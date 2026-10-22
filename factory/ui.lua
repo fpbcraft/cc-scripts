@@ -526,6 +526,12 @@ function UI.run(core)
       state==nil and C.orange or state and C.lime or C.red)
     label(panel,3,7,"Mode: "..m.mode:upper())
     label(panel,3,9,"Relay: "..m.device.." / "..m.side)
+    if m.device:sub(1,7)=="remote:" then
+      local id=tonumber(m.device:match("^remote:(%d+):"))
+      if core.remote.errors[id] then
+        label(panel,3,10,short(core.remote.errors[id],w-6),C.orange)
+      end
+    end
     local smoothing=m.rateWindowSeconds or core.config.rateWindowSeconds
     label(panel,3,11,("Smoothed net gain: %s/min (%.0fs avg)"):format(
       num(core.rates[m.id]),smoothing))
@@ -601,9 +607,8 @@ function UI.run(core)
       end,C.gray)
     end
     if h>=19 then
-      label(panel,3,h-7,
-        "Remote computers: telemetry-only; no wireless machine control",
-        C.orange,w-5)
+      label(panel,3,h-7,"Remote control: pair the node in Devices first",
+        C.lightGray,w-5)
     end
     label(panel,3,h-6,("Fields page %d/%d"):format(editPage,pages),C.lightGray)
     if editPage>1 then
@@ -763,8 +768,18 @@ function UI.run(core)
       dev.typeMismatch and "TYPE CHANGED" or "OFFLINE"),
       dev.online and C.lime or C.orange)
     label(panel,3,11,"Tracked readings: "..dev.readingCount)
-    if dev.name:find("^remote:") then
-      label(panel,3,12,"Wireless node / telemetry only",C.lightGray)
+    local remoteId=tonumber(dev.name:match("^remote:(%d+):"))
+    local paired=remoteId and core.remote:paired(remoteId)
+    if remoteId then
+      label(panel,3,12,paired and "Wireless node: PAIRED"
+        or "Wireless node: PAIR FOR CONTROL",paired and C.lime or C.orange)
+      button(panel,3,16,math.min(20,w-5),1,"PAIR NODE",function()
+        fieldInput("Pair key shown on remote computer","",false,
+          function(code)
+            local ok,err=core.remote:pair(remoteId,code)
+            notify(err or (ok and "Pairing requested" or "Pairing failed"))
+          end,"DEVICE","pairing")
+      end,C.orange)
     end
     button(panel,3,13,math.min(17,w-5),2,"RENAME",function()
       fieldInput("Device name",dev.alias,false,function(value)
@@ -777,9 +792,9 @@ function UI.run(core)
         navigateTo("DEVICE METHODS")
       end,C.green)
     end
-    if dev.online and dev.type=="redstone_relay" and
-       not dev.name:find("^remote:") and h>=23 then
-      button(panel,3,17,math.min(23,w-5),1,"REGISTER AS MACHINE",function()
+    if dev.online and (dev.type=="redstone_relay" or
+       dev.type=="remote_computer") and (not remoteId or paired) and h>=23 then
+      button(panel,3,18,math.min(23,w-5),1,"REGISTER AS MACHINE",function()
         editor={id="",name=dev.alias,device=dev.name,side="front",
           onSignal=true,stopAt=0,resumeBelow=0,item="",product="",
           rateWindowSeconds=core.config.rateWindowSeconds}
@@ -787,8 +802,8 @@ function UI.run(core)
       end,C.green)
     end
     if h>24 then
-      label(panel,3,18,"To replace a device, relink each reading.",C.lightGray)
-      label(panel,3,19,"No output methods are run automatically.",C.lightGray)
+      label(panel,3,21,"To replace a device, relink each reading.",C.lightGray)
+      label(panel,3,22,"Only paired remote nodes accept commands.",C.lightGray)
     end
   end
   local function showMethods()
