@@ -32,6 +32,7 @@ end
 function UI.run(core)
   local basalt=require("basalt")
   local completion=require("completions")
+  local layout=require("layout")
   basalt.use("charts")
   local terminal=basalt.getMainFrame()
   terminal.background=C.black
@@ -398,31 +399,19 @@ function UI.run(core)
     end
     -- Do not require a 64-char monitor: on standard 3x2 monitors this
     -- renders short charts BELOW the summary, rather than not rendering.
-    if h>=26 and w>=32 then
-      local cols=w>=50 and 2 or 1
-      local tileW=math.floor((w-4-(cols-1)*2)/cols)
-      local tileH=8
-      local rows=h>=34 and 2 or 1
-      local firstY=h-3-rows*(tileH+1)
-      local candidates={METRICS[1],METRICS[2],METRICS[3]}
-      for _,m in ipairs(core.machines) do
-        if m.product and m.product~="" then
-          candidates[#candidates+1]={
-            "rate_"..m.id,m.name.." / RATE","items/min",C.pink}
-          break
-        end
+    local candidates={METRICS[1],METRICS[2],METRICS[3]}
+    for _,m in ipairs(core.machines) do
+      if m.product and m.product~="" then
+        candidates[#candidates+1]={
+          "rate_"..m.id,m.name.." / RATE","items/min",C.pink}
+        break
       end
-      local count=math.min(#candidates,cols*rows)
-      for i=1,count do
-        local col=(i-1)%cols
-        local row=math.floor((i-1)/cols)
-        local x=2+col*(tileW+2)
-        local y=firstY+row*(tileH+1)
-        local item=candidates[i]
-        drawChart(panel,item,x,y,tileW,tileH,true,function()
-          graphKey=item[1];navigateTo("GRAPH DETAIL")
-        end)
-      end
+    end
+    for _,tile in ipairs(layout.overviewCharts(w,h,#candidates)) do
+      local item=candidates[tile.index]
+      drawChart(panel,item,tile.x,tile.y,tile.width,tile.height,true,function()
+        graphKey=item[1];navigateTo("GRAPH DETAIL")
+      end)
     end
   end
   local function showInventory()
