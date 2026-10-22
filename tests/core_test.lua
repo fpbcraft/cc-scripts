@@ -147,4 +147,12 @@ local badWindow,reason=core:register({
   side="left",rateWindowSeconds=1
 })
 assert(not badWindow and reason:find("averaging"))
+assert(core:setRateWindow(m,300))
+assert(m.rateWindowSeconds==300 and core.rates[m.id]==0)
+assert(core.rateState[m.id]==nil)
+local invalid,reason=core:setRateWindow(m,12)
+assert(not invalid and reason:find("15%-900"))
+assert(m.rateWindowSeconds==300)
+assert(core:setRateWindow(m,60))
+assert(m.rateWindowSeconds==60)
 print("Core tests passed")
