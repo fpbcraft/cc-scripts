@@ -10,7 +10,9 @@ local files={
   ["main.lua"]=url.."node/main.lua",
   ["auth.lua"]=url.."factory/auth.lua",
   ["unpair.lua"]=url.."node/unpair.lua",
-  ["export_pairing.lua"]=url.."node/export_pairing.lua"
+  ["export_pairing.lua"]=url.."node/export_pairing.lua",
+  ["pairing.lua"]=url.."node/pairing.lua",
+  ["ui.lua"]=url.."node/ui.lua"
 }
 local function remove(path) if fs.exists(path) then fs.delete(path) end end
 local function read(path)
@@ -82,4 +84,4 @@ if boot~=launcher then
 end
 print("Installed without backup, retained pairing configuration")
 print("Node: "..config.name.." | Auto-start enabled")
-print("Reboot, then copy the pairing key displayed on this node")
+print("Reboot, then use EXPORT KEY TO DISK in the node GUI")
