@@ -245,17 +245,36 @@ function UI.run(core)
     button(panel,21,14,12,2,"CANCEL",function()goto("ITEM")end,C.red)
   end
   local function showSwitchboard()
-    label(panel,3,3,"SWITCHBOARD   [manual outputs only]",C.cyan)
+    label(panel,3,3,"SWITCHBOARD  /  TAP TO TOGGLE",C.cyan)
     local per=math.max(2,math.floor((h-11)/2))
-    choose(panel,core.machines,genericPage,per,function(m)
-      selectedMachine=m
-      goto("MACHINE")
-    end,function(m)
-      local state=core:actual(m)
-      local status=state==nil and "?" or state and "ON" or "OFF"
-      local note=m.mode=="auto" and "AUTO" or "MANUAL"
-      return ("%s  [%s/%s]"):format(short(m.name,w-23),status,note)
-    end)
+    local pages=math.max(1,math.ceil(#core.machines/per))
+    genericPage=math.min(genericPage,pages)
+    for i=1,per do
+      local m=core.machines[(genericPage-1)*per+i]
+      if not m then break end
+      local y=5+(i-1)*2
+      local actual=core:actual(m)
+      local state=actual==nil and "?" or actual and "ON" or "OFF"
+      local wide=math.max(10,w-24)
+      button(panel,2,y,wide,1,short(m.name,wide-5).." ["..state.."]",function()
+        selectedMachine=m;goto("MACHINE")
+      end,C.gray)
+      button(panel,wide+3,y,math.min(18,w-wide-4),1,
+        m.mode=="auto" and "AUTO" or actual and "TURN OFF" or "TURN ON",
+        function()
+          local ok,err=core:toggle(m)
+          notify(ok and ("Switched "..m.name) or (err or "Control failed"))
+          render()
+        end,m.mode=="auto" and C.gray or actual and C.red or C.green)
+    end
+    if genericPage>1 then button(panel,2,h-4,11,1,"< PREV",function()
+      genericPage=genericPage-1;render()
+    end) end
+    if genericPage<pages then button(panel,w-12,h-4,11,1,"NEXT >",function()
+      genericPage=genericPage+1;render()
+    end) end
+    label(panel,2,h-6,("Page %d/%d; AUTO machines require Manual mode"):format(genericPage,pages),
+      C.lightGray)
   end
   local function showMachine()
     local m=selectedMachine
@@ -314,7 +333,14 @@ function UI.run(core)
           return
         end
         fieldInput(f[2],editor[f[1]],f[3],function(value)
-          editor[f[1]]=f[3] and (tonumber(value) or 0) or value
+          if f[3] then
+            editor[f[1]]=tonumber(value) or 0
+          elseif f[1]=="device" or f[1]=="side" or f[1]=="product" or
+            f[1]=="item" or f[1]=="id" then
+            editor[f[1]]=value:lower()
+          else
+            editor[f[1]]=value
+          end
         end,"MACHINE EDIT")
       end,C.gray)
     end
@@ -504,11 +530,11 @@ function UI.run(core)
       end,C.gray)
     end
     if pages>1 then
-      label(panel,2,h-8,("Keyboard %d/%d"):format(kbPage,pages),C.lightGray)
-      if kbPage>1 then button(panel,w-22,h-8,10,1,"< KEYS",function()
+      label(panel,2,h-7,("Keyboard %d/%d"):format(kbPage,pages),C.lightGray)
+      if kbPage>1 then button(panel,w-22,h-7,10,1,"< KEYS",function()
         kbPage=kbPage-1;render()
       end) end
-      if kbPage<pages then button(panel,w-11,h-8,10,1,"KEYS >",function()
+      if kbPage<pages then button(panel,w-11,h-7,10,1,"KEYS >",function()
         kbPage=kbPage+1;render()
       end) end
     end
