@@ -3,7 +3,8 @@
 local UI={}
 local C=colors
 local NAV={"OVERVIEW","INVENTORY","SWITCHBOARD","MACHINES",
-  "RULES","GRAPHS","POWER GRID","REQUESTS","DIAGNOSTICS","SETTINGS"}
+  "RULES","GRAPHS","DEVICES","READINGS","POWER GRID","REQUESTS",
+  "DIAGNOSTICS","SETTINGS"}
 local METRICS={
   {"stress","KINETIC STRESS","%",C.orange},
   {"rpm","SHAFT RPM","RPM",C.cyan},
@@ -68,6 +69,8 @@ function UI.run(core)
   local selected=nil
   local quantity=1
   local selectedMachine=nil
+  local selectedDevice=nil
+  local selectedReading=nil
   local confirmAction=nil
   local editor={}
   local editMode="new"
@@ -392,9 +395,32 @@ function UI.run(core)
     end)
     label(panel,3,h-6,"AUTO stops high, resumes low; Manual bypasses rules",C.lightGray)
   end
+  local function availableMetrics()
+    local all={}
+    for _,metric in ipairs(METRICS) do all[#all+1]=metric end
+    for _,r in ipairs(core.devices:charts()) do
+      all[#all+1]={r.id,r.label,r.unit,C.magenta}
+    end
+    return all
+  end
+  local function showGraphPicker()
+    label(panel,3,3,"SELECT GRAPH METRIC",C.cyan)
+    local per=math.max(2,math.floor((h-11)/2))
+    choose(panel,availableMetrics(),genericPage,per,function(entry)
+      graphKey=entry[1];navigateTo("GRAPHS")
+    end,function(entry)
+      return short(entry[2],w-12).." ("..entry[3]..")"
+    end)
+  end
   local function showGraphs()
     local metric=matchMetric(graphKey)
-    label(panel,3,3,metric[2].." ("..metric[3]..")",C.cyan)
+    for _,entry in ipairs(availableMetrics()) do
+      if entry[1]==graphKey then metric=entry;break end
+    end
+    label(panel,3,3,short(metric[2].." ("..metric[3]..")",w-24),C.cyan,w-24)
+    button(panel,w-17,3,15,1,"CHANGE GRAPH",function()
+      navigateTo("GRAPH PICKER")
+    end)
     local chartY=6
     local gh=math.max(5,h-14)
     local chart=panel:addPixelGraph({
@@ -412,16 +438,166 @@ function UI.run(core)
       local v=point[graphKey]
       if type(v)=="number" then chart:addPoint("data",v) end
     end
-    local col=math.max(2,math.floor((w-4)/4))
-    for i,entry in ipairs(METRICS) do
-      local row=math.floor((i-1)/4)
-      local x=2+((i-1)%4)*col
-      local y=h-6+row
-      button(panel,x,y,col-1,1,short(entry[1]:upper(),col-2),function()
-        graphKey=entry[1];render()
-      end,graphKey==entry[1] and C.purple or C.gray)
-    end
     label(panel,3,h-8,("Samples: %d / 360   Max: %s"):format(#core.samples,num(chart.maxValue,0)),C.lightGray)
+  end
+  local function showDevices()
+    local devices=core.devices:list()
+    label(panel,3,3,"WIRED PERIPHERALS  /  AUTO DISCOVERY",C.cyan)
+    button(panel,w-12,3,10,1,"RESCAN",function()
+      core.devices:discover();render()
+    end)
+    local per=math.max(2,math.floor((h-11)/2))
+    choose(panel,devices,genericPage,per,function(device)
+      selectedDevice=device.name
+      navigateTo("DEVICE")
+    end,function(device)
+      local status=device.online and "ON" or
+        device.typeMismatch and "TYPE?" or "OFF"
+      return short(device.alias or device.name,w-20).." ["..status.."]"
+    end)
+    if #devices==0 then
+      label(panel,3,7,"Attach wired modems and peripherals",C.orange)
+    end
+    label(panel,3,h-6,"New devices appear after the next refresh",C.lightGray)
+  end
+  local function showDevice()
+    local dev=core.devices:get(selectedDevice)
+    if not dev then return navigateTo("DEVICES") end
+    label(panel,3,3,short(dev.alias or dev.name,w-6),C.cyan)
+    label(panel,3,5,"Type: "..short(dev.type,w-10))
+    label(panel,3,7,"Network: "..short(dev.name,w-13),C.lightGray)
+    label(panel,3,9,"Status: "..(dev.online and "CONNECTED" or
+      dev.typeMismatch and "TYPE CHANGED" or "OFFLINE"),
+      dev.online and C.lime or C.orange)
+    label(panel,3,11,"Tracked readings: "..dev.readingCount)
+    button(panel,3,13,math.min(17,w-5),2,"RENAME",function()
+      fieldInput("Device name",dev.alias,false,function(value)
+        local ok,err=core.devices:rename(dev.name,value)
+        notify(ok and "Device renamed" or err)
+      end,"DEVICE")
+    end)
+    if dev.online then
+      button(panel,21,13,math.min(21,w-23),2,"ADD READING",function()
+        navigateTo("DEVICE METHODS")
+      end,C.green)
+    end
+    if h>24 then
+      label(panel,3,18,"To replace a device, relink each reading.",C.lightGray)
+      label(panel,3,19,"No output methods are run automatically.",C.lightGray)
+    end
+  end
+  local function showMethods()
+    label(panel,3,3,"READ-ONLY METHOD SELECTION",C.cyan)
+    local methods=core.devices:methods(selectedDevice)
+    local per=math.max(2,math.floor((h-11)/2))
+    choose(panel,methods,genericPage,per,function(method)
+      local reading,err=core.devices:add(selectedDevice,method)
+      if reading then selectedReading=reading.id;navigateTo("READING")
+      else notify(err);render() end
+    end,function(method) return method.."()" end)
+    if #methods==0 then
+      label(panel,3,7,"No recognized scalar getters; see Diagnostics",C.orange)
+    end
+    label(panel,3,h-6,"Only zero-argument read methods are offered",C.lightGray)
+  end
+  local function showReadings()
+    label(panel,3,3,"CONFIGURED TELEMETRY / READINGS",C.cyan)
+    local per=math.max(2,math.floor((h-11)/2))
+    choose(panel,core.devices.readings,genericPage,per,function(r)
+      selectedReading=r.id;navigateTo("READING")
+    end,function(r)
+      local v=core.devices.values[r.id]
+      local value=v and v.value
+      local status=v and v.status=="online" and
+        short(tostring(value),10) or "OFFLINE"
+      return short(r.label,w-22).." ["..status.."]"
+    end)
+    if #core.devices.readings==0 then
+      label(panel,3,7,"DEVICES > select a peripheral > ADD READING",C.orange)
+    end
+  end
+  local function showReading()
+    local r=core.devices:getReading(selectedReading)
+    if not r then return navigateTo("READINGS") end
+    local v=core.devices.values[r.id] or {}
+    label(panel,3,3,short(r.label,w-6),C.cyan)
+    label(panel,3,5,"Device: "..short(r.device,w-13),C.lightGray)
+    label(panel,3,7,"Method: "..r.method.."()",C.lightGray)
+    label(panel,3,9,"Reading: "..short(tostring(v.value or "-").." "..r.unit,w-13),
+      v.status=="online" and C.lime or C.orange)
+    label(panel,3,11,"Status: "..tostring(v.status or "Pending"),C.lightGray)
+    if v.warning then label(panel,3,12,"ALERT: "..v.warning,C.orange) end
+    local width=math.min(17,math.floor((w-8)/2))
+    button(panel,3,14,width,1,"RENAME",function()
+      fieldInput("Reading label",r.label,false,function(value)
+        local ok,err=core.devices:update(r.id,{label=value})
+        notify(ok and "Saved" or err)
+      end,"READING")
+    end)
+    button(panel,4+width,14,width,1,"UNIT: "..(r.unit=="" and "-" or r.unit),function()
+      fieldInput("Unit (e.g. RPM, SU, W)",r.unit,false,function(value)
+        local ok,err=core.devices:update(r.id,{unit=value})
+        notify(ok and "Saved" or err)
+      end,"READING")
+    end)
+    button(panel,3,16,width,1,r.graph and "GRAPH: ON" or "GRAPH: OFF",function()
+      core.devices:update(r.id,{graph=not r.graph});render()
+    end)
+    button(panel,4+width,16,width,1,r.enabled and "POLL: ON" or "POLL: OFF",function()
+      core.devices:update(r.id,{enabled=not r.enabled});render()
+    end)
+    button(panel,3,18,width,1,"WARN ABOVE",function()
+      fieldInput("Alert above (blank=off)",r.warnAbove or "",true,function(value)
+        local ok,err=core.devices:update(r.id,{warnAbove=
+          value=="" and false or tonumber(value)})
+        notify(ok and "Saved" or err)
+      end,"READING")
+    end)
+    button(panel,4+width,18,width,1,"WARN BELOW",function()
+      fieldInput("Alert below (blank=off)",r.warnBelow or "",true,function(value)
+        local ok,err=core.devices:update(r.id,{warnBelow=
+          value=="" and false or tonumber(value)})
+        notify(ok and "Saved" or err)
+      end,"READING")
+    end)
+    if h>=26 then
+      button(panel,3,21,width,1,"RELINK",function()
+        navigateTo("RELINK READING")
+      end,C.orange)
+      button(panel,4+width,21,width,1,"REMOVE",function()
+        navigateTo("DELETE READING")
+      end,C.red)
+    end
+  end
+  local function showRelink()
+    local r=core.devices:getReading(selectedReading)
+    if not r then return navigateTo("READINGS") end
+    label(panel,3,3,"RELINK READING TO SAME DEVICE TYPE",C.cyan)
+    local candidates={}
+    for _,d in ipairs(core.devices:list()) do
+      if d.online and d.type==r.type then candidates[#candidates+1]=d end
+    end
+    local per=math.max(2,math.floor((h-11)/2))
+    choose(panel,candidates,genericPage,per,function(d)
+      local ok,err=core.devices:rebind(r.id,d.name)
+      notify(ok and "Rebound to "..d.name or err)
+      if ok then navigateTo("READING") else render() end
+    end,function(d)
+      return d.alias.." ("..d.name..")"
+    end)
+  end
+  local function showDeleteReading()
+    local r=core.devices:getReading(selectedReading)
+    if not r then return navigateTo("READINGS") end
+    label(panel,3,5,"REMOVE THIS READING?",C.orange)
+    label(panel,3,7,short(r.label,w-7))
+    label(panel,3,9,"This will not disconnect the device.",C.lightGray)
+    button(panel,3,12,16,2,"REMOVE",function()
+      core.devices:remove(r.id);navigateTo("READINGS")
+    end,C.red)
+    button(panel,21,12,14,2,"CANCEL",function()
+      navigateTo("READING")
+    end)
   end
   local function showPower()
     label(panel,3,3,"CREATE: POWER GRID",C.cyan)
@@ -578,7 +754,11 @@ function UI.run(core)
       ITEM=showItem,["ORDER CONFIRM"]=showConfirmation,
       SWITCHBOARD=showSwitchboard,MACHINES=showMachines,
       MACHINE=showMachine,["MACHINE EDIT"]=showMachineEdit,
-      RULES=showRules,GRAPHS=showGraphs,["POWER GRID"]=showPower,
+      RULES=showRules,GRAPHS=showGraphs,["GRAPH PICKER"]=showGraphPicker,
+      DEVICES=showDevices,DEVICE=showDevice,
+      ["DEVICE METHODS"]=showMethods,READINGS=showReadings,READING=showReading,
+      ["RELINK READING"]=showRelink,["DELETE READING"]=showDeleteReading,
+      ["POWER GRID"]=showPower,
       ["POWER DETAIL"]=showPowerDetail,REQUESTS=showRequests,
       ["REQUEST DETAIL"]=showRequestDetail,
       DIAGNOSTICS=showDiagnostics,["PERIPHERAL DETAIL"]=showPeripheralDetail,
