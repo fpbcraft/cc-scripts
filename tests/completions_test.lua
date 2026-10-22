@@ -26,6 +26,24 @@ assert(contains(devices,"computer"))
 assert(contains(devices,"redstone_relay_0"))
 assert(not contains(devices,"powergrid_voltage_gauge_0"))
 assert(not contains(devices,"redstone_relay_1"))
+-- Paired remote nodes may offer both their own redstone sides and relay faces.
+core.remote={paired=function(_,id)return id==47 end}
+local entries=core.devices.list
+core.devices.list=function()
+  local found=entries()
+  found[#found+1]={name="remote:47:computer",type="remote_computer",
+    online=true,alias="Ironworks"}
+  found[#found+1]={name="remote:47:redstone_relay_2",type="redstone_relay",
+    online=true,alias="Remote Relay"}
+  found[#found+1]={name="remote:48:computer",type="remote_computer",
+    online=true,alias="Unpaired"}
+  return found
+end
+local paired=c.candidates("device",core)
+assert(contains(paired,"remote:47:computer"))
+assert(contains(paired,"remote:47:redstone_relay_2"))
+assert(not contains(paired,"remote:48:computer"))
+
 local sides=c.suggest("side","le",core,5)
 assert(#sides==1 and sides[1].value=="left")
 local items=c.suggest("item","andesite",core,5)
