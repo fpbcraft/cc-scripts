@@ -501,33 +501,102 @@ function UI.run(core)
       return short(entry[2],w-12).." ("..entry[3]..")"
     end)
   end
+  local function graphNumber(v)
+    if type(v)~="number" then return "--" end
+    if math.abs(v)>=1e9 then return string.format("%.1fG",v/1e9) end
+    if math.abs(v)>=1e6 then return string.format("%.1fM",v/1e6) end
+    if math.abs(v)>=1e4 then return string.format("%.1fk",v/1e3) end
+    if math.abs(v)>=100 then return string.format("%.0f",v) end
+    if math.abs(v)>=10 then return string.format("%.1f",v) end
+    return string.format("%.2f",v)
+  end
   local function showGraphs()
     local metric=matchMetric(graphKey)
     for _,entry in ipairs(availableMetrics()) do
       if entry[1]==graphKey then metric=entry;break end
     end
-    label(panel,3,3,short(metric[2].." ("..metric[3]..")",w-24),C.cyan,w-24)
+    label(panel,3,3,short(metric[2].." ("..metric[3]..")",w-23),
+      C.cyan,w-23)
     button(panel,w-17,3,15,1,"CHANGE GRAPH",function()
       navigateTo("GRAPH PICKER")
     end)
-    local chartY=6
-    local gh=math.max(5,h-14)
+    -- PixelGraph plots solid-colour subpixels. Axes/ticks/labels are separate
+    -- Basalt elements outside the canvas, so they never obscure the series.
+    local chartX,chartY=12,7
+    local chartW=math.max(12,w-chartX-3)
+    local chartH=math.max(4,h-19)
+    local first=math.max(1,#core.samples-math.min(200,chartW*2)+1)
+    local data={},sum,min,max,last=0,0,nil,nil,nil
+    for i=first,#core.samples do
+      local v=core.samples[i][graphKey]
+      if type(v)=="number" and v==v and
+         v<math.huge and v>-math.huge then
+        data[#data+1]=v
+        sum=sum+v
+        min=min and math.min(min,v) or v
+        max=max and math.max(max,v) or v
+        last=v
+      end
+    end
+    label(panel,3,5,"LATEST: "..graphNumber(last).." "..(metric[3] or ""),
+      metric[4],w-6)
+    local ymin,ymax=0,100
+    if min and max then
+      local low=math.min(0,min)
+      local high=math.max(0,max)
+      if low==high then high=low+1 end
+      local raw=(high-low)/4
+      local base=10^math.floor(math.log(raw)/math.log(10))
+      local n=raw/base
+      local nice=n<=1 and 1 or n<=2 and 2 or n<=5 and 5 or 10
+      local step=nice*base
+      ymin=math.floor(low/step)*step
+      ymax=math.ceil(high/step)*step
+      if ymin==ymax then ymax=ymin+step end
+    end
+    label(panel,2,6,"Y: "..(metric[3] or ""),C.lightGray,9)
+    -- Axis tick labels, from maximum at the top to minimum at the bottom.
+    for j=0,4 do
+      local yy=chartY+math.floor(j*(chartH-1)/4)
+      local tick=ymax-(ymax-ymin)*j/4
+      label(panel,2,yy,graphNumber(tick),C.lightGray,8)
+      label(panel,10,yy,"|",C.gray,1)
+    end
     local chart=panel:addPixelGraph({
-      x=3,y=chartY,width=w-6,height=gh,
-      background=C.black,minValue=0,maxValue=100
+      x=chartX,y=chartY,width=chartW,height=chartH,
+      background=C.black,minValue=ymin,maxValue=ymax
     })
-    chart:addSeries("data",{color=metric[4],pointCount=math.min(200,(w-6)*2)})
-    local mx=0
-    for _,point in ipairs(core.samples) do
-      local v=point[graphKey]
-      if type(v)=="number" then mx=math.max(mx,v) end
+    chart:addSeries("data",{
+      color=metric[4],pointCount=math.min(200,chartW*2)
+    })
+    for _,value in ipairs(data) do chart:addPoint("data",value) end
+    if #data==0 then
+      label(panel,chartX+2,chartY+2,"NO NUMERIC DATA",C.orange,chartW-4)
     end
-    chart.maxValue=math.max(graphKey=="stress" and 100 or graphKey=="battery" and 100 or 10,math.ceil(mx*1.2))
-    for _,point in ipairs(core.samples) do
-      local v=point[graphKey]
-      if type(v)=="number" then chart:addPoint("data",v) end
+    local axisY=chartY+chartH
+    if axisY<h-3 then
+      label(panel,10,axisY,"+",C.gray,1)
+      label(panel,chartX,axisY,"^",C.lightGray,1)
+      label(panel,chartX+math.floor(chartW/2),axisY,"^",C.lightGray,1)
+      label(panel,chartX+chartW-1,axisY,"^",C.lightGray,1)
+      local t1=core.samples[first] and core.samples[first].time
+      local t2=core.samples[#core.samples] and core.samples[#core.samples].time
+      local seconds=type(t1)=="number" and type(t2)=="number" and
+        math.max(0,t2-t1) or 0
+      local range=seconds>=60 and
+        string.format("-%.1fm",seconds/60) or string.format("-%ds",seconds)
+      label(panel,chartX,axisY+1,range,C.lightGray,10)
+      label(panel,chartX+math.floor(chartW/2)-3,axisY+1,"MID",C.lightGray,6)
+      label(panel,chartX+chartW-4,axisY+1,"NOW",C.lightGray,4)
     end
-    label(panel,3,h-8,("Samples: %d / 360   Max: %s"):format(#core.samples,num(chart.maxValue,0)),C.lightGray)
+    if h>=23 then
+      local average=#data>0 and sum/#data or nil
+      label(panel,3,h-6,("MIN %s   AVG %s   MAX %s"):format(
+        graphNumber(min),graphNumber(average),graphNumber(max)),
+        C.lightGray,w-5)
+      label(panel,3,h-4,("X: elapsed time  |  %d samples"):format(#data),
+        C.lightGray,w-5)
+    end
   end
   local function showDevices()
     local devices={}
