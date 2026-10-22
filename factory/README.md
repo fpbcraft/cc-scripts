@@ -171,3 +171,13 @@ lua5.3 tests/core_test.lua
 ```
 
 The CI workflow runs syntax checks and mocked core rule tests. Real in-game Basalt and peripheral integration should be validated before using unattended machine control.
+
+## Overview charts and production-rate averaging
+
+The Overview now displays compact charts below the status summary on monitors at least 32 characters wide and 27 rows tall. On wider or taller monitors it automatically shows more charts; tap a chart to expand it.
+
+The estimated production rate is now smoothed using an exponential time-weighted average. Its default period is 120 seconds. Adjust per machine under Machines > Edit > Rate Avg Seconds (15 to 900 seconds), or change the default for newly registered machines in Settings > Rate Average. Shorter periods react more quickly, while longer periods reduce batch-delivery spikes. Historical spike-based rate values are excluded from the new chart history.
+
+Rates remain based on net Stock Ticker changes, not exact per-machine production. Consumers and other producers sharing the same item can affect the estimate.
+
+**Wireless-node controls:** Remote nodes are read-only and are therefore not suggested as machine actuators. Machine control currently requires the local computer's redstone outputs or a wired Redstone Relay. Remote nodes may still supply sensor readings and graphs; adding wireless actuation will require a separate trusted control mechanism.
