@@ -86,6 +86,21 @@ function Devices:discover()
       -- different type: we never want outputs or readings silently remapped.
     end
   end
+  -- Remote nodes are discovered from signed-by-nothing Rednet announcements.
+  -- Read-only telemetry is accepted; actuator commands are intentionally off.
+  if self.remote then
+    for _,remote in ipairs(self.remote:list()) do
+      live[remote.name]=remote.type
+      if not self.known[remote.name] then
+        self.known[remote.name]={
+          name=remote.name,type=remote.type,
+          alias=remote.alias,firstSeen=timestamp(),
+          remote=true
+        }
+        changed=true
+      end
+    end
+  end
   self.live=live
   if changed then self:save() end
   return self:list()
@@ -122,7 +137,8 @@ end
 function Devices:methods(name)
   local dev=self:get(name)
   if not dev or not dev.online then return {} end
-  local methods=peripheral.getMethods(name) or {}
+  local remote=self.remote and self.remote:find(name)
+  local methods=remote and remote.methods or peripheral.getMethods(name) or {}
   local out={}
   for _,method in ipairs(methods) do
     if safeMethod(method) then out[#out+1]=method end
@@ -226,7 +242,14 @@ function Devices:readAll()
           if method==r.method then valid=true;break end
         end
         if valid then
-          local ok,result=pcall(peripheral.call,r.device,r.method)
+          local remote=self.remote and self.remote:find(r.device)
+          local ok,result
+          if remote then
+            result=remote.values[r.method]
+            ok=result~=nil
+          else
+            ok,result=pcall(peripheral.call,r.device,r.method)
+          end
           if ok and (type(result)=="number" or
               type(result)=="boolean" or type(result)=="string") then
             value.status="online"
