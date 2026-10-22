@@ -82,6 +82,7 @@ function Core.new(root)
     order.to=order.to or order.address or self.config.hubAddress
     order.status=order.status or "Previously requested"
   end
+  self.devices=require("devices").new(dir)
   self.machines=read(fs.combine(dir,"machines.db")) or {}
   self.samples=read(fs.combine(dir,"samples.db")) or {}
   self.snapshot={stock={},stockError="Not scanned",stress={},speed={},power={}}
@@ -279,6 +280,10 @@ function Core:scan()
   for _,m in ipairs(self.machines) do
     point["rate_"..m.id]=self.rates[m.id]
   end
+  -- User-configured scalar peripheral readings require no mod-specific code.
+  -- Each keeps a stable internal key, even if the user later renames it.
+  local extras=self.devices:readAll()
+  for key,value in pairs(extras) do point[key]=value end
   self.samples[#self.samples+1]=point
   while #self.samples>360 do table.remove(self.samples,1) end
   self.dirty=self.dirty+1
