@@ -67,6 +67,7 @@ function UI.run(core)
   local machinePage=1
   local genericPage=1
   local graphKey="stress"
+  local graphPage=1
   local selected=nil
   local quantity=1
   local selectedMachine=nil
@@ -222,6 +223,125 @@ function UI.run(core)
         if page=="INVENTORY" then invPage=genericPage end
         render()
       end)
+    end
+  end
+  -- Chart renderer shared by Graphs, Overview and machine detail views.
+  -- Numeric values remain in Core.samples; only the visible window is plotted.
+  local function graphNumber(v)
+    if type(v)~="number" then return "--" end
+    if math.abs(v)>=1e9 then return string.format("%.1fG",v/1e9) end
+    if math.abs(v)>=1e6 then return string.format("%.1fM",v/1e6) end
+    if math.abs(v)>=1e4 then return string.format("%.1fk",v/1e3) end
+    if math.abs(v)>=100 then return string.format("%.0f",v) end
+    if math.abs(v)>=10 then return string.format("%.1f",v) end
+    return string.format("%.2f",v)
+  end
+  local function availableMetrics()
+    local all={}
+    for _,metric in ipairs(METRICS) do all[#all+1]=metric end
+    for _,m in ipairs(core.machines) do
+      if m.product and m.product~="" then
+        all[#all+1]={"rate_"..m.id,m.name.." / NET RATE","items/min",C.pink}
+      end
+    end
+    for _,r in ipairs(core.devices:charts()) do
+      all[#all+1]={r.id,r.label,r.unit,C.magenta}
+    end
+    return all
+  end
+  local function collectSeries(key,limit)
+    local points={}
+    local start=math.max(1,#core.samples-limit+1)
+    local first,last,min,max,total=nil,nil,nil,nil,0
+    for i=start,#core.samples do
+      local item=core.samples[i]
+      local value=item[key]
+      if type(value)=="number" and value==value and
+         value<math.huge and value>-math.huge then
+        points[#points+1]=value
+        if not first then first=item.time end
+        last=item.time
+        min=min and math.min(min,value) or value
+        max=max and math.max(max,value) or value
+        total=total+value
+      end
+    end
+    return points,first,last,min,max,
+      #points>0 and total/#points or nil
+  end
+  local function scaleBounds(min,max)
+    if min==nil or max==nil then return 0,100 end
+    local low=math.min(0,min)
+    local high=math.max(0,max)
+    if high==low then high=low+1 end
+    local step=(high-low)/4
+    local base=10^math.floor(math.log(step)/math.log(10))
+    local n=step/base
+    local nice=(n<=1 and 1 or n<=2 and 2 or n<=5 and 5 or 10)*base
+    local bottom=math.floor(low/nice)*nice
+    local top=math.ceil(high/nice)*nice
+    if bottom==top then top=bottom+nice end
+    return bottom,top
+  end
+  local function drawChart(parent,metric,x,y,width,height,compact,onOpen)
+    if width<21 or height<7 then return end
+    local key,title,unit,color=metric[1],metric[2],metric[3],metric[4]
+    local titleWidth=onOpen and width-10 or width
+    label(parent,x,y,short(title,titleWidth),color,titleWidth)
+    if onOpen then
+      button(parent,x+width-9,y,9,1,"EXPAND >",onOpen,C.gray)
+    end
+    local cy=y+2
+    local px=x+(compact and 7 or 10)
+    local pw=math.max(10,width-(px-x)-1)
+    local ph=math.max(3,height-(compact and 5 or 7))
+    local values,t0,t1,min,max,avg=collectSeries(key,math.min(200,pw*2))
+    local bottom,top=scaleBounds(min,max)
+    local latest=values[#values]
+    label(parent,x,cy-1,"Now: "..graphNumber(latest).." "..(unit or ""),
+      C.lightGray,width)
+    local ticks=compact and 2 or 4
+    for row=0,ph-1 do
+      label(parent,px-2,cy+row,"|",C.gray,1)
+    end
+    for i=0,ticks do
+      local yy=cy+math.floor(i*(ph-1)/ticks)
+      label(parent,x,yy,graphNumber(top-(top-bottom)*i/ticks),
+        C.lightGray,compact and 5 or 8)
+      label(parent,px-2,yy,"+",C.lightGray,1)
+    end
+    local graph=parent:addPixelGraph({
+      x=px,y=cy,width=pw,height=ph,background=C.black,
+      minValue=bottom,maxValue=top
+    })
+    graph:addSeries("data",{color=color,pointCount=math.min(200,pw*2)})
+    for _,value in ipairs(values) do graph:addPoint("data",value) end
+    if onOpen and graph.onClick then
+      graph:onClick(function() onOpen() end)
+    end
+    if #values==0 then
+      label(parent,px+1,cy+math.floor(ph/2),"No data",C.orange,pw-1)
+    end
+    local ay=cy+ph
+    label(parent,px-2,ay,"+",C.lightGray,1)
+    label(parent,px,ay,string.rep("-",pw),C.gray,pw)
+    label(parent,px,ay,"+",C.lightGray,1)
+    label(parent,px+math.floor(pw/2),ay,"+",C.lightGray,1)
+    label(parent,px+pw-1,ay,"+",C.lightGray,1)
+    if ay+1<=y+height-1 then
+      local elapsed=t0 and t1 and math.max(0,t1-t0) or 0
+      local window=elapsed>=60 and
+        string.format("-%.1fm",elapsed/60) or string.format("-%ds",elapsed)
+      label(parent,px,ay+1,window,C.lightGray,math.min(9,pw))
+      label(parent,px+pw-4,ay+1,"NOW",C.lightGray,4)
+    end
+    if not compact then
+      local statY=ay+3
+      if statY<=y+height-1 then
+        label(parent,x,statY,("MIN %s  AVG %s  MAX %s  N=%d"):format(
+          graphNumber(min),graphNumber(avg),graphNumber(max),#values),
+          C.lightGray,width)
+      end
     end
   end
   local function showHome()
@@ -504,123 +624,64 @@ function UI.run(core)
     end)
     label(panel,3,h-6,"AUTO stops high, resumes low; Manual bypasses rules",C.lightGray)
   end
-  local function availableMetrics()
-    local all={}
-    for _,metric in ipairs(METRICS) do all[#all+1]=metric end
-    for _,r in ipairs(core.devices:charts()) do
-      all[#all+1]={r.id,r.label,r.unit,C.magenta}
-    end
-    return all
-  end
   local function showGraphPicker()
     label(panel,3,3,"SELECT GRAPH METRIC",C.cyan)
     local per=math.max(2,math.floor((h-11)/2))
     choose(panel,availableMetrics(),genericPage,per,function(entry)
-      graphKey=entry[1];navigateTo("GRAPHS")
+      graphKey=entry[1];navigateTo("GRAPH DETAIL")
     end,function(entry)
       return short(entry[2],w-12).." ("..entry[3]..")"
     end)
   end
-  local function graphNumber(v)
-    if type(v)~="number" then return "--" end
-    if math.abs(v)>=1e9 then return string.format("%.1fG",v/1e9) end
-    if math.abs(v)>=1e6 then return string.format("%.1fM",v/1e6) end
-    if math.abs(v)>=1e4 then return string.format("%.1fk",v/1e3) end
-    if math.abs(v)>=100 then return string.format("%.0f",v) end
-    if math.abs(v)>=10 then return string.format("%.1f",v) end
-    return string.format("%.2f",v)
-  end
   local function showGraphs()
-    local metric=matchMetric(graphKey)
-    for _,entry in ipairs(availableMetrics()) do
-      if entry[1]==graphKey then metric=entry;break end
+    local metrics=availableMetrics()
+    label(panel,3,3,("LIVE GRAPHS  /  %d METRICS"):format(#metrics),C.cyan)
+    local cols=(w>=84 and 3) or (w>=53 and 2) or 1
+    local tileW=math.floor((w-4-(cols-1)*2)/cols)
+    local tileH=(h>=29 and 10) or 8
+    local rows=math.max(1,math.floor((h-10)/(tileH+1)))
+    local per=cols*rows
+    local pages=math.max(1,math.ceil(#metrics/per))
+    graphPage=math.max(1,math.min(graphPage,pages))
+    for idx=1,per do
+      local metric=metrics[(graphPage-1)*per+idx]
+      if not metric then break end
+      local column=(idx-1)%cols
+      local row=math.floor((idx-1)/cols)
+      local x=2+column*(tileW+2)
+      local y=5+row*(tileH+1)
+      drawChart(panel,metric,x,y,tileW,tileH,true,function()
+        graphKey=metric[1]
+        navigateTo("GRAPH DETAIL")
+      end)
     end
-    label(panel,3,3,short(metric[2].." ("..metric[3]..")",w-23),
-      C.cyan,w-23)
-    button(panel,w-17,3,15,1,"CHANGE GRAPH",function()
-      navigateTo("GRAPH PICKER")
-    end)
-    -- PixelGraph plots solid-colour subpixels. Axes/ticks/labels are separate
-    -- Basalt elements outside the canvas, so they never obscure the series.
-    local chartX,chartY=12,7
-    local chartW=math.max(12,w-chartX-3)
-    local chartH=math.max(4,h-19)
-    local first=math.max(1,#core.samples-math.min(200,chartW*2)+1)
-    local data,sum,min,max,last={},0,nil,nil,nil
-    for i=first,#core.samples do
-      local v=core.samples[i][graphKey]
-      if type(v)=="number" and v==v and
-         v<math.huge and v>-math.huge then
-        data[#data+1]=v
-        sum=sum+v
-        min=min and math.min(min,v) or v
-        max=max and math.max(max,v) or v
-        last=v
-      end
+    local y=h-4
+    if graphPage>1 then
+      button(panel,2,y,10,1,"< PREV",function()
+        graphPage=graphPage-1;render()
+      end)
     end
-    label(panel,3,5,"LATEST: "..graphNumber(last).." "..(metric[3] or ""),
-      metric[4],w-6)
-    local ymin,ymax=0,100
-    if min and max then
-      local low=math.min(0,min)
-      local high=math.max(0,max)
-      if low==high then high=low+1 end
-      local raw=(high-low)/4
-      local base=10^math.floor(math.log(raw)/math.log(10))
-      local n=raw/base
-      local nice=n<=1 and 1 or n<=2 and 2 or n<=5 and 5 or 10
-      local step=nice*base
-      ymin=math.floor(low/step)*step
-      ymax=math.ceil(high/step)*step
-      if ymin==ymax then ymax=ymin+step end
+    label(panel,math.floor(w/2)-8,y,
+      ("PAGE %d/%d"):format(graphPage,pages),C.lightGray,16)
+    if graphPage<pages then
+      button(panel,w-11,y,10,1,"NEXT >",function()
+        graphPage=graphPage+1;render()
+      end)
     end
-    label(panel,2,6,"Y: "..(metric[3] or ""),C.lightGray,9)
-    -- Full Y-axis, then marked numeric ticks at five evenly-spaced levels.
-    for yy=chartY,chartY+chartH-1 do
-      label(panel,10,yy,"|",C.gray,1)
+  end
+  local function showGraphDetail()
+    local chosen
+    for _,item in ipairs(availableMetrics()) do
+      if item[1]==graphKey then chosen=item;break end
     end
-    for j=0,4 do
-      local yy=chartY+math.floor(j*(chartH-1)/4)
-      local tick=ymax-(ymax-ymin)*j/4
-      label(panel,2,yy,graphNumber(tick),C.lightGray,8)
-      label(panel,10,yy,"+",C.lightGray,1)
+    if not chosen then
+      label(panel,3,5,"Metric unavailable: "..graphKey,C.orange)
+      return
     end
-    local chart=panel:addPixelGraph({
-      x=chartX,y=chartY,width=chartW,height=chartH,
-      background=C.black,minValue=ymin,maxValue=ymax
-    })
-    chart:addSeries("data",{
-      color=metric[4],pointCount=math.min(200,chartW*2)
-    })
-    for _,value in ipairs(data) do chart:addPoint("data",value) end
-    if #data==0 then
-      label(panel,chartX+2,chartY+2,"NO NUMERIC DATA",C.orange,chartW-4)
-    end
-    local axisY=chartY+chartH
-    if axisY<h-3 then
-      label(panel,10,axisY,"+",C.lightGray,1)
-      label(panel,chartX,axisY,string.rep("-",chartW),C.gray,chartW)
-      label(panel,chartX,axisY,"+",C.lightGray,1)
-      label(panel,chartX+math.floor(chartW/2),axisY,"+",C.lightGray,1)
-      label(panel,chartX+chartW-1,axisY,"+",C.lightGray,1)
-      local t1=core.samples[first] and core.samples[first].time
-      local t2=core.samples[#core.samples] and core.samples[#core.samples].time
-      local seconds=type(t1)=="number" and type(t2)=="number" and
-        math.max(0,t2-t1) or 0
-      local range=seconds>=60 and
-        string.format("-%.1fm",seconds/60) or string.format("-%ds",seconds)
-      label(panel,chartX,axisY+1,range,C.lightGray,10)
-      label(panel,chartX+math.floor(chartW/2)-3,axisY+1,"MID",C.lightGray,6)
-      label(panel,chartX+chartW-4,axisY+1,"NOW",C.lightGray,4)
-    end
-    if h>=23 then
-      local average=#data>0 and sum/#data or nil
-      label(panel,3,h-6,("MIN %s   AVG %s   MAX %s"):format(
-        graphNumber(min),graphNumber(average),graphNumber(max)),
-        C.lightGray,w-5)
-      label(panel,3,h-4,("X: elapsed time  |  %d samples"):format(#data),
-        C.lightGray,w-5)
-    end
+    button(panel,w-15,3,13,1,"< ALL GRAPHS",function()
+      navigateTo("GRAPHS")
+    end,C.gray)
+    drawChart(panel,chosen,2,5,w-4,h-11,false,nil)
   end
   local function showDevices()
     local devices={}
@@ -1033,7 +1094,8 @@ function UI.run(core)
       ITEM=showItem,["ORDER CONFIRM"]=showConfirmation,
       SWITCHBOARD=showSwitchboard,MACHINES=showMachines,
       MACHINE=showMachine,["MACHINE EDIT"]=showMachineEdit,
-      RULES=showRules,GRAPHS=showGraphs,["GRAPH PICKER"]=showGraphPicker,
+      RULES=showRules,GRAPHS=showGraphs,["GRAPH DETAIL"]=showGraphDetail,
+      ["GRAPH PICKER"]=showGraphPicker,
       DEVICES=showDevices,DEVICE=showDevice,
       ["DEVICE METHODS"]=showMethods,READINGS=showReadings,READING=showReading,
       ["READING OPTIONS"]=showReadingOptions,
