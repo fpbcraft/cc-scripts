@@ -175,8 +175,16 @@ function Devices:update(id,changes)
   end
   if changes.graph~=nil then r.graph=changes.graph==true end
   if changes.enabled~=nil then r.enabled=changes.enabled==true end
-  if changes.warnAbove~=nil then r.warnAbove=changes.warnAbove end
-  if changes.warnBelow~=nil then r.warnBelow=changes.warnBelow end
+  if changes.warnAbove~=nil then
+    if changes.warnAbove~=false and (type(changes.warnAbove)~="number" or
+       changes.warnAbove~=changes.warnAbove) then return false,"Invalid upper alert" end
+    r.warnAbove=changes.warnAbove==false and nil or changes.warnAbove
+  end
+  if changes.warnBelow~=nil then
+    if changes.warnBelow~=false and (type(changes.warnBelow)~="number" or
+       changes.warnBelow~=changes.warnBelow) then return false,"Invalid lower alert" end
+    r.warnBelow=changes.warnBelow==false and nil or changes.warnBelow
+  end
   return self:save()
 end
 function Devices:rebind(id,name)
