@@ -11,7 +11,7 @@ wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install.lua
 ```
 
 Repeat the same command to update. The installer:
-1. Downloads the core, peripheral registry, autocomplete engine, Basalt UI, and launcher into `/fpb-factory.next`.
+1. Downloads the core, peripheral registry, autocomplete engine, remote-node listener, Basalt UI, and launcher into `/fpb-factory.next`.
 2. Installs Basalt 2.5 (minified) alongside the application.
 3. Preserves `/fpb-factory/data`, retaining configured machines, graphs, settings, and request history.
 4. Backs up the previous installation to `/fpb-factory.backup` before swapping.
@@ -41,7 +41,9 @@ The dashboard finds the first connected monitor by name (sorted alphabetically).
 - **Switchboard:** all configured production units with observed redstone output state and direct manual ON/OFF buttons.
 - **Machines:** register and edit machines, configure actuator sides and outputs.
 - **Rules:** list automation policies and open machine configuration.
-- **Graphs:** Basalt PixelGraph, real solid-colour plots of kinetic load, RPM, stock and Power Grid readings.
+- **Graphs:** responsive paginated multi-graph dashboard, solid-colour PixelGraph plots with labeled axes/ticks and values; tap **Expand** on a tile for a detailed full-screen view.
+- **Overview:** small live telemetry graphs next to operational status when the monitor has enough space.
+- **Machine details:** production-rate mini graph (using net Stock Ticker changes); select it to open the detailed view.
 - **Devices:** automatically discover wired and adjacent peripherals, rename each device, list supported read-only methods, register a sensor or set up a Redstone Relay as a controllable machine.
 - **Readings:** browse configured scalar telemetry, set labels/units, enable graphs, set upper/lower warning thresholds, suspend polling, and relink after a device is replaced.
 - **Power Grid:** native voltage, current, power, energy, battery and generator clutch peripheral readings.
@@ -73,6 +75,16 @@ No source edits, mod-specific Lua module or reboot is needed for such scalar sen
 ### Adding a remote Redstone Relay as a machine
 
 The **Devices** page identifies attached `redstone_relay` peripherals. Select one and tap **Register as Machine**. The machine editor starts with the correct relay name. Configure the redstone face, signal polarity, and optionally the Create stock item/stop-resume thresholds. Then use the **Switchboard** to test manual control before enabling Auto. This requires the physical override and safe wiring described below.
+
+## Remote factories / wireless nodes
+
+You can install a small **FPBCRAFT Remote Node** on any distant CC:Tweaked computer. It attaches to local wired peripherals, automatically broadcasts their scalar telemetry over Wireless or Ender Modems, and reconnects after restart.
+
+The Factory Manager requires its own Wireless/Ender Modem. It discovers the broadcasts automatically and lists sensors under **Devices** alongside locally wired peripherals, with persistent friendly names, graph options and warning thresholds. Nodes expire from the live online list after about 22 seconds without an update.
+
+**Remote control is not enabled:** nodes publish read-only telemetry; network commands cannot turn machinery on/off. Rednet messages are not authenticated, so writing to machinery over that channel will need a separate pairing/security mechanism.
+
+[Complete setup and installation instructions](../node/README.md), including the one-command installer for each node.
 
 ## Keyboard, autocomplete and clipboard
 
