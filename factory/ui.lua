@@ -70,6 +70,7 @@ function UI.run(core)
   local quantity=1
   local selectedMachine=nil
   local selectedDevice=nil
+  local showSystemDevices=false
   local selectedReading=nil
   local confirmAction=nil
   local editor={}
@@ -441,8 +442,19 @@ function UI.run(core)
     label(panel,3,h-8,("Samples: %d / 360   Max: %s"):format(#core.samples,num(chart.maxValue,0)),C.lightGray)
   end
   local function showDevices()
-    local devices=core.devices:list()
-    label(panel,3,3,"WIRED PERIPHERALS  /  AUTO DISCOVERY",C.cyan)
+    local devices={}
+    local ignored={monitor=true,modem=true,computer=true,drive=true,
+      printer=true,disk_drive=true}
+    for _,dev in ipairs(core.devices:list()) do
+      if showSystemDevices or not ignored[dev.type] then
+        devices[#devices+1]=dev
+      end
+    end
+    label(panel,3,3,"WIRED PERIPHERALS  /  AUTO DISCOVERY",C.cyan,w-27)
+    button(panel,w-24,3,11,1,showSystemDevices and "FACTORY" or "SHOW ALL",function()
+      showSystemDevices=not showSystemDevices
+      genericPage=1;render()
+    end,C.gray)
     button(panel,w-12,3,10,1,"RESCAN",function()
       core.devices:discover();render()
     end)
