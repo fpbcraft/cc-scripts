@@ -501,7 +501,8 @@ function UI.run(core)
         selectedMachine=m;navigateTo("MACHINE")
       end,C.gray)
       button(panel,wide+3,y,math.min(18,w-wide-4),1,
-        m.mode=="auto" and "AUTO" or actual and "TURN OFF" or "TURN ON",
+        m.mode=="auto" and "AUTO" or
+          actual==nil and "SAFE OFF" or actual and "TURN OFF" or "TURN ON",
         function()
           local ok,err=core:toggle(m)
           notify(ok and ("Switched "..m.name) or (err or "Control failed"))
@@ -538,7 +539,7 @@ function UI.run(core)
     label(panel,3,12,"Stock: "..short(m.item,math.max(8,w-19)))
     label(panel,3,13,("Stop >=%d, Resume <=%d"):format(m.stopAt,m.resumeBelow))
     if core.errors[m.id] then label(panel,3,14,short(core.errors[m.id],w-5),C.red) end
-    button(panel,3,16,12,2,state and "TURN OFF" or "TURN ON",function()
+    button(panel,3,16,12,2,state==nil and "SAFE OFF" or state and "TURN OFF" or "TURN ON",function()
       local ok,err=core:toggle(m)
       notify(ok and "Output updated" or (err or "Error"))
       render()
