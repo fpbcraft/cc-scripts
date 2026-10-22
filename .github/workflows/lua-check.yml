@@ -27,3 +27,5 @@ jobs:
         run: lua5.3 tests/layout_test.lua
       - name: HMAC-SHA256 authentication vectors
         run: lua5.3 tests/auth_test.lua
+      - name: Paired authenticated remote switching
+        run: lua5.3 tests/paired_remote_test.lua
