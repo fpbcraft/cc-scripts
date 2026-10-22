@@ -132,6 +132,28 @@ function Core:configure(fields)
   end
   self:save("config",self.config)
 end
+function Core:setRateWindow(machine,seconds)
+  seconds=tonumber(seconds)
+  if not seconds or seconds%1~=0 or seconds<15 or seconds>900 then
+    return false,"Averaging range must be 15-900 seconds"
+  end
+  local tracked=false
+  for _,m in ipairs(self.machines) do
+    if m==machine then tracked=true;break end
+  end
+  if not tracked then return false,"Unknown machine" end
+  if machine.rateWindowSeconds==seconds then return true end
+  machine.rateWindowSeconds=seconds
+  -- Previous samples used a different averaging period: remove only this
+  -- machine's obsolete rate history to prevent misleading mixed curves.
+  self.rateState[machine.id]=nil
+  self.rates[machine.id]=0
+  local key="rate_"..machine.id
+  for _,sample in ipairs(self.samples) do sample[key]=nil end
+  self:save("machines",self.machines)
+  self:save("samples",self.samples)
+  return true
+end
 function Core:register(fields)
   local id=tostring(fields.id or ""):lower()
   if not id:match("^[a-z0-9_-]+$") then return false,"ID: letters, digits, - or _" end
