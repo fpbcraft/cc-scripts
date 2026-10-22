@@ -73,30 +73,50 @@ if not swapped then
   fail("Could not activate new version: "..tostring(swapErr))
 end
 clean("/fpb-factory.install-progress")
+-- This computer is dedicated to the Factory Manager: ensure it launches on
+-- every normal root-disk boot, even if another startup program existed.
+-- Preserve older startup programs as backups; do not accidentally run an old
+-- factory controller alongside the new one.
 local launcher="shell.run('/fpb-factory/main.lua')\n"
 local startup="/startup.lua"
+local previous="/startup"
+local function backupStartup(path,backupPath)
+  if not fs.exists(path) then return end
+  if fs.isDir and fs.isDir(path) then return end
+  if fs.exists(backupPath) then fs.delete(backupPath) end
+  fs.copy(path,backupPath)
+end
+-- An extensionless /startup file can shadow /startup.lua in CraftOS.
+if fs.exists(previous) and not (fs.isDir and fs.isDir(previous)) then
+  backupStartup(previous,"/startup.fpb-factory-backup")
+  fs.delete(previous)
+  print("Backed up older /startup entrypoint.")
+end
+local shouldWrite=true
 if fs.exists(startup) then
   local f=fs.open(startup,"r")
-  local previous=f and f.readAll() or ""
+  local current=f and f.readAll() or ""
   if f then f.close() end
-  if previous~=launcher then
-    local old="/startup.fpb-factory-backup.lua"
-    if not fs.exists(old) then fs.copy(startup,old) end
-    local legacy=previous:find("factory.lua",1,true) or
-                 previous:find("fpb_factory",1,true)
-    if legacy then
-      write(startup,launcher)
-      print("Replaced old factory startup; backed up previous startup.lua")
-    else
-      -- Respect an existing startup with potentially unrelated programs.
-      print("Existing startup.lua left unchanged.")
-      print("Run /fpb-factory/main.lua manually or update startup yourself.")
-    end
+  if current==launcher then
+    shouldWrite=false
+  else
+    backupStartup(startup,"/startup.fpb-factory-backup.lua")
+    print("Backed up previous startup.lua (will no longer run automatically).")
   end
-else
-  write(startup,launcher)
-  print("Configured startup.lua to launch the factory")
+end
+if shouldWrite then
+  local tempStartup="/startup.fpb-factory-next.lua"
+  write(tempStartup,launcher)
+  if fs.exists(startup) then fs.delete(startup) end
+  fs.move(tempStartup,startup)
+end
+print("Auto-start configured: /startup.lua -> /fpb-factory/main.lua")
+-- CraftOS may prefer boot scripts on a connected disk; warn explicitly.
+if settings and settings.get and settings.get("shell.allow_startup")==false then
+  print("WARNING: shell.allow_startup is disabled in CraftOS settings.")
+  print("Enable it and save settings for automatic startup.")
 end
 print("Install/update complete")
-print("Backup: "..backup)
-print("Run: /fpb-factory/main.lua")
+print("Previous install: "..backup)
+print("Run now: /fpb-factory/main.lua")
+print("Or reboot to launch Factory Manager automatically.")
