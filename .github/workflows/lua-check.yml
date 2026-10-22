@@ -19,3 +19,5 @@ jobs:
         run: lua5.3 tests/loader_test.lua
       - name: Peripheral discovery and telemetry tests
         run: lua5.3 tests/devices_test.lua
+      - name: Context-sensitive editor suggestions
+        run: lua5.3 tests/completions_test.lua
