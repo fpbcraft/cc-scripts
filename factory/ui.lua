@@ -667,7 +667,7 @@ function UI.run(core)
     label(panel,3,3,("LIVE GRAPHS  /  %d METRICS"):format(#metrics),C.cyan)
     local cols=(w>=84 and 3) or (w>=53 and 2) or 1
     local tileW=math.floor((w-4-(cols-1)*2)/cols)
-    local tileH=(h>=29 and 10) or 8
+    local tileH=(h>=29 and 10) or (h>=19 and 8) or 7
     local rows=math.max(1,math.floor((h-10)/(tileH+1)))
     local per=cols*rows
     local pages=math.max(1,math.ceil(#metrics/per))
