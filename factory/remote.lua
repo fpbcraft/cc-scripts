@@ -44,7 +44,8 @@ function Remote:save()
 end
 function Remote:paired(id)
   local p=self.pairs[id]
-  return p~=nil and p.ready==true and self:online(self.nodes[id])
+  return p~=nil and p.ready==true and self:online(self.nodes[id]) and
+    p.lastSecure~=nil and now()-p.lastSecure<12
 end
 function Remote:pair(id,code)
   id=tonumber(id)
@@ -91,6 +92,7 @@ function Remote:handleAck(sender,msg)
   self.pending[sender][msg.seq]=nil
   if msg.status=="ok" then
     pair.ready=true
+    pair.lastSecure=now()
     self.errors[sender]=nil
     if pending.action=="set" then
       self.outputs["remote:"..sender..":"..pending.target.."|"..pending.side]={
@@ -102,14 +104,23 @@ function Remote:handleAck(sender,msg)
   self.errors[sender]="Node rejected command: "..msg.status
   return false
 end
+function Remote:hasPending(name,side)
+  local id=tonumber(name:match("^remote:(%d+):"))
+  if not id then return false end
+  for _,p in pairs(self.pending[id] or {}) do
+    if p.action=="set" and p.target==name:match("^remote:%d+:(.+)$")
+       and p.side==side then return true end
+  end
+  return false
+end
 function Remote:state(name,side)
   local id=name:match("^remote:(%d+):")
   id=tonumber(id)
   if not id or not self:paired(id) then return nil end
   local output=self.outputs[name.."|"..side]
   if not output then return nil end
-  -- Do not show stale observed state after link loss.
-  if now()-output.at>22 then return nil end
+  -- Authenticated heartbeat verifies link health. Outputs only become
+  -- "observed" again after signed set acknowledgments on reconnect.
   return output.running
 end
 function Remote:control(name,side,on,polarity)
@@ -131,6 +142,18 @@ end
 function Remote:tick()
   if not self.opened then return end
   local t=now()
+  for id,pair in pairs(self.pairs) do
+    if pair.ready and pair.lastSecure and t-pair.lastSecure>=12 then
+      pair.ready=false
+      -- Old output acknowledgments may predate the node's watchdog cutoff.
+      -- They must not be reused as current observed machine state.
+      for key in pairs(self.outputs) do
+        if key:sub(1,#("remote:"..id..":"))=="remote:"..id..":" then
+          self.outputs[key]=nil
+        end
+      end
+    end
+  end
   if t-self.lastHeartbeat>=4 then
     self.lastHeartbeat=t
     for id,node in pairs(self.nodes) do
