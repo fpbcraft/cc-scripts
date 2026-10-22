@@ -96,7 +96,7 @@ function UI.run(core)
       if status then status.text=message end
     end
   end
-  local function goto(p)
+  local function navigateTo(p)
     page=p
     genericPage=1
     render()
@@ -147,7 +147,7 @@ function UI.run(core)
       local x=2+ix*(cellw+spacing)
       local y=5+iy*cellh
       button(panel,x,y,cellw,math.max(1,cellh-1),name,function()
-        goto(name)
+        navigateTo(name)
       end)
     end
   end
@@ -169,8 +169,8 @@ function UI.run(core)
     end
     label(panel,3,13,"Outputs ON: "..running,C.lime)
     if h>=24 then
-      button(panel,3,16,math.min(20,w-5),2,"SWITCHBOARD",function()goto("SWITCHBOARD")end)
-      button(panel,3,19,math.min(20,w-5),2,"INVENTORY",function()goto("INVENTORY")end)
+      button(panel,3,16,math.min(20,w-5),2,"SWITCHBOARD",function()navigateTo("SWITCHBOARD")end)
+      button(panel,3,19,math.min(20,w-5),2,"INVENTORY",function()navigateTo("INVENTORY")end)
     end
   end
   local function showInventory()
@@ -193,7 +193,7 @@ function UI.run(core)
     choose(panel,listing,invPage,per,function(item)
       selected=item
       quantity=math.min(64,item.count)
-      goto("ITEM")
+      navigateTo("ITEM")
     end,function(item)
       return short(item.displayName or item.name,w-18).."  x"..tostring(item.count)
     end)
@@ -202,7 +202,7 @@ function UI.run(core)
     label(panel,2,h-6,("Entries: %d   Sort: %s"):format(#listing,invSort),C.lightGray)
   end
   local function showItem()
-    if not selected then return goto("INVENTORY") end
+    if not selected then return navigateTo("INVENTORY") end
     label(panel,3,3,"PACKAGE ORDER",C.cyan)
     label(panel,3,5,selected.displayName or selected.name,C.white)
     label(panel,3,7,short(selected.name,w-6),C.lightGray)
@@ -229,7 +229,7 @@ function UI.run(core)
       end,"ITEM")
     end)
     button(panel,17,16,math.min(18,w-19),2,"SEND TO HUB",function()
-      goto("ORDER CONFIRM")
+      navigateTo("ORDER CONFIRM")
     end,C.orange)
   end
   local function showConfirmation()
@@ -240,9 +240,9 @@ function UI.run(core)
     button(panel,3,14,16,2,"CONFIRM",function()
       local ok,result=core:request(selected,quantity)
       notify(ok and ("Requested "..result.." items") or ("ERROR: "..result))
-      goto("INVENTORY")
+      navigateTo("INVENTORY")
     end,C.green)
-    button(panel,21,14,12,2,"CANCEL",function()goto("ITEM")end,C.red)
+    button(panel,21,14,12,2,"CANCEL",function()navigateTo("ITEM")end,C.red)
   end
   local function showSwitchboard()
     label(panel,3,3,"SWITCHBOARD  /  TAP TO TOGGLE",C.cyan)
@@ -257,7 +257,7 @@ function UI.run(core)
       local state=actual==nil and "?" or actual and "ON" or "OFF"
       local wide=math.max(10,w-24)
       button(panel,2,y,wide,1,short(m.name,wide-5).." ["..state.."]",function()
-        selectedMachine=m;goto("MACHINE")
+        selectedMachine=m;navigateTo("MACHINE")
       end,C.gray)
       button(panel,wide+3,y,math.min(18,w-wide-4),1,
         m.mode=="auto" and "AUTO" or actual and "TURN OFF" or "TURN ON",
@@ -278,7 +278,7 @@ function UI.run(core)
   end
   local function showMachine()
     local m=selectedMachine
-    if not m then return goto("SWITCHBOARD") end
+    if not m then return navigateTo("SWITCHBOARD") end
     label(panel,3,3,short(m.name,w-5),C.cyan)
     local state=core:actual(m)
     label(panel,3,5,"State: "..(state==nil and "UNKNOWN" or state and "ON" or "OFF"),
@@ -303,7 +303,7 @@ function UI.run(core)
       button(panel,31,16,12,2,"EDIT",function()
         editor={}
         for k,v in pairs(m) do editor[k]=v end
-        editMode="existing";editPage=1;goto("MACHINE EDIT")
+        editMode="existing";editPage=1;navigateTo("MACHINE EDIT")
       end)
     end
     if h>=25 then
@@ -357,14 +357,14 @@ function UI.run(core)
     end
     button(panel,3,h-4,11,1,"SAVE",function()
       local ok,err=core:register(editor)
-      if ok then notify("Machine saved");goto("MACHINES")
+      if ok then notify("Machine saved");navigateTo("MACHINES")
       else notify(err);render() end
     end,C.green)
     if editMode=="existing" then
       button(panel,16,h-4,11,1,"REMOVE",function()
         local ok,err=core:remove(editor.id)
         notify(ok and "Removed" or err)
-        if ok then goto("MACHINES") else render() end
+        if ok then navigateTo("MACHINES") else render() end
       end,C.red)
     end
 
@@ -373,19 +373,19 @@ function UI.run(core)
     label(panel,3,3,"REGISTERED MACHINES",C.cyan)
     local per=math.max(2,math.floor((h-11)/2))
     choose(panel,core.machines,genericPage,per,function(m)
-      selectedMachine=m;goto("MACHINE")
+      selectedMachine=m;navigateTo("MACHINE")
     end,function(m) return m.name.." ("..m.device..")" end)
     button(panel,3,h-4,13,1,"+ ADD",function()
       editor={id="",name="",device="computer",side="back",onSignal=true,
         stopAt=0,resumeBelow=0,product="",item=""}
-      editMode="new";editPage=1;goto("MACHINE EDIT")
+      editMode="new";editPage=1;navigateTo("MACHINE EDIT")
     end,C.green)
   end
   local function showRules()
     label(panel,3,3,"INVENTORY STOCK-BAND RULES",C.cyan)
     local per=math.max(2,math.floor((h-11)/2))
     choose(panel,core.machines,genericPage,per,function(m)
-      selectedMachine=m;goto("MACHINE")
+      selectedMachine=m;navigateTo("MACHINE")
     end,function(m)
       return short(m.name,w-24).." "..(m.mode=="auto" and "AUTO" or "MAN")
           .." "..m.stopAt.."/"..m.resumeBelow
@@ -427,7 +427,7 @@ function UI.run(core)
     label(panel,3,3,"CREATE: POWER GRID",C.cyan)
     local per=math.max(2,math.floor((h-11)/2))
     choose(panel,core.snapshot.power,genericPage,per,function(p)
-      selected=p;goto("POWER DETAIL")
+      selected=p;navigateTo("POWER DETAIL")
     end,function(p)
       return p.label.." "..short(p.name,w-30).." "..num(p.value).." "..p.unit
     end)
@@ -436,7 +436,7 @@ function UI.run(core)
     end
   end
   local function showPowerDetail()
-    if not selected then return goto("POWER GRID") end
+    if not selected then return navigateTo("POWER GRID") end
     label(panel,3,3,selected.label,C.cyan)
     label(panel,3,6,"Peripheral: "..selected.name)
     label(panel,3,8,"Value: "..num(selected.value).." "..selected.unit,C.lime)
@@ -448,13 +448,13 @@ function UI.run(core)
     label(panel,3,3,"PACKAGE REQUEST HISTORY",C.cyan)
     local per=math.max(2,math.floor((h-11)/2))
     choose(panel,core.orders,genericPage,per,function(order)
-      selected=order;goto("REQUEST DETAIL")
+      selected=order;navigateTo("REQUEST DETAIL")
     end,function(order)
       return short(order.item,w-25).." x"..order.quantity.." -> "..order.to
     end)
   end
   local function showRequestDetail()
-    if not selected then return goto("REQUESTS") end
+    if not selected then return navigateTo("REQUESTS") end
     label(panel,3,4,selected.item,C.cyan)
     label(panel,3,6,"Requested: "..selected.requested)
     label(panel,3,8,"Accepted: "..selected.quantity)
@@ -469,7 +469,7 @@ function UI.run(core)
     local per=math.max(2,math.floor((h-11)/2))
     choose(panel,names,genericPage,per,function(name)
       selected={name=name,kind=peripheral.getType(name)}
-      goto("PERIPHERAL DETAIL")
+      navigateTo("PERIPHERAL DETAIL")
     end,function(name) return name.." ("..tostring(peripheral.getType(name))..")" end)
     if core.snapshot.stockError then
       label(panel,3,h-6,short(core.snapshot.stockError,w-5),C.orange)
@@ -551,10 +551,10 @@ function UI.run(core)
       local cb=kb.callback
       local dest=kb.returnPage
       if cb then cb(result) end
-      goto(dest)
+      navigateTo(dest)
     end,C.green)
     button(panel,5+bw*3,y,bw,2,"CANCEL",function()
-      goto(kb.returnPage)
+      navigateTo(kb.returnPage)
     end)
   end
   function render()
@@ -565,12 +565,12 @@ function UI.run(core)
     panel:addLabel({x=2,y=1,width=w-3,text=short("FPBCRAFT / "..core.config.site,w-5),
       foreground=C.cyan})
     if page~="HOME" then
-      button(panel,2,2,8,1,"< HOME",function()goto("HOME")end,C.gray)
+      button(panel,2,2,8,1,"< HOME",function()navigateTo("HOME")end,C.gray)
       label(panel,12,2,page,C.yellow)
       if page=="ITEM" then
-        button(panel,w-11,2,10,1,"< STOCK",function()goto("INVENTORY")end,C.gray)
+        button(panel,w-11,2,10,1,"< STOCK",function()navigateTo("INVENTORY")end,C.gray)
       elseif page=="MACHINE" or page=="MACHINE EDIT" then
-        button(panel,w-11,2,10,1,"< LIST",function()goto("MACHINES")end,C.gray)
+        button(panel,w-11,2,10,1,"< LIST",function()navigateTo("MACHINES")end,C.gray)
       end
     end
     local actions={
