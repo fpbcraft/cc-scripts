@@ -35,7 +35,8 @@ fs={
     return {write=function(v) data[path]=v end,close=function() end}
   end,
 }
-os.epoch=function() return 1000000 end
+local clock=1000000
+os.epoch=function() return clock end
 local active={}
 redstone={
   setOutput=function(side,value) active["computer:"..side]=value end,
@@ -85,21 +86,39 @@ assert(core.config.hubAddress=="Hub")
 assert(core:register({
   id="iron",name="Iron Farm",device="redstone_relay_0",side="front",
   product="minecraft:iron_nugget",item="minecraft:iron_nugget",
-  stopAt=20,resumeBelow=10,mode="auto",onSignal=true
+  stopAt=20,resumeBelow=10,mode="auto",onSignal=true,
+  rateWindowSeconds=120
 }))
 local m=core.machines[1]
+assert(core:register({
+  id="fast",name="Fast Averaging",device="computer",side="left",
+  product="minecraft:iron_nugget",rateWindowSeconds=30
+}))
+local fast=core.machines[2]
 core:scan()
+assert(core.rates.iron==0 and core.rates.fast==0)
 assert(m.enabled==false)
 assert(core.snapshot.stress[1].used==500)
 assert(core.snapshot.speed[1].rpm==128)
 assert(core.snapshot.power[1].value==24)
+clock=clock+5000
 count=5
 core:scan()
 assert(m.enabled==true and active["relay:front"]==true,
   "Auto rule should resume below lower threshold")
+clock=clock+5000
 count=15
 core:scan()
+assert(core.rates.iron>0 and core.rates.iron<120,
+  "Smoothing should suppress per-sample spikes")
+assert(core.rates.fast>core.rates.iron,
+  "A shorter averaging period should be more responsive")
+local prevSlow=core.rates.iron
+clock=clock+5000
+core:scan()
+assert(core.rates.iron<prevSlow,"Rate must decay smoothly when idle")
 assert(m.enabled==true,"Hysteresis must not toggle in the middle band")
+clock=clock+5000
 count=30
 core:scan()
 assert(m.enabled==false and active["relay:front"]==false,
@@ -117,4 +136,14 @@ local invalid,message=core:register({
   stopAt=20,resumeBelow=21
 })
 assert(not invalid and message:find("threshold"))
+local rejected,why=core:register({
+  id="remote",name="Remote Motor",device="remote:13:redstone_relay_0",
+  side="left",rateWindowSeconds=120
+})
+assert(not rejected and why:find("telemetry"))
+local badWindow,reason=core:register({
+  id="bad",name="Bad averaging window",device="computer",
+  side="left",rateWindowSeconds=1
+})
+assert(not badWindow and reason:find("averaging"))
 print("Core tests passed")
