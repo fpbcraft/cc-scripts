@@ -75,6 +75,13 @@ function Core.new(root)
   self.config.refreshSeconds=math.max(2,math.min(30,self.config.refreshSeconds))
   local oldOrders=read("fpb_factory_orders.db") or {}
   self.orders=read(fs.combine(dir,"orders.db")) or oldOrders
+  for _,order in ipairs(self.orders) do
+    -- Convert the v2.1 order history schema without discarding existing data.
+    order.quantity=order.quantity or order.accepted or order.amount or 0
+    order.requested=order.requested or order.amount or order.quantity
+    order.to=order.to or order.address or self.config.hubAddress
+    order.status=order.status or "Previously requested"
+  end
   self.machines=read(fs.combine(dir,"machines.db")) or {}
   self.samples=read(fs.combine(dir,"samples.db")) or {}
   self.snapshot={stock={},stockError="Not scanned",stress={},speed={},power={}}
@@ -86,6 +93,7 @@ function Core.new(root)
   self.lastTick=0
   self.dirty=0
   self:save("config",self.config)
+  self:save("orders",self.orders)
   return self
 end
 function Core:save(key,value)
