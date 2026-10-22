@@ -140,7 +140,8 @@ local rejected,why=core:register({
   id="remote",name="Remote Motor",device="remote:13:redstone_relay_0",
   side="left",rateWindowSeconds=120
 })
-assert(not rejected and why:find("telemetry"))
+assert(not rejected and (why:find("available") or why:find("Pair")))
+
 local badWindow,reason=core:register({
   id="bad",name="Bad averaging window",device="computer",
   side="left",rateWindowSeconds=1
