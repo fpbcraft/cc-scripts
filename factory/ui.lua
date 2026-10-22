@@ -564,10 +564,18 @@ function UI.run(core)
     label(panel,3,3,short(r.label,w-6),C.cyan)
     label(panel,3,5,"Device: "..short(r.device,w-13),C.lightGray)
     label(panel,3,7,"Method: "..r.method.."()",C.lightGray)
-    label(panel,3,9,"Reading: "..short(tostring(v.value or "-").." "..r.unit,w-13),
+    local displayed=v.value
+    if displayed==nil then displayed="-" end
+    label(panel,3,9,"Reading: "..short(tostring(displayed).." "..r.unit,w-13),
       v.status=="online" and C.lime or C.orange)
     label(panel,3,11,"Status: "..tostring(v.status or "Pending"),C.lightGray)
     if v.warning then label(panel,3,12,"ALERT: "..v.warning,C.orange) end
+    if h<26 then
+      button(panel,3,13,math.min(22,w-6),1,"READING OPTIONS",function()
+        navigateTo("READING OPTIONS")
+      end)
+      return
+    end
     local width=math.min(17,math.floor((w-8)/2))
     button(panel,3,14,width,1,"RENAME",function()
       fieldInput("Reading label",r.label,false,function(value)
@@ -609,6 +617,45 @@ function UI.run(core)
         navigateTo("DELETE READING")
       end,C.red)
     end
+  end
+  local function showReadingOptions()
+    local r=core.devices:getReading(selectedReading)
+    if not r then return navigateTo("READINGS") end
+    label(panel,3,3,"READING OPTIONS: "..short(r.label,w-23),C.cyan)
+    local options={"RENAME","UNIT","TOGGLE GRAPH","TOGGLE POLL",
+      "WARN ABOVE","WARN BELOW","RELINK","REMOVE"}
+    local per=math.max(2,math.floor((h-11)/2))
+    choose(panel,options,genericPage,per,function(option)
+      if option=="RENAME" then
+        fieldInput("Reading label",r.label,false,function(value)
+          local ok,err=core.devices:update(r.id,{label=value})
+          notify(ok and "Saved" or err)
+        end,"READING")
+      elseif option=="UNIT" then
+        fieldInput("Unit",r.unit,false,function(value)
+          local ok,err=core.devices:update(r.id,{unit=value})
+          notify(ok and "Saved" or err)
+        end,"READING")
+      elseif option=="TOGGLE GRAPH" then
+        core.devices:update(r.id,{graph=not r.graph})
+        navigateTo("READING")
+      elseif option=="TOGGLE POLL" then
+        core.devices:update(r.id,{enabled=not r.enabled})
+        navigateTo("READING")
+      elseif option=="WARN ABOVE" or option=="WARN BELOW" then
+        local key=option=="WARN ABOVE" and "warnAbove" or "warnBelow"
+        fieldInput("Alert threshold (blank disables)",r[key] or "",true,function(value)
+          local change={}
+          change[key]=value=="" and false or tonumber(value)
+          local ok,err=core.devices:update(r.id,change)
+          notify(ok and "Saved" or err)
+        end,"READING")
+      elseif option=="RELINK" then
+        navigateTo("RELINK READING")
+      elseif option=="REMOVE" then
+        navigateTo("DELETE READING")
+      end
+    end,function(value) return value end)
   end
   local function showRelink()
     local r=core.devices:getReading(selectedReading)
@@ -798,6 +845,7 @@ function UI.run(core)
       RULES=showRules,GRAPHS=showGraphs,["GRAPH PICKER"]=showGraphPicker,
       DEVICES=showDevices,DEVICE=showDevice,
       ["DEVICE METHODS"]=showMethods,READINGS=showReadings,READING=showReading,
+      ["READING OPTIONS"]=showReadingOptions,
       ["RELINK READING"]=showRelink,["DELETE READING"]=showDeleteReading,
       ["POWER GRID"]=showPower,
       ["POWER DETAIL"]=showPowerDetail,REQUESTS=showRequests,
