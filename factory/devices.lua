@@ -258,7 +258,7 @@ function Devices:charts()
   for _,r in ipairs(self.readings) do
     if r.graph and r.enabled then
       local v=self.values[r.id]
-      if not v or not v.value or type(v.value)=="number" then
+      if not v or v.status~="online" or type(v.value)=="number" then
         out[#out+1]={id="sensor_"..r.id,label=r.label,unit=r.unit}
       end
     end
