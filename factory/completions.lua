@@ -8,19 +8,14 @@ local function offer(out,seen,value,display,kind)
   seen[value]=true
   out[#out+1]={value=value,label=display or value,kind=kind}
 end
-function M.candidates(kind,core)
+function M.candidates(kind,core,context)
   local out,seen={},{}
   if kind=="device" then
     offer(out,seen,"computer","computer (local redstone)")
     for _,entry in ipairs(core.devices and core.devices:list() or {}) do
-      if entry.online then
-        local types=entry.type=="redstone_relay" and " / relay" or
-          " / "..tostring(entry.type or "")
-        offer(out,seen,entry.name,(entry.alias or entry.name)..types)
+      if entry.online and entry.type=="redstone_relay" then
+        offer(out,seen,entry.name,(entry.alias or entry.name).." / relay")
       end
-    end
-    for _,name in ipairs(peripheral.getNames()) do
-      offer(out,seen,name,name)
     end
   elseif kind=="side" then
     for _,v in ipairs(SIDES) do offer(out,seen,v) end
@@ -42,7 +37,10 @@ function M.candidates(kind,core)
   elseif kind=="stopAt" or kind=="resumeBelow" or kind=="quantity" then
     local numbers={1,16,32,64,128,256,512,1024,2048,4096,8192}
     for _,n in ipairs(numbers) do
-      offer(out,seen,tostring(n))
+      if kind~="resumeBelow" or not context or
+         not tonumber(context.stopAt) or n<tonumber(context.stopAt) then
+        offer(out,seen,tostring(n))
+      end
     end
   elseif kind=="hubAddress" then
     offer(out,seen,core.config and core.config.hubAddress or "Hub")
@@ -62,8 +60,8 @@ function M.candidates(kind,core)
   end
   return out
 end
-function M.suggest(kind,typed,core,max)
-  local available=M.candidates(kind,core)
+function M.suggest(kind,typed,core,max,context)
+  local available=M.candidates(kind,core,context)
   local prefix,partial,all={}, {}, {}
   typed=tostring(typed or ""):lower()
   for _,entry in ipairs(available) do
