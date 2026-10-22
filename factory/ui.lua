@@ -71,6 +71,7 @@ function UI.run(core)
   local confirmAction=nil
   local editor={}
   local editMode="new"
+  local editPage=1
   local kb={value="",title="",returnPage="HOME",callback=nil,numeric=false}
   local render
   local function label(parent,x,y,value,color,width)
@@ -118,12 +119,16 @@ function UI.run(core)
     local controlsY=h-4
     if pageNumber>1 then
       button(target,2,controlsY,10,1,"< PREV",function()
-        genericPage=genericPage-1;render()
+        genericPage=genericPage-1
+        if page=="INVENTORY" then invPage=genericPage end
+        render()
       end)
     end
     if pageNumber<pages then
       button(target,w-11,controlsY,10,1,"NEXT >",function()
-        genericPage=genericPage+1;render()
+        genericPage=genericPage+1
+        if page=="INVENTORY" then invPage=genericPage end
+        render()
       end)
     end
   end
@@ -192,17 +197,6 @@ function UI.run(core)
     end)
     invPage=genericPage
     -- choose() updates genericPage in handlers; keep inventory page synchronized.
-    local pages=math.max(1,math.ceil(#listing/per))
-    if invPage>1 then
-      button(panel,13,h-4,9,1,"PAGE -",function()
-        invPage=invPage-1;render()
-      end)
-    end
-    if invPage<pages then
-      button(panel,w-23,h-4,9,1,"PAGE +",function()
-        invPage=invPage+1;render()
-      end)
-    end
     label(panel,2,h-6,("Entries: %d   Sort: %s"):format(#listing,invSort),C.lightGray)
   end
   local function showItem()
@@ -288,7 +282,7 @@ function UI.run(core)
       button(panel,31,16,12,2,"EDIT",function()
         editor={}
         for k,v in pairs(m) do editor[k]=v end
-        editMode="existing";goto("MACHINE EDIT")
+        editMode="existing";editPage=1;goto("MACHINE EDIT")
       end)
     end
     if h>=25 then
@@ -299,20 +293,39 @@ function UI.run(core)
     {"id","ID",false},{"name","NAME",false},{"device","RELAY / computer",false},
     {"side","SIDE",false},{"product","OUTPUT ITEM ID",false},
     {"item","RULE STOCK ITEM",false},{"stopAt","STOP AT",true},
-    {"resumeBelow","RESUME BELOW",true}
+    {"resumeBelow","RESUME BELOW",true},
+    {"onSignal","SIGNAL WHEN RUNNING (1=ON)",false}
   }
   local function showMachineEdit()
     label(panel,3,3,editMode=="new" and "REGISTER MACHINE" or "EDIT MACHINE",C.cyan)
     local per=math.max(2,math.floor((h-11)/2))
-    for i=1,math.min(#machineFields,per) do
-      local f=machineFields[i]
+    local pages=math.max(1,math.ceil(#machineFields/per))
+    editPage=math.min(editPage,pages)
+    for i=1,per do
+      local f=machineFields[(editPage-1)*per+i]
+      if not f then break end
       local y=5+(i-1)*2
       button(panel,3,y,w-6,1,f[2]..": "..short(editor[f[1]] or "",w-26),function()
-        local initial=editor[f[1]]
-        fieldInput(f[2],initial,f[3],function(value)
+        if f[1]=="onSignal" then
+          editor.onSignal=not (editor.onSignal==false)
+          render()
+          return
+        end
+        fieldInput(f[2],editor[f[1]],f[3],function(value)
           editor[f[1]]=f[3] and (tonumber(value) or 0) or value
         end,"MACHINE EDIT")
       end,C.gray)
+    end
+    label(panel,3,h-6,("Fields page %d/%d"):format(editPage,pages),C.lightGray)
+    if editPage>1 then
+      button(panel,w-24,h-4,9,1,"< FIELDS",function()
+        editPage=editPage-1;render()
+      end)
+    end
+    if editPage<pages then
+      button(panel,w-13,h-4,9,1,"FIELDS >",function()
+        editPage=editPage+1;render()
+      end)
     end
     button(panel,3,h-4,11,1,"SAVE",function()
       local ok,err=core:register(editor)
@@ -326,9 +339,7 @@ function UI.run(core)
         if ok then goto("MACHINES") else render() end
       end,C.red)
     end
-    if per<#machineFields then
-      label(panel,3,h-6,"More fields require a taller monitor",C.orange)
-    end
+
   end
   local function showMachines()
     label(panel,3,3,"REGISTERED MACHINES",C.cyan)
@@ -339,7 +350,7 @@ function UI.run(core)
     button(panel,3,h-4,13,1,"+ ADD",function()
       editor={id="",name="",device="computer",side="back",onSignal=true,
         stopAt=0,resumeBelow=0,product="",item=""}
-      editMode="new";goto("MACHINE EDIT")
+      editMode="new";editPage=1;goto("MACHINE EDIT")
     end,C.green)
   end
   local function showRules()
