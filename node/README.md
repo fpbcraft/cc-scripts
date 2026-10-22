@@ -29,6 +29,16 @@ The GUI updates its disk status automatically. If the floppy already contains a 
 
 The previous `/fpb-node/export_pairing.lua` script remains available as a command-line fallback, but is no longer necessary during routine use. Normal GUI exports do **not** restart or interrupt the remote-node controller.
 
+## Clicking buttons / choosing a display
+
+CC:Tweaked sends mouse clicks only from **Advanced Computers**. A regular Computer can display the same coloured button labels but cannot send `mouse_click` events. The remote GUI now handles:
+
+- **Advanced Computer:** click buttons in the computer terminal.
+- **Advanced Monitor attached to the remote computer:** the GUI automatically uses the monitor if it is at least 29 characters wide and 17 rows tall. Right-click its buttons; `monitor_touch` events are processed. A basic computer can run the node behind the Advanced Monitor.
+- **Regular Computer (no Advanced Monitor):** use the keyboard: **E** = Export, **J** = Eject, **K** = Show/Hide pairing key, **R** = Refresh, or **Tab** to select an action then **Enter** to activate it.
+
+The telemetry transmitter, signed-command listener and watchdog continue running while interacting with this screen. No separate exporter command is necessary.
+
 ## Remote control and recovery
 
 - The node accepts commands only from its paired Factory Manager and verifies HMAC-SHA256 signatures, acknowledgements, and sequence numbers.
