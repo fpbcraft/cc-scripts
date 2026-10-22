@@ -1,3 +1,4 @@
+package.path="./factory/?.lua;"..package.path
 -- Run with: lua tests/core_test.lua
 -- This test uses fake Create/CC peripherals without loading Minecraft.
 local function serialize(v)
