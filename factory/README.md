@@ -11,7 +11,7 @@ wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install.lua
 ```
 
 Repeat the same command to update. The installer:
-1. Downloads the core, peripheral registry, Basalt UI, and launcher into `/fpb-factory.next`.
+1. Downloads the core, peripheral registry, autocomplete engine, Basalt UI, and launcher into `/fpb-factory.next`.
 2. Installs Basalt 2.5 (minified) alongside the application.
 3. Preserves `/fpb-factory/data`, retaining configured machines, graphs, settings, and request history.
 4. Backs up the previous installation to `/fpb-factory.backup` before swapping.
@@ -73,6 +73,34 @@ No source edits, mod-specific Lua module or reboot is needed for such scalar sen
 ### Adding a remote Redstone Relay as a machine
 
 The **Devices** page identifies attached `redstone_relay` peripherals. Select one and tap **Register as Machine**. The machine editor starts with the correct relay name. Configure the redstone face, signal polarity, and optionally the Create stock item/stop-resume thresholds. Then use the **Switchboard** to test manual control before enabling Auto. This requires the physical override and safe wiring described below.
+
+## Keyboard, autocomplete and clipboard
+
+Every text/numeric field now supports **both** modes without changing the factory application:
+
+- **Touchscreen:** tap the original field to open a keypad. The editor shows tappable matching suggestions; select one to fill the field. Use BACKSPACE, CLEAR, COPY, PASTE, DONE or CANCEL.
+- **Physical keyboard:** open the computer's GUI while the keypad is shown on the Advanced Monitor. The computer displays a synchronized Basalt text input. Type as normal, press **Enter** to apply, or paste text using **Ctrl+V** (**⌘V** on macOS when the Minecraft client maps that shortcut). Monitor taps and computer edits share the current field value.
+- **Copy/Paste:** COPY and PASTE buttons on both displays operate on an **in-application clipboard**, retained while the Factory Manager runs, across different fields. **This does not read or write the operating system clipboard** from a touch event: CC:Tweaked exposes incoming paste events, not native clipboard contents on monitors. For external clipboard text, focus the computer input and use native paste.
+
+Valid-value suggestions (when the game exposes the necessary data):
+- **Relay / computer:** `computer` or online wired Redstone Relay names (excluding unrelated gauges).
+- **Side:** `top`, `bottom`, `left`, `right`, `front`, `back`.
+- **Output item / rule stock item:** actual item IDs and display names in the connected Stock Ticker; this is not a full registry of every modded item.
+- **Inventory search:** current stock display names.
+- **Order quantity / rule stock thresholds:** common numeric presets. Resume thresholds are filtered below the configured stop threshold.
+- **Hub address:** current setting and previously used destinations; Create does not expose an authoritative list of every valid package destination.
+
+Suggestions never automatically change the saved value: choosing one fills the editor, and **DONE/Enter** commits it. You can always type a custom value.
+
+## Graph axes and readouts
+
+PixelGraph displays each numerical series in a **solid colour**. Graphs now show:
+- Labeled **Y-axis** with the actual unit, numeric ticks and scale that includes negative data when necessary
+- **X-axis** showing the elapsed time window with start, midpoint and **NOW** tick labels
+- **Latest** measured value, plus minimum, average, and maximum values for the visible sample window
+- An explicit **NO NUMERIC DATA** message when the selected sensor has not returned measurements
+
+Values are rounded and compacted for readability on Advanced Monitors; the persisted telemetry remains numerical.
 
 ## Set up the andesite farm
 
