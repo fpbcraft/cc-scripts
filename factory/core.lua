@@ -71,8 +71,10 @@ function Core.new(root)
     refreshSeconds=tonumber(cfg.refreshSeconds or old.refreshSeconds) or 5,
     maxOrder=tonumber(cfg.maxOrder or old.maxOrder) or 4096,
     textScale=tonumber(cfg.textScale or old.textScale) or 0.5,
+    rateWindowSeconds=tonumber(cfg.rateWindowSeconds) or 120,
   }
   self.config.refreshSeconds=math.max(2,math.min(30,self.config.refreshSeconds))
+  self.config.rateWindowSeconds=math.max(15,math.min(900,self.config.rateWindowSeconds))
   local oldOrders=read("fpb_factory_orders.db") or {}
   self.orders=read(fs.combine(dir,"orders.db")) or oldOrders
   for _,order in ipairs(self.orders) do
@@ -91,6 +93,7 @@ function Core.new(root)
   self.prevStock=nil
   self.prevTime=nil
   self.rates={}
+  self.rateState={}
   self.states={}
   self.errors={}
   self.lastTick=0
@@ -110,6 +113,9 @@ function Core:configure(fields)
   if fields.refreshSeconds then
     self.config.refreshSeconds=math.max(2,math.min(30,tonumber(fields.refreshSeconds) or 5))
   end
+  if fields.rateWindowSeconds then
+    self.config.rateWindowSeconds=math.max(15,math.min(900,tonumber(fields.rateWindowSeconds) or 120))
+  end
   self:save("config",self.config)
 end
 function Core:register(fields)
@@ -118,7 +124,18 @@ function Core:register(fields)
   local side=tostring(fields.side or "")
   if not validSide(side) then return false,"Invalid side" end
   local device=tostring(fields.device or "")
+  if device:sub(1,7)=="remote:" then
+    return false,"Remote nodes currently provide telemetry only"
+  end
   if device=="" then return false,"Specify computer or relay peripheral name" end
+  if device~="computer" and (not peripheral.isPresent(device)
+    or peripheral.getType(device)~="redstone_relay") then
+    return false,"Choose a connected local Redstone Relay"
+  end
+  local rateWindow=tonumber(fields.rateWindowSeconds) or self.config.rateWindowSeconds
+  if rateWindow<15 or rateWindow>900 or rateWindow%1~=0 then
+    return false,"Rate averaging must be 15-900 seconds"
+  end
   local stop=tonumber(fields.stopAt) or 0
   local resume=tonumber(fields.resumeBelow) or 0
   if stop<0 or resume<0 or (stop>0 and resume>=stop) then
@@ -135,7 +152,8 @@ function Core:register(fields)
     enabled=false, -- fail off following application restart
     item=tostring(fields.item or ""),
     stopAt=stop,resumeBelow=resume,
-    product=tostring(fields.product or "")
+    product=tostring(fields.product or ""),
+    rateWindowSeconds=rateWindow
   }
   if previous then
     machine.enabled=self.machines[previous].enabled or false
@@ -152,6 +170,8 @@ function Core:remove(id)
       local ok=self:setRunning(m,false,"remove")
       if not ok then return false,"Cannot turn output off; not removed" end
       table.remove(self.machines,i)
+      self.rateState[id]=nil
+      self.rates[id]=nil
       self:save("machines",self.machines)
       return true
     end
@@ -251,15 +271,33 @@ function Core:scan()
   end
   table.sort(snap.power,function(a,b) return a.name<b.name end)
   local ts=now()
-  if self.prevStock and not snap.stockError then
-    local dt=math.max(0.1,ts-(self.prevTime or ts))
+  if not snap.stockError then
     for _,m in ipairs(self.machines) do
-      if m.product~="" then
-        local delta=math.max(0,itemCount(snap.stock,m.product)-
-                               itemCount(self.prevStock,m.product))
-        self.rates[m.id]=delta/dt*60
+      if m.product and m.product~="" then
+        local count=itemCount(snap.stock,m.product)
+        local state=self.rateState[m.id]
+        local window=m.rateWindowSeconds or self.config.rateWindowSeconds
+        if state and state.product==m.product and
+           state.window==window and ts>state.timestamp then
+          local dt=ts-state.timestamp
+          local observed=math.max(0,count-state.count)/dt*60
+          -- Exponential time-weighted average of net stock gains.
+          -- A batched deposit changes the displayed rate gradually instead
+          -- of briefly producing a huge items/min reading.
+          local alpha=1-math.exp(-dt/window)
+          self.rates[m.id]=(self.rates[m.id] or 0)+alpha*
+            (observed-(self.rates[m.id] or 0))
+        else
+          self.rates[m.id]=0
+        end
+        self.rateState[m.id]={
+          count=count,timestamp=ts,product=m.product,window=window
+        }
       end
     end
+  else
+    -- Never derive rates across an unobserved inventory outage.
+    self.rateState={}
   end
   self.prevStock=snap.stockError and nil or snap.stock
   self.prevTime=ts
@@ -280,7 +318,9 @@ function Core:scan()
     if entry.value and point[entry.key]==nil then point[entry.key]=entry.value end
   end
   for _,m in ipairs(self.machines) do
-    point["rate_"..m.id]=self.rates[m.id]
+    if m.product and m.product~="" then
+      point["rate_"..m.id]=self.rates[m.id]
+    end
   end
   -- User-configured scalar peripheral readings require no mod-specific code.
   -- Each keeps a stable internal key, even if the user later renames it.
