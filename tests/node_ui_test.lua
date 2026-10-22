@@ -83,4 +83,40 @@ view:handle("key",keys.k)
 assert(view.showKey)
 view:handle("key",keys.e)
 assert(called==2)
+-- Basic computers do not emit mouse_click; keyboard E and Enter still work.
+keys.j=36;keys.tab=15;keys.enter=28;keys.numPadEnter=156
+local before=called
+view:handle("key",keys.e)
+assert(called==before+1)
+view.focus=1
+view:handle("key",keys.enter)
+assert(called==before+2)
+-- An attached Advanced Monitor generates monitor_touch(side,x,y).
+local screen={
+  isColor=function()return true end,
+  getSize=function()return 51,24 end,
+  setCursorPos=function()end,setBackgroundColor=function()end,
+  setTextColor=function()end,clear=function()end,clearLine=function()end,
+  write=function()end
+}
+peripheral.getNames=function()return {"left","back"}end
+peripheral.getType=function(name)
+  return name=="back" and "monitor" or "drive"
+end
+peripheral.wrap=function(name)
+  return name=="back" and screen or nil
+end
+view:selectDisplay()
+assert(view.monitorName=="back")
+view:draw()
+local action
+for _,b in ipairs(view.buttons) do
+  if b.id=="export" then action=b;break end
+end
+assert(action)
+before=called
+view:handle("monitor_touch","left",action.x,action.y)
+assert(called==before,"Touches on a different monitor must be ignored")
+view:handle("monitor_touch","back",action.x,action.y)
+assert(called==before+1,"Advanced Monitor touches must activate buttons")
 print("Node pairing disk and GUI tests passed")
