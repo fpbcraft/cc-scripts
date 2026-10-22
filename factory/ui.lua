@@ -575,12 +575,15 @@ function UI.run(core)
       if ymin==ymax then ymax=ymin+step end
     end
     label(panel,2,6,"Y: "..(metric[3] or ""),C.lightGray,9)
-    -- Axis tick labels, from maximum at the top to minimum at the bottom.
+    -- Full Y-axis, then marked numeric ticks at five evenly-spaced levels.
+    for yy=chartY,chartY+chartH-1 do
+      label(panel,10,yy,"|",C.gray,1)
+    end
     for j=0,4 do
       local yy=chartY+math.floor(j*(chartH-1)/4)
       local tick=ymax-(ymax-ymin)*j/4
       label(panel,2,yy,graphNumber(tick),C.lightGray,8)
-      label(panel,10,yy,"|",C.gray,1)
+      label(panel,10,yy,"+",C.lightGray,1)
     end
     local chart=panel:addPixelGraph({
       x=chartX,y=chartY,width=chartW,height=chartH,
@@ -595,10 +598,11 @@ function UI.run(core)
     end
     local axisY=chartY+chartH
     if axisY<h-3 then
-      label(panel,10,axisY,"+",C.gray,1)
-      label(panel,chartX,axisY,"^",C.lightGray,1)
-      label(panel,chartX+math.floor(chartW/2),axisY,"^",C.lightGray,1)
-      label(panel,chartX+chartW-1,axisY,"^",C.lightGray,1)
+      label(panel,10,axisY,"+",C.lightGray,1)
+      label(panel,chartX,axisY,string.rep("-",chartW),C.gray,chartW)
+      label(panel,chartX,axisY,"+",C.lightGray,1)
+      label(panel,chartX+math.floor(chartW/2),axisY,"+",C.lightGray,1)
+      label(panel,chartX+chartW-1,axisY,"+",C.lightGray,1)
       local t1=core.samples[first] and core.samples[first].time
       local t2=core.samples[#core.samples] and core.samples[#core.samples].time
       local seconds=type(t1)=="number" and type(t2)=="number" and
