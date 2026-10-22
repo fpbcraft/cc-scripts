@@ -7,12 +7,12 @@ local core={
 local modules={
   core={new=function(dir)
     assert(dir=="factory","unexpected module data directory: "..tostring(dir))
-    loaded.core=true
+    loaded.created=true
     return core
   end},
   ui={run=function(actual)
     assert(actual==core)
-    loaded.ui=true
+    loaded.ran=true
   end},
 }
 local env={
@@ -30,5 +30,5 @@ local env={
 setmetatable(env,{__index=_G})
 local chunk=assert(loadfile("factory/main.lua","t",env))
 chunk()
-assert(loaded.core==1 and loaded.ui==1 and loaded.shutdown)
+assert(loaded.core==1 and loaded.ui==1 and loaded.created and loaded.ran and loaded.shutdown)
 print("CraftOS module loader test passed")
