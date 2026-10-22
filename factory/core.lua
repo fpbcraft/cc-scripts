@@ -82,7 +82,9 @@ function Core.new(root)
     order.to=order.to or order.address or self.config.hubAddress
     order.status=order.status or "Previously requested"
   end
+  self.remote=require("remote").new()
   self.devices=require("devices").new(dir)
+  self.devices.remote=self.remote
   self.machines=read(fs.combine(dir,"machines.db")) or {}
   self.samples=read(fs.combine(dir,"samples.db")) or {}
   self.snapshot={stock={},stockError="Not scanned",stress={},speed={},power={}}
