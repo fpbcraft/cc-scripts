@@ -4,22 +4,20 @@ A modular touchscreen controller for CC:Tweaked + Create + Create: Power Grid on
 
 ## One-command installation / updates
 
-**When this repository is publicly downloadable**, run on the CC:Tweaked computer:
+Run this command on the CC:Tweaked computer:
 
 ```sh
 wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install.lua
 ```
 
 Repeat the same command to update. The installer:
-1. Downloads the core, Basalt UI, and launcher into `/fpb-factory.next`.
+1. Downloads the core, peripheral registry, autocomplete engine, remote-node listener, Basalt UI, and launcher into `/fpb-factory.next`.
 2. Installs Basalt 2.5 (minified) alongside the application.
 3. Preserves `/fpb-factory/data`, retaining configured machines, graphs, settings, and request history.
 4. Backs up the previous installation to `/fpb-factory.backup` before swapping.
 5. **Always installs `/startup.lua`** to launch `/fpb-factory/main.lua` automatically on boot. Existing `/startup.lua` or extensionless `/startup` files are backed up under `/startup.fpb-factory-backup*` and no longer run automatically. This computer is dedicated to the factory manager.
 
 **Reboot to launch the manager automatically.** You can also run `/fpb-factory/main.lua` immediately. CraftOS must have `shell.allow_startup` enabled; bootable programs on attached disks may take precedence over root startup scripts. Disconnect boot disks when using this dedicated controller.
-
-**Important:** The GitHub repository currently is **private**. Anonymous `wget` requests to `raw.githubusercontent.com` will return 404. You must either make the repository public, or publish a public, static distribution of these files and point the installer at that endpoint. The repo does *not* need to be public if you use a separate public distribution host. Don't put a GitHub personal access token in a ComputerCraft command or script.
 
 For a feature branch preview, the installer accepts a Git ref as its first argument. Only use this with a trusted public download endpoint.
 
@@ -43,13 +41,78 @@ The dashboard finds the first connected monitor by name (sorted alphabetically).
 - **Switchboard:** all configured production units with observed redstone output state and direct manual ON/OFF buttons.
 - **Machines:** register and edit machines, configure actuator sides and outputs.
 - **Rules:** list automation policies and open machine configuration.
-- **Graphs:** Basalt PixelGraph, real solid-colour plots of kinetic load, RPM, stock and Power Grid readings.
+- **Graphs:** responsive paginated multi-graph dashboard, solid-colour PixelGraph plots with labeled axes/ticks and values; tap **Expand** on a tile for a detailed full-screen view.
+- **Overview:** small live telemetry graphs next to operational status when the monitor has enough space.
+- **Machine details:** production-rate mini graph (using net Stock Ticker changes); select it to open the detailed view.
+- **Devices:** automatically discover wired and adjacent peripherals, rename each device, list supported read-only methods, register a sensor or set up a Redstone Relay as a controllable machine.
+- **Readings:** browse configured scalar telemetry, set labels/units, enable graphs, set upper/lower warning thresholds, suspend polling, and relink after a device is replaced.
 - **Power Grid:** native voltage, current, power, energy, battery and generator clutch peripheral readings.
 - **Requests:** history of accepted Create package requests, NOT guaranteed deliveries.
 - **Diagnostics:** attached peripherals and exposed methods.
 - **Settings:** factory name, Hub address and sample frequency.
 
 A touchscreen keyboard with CLEAR, BACKSPACE, and a separate Done action is included. Keyboard pages are available if the monitor is too small to display all characters simultaneously.
+
+## Add a new sensor without editing Lua
+
+1. Attach the new sensor/entity to the computer using **Wired Modems and Networking Cable**. Right-click its modem so CC:Tweaked attaches the peripheral.
+2. Open **Devices** in Factory Manager. The new peripheral appears on the next refresh (or tap **Rescan**), with its CC:Tweaked network name and type.
+3. Tap the device and **Rename** it to a friendly name, e.g. `Boiler Room / Battery A`.
+4. Tap **Add Reading**. The manager lists recognized, zero-argument read methods from `peripheral.getMethods()`. Select a trustworthy method, for example `getStress`, `voltage`, `getSpeed`, or `getValue`.
+5. In **Readings**, choose the new reading and optionally give it a meaningful label, set units, toggle graphing, or add upper/lower warning limits.
+6. Go to **Graphs → Change Graph** and select the newly added reading.
+
+No source edits, mod-specific Lua module or reboot is needed for such scalar sensors. The device inventory and configured readings are persisted in `/fpb-factory/data/devices.db` and survive automatic updates. A disconnected sensor stays listed as **offline** instead of disappearing and losing its configuration. If you replace it, open its Reading page and choose **Relink**, which only offers online peripherals of the same declared type exposing the same method.
+
+**Important limitations:**
+- This version polls explicitly selected, no-argument getters returning a **number, string or boolean**. Some getters may require an argument or return a table; those show as unavailable and require a dedicated adapter in a future release.
+- Read method names starting with `get`, `is`, or `has` are candidates, but the name itself does not guarantee they are side-effect free; choose methods belonging to trustworthy mods. No arbitrary setters or mutating methods run automatically.
+- Graphs can use numeric readings only; textual and boolean readings remain visible on their details screen.
+- If wired names are reassigned after rebuilding a cable network, use **Relink**. The manager does not silently reassociate peripherals merely because they share a type.
+- Up to **48** custom readings are supported, with polling at the configured refresh interval. Very large inventories/expensive getters should use purpose-built adapters, not generic method polling.
+- **Alerts** display warning states only; they do **not** issue commands or stop machines. Stock rules remain managed through **Machines** and **Rules**, and machine controls must be explicitly configured.
+
+### Adding a remote Redstone Relay as a machine
+
+The **Devices** page identifies attached `redstone_relay` peripherals. Select one and tap **Register as Machine**. The machine editor starts with the correct relay name. Configure the redstone face, signal polarity, and optionally the Create stock item/stop-resume thresholds. Then use the **Switchboard** to test manual control before enabling Auto. This requires the physical override and safe wiring described below.
+
+## Remote factories / wireless nodes
+
+You can install a small **FPBCRAFT Remote Node** on any distant CC:Tweaked computer. It attaches to local wired peripherals, automatically broadcasts their scalar telemetry over Wireless or Ender Modems, and reconnects after restart.
+
+The Factory Manager requires its own Wireless/Ender Modem. It discovers the broadcasts automatically and lists sensors under **Devices** alongside locally wired peripherals, with persistent friendly names, graph options and warning thresholds. Nodes expire from the live online list after about 22 seconds without an update.
+
+**Remote control is not enabled:** nodes publish read-only telemetry; network commands cannot turn machinery on/off. Rednet messages are not authenticated, so writing to machinery over that channel will need a separate pairing/security mechanism.
+
+[Complete setup and installation instructions](../node/README.md), including the one-command installer for each node.
+
+## Keyboard, autocomplete and clipboard
+
+Every text/numeric field now supports **both** modes without changing the factory application:
+
+- **Touchscreen:** tap the original field to open a keypad. The editor shows tappable matching suggestions; select one to fill the field. Use BACKSPACE, CLEAR, COPY, PASTE, DONE or CANCEL.
+- **Physical keyboard:** open the computer's GUI while the keypad is shown on the Advanced Monitor. The computer displays a synchronized Basalt text input. Type as normal, press **Enter** to apply, or paste text using **Ctrl+V** (**⌘V** on macOS when the Minecraft client maps that shortcut). Monitor taps and computer edits share the current field value.
+- **Copy/Paste:** COPY and PASTE buttons on both displays operate on an **in-application clipboard**, retained while the Factory Manager runs, across different fields. **This does not read or write the operating system clipboard** from a touch event: CC:Tweaked exposes incoming paste events, not native clipboard contents on monitors. For external clipboard text, focus the computer input and use native paste.
+
+Valid-value suggestions (when the game exposes the necessary data):
+- **Relay / computer:** `computer` or online wired Redstone Relay names (excluding unrelated gauges).
+- **Side:** `top`, `bottom`, `left`, `right`, `front`, `back`.
+- **Output item / rule stock item:** actual item IDs and display names in the connected Stock Ticker; this is not a full registry of every modded item.
+- **Inventory search:** current stock display names.
+- **Order quantity / rule stock thresholds:** common numeric presets. Resume thresholds are filtered below the configured stop threshold.
+- **Hub address:** current setting and previously used destinations; Create does not expose an authoritative list of every valid package destination.
+
+Suggestions never automatically change the saved value: choosing one fills the editor, and **DONE/Enter** commits it. You can always type a custom value.
+
+## Graph axes and readouts
+
+PixelGraph displays each numerical series in a **solid colour**. Graphs now show:
+- Labeled **Y-axis** with the actual unit, numeric ticks and scale that includes negative data when necessary
+- **X-axis** showing the elapsed time window with start, midpoint and **NOW** tick labels
+- **Latest** measured value, plus minimum, average, and maximum values for the visible sample window
+- An explicit **NO NUMERIC DATA** message when the selected sensor has not returned measurements
+
+Values are rounded and compacted for readability on Advanced Monitors; the persisted telemetry remains numerical.
 
 ## Set up the andesite farm
 
@@ -108,3 +171,21 @@ lua5.3 tests/core_test.lua
 ```
 
 The CI workflow runs syntax checks and mocked core rule tests. Real in-game Basalt and peripheral integration should be validated before using unattended machine control.
+
+## Overview charts and production-rate averaging
+
+The Overview now displays compact charts below the status summary on monitors at least 32 characters wide and 27 rows tall. On wider or taller monitors it automatically shows more charts; tap a chart to expand it.
+
+The estimated production rate is now smoothed using an exponential time-weighted average. Its default period is 120 seconds. Adjust per machine under Machines > Edit > Rate Avg Seconds (15 to 900 seconds), or change the default for newly registered machines in Settings > Rate Average. Shorter periods react more quickly, while longer periods reduce batch-delivery spikes. Historical spike-based rate values are excluded from the new chart history.
+
+Rates remain based on net Stock Ticker changes, not exact per-machine production. Consumers and other producers sharing the same item can affect the estimate.
+
+**Wireless-node controls:** Remote nodes are read-only and are therefore not suggested as machine actuators. Machine control currently requires the local computer's redstone outputs or a wired Redstone Relay. Remote nodes may still supply sensor readings and graphs; adding wireless actuation will require a separate trusted control mechanism.
+
+## Graph visibility and quick averaging-range controls
+
+- **Power Grid graphs appear only when an attached Power Grid peripheral returns a finite numeric value.** Gauges without data no longer occupy tiles in the graph dashboard or picker. A valid zero is still displayed as data.
+- **Rate averaging can be adjusted directly on each Machine screen or its expanded rate graph.** Presets: **30 seconds, 1 minute, 2 minutes, 5 minutes, 10 minutes**. The selected preset is highlighted and saved to the individual machine. Custom values from 15 to 900 seconds remain configurable via **Machines > Edit > Rate Avg Seconds**.
+- This controls the time constant for the existing exponentially smoothed net-stock-gain rate, not the graph's X-axis history range. Changing the rate time constant clears that machine's previous rate graph samples to avoid showing mixed averaging periods; other saved telemetry stays intact.
+- The default rate averaging period under **Settings > Rate Average** applies to newly created machines. Existing machines keep their chosen values.
+

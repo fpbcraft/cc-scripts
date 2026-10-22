@@ -71,8 +71,11 @@ function Core.new(root)
     refreshSeconds=tonumber(cfg.refreshSeconds or old.refreshSeconds) or 5,
     maxOrder=tonumber(cfg.maxOrder or old.maxOrder) or 4096,
     textScale=tonumber(cfg.textScale or old.textScale) or 0.5,
+    rateWindowSeconds=tonumber(cfg.rateWindowSeconds) or 120,
+    rateEstimatorVersion=tonumber(cfg.rateEstimatorVersion) or 1,
   }
   self.config.refreshSeconds=math.max(2,math.min(30,self.config.refreshSeconds))
+  self.config.rateWindowSeconds=math.max(15,math.min(900,self.config.rateWindowSeconds))
   local oldOrders=read("fpb_factory_orders.db") or {}
   self.orders=read(fs.combine(dir,"orders.db")) or oldOrders
   for _,order in ipairs(self.orders) do
@@ -82,12 +85,29 @@ function Core.new(root)
     order.to=order.to or order.address or self.config.hubAddress
     order.status=order.status or "Previously requested"
   end
+  self.remote=require("remote").new(dir)
+  self.devices=require("devices").new(dir)
+  self.devices.remote=self.remote
   self.machines=read(fs.combine(dir,"machines.db")) or {}
   self.samples=read(fs.combine(dir,"samples.db")) or {}
+  if self.config.rateEstimatorVersion<2 then
+    -- Legacy per-poll spikes are not comparable to smoothed rate estimates.
+    -- Keep the rest of historical telemetry without graphing stale spikes.
+    for _,sample in ipairs(self.samples) do
+      for key in pairs(sample) do
+        if type(key)=="string" and key:sub(1,5)=="rate_" then
+          sample[key]=nil
+        end
+      end
+    end
+    self.config.rateEstimatorVersion=2
+    self:save("samples",self.samples)
+  end
   self.snapshot={stock={},stockError="Not scanned",stress={},speed={},power={}}
   self.prevStock=nil
   self.prevTime=nil
   self.rates={}
+  self.rateState={}
   self.states={}
   self.errors={}
   self.lastTick=0
@@ -107,7 +127,32 @@ function Core:configure(fields)
   if fields.refreshSeconds then
     self.config.refreshSeconds=math.max(2,math.min(30,tonumber(fields.refreshSeconds) or 5))
   end
+  if fields.rateWindowSeconds then
+    self.config.rateWindowSeconds=math.max(15,math.min(900,tonumber(fields.rateWindowSeconds) or 120))
+  end
   self:save("config",self.config)
+end
+function Core:setRateWindow(machine,seconds)
+  seconds=tonumber(seconds)
+  if not seconds or seconds%1~=0 or seconds<15 or seconds>900 then
+    return false,"Averaging range must be 15-900 seconds"
+  end
+  local tracked=false
+  for _,m in ipairs(self.machines) do
+    if m==machine then tracked=true;break end
+  end
+  if not tracked then return false,"Unknown machine" end
+  if machine.rateWindowSeconds==seconds then return true end
+  machine.rateWindowSeconds=seconds
+  -- Previous samples used a different averaging period: remove only this
+  -- machine's obsolete rate history to prevent misleading mixed curves.
+  self.rateState[machine.id]=nil
+  self.rates[machine.id]=0
+  local key="rate_"..machine.id
+  for _,sample in ipairs(self.samples) do sample[key]=nil end
+  self:save("machines",self.machines)
+  self:save("samples",self.samples)
+  return true
 end
 function Core:register(fields)
   local id=tostring(fields.id or ""):lower()
@@ -116,6 +161,23 @@ function Core:register(fields)
   if not validSide(side) then return false,"Invalid side" end
   local device=tostring(fields.device or "")
   if device=="" then return false,"Specify computer or relay peripheral name" end
+  if device:sub(1,7)=="remote:" then
+    local remote=self.remote:find(device)
+    if not remote or (remote.type~="remote_computer" and
+      remote.type~="redstone_relay") then
+      return false,"Remote node/relay is not available"
+    end
+    if not self.remote:paired(remote.node) then
+      return false,"Pair the remote node in Devices first"
+    end
+  elseif device~="computer" and (not peripheral.isPresent(device)
+    or peripheral.getType(device)~="redstone_relay") then
+    return false,"Choose a connected wired Redstone Relay"
+  end
+  local rateWindow=tonumber(fields.rateWindowSeconds) or self.config.rateWindowSeconds
+  if rateWindow<15 or rateWindow>900 or rateWindow%1~=0 then
+    return false,"Rate averaging must be 15-900 seconds"
+  end
   local stop=tonumber(fields.stopAt) or 0
   local resume=tonumber(fields.resumeBelow) or 0
   if stop<0 or resume<0 or (stop>0 and resume>=stop) then
@@ -132,7 +194,8 @@ function Core:register(fields)
     enabled=false, -- fail off following application restart
     item=tostring(fields.item or ""),
     stopAt=stop,resumeBelow=resume,
-    product=tostring(fields.product or "")
+    product=tostring(fields.product or ""),
+    rateWindowSeconds=rateWindow
   }
   if previous then
     machine.enabled=self.machines[previous].enabled or false
@@ -149,6 +212,8 @@ function Core:remove(id)
       local ok=self:setRunning(m,false,"remove")
       if not ok then return false,"Cannot turn output off; not removed" end
       table.remove(self.machines,i)
+      self.rateState[id]=nil
+      self.rates[id]=nil
       self:save("machines",self.machines)
       return true
     end
@@ -162,6 +227,19 @@ function Core:device(m)
   return peripheral.wrap(m.device)
 end
 function Core:setRunning(m,run,why)
+  if m.device:sub(1,7)=="remote:" then
+    local ok,err=self.remote:control(m.device,m.side,run,m.onSignal)
+    if not ok then
+      self.errors[m.id]=err
+      return false,err
+    end
+    m.enabled=run
+    self.states[m.id]={running=run,reason=why or "operator",
+      time=now(),pending=true}
+    self.errors[m.id]=nil
+    self:save("machines",self.machines)
+    return true,"Remote command sent; awaiting signed acknowledgment"
+  end
   local dev=self:device(m)
   if not dev then
     self.errors[m.id]="Relay offline: "..m.device
@@ -180,6 +258,9 @@ function Core:setRunning(m,run,why)
   return true
 end
 function Core:actual(m)
+  if m.device:sub(1,7)=="remote:" then
+    return self.remote:state(m.device,m.side)
+  end
   local dev=self:device(m)
   if not dev then return nil end
   local val=safe(dev,"getOutput",m.side)
@@ -207,10 +288,26 @@ function Core:evaluate(m)
   local desired=m.enabled
   if n>=m.stopAt then desired=false
   elseif n<=m.resumeBelow then desired=true end
-  if desired~=m.enabled then self:setRunning(m,desired,"Stock "..n) end
+  if desired~=m.enabled then
+    self:setRunning(m,desired,"Stock "..n)
+  elseif m.device:sub(1,7)=="remote:" and desired and
+    self.remote:state(m.device,m.side)==nil then
+    -- Auto mode only: reassert the inventory rule after reconnect.
+    -- The remote node will have entered its safe OFF state after a timeout.
+    local id=tonumber(m.device:match("^remote:(%d+):"))
+    if id and self.remote:paired(id) and
+       not self.remote:hasPending(m.device,m.side) then
+      self:setRunning(m,desired,"Auto recovery")
+    end
+  end
 end
 function Core:toggle(m)
   if m.mode~="manual" then return false,"Set Manual mode first" end
+  if m.device:sub(1,7)=="remote:" and self:actual(m)==nil then
+    -- Unknown state after wireless interruption must be forced OFF first.
+    -- The operator can turn it on after receiving an authenticated ACK.
+    return self:setRunning(m,false,"operator safe-off")
+  end
   return self:setRunning(m,not m.enabled,"operator")
 end
 function Core:scan()
@@ -248,15 +345,33 @@ function Core:scan()
   end
   table.sort(snap.power,function(a,b) return a.name<b.name end)
   local ts=now()
-  if self.prevStock and not snap.stockError then
-    local dt=math.max(0.1,ts-(self.prevTime or ts))
+  if not snap.stockError then
     for _,m in ipairs(self.machines) do
-      if m.product~="" then
-        local delta=math.max(0,itemCount(snap.stock,m.product)-
-                               itemCount(self.prevStock,m.product))
-        self.rates[m.id]=delta/dt*60
+      if m.product and m.product~="" then
+        local count=itemCount(snap.stock,m.product)
+        local state=self.rateState[m.id]
+        local window=m.rateWindowSeconds or self.config.rateWindowSeconds
+        if state and state.product==m.product and
+           state.window==window and ts>state.timestamp then
+          local dt=ts-state.timestamp
+          local observed=math.max(0,count-state.count)/dt*60
+          -- Exponential time-weighted average of net stock gains.
+          -- A batched deposit changes the displayed rate gradually instead
+          -- of briefly producing a huge items/min reading.
+          local alpha=1-math.exp(-dt/window)
+          self.rates[m.id]=(self.rates[m.id] or 0)+alpha*
+            (observed-(self.rates[m.id] or 0))
+        else
+          self.rates[m.id]=0
+        end
+        self.rateState[m.id]={
+          count=count,timestamp=ts,product=m.product,window=window
+        }
       end
     end
+  else
+    -- Never derive rates across an unobserved inventory outage.
+    self.rateState={}
   end
   self.prevStock=snap.stockError and nil or snap.stock
   self.prevTime=ts
@@ -277,13 +392,34 @@ function Core:scan()
     if entry.value and point[entry.key]==nil then point[entry.key]=entry.value end
   end
   for _,m in ipairs(self.machines) do
-    point["rate_"..m.id]=self.rates[m.id]
+    if m.product and m.product~="" then
+      point["rate_"..m.id]=self.rates[m.id]
+    end
   end
+  -- User-configured scalar peripheral readings require no mod-specific code.
+  -- Each keeps a stable internal key, even if the user later renames it.
+  local extras=self.devices:readAll()
+  for key,value in pairs(extras) do point[key]=value end
   self.samples[#self.samples+1]=point
   while #self.samples>360 do table.remove(self.samples,1) end
   self.dirty=self.dirty+1
   if self.dirty>=12 then self:save("samples",self.samples);self.dirty=0 end
   return snap
+end
+-- Inventory quantity for a rule target or machine output, by stock item ID.
+-- Returns nil while the ticker is unavailable (never present stale data as 0).
+function Core:stockFor(id)
+  if type(id)~="string" or id=="" then return nil,nil,"unconfigured" end
+  if self.snapshot.stockError then return nil,nil,"unavailable" end
+  local total=0
+  local title=id
+  for _,item in ipairs(self.snapshot.stock) do
+    if item.name==id then
+      total=total+item.count
+      title=item.displayName or title
+    end
+  end
+  return total,title,nil
 end
 function Core:sortedStock(query,sortMode)
   local stock={}

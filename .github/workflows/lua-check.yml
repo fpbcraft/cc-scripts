@@ -25,4 +25,19 @@ jobs:
         run: lua5.3 tests/airship_keyboard_test.lua
       - name: CraftOS module loader regression
         run: lua5.3 tests/loader_test.lua
-
+      - name: Peripheral discovery and telemetry tests
+        run: lua5.3 tests/devices_test.lua
+      - name: Context-sensitive editor suggestions
+        run: lua5.3 tests/completions_test.lua
+      - name: Remote node discovery and expiry
+        run: lua5.3 tests/remote_test.lua
+      - name: Responsive Overview chart layout
+        run: lua5.3 tests/layout_test.lua
+      - name: HMAC-SHA256 authentication vectors
+        run: lua5.3 tests/auth_test.lua
+      - name: Paired authenticated remote switching
+        run: lua5.3 tests/paired_remote_test.lua
+      - name: Remote node disk-export GUI
+        run: lua5.3 tests/node_ui_test.lua
+      - name: Power Grid graph visibility
+        run: lua5.3 tests/graph_metrics_test.lua

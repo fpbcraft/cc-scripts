@@ -1,3 +1,4 @@
+package.path="./factory/?.lua;"..package.path
 -- Run with: lua tests/core_test.lua
 -- This test uses fake Create/CC peripherals without loading Minecraft.
 local function serialize(v)
@@ -34,7 +35,8 @@ fs={
     return {write=function(v) data[path]=v end,close=function() end}
   end,
 }
-os.epoch=function() return 1000000 end
+local clock=1000000
+os.epoch=function() return clock end
 local active={}
 redstone={
   setOutput=function(side,value) active["computer:"..side]=value end,
@@ -84,21 +86,49 @@ assert(core.config.hubAddress=="Hub")
 assert(core:register({
   id="iron",name="Iron Farm",device="redstone_relay_0",side="front",
   product="minecraft:iron_nugget",item="minecraft:iron_nugget",
-  stopAt=20,resumeBelow=10,mode="auto",onSignal=true
+  stopAt=20,resumeBelow=10,mode="auto",onSignal=true,
+  rateWindowSeconds=120
 }))
 local m=core.machines[1]
+assert(core:register({
+  id="fast",name="Fast Averaging",device="computer",side="left",
+  product="minecraft:iron_nugget",rateWindowSeconds=30
+}))
+local fast=core.machines[2]
 core:scan()
+local available,label,status=core:stockFor("minecraft:iron_nugget")
+assert(available==30 and label=="Iron Nugget" and status==nil)
+local empty=core:stockFor("minecraft:andesite")
+assert(empty==0,"Known available inventory with no matching items must show 0")
+local unset,_,missing=core:stockFor("")
+assert(unset==nil and missing=="unconfigured")
+core.snapshot.stockError="Disconnected"
+local unavailable,_,why=core:stockFor("minecraft:iron_nugget")
+assert(unavailable==nil and why=="unavailable")
+core.snapshot.stockError=nil
+assert(core.rates.iron==0 and core.rates.fast==0)
 assert(m.enabled==false)
 assert(core.snapshot.stress[1].used==500)
 assert(core.snapshot.speed[1].rpm==128)
 assert(core.snapshot.power[1].value==24)
+clock=clock+5000
 count=5
 core:scan()
 assert(m.enabled==true and active["relay:front"]==true,
   "Auto rule should resume below lower threshold")
+clock=clock+5000
 count=15
 core:scan()
+assert(core.rates.iron>0 and core.rates.iron<120,
+  "Smoothing should suppress per-sample spikes")
+assert(core.rates.fast>core.rates.iron,
+  "A shorter averaging period should be more responsive")
+local prevSlow=core.rates.iron
+clock=clock+5000
+core:scan()
+assert(core.rates.iron<prevSlow,"Rate must decay smoothly when idle")
 assert(m.enabled==true,"Hysteresis must not toggle in the middle band")
+clock=clock+5000
 count=30
 core:scan()
 assert(m.enabled==false and active["relay:front"]==false,
@@ -116,4 +146,23 @@ local invalid,message=core:register({
   stopAt=20,resumeBelow=21
 })
 assert(not invalid and message:find("threshold"))
+local rejected,why=core:register({
+  id="remote",name="Remote Motor",device="remote:13:redstone_relay_0",
+  side="left",rateWindowSeconds=120
+})
+assert(not rejected and (why:find("available") or why:find("Pair")))
+
+local badWindow,reason=core:register({
+  id="bad",name="Bad averaging window",device="computer",
+  side="left",rateWindowSeconds=1
+})
+assert(not badWindow and reason:find("averaging"))
+assert(core:setRateWindow(m,300))
+assert(m.rateWindowSeconds==300 and core.rates[m.id]==0)
+assert(core.rateState[m.id]==nil)
+local invalid,reason=core:setRateWindow(m,12)
+assert(not invalid and reason:find("15%-900"))
+assert(m.rateWindowSeconds==300)
+assert(core:setRateWindow(m,60))
+assert(m.rateWindowSeconds==60)
 print("Core tests passed")
