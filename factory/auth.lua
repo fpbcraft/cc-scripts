@@ -39,7 +39,7 @@ function M.sha256(data)
       local s1=bxor(ror(y,17),ror(y,19),shr(y,10))
       W[i]=band(W[i-16]+s0+W[i-7]+s1,0xffffffff)
     end
-    local a,c,d,e,f,g,h,j=unpack(H)
+    local a,c,d,e,f,g,h,j=(table.unpack or unpack)(H)
     for i=1,64 do
       local s1=bxor(ror(f,6),ror(f,11),ror(f,25))
       local ch=bxor(band(f,g),band(bnot(f),h))
