@@ -181,3 +181,11 @@ The estimated production rate is now smoothed using an exponential time-weighted
 Rates remain based on net Stock Ticker changes, not exact per-machine production. Consumers and other producers sharing the same item can affect the estimate.
 
 **Wireless-node controls:** Remote nodes are read-only and are therefore not suggested as machine actuators. Machine control currently requires the local computer's redstone outputs or a wired Redstone Relay. Remote nodes may still supply sensor readings and graphs; adding wireless actuation will require a separate trusted control mechanism.
+
+## Graph visibility and quick averaging-range controls
+
+- **Power Grid graphs appear only when an attached Power Grid peripheral returns a finite numeric value.** Gauges without data no longer occupy tiles in the graph dashboard or picker. A valid zero is still displayed as data.
+- **Rate averaging can be adjusted directly on each Machine screen or its expanded rate graph.** Presets: **30 seconds, 1 minute, 2 minutes, 5 minutes, 10 minutes**. The selected preset is highlighted and saved to the individual machine. Custom values from 15 to 900 seconds remain configurable via **Machines > Edit > Rate Avg Seconds**.
+- This controls the time constant for the existing exponentially smoothed net-stock-gain rate, not the graph's X-axis history range. Changing the rate time constant clears that machine's previous rate graph samples to avoid showing mixed averaging periods; other saved telemetry stays intact.
+- The default rate averaging period under **Settings > Rate Average** applies to newly created machines. Existing machines keep their chosen values.
+
