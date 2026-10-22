@@ -172,6 +172,28 @@ function UI.run(core)
       if core:actual(m)==true then running=running+1 end
     end
     label(panel,3,13,"Outputs ON: "..running,C.lime)
+    local readingCount=#core.devices.readings
+    local warnings={}
+    local online=0
+    for _,r in ipairs(core.devices.readings) do
+      local v=core.devices.values[r.id]
+      if v and v.status=="online" then online=online+1 end
+      if v and v.warning then
+        warnings[#warnings+1]=r.label..": "..v.warning
+      end
+    end
+    label(panel,3,14,("Sensors: %d/%d online"):format(online,readingCount),
+      C.lightGray)
+    if h>=28 then
+      button(panel,3,22,math.min(20,w-5),2,"READINGS",function()
+        navigateTo("READINGS")
+      end)
+      label(panel,3,25,("Warnings: %d"):format(#warnings),
+        #warnings>0 and C.orange or C.lime)
+      for i=1,math.min(#warnings,math.floor((h-29)/2)) do
+        label(panel,3,25+2*i,short(warnings[i],w-6),C.orange)
+      end
+    end
     if h>=24 then
       button(panel,3,16,math.min(20,w-5),2,"SWITCHBOARD",function()navigateTo("SWITCHBOARD")end)
       button(panel,3,19,math.min(20,w-5),2,"INVENTORY",function()navigateTo("INVENTORY")end)
