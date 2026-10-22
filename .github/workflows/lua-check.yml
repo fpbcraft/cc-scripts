@@ -21,6 +21,8 @@ jobs:
         run: lua5.3 tests/airship_core_integration_test.lua
       - name: Airship installer migration/rollback
         run: lua5.3 tests/airship_installer_test.lua
+      - name: Airship keyboard/paste mock UI
+        run: lua5.3 tests/airship_keyboard_test.lua
       - name: CraftOS module loader regression
         run: lua5.3 tests/loader_test.lua
 

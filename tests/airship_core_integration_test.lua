@@ -6,6 +6,7 @@ local files={}
 local saved={}
 local activeMonitor=nil
 local lastSnapshot
+local ship={x=0,z=0}
 fs={getDir=function()return 'airship' end,
  combine=function(a,b)return a..'/'..b end,
  exists=function(path)return files[path]~=nil end,
@@ -20,12 +21,16 @@ fs={getDir=function()return 'airship' end,
    writeLine=function(txt)files[path]=(files[path] or '')..txt..'\n' end,
    close=function()end}
  end}
-textutils={serialize=function(obj)return 'stub' end,
+textutils={serialize=function(obj)
+ if type(obj)=='table' and obj.points and obj.loop~=nil then
+  saved.routeLoop=obj.loop;saved.routeNext=obj.nextIndex
+ end
+ return 'stub' end,
  unserialize=function(raw)if raw=='settings' then return {bowOffset=0,autoMap=false} end end}
 files['airship/.airship_avionics_burners_settings']='settings'
 shell={getRunningProgram=function()return 'airship/autopilot.lua'end}
 local nav={getHeading=function()return 0 end,
- getTablePosition=function()return{x=0,y=100,z=0,projected=true}end,
+ getTablePosition=function()return{x=ship.x,y=100,z=ship.z,projected=true}end,
  getTargetPosition=function()return nil end}
 local bridge={getLinkSignal=function()return 0 end,
  sendLinkSignal=function(a,b,v)writes[#writes+1]={a,b,v}end}
@@ -73,10 +78,35 @@ package.preload.ui=function()
    assert(controller.addPreset(100,200,'Dock'))
    assert(controller.addRoute(0,500,'First',0))
    assert(controller.addRoute(200,1000,'Second',1))
+   assert(controller.setRouteLoop(true))
+   assert(controller.snapshot().routeLoop==true)
+   assert(saved.routeLoop==true,'loop setting not persisted')
    assert(controller.flyRouteFrom(2))
    assert(controller.snapshot().routeIndex==2)
-   for i=1,200 do os.pullEventRaw('timer') end
+   -- Arrive within the fly-through zone of the final stop. Looping must
+   -- select the FIRST stop, not enter the arrived/idle state.
+   ship.x,ship.z=200,1000
+   for i=1,100 do os.pullEventRaw('timer') end
+   local wrapped=controller.snapshot()
+   assert(wrapped.mode=='route','loop stopped unexpectedly at last stop')
+   assert(wrapped.routeIndex==1 and wrapped.routeNext==1,
+      'last stop did not wrap to first')
+   assert(saved.routeNext==1,'next stop after wrap not persisted')
+   -- Now advance through the first stop again.
+   ship.x,ship.z=0,500
+   for i=1,80 do os.pullEventRaw('timer') end
+   assert(controller.snapshot().routeIndex==2,'loop did not advance again')
+   assert(controller.snapshot().routeNext==2)
+   -- Turning looping OFF must not immediately cancel an active route.
+   assert(controller.setRouteLoop(false))
+   assert(controller.snapshot().routeLoop==false)
+   assert(saved.routeLoop==false,'disabled loop mode not persisted')
    lastSnapshot=controller.snapshot()
+   -- With looping disabled, final stop should settle into ARRIVED.
+   ship.x,ship.z=200,1000
+   for i=1,160 do os.pullEventRaw('timer') end
+   assert(controller.snapshot().mode=='arrived',
+     'non-loop route did not arrive at the final waypoint')
    controller.stop()
    assert(controller.snapshot().routeNext==2)
  end}
@@ -87,8 +117,8 @@ local chunk=assert(loadfile('airship/autopilot.lua'))
 chunk()
 assert(lastSnapshot and lastSnapshot.tick>=30,'flight tick stalled while UI active')
 assert(type(lastSnapshot.error)=='number' and math.abs(lastSnapshot.error)>0.1,
-  'numeric heading error lost or overwritten in controller.snapshot()')
-assert(lastSnapshot.controlError==nil,'unexpected flight-controller error')
+  'heading error must remain numeric and nonzero while flying')
+assert(lastSnapshot.controlError==nil,'controller should not report error')
 assert(#writes>4,'no controls were sent')
 assert(files['airship/.airship_avionics_route'],'route not saved')
 assert(files['airship/.airship_avionics_presets'],'preset not saved')

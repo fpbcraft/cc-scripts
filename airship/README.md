@@ -40,9 +40,9 @@ Keep a **physical emergency propulsion cutoff**. Redstone Link commands are not 
 ## Cockpit controls
 
 - **Flight**: current X/Z, destination, heading error, speed, forward/reverse/steering telemetry; **STOP NOW** is always prominent.
-- **Fly to X/Z**: touchscreen coordinate editor (X, Z and optional name), with page-based numeric/name keyboard. Y is read-only and does not control altitude.
+- **Fly to X/Z**: touchscreen coordinate editor (X, Z and optional name), with page-based numeric/name keyboard. **Physical keyboard typing and Ctrl+V paste also work**: on a connected monitor, enter or paste values into the computer's native Basalt input fields while the monitor continues showing the touch keypad. Pasting `120 -340` into X populates both X and Z. Y is read-only and does not control altitude.
 - **Map target**: use the current Avionics Navigation Table marker (not Xaero integration).
-- **Route**: select a waypoint, resume the last *next* stop, fly from the selected stop, reorder, add, edit or delete.
+- **Route**: select a waypoint, resume the last *next* stop, fly from the selected stop, reorder, add, edit or delete. **Loop Route** toggles a repeating circuit; after the last stop the ship automatically targets the first stop. The loop preference and next waypoint are saved. One-waypoint routes still finish normally.
 - **Presets**: fly to a named preset, add it to a route, or **SAVE HERE** to capture the present ship X/Z as a named preset automatically.
 - **Settings**: bow +90°, flip 180°, invert steering, auto-map, engine auto and bow calibration.
 - **Diagnostics**: timer heartbeat, last stage, peripheral names, controller errors and Display Link status.

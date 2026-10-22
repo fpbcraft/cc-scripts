@@ -37,9 +37,27 @@ function UI.run(api)
   local confirm=nil
   local keyPage=1
   local render
+  local keyboardPanel=nil
+  local keyboardInputs={}
+  local monitorValueLabels={}
+  local editorSession=0
+  local keyboardSession=-1
+  local function setEditValue(i,value)
+    edit.values[i]=tostring(value or ""):sub(1,80)
+    if monitorValueLabels[i] then
+      monitorValueLabels[i].text=short(edit.values[i],math.max(4,math.floor((w-4)/3)-2))
+    end
+  end
+  local function parseCoordinatePair(value)
+    local normalized=tostring(value or "")
+      :gsub("[Xx]%s*[:=]%s*","")
+      :gsub("[Zz]%s*[:=]%s*"," ")
+    local x,z=normalized:match("^%s*([+-]?%d+%.?%d*)%s*[,;%s]+%s*([+-]?%d+%.?%d*)%s*$")
+    if x and z and tonumber(x) and tonumber(z) then return x,z end
+  end
   local function label(parent,x,y,s,color,width)
     if y<1 or y>h-2 or x>w then return end
-    parent:addLabel({x=x,y=y,width=math.max(1,math.min(width or w-x,w-x+1)),
+    return parent:addLabel({x=x,y=y,width=math.max(1,math.min(width or w-x,w-x+1)),
       text=short(s,math.max(1,math.min(width or w-x,w-x+1))),foreground=color or C.white})
   end
   local function btn(parent,x,y,bw,bh,text,action,color)
@@ -68,6 +86,7 @@ function UI.run(api)
     edit={kind=kind,index=index,field=1,back=back or page,
       values={p and tostring(p.x) or "",p and tostring(p.z) or "",p and p.name or ""}}
     keyPage=1
+    editorSession=editorSession+1
     page="EDITOR"
     render()
   end
@@ -95,7 +114,12 @@ function UI.run(api)
   local function showFlight(s)
     local p=s.position
     local active=s.mode=="map" or s.mode=="direct" or s.mode=="route" or s.mode=="calibration"
-    label(panel,3,4,"NAVIGATION / "..s.mode:upper(),active and C.lime or C.orange)
+    local modeTitle=s.mode:upper()
+    if s.mode=="route" then
+      modeTitle=modeTitle.." "..s.routeIndex.."/"..#s.route
+        ..(s.routeLoop and " / LOOP" or "")
+    end
+    label(panel,3,4,"NAVIGATION / "..modeTitle,active and C.lime or C.orange)
     local compact=h<21
     if p then
       label(panel,3,compact and 5 or 6,"POSITION  X "..num(p.x).."  Z "..num(p.z),C.cyan)
@@ -161,6 +185,11 @@ function UI.run(api)
       end) end
     end,C.red)
     if isRoute then
+      btn(panel,2,h-3,w-3,1,
+        s.routeLoop and "LOOP ROUTE: ON - REPEAT FROM FIRST"
+                    or "LOOP ROUTE: OFF - STOP AT END",function()
+        action(api.setRouteLoop,not s.routeLoop)
+      end,s.routeLoop and C.lime or C.gray)
       btn(panel,2,h-4,bw,1,"RESUME",function()if action(api.resumeRoute)then page="FLIGHT"end end,C.lime)
       btn(panel,3+bw,h-4,bw,1,"FROM SELECT",function()
         if action(api.flyRouteFrom,selectedRoute) then page="FLIGHT" end
@@ -187,13 +216,41 @@ function UI.run(api)
     btn(panel,3,14,18,1,"BACK TO ROUTE",function()navigate("ROUTE")end,C.gray)
   end
   local function showEditor()
-    label(panel,2,4,"ENTER DESTINATION / "..edit.kind:upper(),C.cyan)
+    label(panel,2,4,"DESTINATION / "..edit.kind:upper().."  (TYPE ON COMPUTER)",C.cyan)
     local names={"X COORD","Z COORD","NAME"}
     local bw=math.floor((w-4)/3)
+    monitorValueLabels={}
     for i=1,3 do
-      btn(panel,2+(i-1)*bw,6,bw-1,1,names[i],function()edit.field=i;keyPage=1 end,
-        edit.field==i and C.blue or C.gray)
-      label(panel,2+(i-1)*bw,7,short(edit.values[i],bw-2),C.white,bw-1)
+      btn(panel,2+(i-1)*bw,6,bw-1,1,names[i],function()
+        edit.field=i;keyPage=1
+        if keyboardInputs[i] then keyboardInputs[i]:focus() end
+      end,edit.field==i and C.blue or C.gray)
+      -- The physical keyboard is routed to the computer, not the monitor.
+      -- On a computer-only setup, use native Input elements right here.
+      if not api.monitor then
+        local idx=i
+        local input=panel:addInput({x=2+(i-1)*bw,y=7,width=bw-1,
+          text=edit.values[idx],maxLength=80,
+          background=C.lightGray,foreground=C.black})
+        keyboardInputs[idx]=input
+        input:onChange(function(self)
+          local raw=self.text
+          local a,b
+          if idx~=3 then a,b=parseCoordinatePair(raw) end
+          if a and b then
+            setEditValue(1,a);setEditValue(2,b)
+            self.text=edit.values[idx]
+            if keyboardInputs[3-idx] then keyboardInputs[3-idx].text=edit.values[3-idx] end
+          else setEditValue(idx,raw) end
+        end)
+        input:onEnter(function()
+          if idx<3 then keyboardInputs[idx+1]:focus()
+          else submit();render() end
+        end)
+      else
+        monitorValueLabels[i]=label(panel,2+(i-1)*bw,7,
+          short(edit.values[i],bw-2),C.white,bw-1)
+      end
     end
     local characters=edit.field==3 and "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_" or "7894561230-."
     local cols=edit.field==3 and math.min(8,math.floor((w-4)/4)) or 4
@@ -209,7 +266,7 @@ function UI.run(api)
       local y=9+math.floor((pos-1)/cols)
       local ch=characters:sub(i,i)
       btn(panel,x,y,cw-1,1,ch==" " and "SPACE" or ch,function()
-        if #edit.values[edit.field]<50 then edit.values[edit.field]=edit.values[edit.field]..ch end
+        if #edit.values[edit.field]<80 then setEditValue(edit.field,edit.values[edit.field]..ch) end
       end,C.gray)
     end
     if pages>1 then
@@ -218,14 +275,79 @@ function UI.run(api)
     end
     local y=h-4
     btn(panel,2,y,math.max(7,math.floor((w-6)/3)),1,"BACKSPACE",function()
-      edit.values[edit.field]=edit.values[edit.field]:sub(1,-2)
+      setEditValue(edit.field,edit.values[edit.field]:sub(1,-2))
     end,C.orange)
     btn(panel,3+math.floor((w-6)/3),y,math.max(5,math.floor((w-6)/3)),1,"CLEAR",function()
-      edit.values[edit.field]=""
+      setEditValue(edit.field,"")
     end,C.red)
     btn(panel,2,h-3,math.floor((w-4)/2),1,"CANCEL",function()navigate(edit.back)end,C.gray)
     btn(panel,3+math.floor((w-4)/2),h-3,math.floor((w-4)/2),1,"SAVE / FLY",function()submit()end,C.lime)
   end
+  -- Basalt dispatches keyboard/paste events only to its main computer root.
+  -- A monitor is touch-only, so create synchronized native Inputs on the
+  -- computer while the monitor retains the large, touch-friendly keypad.
+  local function updateKeyboardPanel()
+    if not api.monitor then return end
+    if page~="EDITOR" then
+      if keyboardPanel then keyboardPanel:destroy();keyboardPanel=nil end
+      keyboardInputs={}
+      keyboardSession=-1
+      return
+    end
+    if keyboardPanel and keyboardSession==editorSession then
+      for i=1,3 do
+        if keyboardInputs[i] and keyboardInputs[i].text~=edit.values[i] then
+          keyboardInputs[i].text=edit.values[i]
+        end
+      end
+      return
+    end
+    if keyboardPanel then keyboardPanel:destroy() end
+    local tw,th=term.getSize()
+    keyboardPanel=terminal:addFrame({x=1,y=1,width=tw,height=th,background=C.black})
+    keyboardSession=editorSession
+    keyboardInputs={}
+    label(keyboardPanel,2,2,"SKYWAYS / KEYBOARD ENTRY",C.cyan,tw-3)
+    label(keyboardPanel,2,3,"Type or Ctrl+V paste values below.",C.lightGray,tw-3)
+    label(keyboardPanel,2,4,"You can paste 'X Z' together into X.",C.lightGray,tw-3)
+    local titles={"X","Z","NAME"}
+    for i=1,3 do
+      local idx=i
+      local y=5+(i-1)*3
+      if y<=th-2 then
+        label(keyboardPanel,2,y,titles[i],C.yellow,8)
+        local input=keyboardPanel:addInput({x=10,y=y,width=math.max(8,tw-12),
+          text=edit.values[idx],maxLength=80,background=C.lightGray,foreground=C.black})
+        keyboardInputs[idx]=input
+        input:onChange(function(self)
+          local raw=self.text
+          local a,b
+          if idx~=3 then a,b=parseCoordinatePair(raw) end
+          if a and b then
+            setEditValue(1,a);setEditValue(2,b)
+            self.text=edit.values[idx]
+            local other=3-idx
+            if keyboardInputs[other] then keyboardInputs[other].text=edit.values[other] end
+          else
+            setEditValue(idx,raw)
+          end
+        end)
+        input:onEnter(function()
+          if idx<3 and keyboardInputs[idx+1] then
+            edit.field=idx+1
+            keyboardInputs[idx+1]:focus()
+          else
+            submit()
+            render()
+          end
+        end)
+      end
+    end
+    label(keyboardPanel,2,math.min(th-2,15),
+      "Monitor: SAVE / FLY to confirm.",C.lightGray,tw-3)
+    if keyboardInputs[edit.field] then keyboardInputs[edit.field]:focus() end
+  end
+
   local function showSettings(s)
     label(panel,3,4,"NAVIGATION SETTINGS",C.cyan)
     label(panel,3,6,"BOW OFFSET  "..tostring(s.bowOffset or "NOT CALIBRATED"),C.yellow)
@@ -307,6 +429,10 @@ function UI.run(api)
     elseif page=="CONFIRM" then showConfirm() end
     local line=message~="" and message or s.notice or "Select a destination to begin"
     label(panel,2,h-1,line,C.lightGray,w-3)
+    updateKeyboardPanel()
+    if not api.monitor and page=="EDITOR" and keyboardInputs[edit.field] then
+      keyboardInputs[edit.field]:focus()
+    end
   end
   -- Non-blocking start animation: frame transitions are scheduled inside
   -- Basalt; the independent 10Hz navigation loop starts immediately.

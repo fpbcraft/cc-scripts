@@ -279,6 +279,9 @@ if type(rawRoute)=="table" then
     end
   end
 end
+-- Loop mode is stored alongside waypoint progress, independently from
+-- navigation settings. Older array-only route files default to one-shot.
+local routeLoop=routeData.loop==true
 local routeNext=clamp(math.floor(tonumber(routeData.nextIndex) or 1),
   1,math.max(1,#route))
 if routeData.nextWaypointId then
@@ -288,9 +291,9 @@ if routeData.nextWaypointId then
 end
 local function saveRoute()
   local current=route[routeNext]
-  return writeTable(routeFile,{version=2,points=route,
-    nextIndex=routeNext,nextWaypointId=current and current.id or nil,
-    nextId=nextWaypointId})
+  return writeTable(routeFile,{version=3,points=route,
+    loop=routeLoop,nextIndex=routeNext,
+    nextWaypointId=current and current.id or nil,nextId=nextWaypointId})
 end
 
 local presetFile=sibling(".airship_avionics_presets")
@@ -613,11 +616,18 @@ local function update(now)
   lastDist,lastTick,lastErr,lastPos=dist,now,err,p
 
   -- Fly THROUGH intermediate waypoints; do not brake to a full stop at each.
-  if mode=="route" and routeIndex<#route and dist<=CFG.PASS_RADIUS then
-    routeIndex=routeIndex+1
+  -- Loop routes wrap after the last waypoint rather than entering ARRIVED.
+  -- One-stop routes still use the usual arrival behavior: repeatedly
+  -- reacquiring an already-reached destination would be unsafe.
+  if mode=="route" and dist<=CFG.PASS_RADIUS
+     and (routeIndex<#route or (routeLoop and #route>1)) then
+    local previous=routeIndex
+    routeIndex=routeIndex<#route and routeIndex+1 or 1
     routeNext=routeIndex
     saveRoute()
-    notice=("Waypoint reached; next "..routeIndex.."/"..#route)
+    notice=previous==#route and "Route loop completed; returning to stop 1"
+      or ("Waypoint reached; next "..routeIndex.."/"..#route)
+    trace("ROUTE advance "..previous.." -> "..routeIndex..(routeLoop and " loop" or ""))
     motionReset()
     zeroHorizontal()
     return
@@ -744,7 +754,7 @@ local function sendTelemetry(now)
   local t=telemetry
   local msg={
     tick=controlTicks, mode=mode,
-    routeIndex=routeIndex, routeCount=#route,
+    routeIndex=routeIndex, routeCount=#route, routeLoop=routeLoop,
     position=t.position, target=t.target,
     label=t.label, distance=t.distance, error=t.error,
     speed=t.speed, closing=t.closing,
@@ -805,7 +815,8 @@ function controller.snapshot()
   return {mode=mode,notice=notice,position=telemetry.position,
     target=telemetry.target,label=telemetry.label,distance=telemetry.distance,
     error=telemetry.error,speed=telemetry.speed,outputs=outputs,
-    route=route,routeNext=routeNext,routeIndex=routeIndex,presets=presets,
+    route=route,routeNext=routeNext,routeIndex=routeIndex,
+    routeLoop=routeLoop,presets=presets,
     bowOffset=CFG.BOW_OFFSET,invertSteering=CFG.INVERT_STEERING,
     autoMap=CFG.AUTO_MAP,engineAuto=CFG.ENGINE_AUTO,
     tick=controlTicks,tickAge=os.clock()-lastFlightCompleted,
@@ -833,6 +844,17 @@ function controller.stop()
 end
 function controller.resumeRoute()
   if not beginNavigation("route") then return false,notice end
+  return true
+end
+function controller.setRouteLoop(enabled)
+  routeLoop=(enabled==true)
+  local ok,err=saveRoute()
+  if not ok then
+    return false,"Unable to persist loop setting: "..tostring(err)
+  end
+  notice=routeLoop and "Route will repeat after the last waypoint"
+    or "Route will stop at the last waypoint"
+  trace("ROUTE looping "..(routeLoop and "ON" or "OFF"))
   return true
 end
 function controller.flyRouteFrom(index)
@@ -996,8 +1018,8 @@ local function watchdogLoop()
 end
 local function displayLines(maxRows)
   local t=telemetry
-  local status=mode=="route" and ("ROUTE "..routeIndex.."/"..#route)
-    or mode:upper()
+  local status=mode=="route" and ("ROUTE "..routeIndex.."/"..#route
+    ..(routeLoop and " LOOP" or "")) or mode:upper()
   local name=t.label or "--"
   local headingError=t.error and ("E%+.0f"):format(t.error) or ""
   local dist=t.distance and ("D%.0f"):format(t.distance) or ""
