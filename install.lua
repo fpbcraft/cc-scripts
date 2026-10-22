@@ -1,122 +1,92 @@
--- FPBCRAFT CC:Tweaked factory installer / updater.
--- Run: wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install.lua
--- Optional: append a branch name for development builds.
-local args={...}
-local ref=args[1] or "main"
-if not ref:match("^[a-zA-Z0-9._/-]+$") or ref:find("..",1,true) then
-  error("Invalid branch/ref",0)
-end
+-- FPBCRAFT Factory Manager: low-disk, no-backup install/update.
+local ref=({...})[1] or "main"
+assert(ref:match("^[%w._/-]+$") and not ref:find("..",1,true),"Invalid git ref")
 local root="/fpb-factory"
-local nextDir="/fpb-factory.next"
-local backup="/fpb-factory.backup"
-local url="https://raw.githubusercontent.com/fpbcraft/cc-scripts/"..ref.."/factory/"
-local files={"main.lua","ui.lua","core.lua","devices.lua","completions.lua","remote.lua","layout.lua"}
-local function fail(msg)
-  printError("Installation failed: "..msg)
-  error(msg,0)
-end
-local function write(path,bytes)
-  local f,err=fs.open(path,"w")
-  if not f then fail(tostring(err)) end
-  f.write(bytes)
-  f.close()
-end
-local function download(path,remote)
-  local response,err=http.get(remote,nil,true)
-  if not response then return false,tostring(err or "HTTP request failed") end
-  local code=response.getResponseCode and response.getResponseCode() or 200
-  if code~=200 then response.close();return false,"HTTP "..tostring(code) end
-  local bytes=response.readAll()
-  response.close()
-  if not bytes or #bytes<20 then return false,"Empty or invalid response" end
-  write(path,bytes)
-  return true
-end
-local function clean(path)
+local base="https://raw.githubusercontent.com/fpbcraft/cc-scripts/"..ref.."/factory/"
+local names={"main.lua","ui.lua","core.lua","devices.lua","completions.lua",
+  "remote.lua","auth.lua","layout.lua"}
+local function remove(path)
   if fs.exists(path) then fs.delete(path) end
 end
-print("FPBCRAFT Factory Control installer")
-print("Source: fpbcraft/cc-scripts ("..ref..")")
-if not http then fail("ComputerCraft HTTP is disabled") end
-clean(nextDir)
-fs.makeDir(nextDir)
-for _,name in ipairs(files) do
-  write("/fpb-factory.install-progress","downloading "..name)
-  local ok,err=download(fs.combine(nextDir,name),url..name)
-  if not ok then clean(nextDir);fail(name..": "..err
-     .."\nNote: a PRIVATE GitHub repository cannot be downloaded anonymously.") end
+local function read(path)
+  if not fs.exists(path) then return nil end
+  local f=fs.open(path,"r")
+  if not f then return nil end
+  local value=f.readAll();f.close();return value
+end
+local function write(path,value)
+  local f,err=fs.open(path,"w")
+  assert(f,"Cannot write "..path..": "..tostring(err))
+  f.write(value);f.close()
+end
+local function fetch(url)
+  local h,err=http.get(url,nil,true)
+  assert(h,"Download failed: "..tostring(err))
+  local code=h.getResponseCode and h.getResponseCode() or 200
+  local value=h.readAll();h.close()
+  assert(code==200 and value and #value>20,"HTTP "..tostring(code).." at "..url)
+  return value
+end
+local startup="/startup.lua"
+local launcher="shell.run('/fpb-factory/main.lua')\n"
+local oldStartup=read(startup)
+local shadow=read("/startup")
+-- No backup policy: reject unrelated startup scripts rather than deleting them.
+if oldStartup and oldStartup~=launcher and
+   not oldStartup:find("factory.lua",1,true) and
+   not oldStartup:find("/fpb-factory/",1,true) then
+  error("Unrelated /startup.lua exists. Move it yourself before installing. No backups are made.",0)
+end
+if shadow and not shadow:find("factory",1,true) then
+  error("Unrelated extensionless /startup exists. Resolve it manually.",0)
+end
+print("FPBCRAFT Factory Manager updater (no backups)")
+print("Source: "..ref)
+-- Keep the active data directory, but reclaim space from old installer copies.
+if not fs.exists(root) then fs.makeDir(root) end
+if fs.exists("/fpb-factory.backup") and not fs.exists(root.."/data") and
+   fs.exists("/fpb-factory.backup/data") then
+  fs.move("/fpb-factory.backup/data",root.."/data")
+end
+remove("/fpb-factory.backup")
+remove("/fpb-factory.next")
+remove("/fpb-factory.install-progress")
+remove("/startup.fpb-factory-backup")
+remove("/startup.fpb-factory-backup.lua")
+print("Removed old installer backups/staging to free disk space")
+-- Fetch and parse-validate every script in memory before altering active files.
+local downloaded={}
+for _,name in ipairs(names) do
+  local source=fetch(base..name)
+  local chunk,err=load(source,"@"..name,"t")
+  assert(chunk,"Syntax error in downloaded "..name..": "..tostring(err))
+  downloaded[name]=source
   print("Fetched "..name)
 end
--- Ensure Basalt ships together with the application.
-local function installBasalt()
-  local path=fs.combine(nextDir,"basalt.lua")
-  local success=shell.run("wget","run","https://basalt.madefor.cc/2.5/install.lua",
-                          "minified",path)
-  return success and fs.exists(path)
+-- Atomic per-file replace: only one temporary source file at a time.
+-- Existing /data is never duplicated or deleted.
+for _,name in ipairs(names) do
+  local target=fs.combine(root,name)
+  local temp=target..".new"
+  remove(temp)
+  write(temp,downloaded[name])
+  remove(target)
+  fs.move(temp,target)
+  downloaded[name]=nil
 end
-if not installBasalt() then
-  clean(nextDir)
-  fail("Basalt 2.5 installation failed; old version was not touched")
+-- Reuse installed Basalt. Only download dependency on first installation.
+if not fs.exists(root.."/basalt.lua") then
+  print("Installing Basalt...")
+  local ok=shell.run("wget","run","https://basalt.madefor.cc/2.5/install.lua",
+    "minified",root.."/basalt.lua")
+  assert(ok and fs.exists(root.."/basalt.lua"),"Basalt installer failed")
 end
-print("Installed Basalt 2.5 dependency")
--- Transfer live data before swapping; keep a full rollback backup.
-if fs.exists(root) then
-  if fs.exists(fs.combine(root,"data")) then
-    fs.copy(fs.combine(root,"data"),fs.combine(nextDir,"data"))
-  end
+if shadow then remove("/startup") end
+if oldStartup~=launcher then
+  local tmp="/startup.fpb-factory-next.lua"
+  remove(tmp);write(tmp,launcher)
+  remove(startup);fs.move(tmp,startup)
 end
-clean(backup)
-if fs.exists(root) then fs.move(root,backup) end
-local swapped,swapErr=pcall(fs.move,nextDir,root)
-if not swapped then
-  if fs.exists(backup) then fs.move(backup,root) end
-  fail("Could not activate new version: "..tostring(swapErr))
-end
-clean("/fpb-factory.install-progress")
--- This computer is dedicated to the Factory Manager: ensure it launches on
--- every normal root-disk boot, even if another startup program existed.
--- Preserve older startup programs as backups; do not accidentally run an old
--- factory controller alongside the new one.
-local launcher="shell.run('/fpb-factory/main.lua')\n"
-local startup="/startup.lua"
-local previous="/startup"
-local function backupStartup(path,backupPath)
-  if not fs.exists(path) then return end
-  if fs.isDir and fs.isDir(path) then return end
-  if fs.exists(backupPath) then fs.delete(backupPath) end
-  fs.copy(path,backupPath)
-end
--- An extensionless /startup file can shadow /startup.lua in CraftOS.
-if fs.exists(previous) and not (fs.isDir and fs.isDir(previous)) then
-  backupStartup(previous,"/startup.fpb-factory-backup")
-  fs.delete(previous)
-  print("Backed up older /startup entrypoint.")
-end
-local shouldWrite=true
-if fs.exists(startup) then
-  local f=fs.open(startup,"r")
-  local current=f and f.readAll() or ""
-  if f then f.close() end
-  if current==launcher then
-    shouldWrite=false
-  else
-    backupStartup(startup,"/startup.fpb-factory-backup.lua")
-    print("Backed up previous startup.lua (will no longer run automatically).")
-  end
-end
-if shouldWrite then
-  local tempStartup="/startup.fpb-factory-next.lua"
-  write(tempStartup,launcher)
-  if fs.exists(startup) then fs.delete(startup) end
-  fs.move(tempStartup,startup)
-end
-print("Auto-start configured: /startup.lua -> /fpb-factory/main.lua")
--- CraftOS may prefer boot scripts on a connected disk; warn explicitly.
-if settings and settings.get and settings.get("shell.allow_startup")==false then
-  print("WARNING: shell.allow_startup is disabled in CraftOS settings.")
-  print("Enable it and save settings for automatic startup.")
-end
-print("Install/update complete")
-print("Previous install: "..backup)
-print("Run now: /fpb-factory/main.lua")
-print("Or reboot to launch Factory Manager automatically.")
+print("Factory Manager installed without a backup.")
+print("Existing data retained at "..root.."/data")
+print("Auto-start enabled. Run reboot to use the update.")
