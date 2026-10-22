@@ -4,22 +4,20 @@ A modular touchscreen controller for CC:Tweaked + Create + Create: Power Grid on
 
 ## One-command installation / updates
 
-**When this repository is publicly downloadable**, run on the CC:Tweaked computer:
+Run this command on the CC:Tweaked computer:
 
 ```sh
 wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install.lua
 ```
 
 Repeat the same command to update. The installer:
-1. Downloads the core, Basalt UI, and launcher into `/fpb-factory.next`.
+1. Downloads the core, peripheral registry, Basalt UI, and launcher into `/fpb-factory.next`.
 2. Installs Basalt 2.5 (minified) alongside the application.
 3. Preserves `/fpb-factory/data`, retaining configured machines, graphs, settings, and request history.
 4. Backs up the previous installation to `/fpb-factory.backup` before swapping.
 5. **Always installs `/startup.lua`** to launch `/fpb-factory/main.lua` automatically on boot. Existing `/startup.lua` or extensionless `/startup` files are backed up under `/startup.fpb-factory-backup*` and no longer run automatically. This computer is dedicated to the factory manager.
 
 **Reboot to launch the manager automatically.** You can also run `/fpb-factory/main.lua` immediately. CraftOS must have `shell.allow_startup` enabled; bootable programs on attached disks may take precedence over root startup scripts. Disconnect boot disks when using this dedicated controller.
-
-**Important:** The GitHub repository currently is **private**. Anonymous `wget` requests to `raw.githubusercontent.com` will return 404. You must either make the repository public, or publish a public, static distribution of these files and point the installer at that endpoint. The repo does *not* need to be public if you use a separate public distribution host. Don't put a GitHub personal access token in a ComputerCraft command or script.
 
 For a feature branch preview, the installer accepts a Git ref as its first argument. Only use this with a trusted public download endpoint.
 
@@ -44,12 +42,37 @@ The dashboard finds the first connected monitor by name (sorted alphabetically).
 - **Machines:** register and edit machines, configure actuator sides and outputs.
 - **Rules:** list automation policies and open machine configuration.
 - **Graphs:** Basalt PixelGraph, real solid-colour plots of kinetic load, RPM, stock and Power Grid readings.
+- **Devices:** automatically discover wired and adjacent peripherals, rename each device, list supported read-only methods, register a sensor or set up a Redstone Relay as a controllable machine.
+- **Readings:** browse configured scalar telemetry, set labels/units, enable graphs, set upper/lower warning thresholds, suspend polling, and relink after a device is replaced.
 - **Power Grid:** native voltage, current, power, energy, battery and generator clutch peripheral readings.
 - **Requests:** history of accepted Create package requests, NOT guaranteed deliveries.
 - **Diagnostics:** attached peripherals and exposed methods.
 - **Settings:** factory name, Hub address and sample frequency.
 
 A touchscreen keyboard with CLEAR, BACKSPACE, and a separate Done action is included. Keyboard pages are available if the monitor is too small to display all characters simultaneously.
+
+## Add a new sensor without editing Lua
+
+1. Attach the new sensor/entity to the computer using **Wired Modems and Networking Cable**. Right-click its modem so CC:Tweaked attaches the peripheral.
+2. Open **Devices** in Factory Manager. The new peripheral appears on the next refresh (or tap **Rescan**), with its CC:Tweaked network name and type.
+3. Tap the device and **Rename** it to a friendly name, e.g. `Boiler Room / Battery A`.
+4. Tap **Add Reading**. The manager lists recognized, zero-argument read methods from `peripheral.getMethods()`. Select a trustworthy method, for example `getStress`, `voltage`, `getSpeed`, or `getValue`.
+5. In **Readings**, choose the new reading and optionally give it a meaningful label, set units, toggle graphing, or add upper/lower warning limits.
+6. Go to **Graphs → Change Graph** and select the newly added reading.
+
+No source edits, mod-specific Lua module or reboot is needed for such scalar sensors. The device inventory and configured readings are persisted in `/fpb-factory/data/devices.db` and survive automatic updates. A disconnected sensor stays listed as **offline** instead of disappearing and losing its configuration. If you replace it, open its Reading page and choose **Relink**, which only offers online peripherals of the same declared type exposing the same method.
+
+**Important limitations:**
+- This version polls explicitly selected, no-argument getters returning a **number, string or boolean**. Some getters may require an argument or return a table; those show as unavailable and require a dedicated adapter in a future release.
+- Read method names starting with `get`, `is`, or `has` are candidates, but the name itself does not guarantee they are side-effect free; choose methods belonging to trustworthy mods. No arbitrary setters or mutating methods run automatically.
+- Graphs can use numeric readings only; textual and boolean readings remain visible on their details screen.
+- If wired names are reassigned after rebuilding a cable network, use **Relink**. The manager does not silently reassociate peripherals merely because they share a type.
+- Up to **48** custom readings are supported, with polling at the configured refresh interval. Very large inventories/expensive getters should use purpose-built adapters, not generic method polling.
+- **Alerts** display warning states only; they do **not** issue commands or stop machines. Stock rules remain managed through **Machines** and **Rules**, and machine controls must be explicitly configured.
+
+### Adding a remote Redstone Relay as a machine
+
+The **Devices** page identifies attached `redstone_relay` peripherals. Select one and tap **Register as Machine**. The machine editor starts with the correct relay name. Configure the redstone face, signal polarity, and optionally the Create stock item/stop-resume thresholds. Then use the **Switchboard** to test manual control before enabling Auto. This requires the physical override and safe wiring described below.
 
 ## Set up the andesite farm
 
