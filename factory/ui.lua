@@ -526,7 +526,7 @@ function UI.run(core)
     local chartW=math.max(12,w-chartX-3)
     local chartH=math.max(4,h-19)
     local first=math.max(1,#core.samples-math.min(200,chartW*2)+1)
-    local data={},sum,min,max,last=0,0,nil,nil,nil
+    local data,sum,min,max,last={},0,nil,nil,nil
     for i=first,#core.samples do
       local v=core.samples[i][graphKey]
       if type(v)=="number" and v==v and
@@ -907,12 +907,24 @@ function UI.run(core)
     end)
   end
   local function showKeyboard()
-    label(panel,2,3,short(kb.title..": "..kb.value,w-5),C.cyan,w-4)
+    label(panel,2,3,short(kb.title..": "..kb.value,w-5),
+      C.cyan,w-4)
+    label(panel,2,4,"TYPE ON COMPUTER / Ctrl+V, OR USE TOUCH KEYS",
+      C.lightGray,w-4)
+    local suggestions=completion.suggest(kb.kind,kb.value,core,
+      h>=23 and 3 or 1)
+    for i,entry in ipairs(suggestions) do
+      local y=4+i
+      button(panel,2,y,w-4,1,"USE: "..short(entry.label,w-12),function()
+        setKeyboardValue(entry.value)
+      end,C.gray)
+    end
     local chars=kb.numeric and "1234567890.-" or
       "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-:. /"
     local cols=math.min(10,math.max(5,math.floor((w-4)/5)))
     local cw=math.max(4,math.floor((w-4)/cols))
-    local rows=math.max(1,math.floor((h-12)/2))
+    local sy=6+#suggestions
+    local rows=math.min(6,math.max(1,math.floor((h-12-sy)/2)))
     local perPage=cols*rows
     local pages=math.max(1,math.ceil(#chars/perPage))
     kbPage=math.min(kbPage,pages)
@@ -921,40 +933,60 @@ function UI.run(core)
       local index=start+pos-1
       if index>#chars then break end
       local x=2+((pos-1)%cols)*cw
-      local y=5+math.floor((pos-1)/cols)*2
+      local y=sy+math.floor((pos-1)/cols)*2
       local ch=chars:sub(index,index)
       button(panel,x,y,cw-1,1,ch==" " and "SPACE" or ch,function()
-        kb.value=kb.value..ch
-        render()
+        setKeyboardValue(kb.value..ch)
       end,C.gray)
     end
     if pages>1 then
-      label(panel,2,h-7,("Keyboard %d/%d"):format(kbPage,pages),C.lightGray)
-      if kbPage>1 then button(panel,w-22,h-7,10,1,"< KEYS",function()
+      local py=h-9
+      if kbPage>1 then button(panel,2,py,9,1,"< KEYS",function()
         kbPage=kbPage-1;render()
       end) end
-      if kbPage<pages then button(panel,w-11,h-7,10,1,"KEYS >",function()
+      label(panel,13,py,("Keys %d/%d"):format(kbPage,pages),C.lightGray,12)
+      if kbPage<pages then button(panel,w-11,py,10,1,"KEYS >",function()
         kbPage=kbPage+1;render()
       end) end
+    end
+    if h>=19 then
+      button(panel,2,h-7,math.min(12,math.floor(w/3)),1,
+        "COPY",function()
+          appClipboard=kb.value
+          notify("Copied within Factory Manager")
+        end,C.blue)
+      button(panel,15,h-7,math.min(12,math.floor(w/3)),1,
+        "PASTE",function()
+          if appClipboard~="" then
+            setKeyboardValue(kb.value..appClipboard)
+          else notify("No saved app clipboard text") end
+        end,C.blue)
     end
     local y=h-5
     local bw=math.max(6,math.floor((w-8)/4))
     button(panel,2,y,bw,2,"BACKSPACE",function()
-      kb.value=kb.value:sub(1,-2);render()
+      setKeyboardValue(kb.value:sub(1,-2))
     end,C.orange)
     button(panel,3+bw,y,bw,2,"CLEAR",function()
-      kb.value="";render()
+      setKeyboardValue("")
     end,C.red)
     button(panel,4+bw*2,y,bw,2,"DONE",function()
-      local result=kb.value
-      local cb=kb.callback
-      local dest=kb.returnPage
-      if cb then cb(result) end
-      navigateTo(dest)
+      finishField()
     end,C.green)
     button(panel,5+bw*3,y,bw,2,"CANCEL",function()
       navigateTo(kb.returnPage)
     end)
+    -- Standalone computers without an Advanced Monitor have an editable
+    -- input too. No full panel rebuild inside onChange: focus remains intact.
+    if not monitorName then
+      local edit=panel:addInput({
+        x=2,y=math.min(5,h-11),width=w-4,text=kb.value,
+        maxLength=160,background=C.lightGray,foreground=C.black
+      })
+      edit:onChange(function(_,value) kb.value=value end)
+      edit:onEnter(function() finishField() end)
+      edit:focus()
+    end
   end
   function render()
     local x,y=(monitorName and peripheral.wrap(monitorName) or term).getSize()
