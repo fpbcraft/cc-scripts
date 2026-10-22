@@ -75,7 +75,7 @@ function UI:draw()
   if self.showKey then
     local k=tostring(info.key or "")
     -- Show key in manageable groups. It is still only visible locally.
-    local keyY=math.max(actionY+(h>=16 and 6 or 4),h-5)
+    local keyY=math.min(h-5,actionY+(h>=16 and 6 or 4))
     self:line(keyY," Key (enter at main hub):",C.yellow)
     self:line(keyY+1," "..k:sub(1,math.max(1,w-2)),C.yellow)
     if #k>w-2 then self:line(keyY+2," "..k:sub(w-1),C.yellow) end
@@ -86,7 +86,13 @@ function UI:draw()
 end
 function UI:perform(action)
   if action=="export" then
-    local ok,msg,drive=self.opts.export(self.overwrite)
+    local executed,ok,msg,drive=pcall(self.opts.export,self.overwrite)
+    if not executed then
+      self.overwrite=false
+      self.status="Disk write failed: "..tostring(ok)
+      self:draw()
+      return
+    end
     if ok then
       self.status=msg..(drive and (" ("..drive.name..")") or "")
       self.overwrite=false
@@ -103,6 +109,7 @@ function UI:perform(action)
       local ok,err=pcall(disk.eject,d.name)
       self.status=ok and "Disk ejected. Move to main hub." or
         ("Eject failed: "..tostring(err))
+      self.overwrite=false
     end
   elseif action=="key" then
     self.showKey=not self.showKey
