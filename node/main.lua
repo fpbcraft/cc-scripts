@@ -1,4 +1,6 @@
 local Auth=require("auth")
+local Pairing=require("pairing")
+local UI=require("ui")
 -- FPBCRAFT Remote Node v2: telemetry and paired, fail-safe control.
 -- Attach a wireless/Ender modem to this computer, plus a wired modem and
 -- peripherals on its local cable network. The main Factory Manager
@@ -121,24 +123,23 @@ local function sample()
     name=cfg.name,peripherals=entries,
   }
 end
-local function writeStatus(msg)
-  term.clear()
-  term.setCursorPos(1,1)
-  print("FPBCRAFT REMOTE NODE")
-  print(cfg.name)
-  print("Computer ID: "..os.getComputerID())
-  print("--------------------------------")
-  print(msg)
-  print("Auto-discovery: enabled")
-  print("Paired Hub: "..tostring(cfg.hubId or "NONE"))
-  if not cfg.hubId then
-    print("Pairing key: "..cfg.key)
-    print("Enter this code on main Factory Manager")
-  else
-    print("Controls: paired / signed commands")
+local radioOnline=false
+local sensorCount=0
+local dashboard=UI.new({
+  info=function()
+    local outputs=0
+    for _ in pairs(cfg.managed) do outputs=outputs+1 end
+    return {
+      id=os.getComputerID(),name=cfg.name,key=cfg.key,
+      wireless=radioOnline,sensors=sensorCount,
+      hubId=cfg.hubId,outputs=outputs
+    }
+  end,
+  drives=Pairing.drives,
+  export=function(replace)
+    return Pairing.export(cfg,os.getComputerID(),{replace=replace})
   end
-  print("Watchdog: actuator OFF after 15s without hub")
-end
+})
 local validSides={top=true,bottom=true,left=true,right=true,front=true,back=true}
 local function receiveCommand(sender,msg)
   if type(sender)~="number" or type(msg)~="table" or
@@ -191,12 +192,13 @@ local function receiveCommand(sender,msg)
 end
 local function publisher()
   while true do
-    if ensureWireless() then
+    radioOnline=ensureWireless()
+    if radioOnline then
       local msg=sample()
+      sensorCount=#msg.peripherals-1 -- subtract virtual "computer" actuator
       rednet.broadcast(msg,PROTOCOL)
-      writeStatus("Published "..#msg.peripherals.." peripherals")
     else
-      writeStatus("No wireless/Ender modem found.")
+      sensorCount=0
     end
     sleep(cfg.interval)
   end
@@ -214,9 +216,10 @@ local function watchdog()
     if not safeApplied and
        os.epoch("utc")/1000-lastAuthenticated>=15 then
       safeOff()
-      writeStatus("Hub timeout: managed outputs set to OFF")
     end
     sleep(1)
   end
 end
-parallel.waitForAll(publisher,listener,watchdog)
+parallel.waitForAll(publisher,listener,watchdog,function()
+  dashboard:run()
+end)
