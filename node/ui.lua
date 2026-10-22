@@ -23,12 +23,15 @@ function UI:selectDisplay()
   table.sort(names)
   for _,name in ipairs(names) do
     if peripheral.getType(name)=="monitor" then
-      local mon=peripheral.wrap(name)
-      if mon and mon.isColor and mon.isColor() then
-        local w,h=mon.getSize()
-        if w>=29 and h>=17 then
-          self.screen=mon;self.monitorName=name
-          break
+      local ok,mon=pcall(peripheral.wrap,name)
+      if ok and mon and mon.isColor then
+        local colorOK,color=pcall(mon.isColor)
+        if colorOK and color then
+          local sized,w,h=pcall(mon.getSize)
+          if sized and w>=29 and h>=17 then
+            self.screen=mon;self.monitorName=name
+            break
+          end
         end
       end
     end
@@ -103,13 +106,22 @@ function UI:draw()
     " E=Export J=Eject K=Key Tab/Enter=Select",C.yellow)
   self:line(h-1," Pair at hub: Devices > PAIR FROM DISK",C.lightGray)
 end
+-- A detached monitor must not crash the node's radio/watchdog tasks.
+function UI:refresh()
+  local ok=pcall(self.draw,self)
+  if not ok then
+    self.monitorName=nil
+    self.screen=term.current and term.current() or term
+    pcall(self.draw,self)
+  end
+end
 function UI:perform(action)
   if action=="export" then
     local executed,ok,msg,drive=pcall(self.opts.export,self.overwrite)
     if not executed then
       self.overwrite=false
       self.status="Disk write failed: "..tostring(ok)
-      self:draw()
+      self:refresh()
       return
     end
     if ok then
@@ -134,7 +146,7 @@ function UI:perform(action)
     self.showKey=not self.showKey
     self.status=self.showKey and "Keep the pairing key private" or ""
   end
-  self:draw()
+  self:refresh()
 end
 function UI:handle(event,...)
   if event=="mouse_click" and not self.monitorName or
@@ -158,28 +170,28 @@ function UI:handle(event,...)
     elseif code==keys.tab then
       self.focus=self.focus%3+1
       self.status="Enter: "..({"EXPORT","EJECT","KEY"})[self.focus]
-      self:draw()
+      self:refresh()
     elseif code==keys.enter or code==keys.numPadEnter then
       local action=({"export","eject","key"})[self.focus]
       if action~="eject" or self.drive then self:perform(action) end
-    elseif code==keys.r then self:draw() end
+    elseif code==keys.r then self:refresh() end
   elseif event=="disk" or event=="disk_eject" or
          event=="peripheral" or event=="peripheral_detach" or
          event=="monitor_resize" or event=="term_resize" then
     if event=="peripheral" or event=="peripheral_detach"
        or event=="monitor_resize" then self:selectDisplay() end
     self.overwrite=false
-    self:draw()
+    self:refresh()
   end
 end
 function UI:run()
   self:selectDisplay()
-  self:draw()
+  self:refresh()
   local tick=os.startTimer(1)
   while true do
     local event,a,b,c=os.pullEvent()
     if event=="timer" and a==tick then
-      self:draw()
+      self:refresh()
       tick=os.startTimer(1)
     elseif event~="timer" then
       self:handle(event,a,b,c)
