@@ -34,8 +34,10 @@ function M.candidates(kind,core,context)
       offer(out,seen,item.name,(item.displayName or item.name)..
         " ("..tostring(item.count or 0)..")")
     end
-  elseif kind=="stopAt" or kind=="resumeBelow" or kind=="quantity" then
-    local numbers={1,16,32,64,128,256,512,1024,2048,4096,8192}
+  elseif kind=="stopAt" or kind=="resumeBelow" or kind=="quantity" or
+         kind=="rateWindowSeconds" then
+    local numbers=kind=="rateWindowSeconds" and {30,60,120,180,300,600,900} or
+      {1,16,32,64,128,256,512,1024,2048,4096,8192}
     for _,n in ipairs(numbers) do
       if kind~="resumeBelow" or not context or
          not tonumber(context.stopAt) or n<tonumber(context.stopAt) then
