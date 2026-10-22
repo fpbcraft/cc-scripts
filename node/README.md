@@ -13,17 +13,21 @@ reboot
 
 Update the main Factory Manager to the same feature branch. Both computers must stay chunk-loaded to operate.
 
-## Easy pairing via floppy disk
+## Built-in GUI and pairing via floppy disk
 
-This option avoids typing a long pairing secret:
+The remote computer now automatically opens its own compact **CraftOS dashboard**, showing its name, ID, modem connection, discovered sensor count, hub pairing status, managed outputs, and removable-disk status. This needs no Basalt dependency and **runs concurrently with telemetry, command reception, and the safety watchdog**.
 
-1. Attach a **Disk Drive** to the remote computer, insert a writable ComputerCraft floppy disk.
-2. Temporarily stop the running node with **Ctrl+T**, then run `/fpb-node/export_pairing.lua`. It writes only the node ID, display name, and pairing key to `fpb_pairing.db` on the disk.
-3. Type `reboot` on the node. Move the disk into a Disk Drive attached to the **main Factory Manager computer**.
-4. On the main monitor, open **Devices → the remote computer → PAIR FROM DISK**. The manager imports the secret, deletes the floppy's pairing file, and initiates a signed handshake.
-5. When the remote device says **PAIRED**, select **REGISTER AS MACHINE** to control the remote computer's redstone sides, or select a remote Redstone Relay and register it as a machine.
+To pair, without stopping the node or running another script:
 
-As an alternative, use **PAIR NODE** and enter the 48-character key displayed on the remote computer. A physical keyboard on the main computer is recommended for this mode.
+1. Attach a **Disk Drive** to the remote computer. Insert a writable ComputerCraft floppy disk.
+2. Click **EXPORT KEY TO DISK** on the remote computer GUI (or press **E** on its keyboard). The GUI automatically locates the disk and writes `fpb_pairing.db` containing only this node's ID, name, and pairing secret.
+3. Click **EJECT DISK** if desired, then move the floppy to a Disk Drive attached to the main Factory Manager.
+4. On the main monitor, select **Devices → remote computer → PAIR FROM DISK**. The Factory Manager imports the secret, removes the pairing file from the floppy, and initiates a signed handshake.
+5. After the device displays **PAIRED**, select **REGISTER AS MACHINE**, if you want to control redstone outputs.
+
+The GUI updates its disk status automatically. If the floppy already contains a *different* pairing key, press **EXPORT KEY TO DISK** twice to explicitly confirm replacement. Other files on the floppy are untouched. If it already holds the same key, no rewrite is needed. Select **SHOW PAIRING KEY** (or press **K**) only if you need manual entry instead.
+
+The previous `/fpb-node/export_pairing.lua` script remains available as a command-line fallback, but is no longer necessary during routine use. Normal GUI exports do **not** restart or interrupt the remote-node controller.
 
 ## Remote control and recovery
 
