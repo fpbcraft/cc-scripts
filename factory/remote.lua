@@ -56,7 +56,9 @@ function Remote:pair(id,code)
   if not code:match("^[a-fA-F0-9]+$") or #code<32 or #code>128 then
     return false,"Enter the full 48-character key shown on the node computer"
   end
-  self.pairs[id]={key=code:lower(),seq=0,ready=false}
+  local previous=self.pairs[id]
+  local seq=previous and previous.key==code:lower() and previous.seq or 0
+  self.pairs[id]={key=code:lower(),seq=seq,ready=false}
   self:save()
   self:send(id,"heartbeat")
   return true,"Pairing requested; wait for authenticated reply"
