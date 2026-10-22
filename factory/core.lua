@@ -406,6 +406,21 @@ function Core:scan()
   if self.dirty>=12 then self:save("samples",self.samples);self.dirty=0 end
   return snap
 end
+-- Inventory quantity for a rule target or machine output, by stock item ID.
+-- Returns nil while the ticker is unavailable (never present stale data as 0).
+function Core:stockFor(id)
+  if type(id)~="string" or id=="" then return nil,nil,"unconfigured" end
+  if self.snapshot.stockError then return nil,nil,"unavailable" end
+  local total=0
+  local title=id
+  for _,item in ipairs(self.snapshot.stock) do
+    if item.name==id then
+      total=total+item.count
+      title=item.displayName or title
+    end
+  end
+  return total,title,nil
+end
 function Core:sortedStock(query,sortMode)
   local stock={}
   local q=tostring(query or ""):lower()
