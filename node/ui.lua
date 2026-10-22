@@ -13,37 +13,56 @@ function UI.new(opts)
   assert(type(opts)=="table" and type(opts.info)=="function")
   assert(type(opts.export)=="function")
   return setmetatable({opts=opts,status="",showKey=false,
-    overwrite=false,buttons={},drive=nil},UI)
+    overwrite=false,buttons={},drive=nil,screen=term,monitorName=nil,focus=1},UI)
+end
+-- Prefer an attached Advanced Monitor: unlike a basic computer it is touchable.
+function UI:selectDisplay()
+  self.screen=term.current and term.current() or term
+  self.monitorName=nil
+  local names=peripheral.getNames()
+  table.sort(names)
+  for _,name in ipairs(names) do
+    if peripheral.getType(name)=="monitor" then
+      local mon=peripheral.wrap(name)
+      if mon and mon.isColor and mon.isColor() then
+        local w,h=mon.getSize()
+        if w>=29 and h>=17 then
+          self.screen=mon;self.monitorName=name
+          break
+        end
+      end
+    end
+  end
 end
 function UI:line(y,text,fg)
-  local w,h=term.getSize()
+  local w,h=self.screen.getSize()
   if y<1 or y>h then return end
-  term.setCursorPos(1,y)
-  term.setBackgroundColor(C.black)
-  term.clearLine()
-  term.setTextColor(fg or C.white)
-  term.write(crop(text,w))
+  self.screen.setCursorPos(1,y)
+  self.screen.setBackgroundColor(C.black)
+  self.screen.clearLine()
+  self.screen.setTextColor(fg or C.white)
+  self.screen.write(crop(text,w))
 end
 function UI:button(y,label,id,enabled,bg)
-  local w,h=term.getSize()
+  local w,h=self.screen.getSize()
   if y>h-1 or y<1 then return end
   local width=math.min(w-2,math.max(13,#label+4))
   local x=math.floor((w-width)/2)+1
   self.buttons[#self.buttons+1]={id=id,x=x,y=y,width=width,enabled=enabled}
-  term.setCursorPos(x,y)
-  term.setBackgroundColor(enabled and (bg or C.blue) or C.gray)
-  term.setTextColor(enabled and C.white or C.lightGray)
-  term.write(string.rep(" ",width))
-  term.setCursorPos(x+math.floor((width-#label)/2),y)
-  term.write(label)
-  term.setBackgroundColor(C.black)
+  self.screen.setCursorPos(x,y)
+  self.screen.setBackgroundColor(enabled and (bg or C.blue) or C.gray)
+  self.screen.setTextColor(enabled and C.white or C.lightGray)
+  self.screen.write(string.rep(" ",width))
+  self.screen.setCursorPos(x+math.floor((width-#label)/2),y)
+  self.screen.write(label)
+  self.screen.setBackgroundColor(C.black)
 end
 function UI:draw()
   local info=self.opts.info()
-  local w,h=term.getSize()
+  local w,h=self.screen.getSize()
   self.buttons={}
-  term.setBackgroundColor(C.black)
-  term.clear()
+  self.screen.setBackgroundColor(C.black)
+  self.screen.clear()
   self:line(1," FPBCRAFT / REMOTE NODE",C.cyan)
   self:line(2," "..crop(info.name,w-3).."  #"..info.id,C.lightGray)
   self:line(4," Radio: "..(info.wireless and "ONLINE" or "OFFLINE")..
@@ -81,7 +100,7 @@ function UI:draw()
     if #k>w-2 then self:line(keyY+2," "..k:sub(w-1),C.yellow) end
   end
   self:line(h-2,self.status~="" and (" "..self.status) or
-    " Click export or press E. K=key; R=refresh",C.yellow)
+    " E=Export J=Eject K=Key Tab/Enter=Select",C.yellow)
   self:line(h-1," Pair at hub: Devices > PAIR FROM DISK",C.lightGray)
 end
 function UI:perform(action)
@@ -118,9 +137,12 @@ function UI:perform(action)
   self:draw()
 end
 function UI:handle(event,...)
-  if event=="mouse_click" then
+  if event=="mouse_click" and not self.monitorName or
+      event=="monitor_touch" and self.monitorName then
     local btn,x,y=...
-    if btn~=1 then return end
+    if event=="monitor_touch" then
+      if btn~=self.monitorName then return end
+    elseif btn~=1 then return end
     for _,button in ipairs(self.buttons) do
       if button.enabled and y==button.y and
           x>=button.x and x<button.x+button.width then
@@ -131,16 +153,27 @@ function UI:handle(event,...)
   elseif event=="key" then
     local code=...
     if code==keys.e then self:perform("export")
+    elseif code==keys.j then self:perform("eject")
     elseif code==keys.k then self:perform("key")
+    elseif code==keys.tab then
+      self.focus=self.focus%3+1
+      self.status="Enter: "..({"EXPORT","EJECT","KEY"})[self.focus]
+      self:draw()
+    elseif code==keys.enter or code==keys.numPadEnter then
+      local action=({"export","eject","key"})[self.focus]
+      if action~="eject" or self.drive then self:perform(action) end
     elseif code==keys.r then self:draw() end
   elseif event=="disk" or event=="disk_eject" or
          event=="peripheral" or event=="peripheral_detach" or
-         event=="term_resize" then
+         event=="monitor_resize" or event=="term_resize" then
+    if event=="peripheral" or event=="peripheral_detach"
+       or event=="monitor_resize" then self:selectDisplay() end
     self.overwrite=false
     self:draw()
   end
 end
 function UI:run()
+  self:selectDisplay()
   self:draw()
   local tick=os.startTimer(1)
   while true do
