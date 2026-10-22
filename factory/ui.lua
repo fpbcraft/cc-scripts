@@ -404,6 +404,23 @@ function UI.run(core)
       button(panel,3,16,math.min(20,w-5),2,"SWITCHBOARD",function()navigateTo("SWITCHBOARD")end)
       button(panel,3,19,math.min(20,w-5),2,"INVENTORY",function()navigateTo("INVENTORY")end)
     end
+    -- Small live telemetry previews on the right. Left-side operations and
+    -- warnings remain reachable; the layout falls back to text on small screens.
+    if w>=64 and h>=30 then
+      local gx,gw=35,w-38
+      local previews={
+        METRICS[1],METRICS[2],METRICS[3]
+      }
+      local count=h>=36 and 3 or 2
+      for i=1,count do
+        local item=previews[i]
+        drawChart(panel,item,gx,5+(i-1)*10,gw,9,true,function()
+          graphKey=item[1];navigateTo("GRAPH DETAIL")
+        end)
+      end
+    elseif h>=30 then
+      label(panel,3,h-4,"Open GRAPHS for live trends",C.lightGray,w-6)
+    end
   end
   local function showInventory()
     local listing=core:sortedStock(invQuery,invSort)
@@ -539,7 +556,19 @@ function UI.run(core)
       end)
     end
     if h>=25 then
-      label(panel,3,20,"*Stock delta estimate, not counted actual output",C.lightGray)
+      label(panel,3,20,"*Net inventory gain; consumption can reduce rate",C.lightGray)
+    end
+    if h>=32 and w>=32 then
+      if m.product and m.product~="" then
+        local metric={"rate_"..m.id,
+          "PRODUCTION: "..m.name.." / NET RATE","items/min",C.pink}
+        drawChart(panel,metric,3,22,w-6,h-26,true,function()
+          graphKey=metric[1];navigateTo("GRAPH DETAIL")
+        end)
+      else
+        label(panel,3,24,
+          "Set OUTPUT ITEM ID to enable rate tracking",C.orange,w-5)
+      end
     end
   end
   local machineFields={
