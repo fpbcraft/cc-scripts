@@ -174,8 +174,28 @@ function UI.run(core)
       background=C.red,foreground=C.white
     })
     cancel:onClick(function() navigateTo(kb.returnPage) end)
-    terminalEditor:addLabel({x=2,y=12,width=tw-3,
-      text="Monitor keypad and this input stay in sync.",
+    local copyButton=terminalEditor:addButton({
+      x=2,y=11,width=11,height=1,text="COPY",
+      background=C.blue,foreground=C.white
+    })
+    copyButton:onClick(function()
+      appClipboard=kb.value
+    end)
+    local pasteButton=terminalEditor:addButton({
+      x=15,y=11,width=11,height=1,text="PASTE",
+      background=C.blue,foreground=C.white
+    })
+    pasteButton:onClick(function()
+      if appClipboard~="" then
+        setKeyboardValue(kb.value..appClipboard)
+        terminalInput:focus()
+      end
+    end)
+    terminalEditor:addLabel({x=2,y=14,width=tw-3,
+      text="Copy/Paste buttons use in-app buffer only.",
+      foreground=C.lightGray})
+    terminalEditor:addLabel({x=2,y=15,width=tw-3,
+      text="Suggestions appear on the monitor.",
       foreground=C.lightGray})
   end
   local function choose(target,list,pageNumber,perPage,action,formatter)
@@ -912,7 +932,7 @@ function UI.run(core)
     label(panel,2,4,"TYPE ON COMPUTER / Ctrl+V, OR USE TOUCH KEYS",
       C.lightGray,w-4)
     local suggestions=completion.suggest(kb.kind,kb.value,core,
-      h>=23 and 3 or 1)
+      h>=23 and 3 or 1,editor)
     for i,entry in ipairs(suggestions) do
       local y=4+i
       button(panel,2,y,w-4,1,"USE: "..short(entry.label,w-12),function()
