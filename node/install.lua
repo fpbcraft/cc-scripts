@@ -8,7 +8,8 @@ local root="/fpb-node"
 local url="https://raw.githubusercontent.com/fpbcraft/cc-scripts/"..ref.."/"
 local files={
   ["main.lua"]=url.."node/main.lua",
-  ["auth.lua"]=url.."factory/auth.lua"
+  ["auth.lua"]=url.."factory/auth.lua",
+  ["unpair.lua"]=url.."node/unpair.lua"
 }
 local function remove(path) if fs.exists(path) then fs.delete(path) end end
 local function read(path)
