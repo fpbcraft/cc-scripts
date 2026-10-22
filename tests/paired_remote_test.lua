@@ -57,4 +57,38 @@ time=time+13000
 r:tick()
 assert(not r:paired(nodeId),"Stale authenticated link is not paired")
 assert(not r:control("remote:17:computer","top",true,true))
-print("Signed remote control, replay and stale-state tests passed")
+-- Disk-based pairing imports the key without a 48-character keyboard entry.
+local diskData=textutils and textutils.serialize and
+  textutils.serialize({format=1,node=18,name="Stoneworks",key=secret}) or
+  '{format=1,node=18,name="Stoneworks",key="'..secret..'"}'
+local files={["disk/fpb_pairing.db"]=diskData}
+fs={
+  exists=function(path)return files[path]~=nil end,
+  combine=function(a,b)return a.."/"..b end,
+  isReadOnly=function()return false end,
+  delete=function(path)files[path]=nil end,
+  open=function(path,mode)
+    if mode=="r" then
+      local value=files[path]
+      if not value then return nil end
+      return {readAll=function()return value end,close=function()end}
+    end
+    return {write=function()end,close=function()end}
+  end
+}
+textutils={unserialize=function(raw)
+  return assert(load("return "..raw))()
+end}
+peripheral={
+  getNames=function()return {"left"}end,
+  getType=function()return "drive"end,
+  hasType=function(_,kind)return kind=="drive"end
+}
+disk={getMountPath=function()return "disk"end}
+local r2=Remote.new()
+r2:ingest(18,{kind="snapshot",version=1,name="Stoneworks",peripherals={}})
+local imported,status=r2:pairFromDisk(18)
+assert(imported and status:find("Pairing"))
+assert(files["disk/fpb_pairing.db"]==nil,"Imported secret should be erased from disk")
+assert(r2.pairs[18] and r2.pairs[18].key==secret)
+print("Signed remote control, disk pairing and stale-state tests passed")
