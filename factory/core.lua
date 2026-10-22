@@ -72,6 +72,7 @@ function Core.new(root)
     maxOrder=tonumber(cfg.maxOrder or old.maxOrder) or 4096,
     textScale=tonumber(cfg.textScale or old.textScale) or 0.5,
     rateWindowSeconds=tonumber(cfg.rateWindowSeconds) or 120,
+    rateEstimatorVersion=tonumber(cfg.rateEstimatorVersion) or 1,
   }
   self.config.refreshSeconds=math.max(2,math.min(30,self.config.refreshSeconds))
   self.config.rateWindowSeconds=math.max(15,math.min(900,self.config.rateWindowSeconds))
@@ -89,6 +90,19 @@ function Core.new(root)
   self.devices.remote=self.remote
   self.machines=read(fs.combine(dir,"machines.db")) or {}
   self.samples=read(fs.combine(dir,"samples.db")) or {}
+  if self.config.rateEstimatorVersion<2 then
+    -- Legacy per-poll spikes are not comparable to smoothed rate estimates.
+    -- Keep the rest of historical telemetry without graphing stale spikes.
+    for _,sample in ipairs(self.samples) do
+      for key in pairs(sample) do
+        if type(key)=="string" and key:sub(1,5)=="rate_" then
+          sample[key]=nil
+        end
+      end
+    end
+    self.config.rateEstimatorVersion=2
+    self:save("samples",self.samples)
+  end
   self.snapshot={stock={},stockError="Not scanned",stress={},speed={},power={}}
   self.prevStock=nil
   self.prevTime=nil
