@@ -85,7 +85,7 @@ function Core.new(root)
     order.to=order.to or order.address or self.config.hubAddress
     order.status=order.status or "Previously requested"
   end
-  self.remote=require("remote").new()
+  self.remote=require("remote").new(dir)
   self.devices=require("devices").new(dir)
   self.devices.remote=self.remote
   self.machines=read(fs.combine(dir,"machines.db")) or {}
@@ -138,13 +138,19 @@ function Core:register(fields)
   local side=tostring(fields.side or "")
   if not validSide(side) then return false,"Invalid side" end
   local device=tostring(fields.device or "")
-  if device:sub(1,7)=="remote:" then
-    return false,"Remote nodes currently provide telemetry only"
-  end
   if device=="" then return false,"Specify computer or relay peripheral name" end
-  if device~="computer" and (not peripheral.isPresent(device)
+  if device:sub(1,7)=="remote:" then
+    local remote=self.remote:find(device)
+    if not remote or (remote.type~="remote_computer" and
+      remote.type~="redstone_relay") then
+      return false,"Remote node/relay is not available"
+    end
+    if not self.remote:paired(remote.node) then
+      return false,"Pair the remote node in Devices first"
+    end
+  elseif device~="computer" and (not peripheral.isPresent(device)
     or peripheral.getType(device)~="redstone_relay") then
-    return false,"Choose a connected local Redstone Relay"
+    return false,"Choose a connected wired Redstone Relay"
   end
   local rateWindow=tonumber(fields.rateWindowSeconds) or self.config.rateWindowSeconds
   if rateWindow<15 or rateWindow>900 or rateWindow%1~=0 then
@@ -199,6 +205,19 @@ function Core:device(m)
   return peripheral.wrap(m.device)
 end
 function Core:setRunning(m,run,why)
+  if m.device:sub(1,7)=="remote:" then
+    local ok,err=self.remote:control(m.device,m.side,run,m.onSignal)
+    if not ok then
+      self.errors[m.id]=err
+      return false,err
+    end
+    m.enabled=run
+    self.states[m.id]={running=run,reason=why or "operator",
+      time=now(),pending=true}
+    self.errors[m.id]=nil
+    self:save("machines",self.machines)
+    return true,"Remote command sent; awaiting signed acknowledgment"
+  end
   local dev=self:device(m)
   if not dev then
     self.errors[m.id]="Relay offline: "..m.device
@@ -217,6 +236,9 @@ function Core:setRunning(m,run,why)
   return true
 end
 function Core:actual(m)
+  if m.device:sub(1,7)=="remote:" then
+    return self.remote:state(m.device,m.side)
+  end
   local dev=self:device(m)
   if not dev then return nil end
   local val=safe(dev,"getOutput",m.side)
@@ -244,7 +266,18 @@ function Core:evaluate(m)
   local desired=m.enabled
   if n>=m.stopAt then desired=false
   elseif n<=m.resumeBelow then desired=true end
-  if desired~=m.enabled then self:setRunning(m,desired,"Stock "..n) end
+  if desired~=m.enabled then
+    self:setRunning(m,desired,"Stock "..n)
+  elseif m.device:sub(1,7)=="remote:" and desired and
+    self.remote:state(m.device,m.side)==nil then
+    -- Auto mode only: reassert the inventory rule after reconnect.
+    -- The remote node will have entered its safe OFF state after a timeout.
+    local id=tonumber(m.device:match("^remote:(%d+):"))
+    if id and self.remote:paired(id) and
+       not self.remote:hasPending(m.device,m.side) then
+      self:setRunning(m,desired,"Auto recovery")
+    end
+  end
 end
 function Core:toggle(m)
   if m.mode~="manual" then return false,"Set Manual mode first" end
