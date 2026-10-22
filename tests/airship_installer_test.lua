@@ -3,6 +3,8 @@ local function runInstall(noStartup)
     ['/startup.lua']="print('original startup')\n",
     ['/.airship_avionics_route']='route-v1',
     ['/fpb-airship/autopilot.lua']='old script',
+    ['/fpb-airship/.airship_route_library']='saved multi-route library',
+    ['/fpb-airship/.airship_route_library.backup']='saved previous routes',
     ['/fpb-airship/.airship_avionics_presets']='saved presets',
   }
   local dirs={['/fpb-airship']=true,['/']=true}
@@ -70,6 +72,8 @@ local function runInstall(noStartup)
   assert(contents['/fpb-airship/basalt.lua'])
   assert(contents['/fpb-airship/.airship_avionics_route']=='route-v1')
   assert(contents['/fpb-airship/.airship_avionics_presets']=='saved presets')
+  assert(contents['/fpb-airship/.airship_route_library']=='saved multi-route library')
+  assert(contents['/fpb-airship/.airship_route_library.backup']=='saved previous routes')
   assert(contents['/fpb-airship.backup/autopilot.lua']=='old script')
   if noStartup then assert(contents['/startup.lua']=="print('original startup')\n")
   else

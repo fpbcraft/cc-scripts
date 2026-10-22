@@ -23,6 +23,10 @@ jobs:
         run: lua5.3 tests/airship_installer_test.lua
       - name: Airship keyboard/paste mock UI
         run: lua5.3 tests/airship_keyboard_test.lua
+      - name: Recorded routes and stations integration
+        run: lua5.3 tests/airship_route_features_test.lua
+      - name: Route planner touchscreen and keyboard
+        run: lua5.3 tests/airship_route_ui_test.lua
       - name: CraftOS module loader regression
         run: lua5.3 tests/loader_test.lua
 

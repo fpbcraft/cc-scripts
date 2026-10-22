@@ -42,6 +42,13 @@ function UI.run(api)
   local monitorValueLabels={}
   local editorSession=0
   local keyboardSession=-1
+  local selectedLibrary=1
+  local libraryScroll=1
+  local selectedDisk=1
+  local selectedSignal=1
+  local signalNames={"forward","reverse","left","right","main","fine","engine"}
+  local valueEdit=nil
+  local stopDetails=1
   local function setEditValue(i,value)
     edit.values[i]=tostring(value or ""):sub(1,80)
     if monitorValueLabels[i] then
@@ -107,6 +114,19 @@ function UI.run(api)
     page=edit.kind=="direct" and "FLIGHT" or edit.back
     message="Coordinates saved"
   end
+  local function valueEditor(title,initial,callback,numeric,returnPage)
+    valueEdit={title=title,value=tostring(initial or ""),callback=callback,
+      numeric=numeric==true,back=returnPage or page}
+    editorSession=editorSession+1;keyPage=1;page="VALUE EDIT"
+    render()
+  end
+  local function submitValue()
+    if not valueEdit then return end
+    local ok,why=valueEdit.callback(valueEdit.value)
+    if ok==false then message=tostring(why or "Invalid value");return end
+    page=valueEdit.back;valueEdit=nil
+    message=type(why)=="string" and why or "Saved"
+  end
   local function ask(title,callback)
     confirm={title=title,callback=callback,back=page}
     page="CONFIRM"
@@ -132,6 +152,14 @@ function UI.run(api)
       label(panel,3,targetY+1,"X "..num(t.x).."  Z "..num(t.z).."  D "..num(s.distance),C.white)
       label(panel,3,targetY+2,"ERROR "..num(s.error,1).."  SPEED "..num(s.speed,1),C.white)
     else label(panel,3,targetY+1,"Choose coordinates, map or route",C.lightGray) end
+    if h>=21 and s.mode=="route" then
+      if s.waitRemaining~=nil then
+        label(panel,3,h-8,"DWELL "..num(s.waitRemaining,1).."s remaining",C.yellow)
+      elseif s.station then
+        label(panel,3,h-8,"STATION LOCK: Y "..(s.heightGood and "OK" or "ADJUST")..
+          " / BOW +"..num(s.headingError,1),C.yellow)
+      end
+    end
     label(panel,3,h-7,"THRUST F"..(s.outputs.forward or 0).." B"..(s.outputs.reverse or 0)..
       "  STEER L"..(s.outputs.left or 0).." R"..(s.outputs.right or 0),C.cyan)
     local cell=math.floor((w-6)/2)
@@ -157,7 +185,8 @@ function UI.run(api)
       if not item then break end
       local y=5+(row-1)*2
       local mark=(isRoute and i==s.routeNext) and "*" or " "
-      local caption=("%s%02d %s [%.0f,%.0f]"):format(mark,i,item.name~="" and item.name or "Waypoint",item.x,item.z)
+      local caption=("%s%02d %s%s [%.0f,%.0f]"):format(mark,i,
+        item.station and "[ST] " or "",item.name~="" and item.name or "Waypoint",item.x,item.z)
       btn(panel,2,y,w-12,1,caption,function()
         if isRoute then selectedRoute=i else selectedPreset=i end
       end,sel==i and C.blue or C.gray)
@@ -185,6 +214,17 @@ function UI.run(api)
       end) end
     end,C.red)
     if isRoute then
+      btn(panel,2,h-8,bw,1,"RECORD",function()
+        action(api.recordWaypoint,nil,false)
+        local newest=api.snapshot().route
+        selectedRoute=#newest
+      end,C.blue)
+      btn(panel,3+bw,h-8,bw,1,"DETAIL",function()
+        if items[sel] then stopDetails=sel;navigate("STOP DETAIL") end
+      end,C.orange)
+      btn(panel,4+bw*2,h-8,bw,1,"LIBRARY",function()
+        navigate("LIBRARY")
+      end,C.gray)
       btn(panel,2,h-3,w-3,1,
         s.routeLoop and "LOOP ROUTE: ON - REPEAT FROM FIRST"
                     or "LOOP ROUTE: OFF - STOP AT END",function()
@@ -202,6 +242,191 @@ function UI.run(api)
       btn(panel,3+bw,h-4,bw,1,"TO ROUTE",function()action(api.presetToRoute,selectedPreset)end,C.orange)
       btn(panel,4+bw*2,h-4,bw,1,"SAVE HERE",function()action(api.capturePreset)end,C.blue)
     end
+  end
+  local function showStopDetail(s)
+    local p=s.route[stopDetails]
+    if not p then label(panel,3,5,"Select a route stop first",C.orange);return end
+    label(panel,3,4,"STOP "..stopDetails.." / "..short(p.name,16),C.cyan)
+    label(panel,3,5,(p.station and "STATION" or "CRUISE").."  X"..num(p.x).." Z"..num(p.z),C.yellow)
+    label(panel,3,6,"Y: "..num(p.y).."    Bow: "..num(p.heading),C.white)
+    label(panel,3,7,"Lift main/fine: "..num(p.main).." / "..num(p.fine),C.white)
+    label(panel,3,8,"Wait: "..num(p.wait).." seconds",C.white)
+    local bw=math.floor((w-5)/2)
+    local detailRows=h<19 and {9,10,11,12} or {9,11,13,15}
+    btn(panel,2,detailRows[1],bw,1,p.station and "STATION: ON" or "SET STATION",function()
+      action(api.editStop,stopDetails,{station=not p.station})
+    end,p.station and C.lime or C.gray)
+    btn(panel,3+bw,detailRows[1],bw,1,"CAPTURE POSE",function()
+      local ok,why=api.captureStop(stopDetails)
+      if ok==false then message=tostring(why) end
+    end,C.blue)
+    btn(panel,2,detailRows[2],bw,1,"LIFT LEVELS",function()
+      valueEditor("Lift normal fine (0..15)",
+        (p.main and tostring(p.main) or "").." "..(p.fine and tostring(p.fine) or ""),
+        function(v)
+          local a,b=v:match("^%s*(%d+)%s*[,; ]+%s*(%d+)%s*$")
+          if not a then return false,"Enter e.g. 8 7" end
+          return api.editStop(stopDetails,{main=a,fine=b})
+        end,true,"STOP DETAIL")
+    end,C.orange)
+    btn(panel,3+bw,detailRows[2],bw,1,"WAIT TIME",function()
+      valueEditor("Seconds at waypoint",num(p.wait),function(v)
+        return api.editStop(stopDetails,{wait=v})
+      end,true,"STOP DETAIL")
+    end,C.blue)
+    btn(panel,2,detailRows[3],bw,1,"BOW HEADING",function()
+      valueEditor("Heading (degrees, blank = free)",p.heading or "",function(v)
+        return api.editStop(stopDetails,{heading=v})
+      end,true,"STOP DETAIL")
+    end,C.blue)
+    btn(panel,3+bw,detailRows[3],bw,1,"HEIGHT Y",function()
+      valueEditor("Station Y (blank = ignore)",p.y or "",function(v)
+        return api.editStop(stopDetails,{y=v})
+      end,true,"STOP DETAIL")
+    end,C.blue)
+    do
+      btn(panel,2,detailRows[4],math.floor((w-5)/2),1,"PRECISION",function()
+      valueEditor("Station radius (0.5..10 blocks)",p.radius or "1.5",function(v)
+        return api.editStop(stopDetails,{radius=v})
+      end,true,"STOP DETAIL")
+    end,C.orange)
+    btn(panel,3+math.floor((w-5)/2),detailRows[4],math.floor((w-5)/2),1,
+      "BACK",function()navigate("ROUTE")end,C.gray)
+    end
+  end
+  local function showLibrary(s)
+    label(panel,2,4,"ROUTE LIBRARY / "..short(s.routeName or "",w-23),C.cyan)
+    local list=s.savedRoutes or {}
+    local rows=math.max(2,h-14)
+    libraryScroll=math.max(1,math.min(libraryScroll,math.max(1,#list-rows+1)))
+    for j=1,rows do
+      local i=libraryScroll+j-1
+      local r=list[i]
+      if not r then break end
+      btn(panel,2,4+j,w-3,1,
+        (r.key==s.routeKey and "* " or "  ")..short(r.name,w-18).." ("..#r.points..")",
+        function()selectedLibrary=i;action(api.selectRoute,r.key);selectedRoute=1 end,
+        selectedLibrary==i and C.blue or C.gray)
+    end
+    local half=math.floor((w-5)/2)
+    btn(panel,2,h-9,half,1,"ROUTES UP",function()
+      libraryScroll=math.max(1,libraryScroll-1)
+    end,C.gray)
+    btn(panel,3+half,h-9,half,1,"ROUTES DOWN",function()
+      libraryScroll=math.min(math.max(1,#list-rows+1),libraryScroll+1)
+    end,C.gray)
+    local bw=math.floor((w-6)/3)
+    btn(panel,2,h-8,bw,1,"NEW",function()
+      valueEditor("New route name","",function(v)return api.createRoute(v,false)end,false,"LIBRARY")
+    end,C.blue)
+    btn(panel,3+bw,h-8,bw,1,"DUPLICATE",function()
+      valueEditor("Copy route name",(s.routeName or "Route").." copy",
+        function(v)return api.createRoute(v,true)end,false,"LIBRARY")
+    end,C.blue)
+    btn(panel,4+2*bw,h-8,bw,1,"RENAME",function()
+      valueEditor("Rename route",s.routeName or "",function(v)
+        return api.renameRoute(s.routeKey,v)
+      end,false,"LIBRARY")
+    end,C.gray)
+    btn(panel,2,h-6,bw,1,"EXPORT",function()navigate("DISKS EXPORT")end,C.lime)
+    btn(panel,3+bw,h-6,bw,1,"IMPORT",function()navigate("DISKS IMPORT")end,C.orange)
+    btn(panel,4+2*bw,h-6,bw,1,"DELETE",function()
+      ask("Delete active route?",function()
+        action(api.deleteRoute,api.snapshot().routeKey)
+        selectedLibrary=1
+      end)
+    end,C.red)
+    btn(panel,2,h-4,w-3,1,"BACK TO WAYPOINTS",function()navigate("ROUTE")end,C.gray)
+  end
+  local function showDisks(s)
+    local drives=api.listDisks()
+    local export=page=="DISKS EXPORT"
+    label(panel,2,4,(export and "EXPORT" or "IMPORT").." / FLOPPY DRIVE",C.cyan)
+    if #drives==0 then label(panel,2,6,"Insert a data floppy in a connected drive",C.orange) end
+    for i=1,math.min(#drives,math.max(1,h-13)) do
+      btn(panel,2,5+i,w-3,1,drives[i].name.." -> "..drives[i].mount,function()
+        selectedDisk=i
+      end,selectedDisk==i and C.blue or C.gray)
+    end
+    btn(panel,2,h-6,w-3,1,export and "EXPORT SELECTED ROUTE" or "IMPORT ALL ROUTES",function()
+      local drive=drives[selectedDisk]
+      if not drive then message="No data disk selected";return end
+      if export then action(api.exportRoute,drive.name,s.routeKey)
+      else action(api.importRoutes,drive.name) end
+    end,C.lime)
+    btn(panel,2,h-4,w-3,1,"BACK TO LIBRARY",function()navigate("LIBRARY")end,C.gray)
+  end
+  local function showSignals(s)
+    label(panel,2,4,"CONTROL FREQUENCIES",C.cyan)
+    label(panel,2,5,"Choose a channel then edit both item IDs",C.lightGray)
+    local names=signalNames
+    local visible=math.max(2,h-12)
+    local top=math.max(1,math.min(selectedSignal,math.max(1,#names-visible+1)))
+    for i=top,math.min(#names,top+visible-1) do
+      local channel=names[i]
+      local pair=s.signals[channel] or {"?","?"}
+      btn(panel,2,5+i-top+1,w-3,1,
+        (selectedSignal==i and ">" or " ")..channel:upper().." "..
+          short(pair[1].." / "..pair[2],w-17),function()
+        selectedSignal=i
+      end,selectedSignal==i and C.blue or C.gray)
+    end
+    btn(panel,2,h-6,math.floor((w-5)/2),1,"< PREV",function()
+      selectedSignal=math.max(1,selectedSignal-1)
+    end,C.gray)
+    btn(panel,3+math.floor((w-5)/2),h-6,math.floor((w-5)/2),1,
+      "NEXT >",function()selectedSignal=math.min(#names,selectedSignal+1)end,C.gray)
+    btn(panel,2,h-4,w-3,1,"EDIT SELECTED FREQUENCY",function()
+      local channel=names[selectedSignal]
+      local pair=s.signals[channel]
+      valueEditor("Two item IDs separated by space",pair[1].." "..pair[2],
+        function(v)
+          local a,b=v:match("^%s*(%S+)%s+(%S+)%s*$")
+          if not a then return false,"Enter item1 item2" end
+          return api.setSignal(channel,a,b)
+        end,false,"SIGNALS")
+    end,C.orange)
+    btn(panel,2,h-3,w-3,1,"BACK TO SETTINGS",function()navigate("SETTINGS")end,C.gray)
+  end
+  local function showValueEdit()
+    if not valueEdit then return end
+    label(panel,2,4,short(valueEdit.title,w-4),C.cyan)
+    label(panel,2,6,"Value: "..short(valueEdit.value,w-9),C.white)
+    if not api.monitor then
+      local input=panel:addInput({x=2,y=7,width=w-4,text=valueEdit.value,
+        maxLength=220,background=C.lightGray,foreground=C.black})
+      input:onChange(function(self)valueEdit.value=self.text end)
+      input:onEnter(function()submitValue();render()end)
+      input:focus()
+    end
+    if api.monitor then
+      label(panel,2,7,"Type on the computer or use these keys",C.lightGray)
+    end
+    local chars=valueEdit.numeric and "7894561230-., "
+      or "abcdefghijklmnopqrstuvwxyz0123456789:_-/ ."
+    local cols=math.max(4,math.min(9,math.floor((w-4)/4)))
+    local cw=math.floor((w-4)/cols)
+    local rows=math.max(1,h-14)
+    local perPage=cols*rows
+    local pages=math.max(1,math.ceil(#chars/perPage))
+    keyPage=math.min(keyPage,pages)
+    for i=1,math.min(perPage,#chars-(keyPage-1)*perPage) do
+      local ch=chars:sub((keyPage-1)*perPage+i,(keyPage-1)*perPage+i)
+      local x=2+((i-1)%cols)*cw
+      local y=8+math.floor((i-1)/cols)
+      btn(panel,x,y,cw-1,1,ch==" " and "SP" or ch,function()
+        valueEdit.value=(valueEdit.value..ch):sub(1,220)
+      end,C.gray)
+    end
+    if pages>1 then
+      btn(panel,2,h-6,10,1,"PREV KEYS",function()keyPage=math.max(1,keyPage-1)end)
+      btn(panel,w-12,h-6,11,1,"NEXT KEYS",function()keyPage=math.min(pages,keyPage+1)end)
+    end
+    local bw=math.floor((w-6)/3)
+    btn(panel,2,h-4,bw,1,"BACKSPACE",function()valueEdit.value=valueEdit.value:sub(1,-2)end,C.orange)
+    btn(panel,3+bw,h-4,bw,1,"CLEAR",function()valueEdit.value=""end,C.red)
+    btn(panel,4+2*bw,h-4,bw,1,"SAVE",function()submitValue()end,C.lime)
+    btn(panel,2,h-3,w-3,1,"CANCEL",function()page=valueEdit.back;valueEdit=nil end,C.gray)
   end
   local function showReorder(s)
     label(panel,3,4,"REORDER / SELECTED STOP "..selectedRoute,C.cyan)
@@ -288,13 +513,17 @@ function UI.run(api)
   -- computer while the monitor retains the large, touch-friendly keypad.
   local function updateKeyboardPanel()
     if not api.monitor then return end
-    if page~="EDITOR" then
+    if page~="EDITOR" and page~="VALUE EDIT" then
       if keyboardPanel then keyboardPanel:destroy();keyboardPanel=nil end
       keyboardInputs={}
       keyboardSession=-1
       return
     end
     if keyboardPanel and keyboardSession==editorSession then
+      if page=="VALUE EDIT" and keyboardInputs[1] and valueEdit then
+        keyboardInputs[1].text=valueEdit.value
+        return
+      end
       for i=1,3 do
         if keyboardInputs[i] and keyboardInputs[i].text~=edit.values[i] then
           keyboardInputs[i].text=edit.values[i]
@@ -307,6 +536,17 @@ function UI.run(api)
     keyboardPanel=terminal:addFrame({x=1,y=1,width=tw,height=th,background=C.black})
     keyboardSession=editorSession
     keyboardInputs={}
+    if page=="VALUE EDIT" and valueEdit then
+      label(keyboardPanel,2,2,"SKYWAYS / "..short(valueEdit.title,tw-14),C.cyan,tw-3)
+      label(keyboardPanel,2,4,"Type or paste with Ctrl+V:",C.lightGray,tw-3)
+      local input=keyboardPanel:addInput({x=2,y=6,width=math.max(10,tw-4),
+        text=valueEdit.value,maxLength=220,background=C.lightGray,foreground=C.black})
+      keyboardInputs[1]=input
+      input:onChange(function(self)valueEdit.value=self.text end)
+      input:onEnter(function()submitValue();render()end)
+      input:focus()
+      return
+    end
     label(keyboardPanel,2,2,"SKYWAYS / KEYBOARD ENTRY",C.cyan,tw-3)
     label(keyboardPanel,2,3,"Type or Ctrl+V paste values below.",C.lightGray,tw-3)
     label(keyboardPanel,2,4,"You can paste 'X Z' together into X.",C.lightGray,tw-3)
@@ -367,6 +607,8 @@ function UI.run(api)
     else
       btn(panel,2,h-4,bw,1,"MORE SETTINGS",function()navigate("SETTINGS 2")end)
     end
+    btn(panel,2,h-3,w-3,1,"CONFIGURE CONTROL SIGNALS",function()
+      navigate("SIGNALS")end,C.orange)
     label(panel,3,h-2,"Engine needs inverted LAC receiver",C.lightGray)
   end
   local function showSettings2()
@@ -410,7 +652,10 @@ function UI.run(api)
     if api.setPage then api.setPage(page) end
     local s=api.snapshot()
     label(panel,2,1,"FPBCRAFT  /  AERONAUTICS",C.cyan,w-3)
-    local nav={{"FLIGHT","FLIGHT"},{"ROUTE","ROUTE"},{"PRESETS","PRESETS"},{"SETUP","SETTINGS"},{"INFO","DIAGNOSTICS"}}
+    local nav={{w<42 and "FLY" or "FLIGHT","FLIGHT"},
+      {w<42 and "RT" or "ROUTE","ROUTE"},
+      {w<42 and "PST" or "PRESETS","PRESETS"},
+      {w<42 and "SET" or "SETUP","SETTINGS"},{"INFO","DIAGNOSTICS"}}
     local x=2
     for _,entry in ipairs(nav) do
       local bw=math.max(5,math.floor((w-4)/#nav))
@@ -422,6 +667,11 @@ function UI.run(api)
     elseif page=="ROUTE" then showList(s,true)
     elseif page=="PRESETS" then showList(s,false)
     elseif page=="EDITOR" then showEditor()
+    elseif page=="VALUE EDIT" then showValueEdit()
+    elseif page=="STOP DETAIL" then showStopDetail(s)
+    elseif page=="LIBRARY" then showLibrary(s)
+    elseif page=="DISKS EXPORT" or page=="DISKS IMPORT" then showDisks(s)
+    elseif page=="SIGNALS" then showSignals(s)
     elseif page=="REORDER" then showReorder(s)
     elseif page=="SETTINGS" then showSettings(s)
     elseif page=="SETTINGS 2" then showSettings2()
@@ -469,7 +719,7 @@ function UI.run(api)
   basalt.schedule(function()
     while true do
       sleep(0.75)
-      if page~="EDITOR" and page~="CONFIRM" and panel then render() end
+      if page~="EDITOR" and page~="VALUE EDIT" and page~="CONFIRM" and panel then render() end
     end
   end)
   basalt.run()

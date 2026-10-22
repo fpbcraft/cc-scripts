@@ -62,7 +62,8 @@ end
 print("Basalt 2.5 ready")
 -- Preserve all pilot data, including legacy computer-root installations.
 local dataFiles={
-  ".airship_avionics_route", ".airship_avionics_presets",
+  ".airship_avionics_route", ".airship_route_library",
+  ".airship_route_library.backup", ".airship_avionics_presets",
   ".airship_avionics_burners_settings",
   ".airship_autopilot_avionics_burners_calibration",
   ".airship_autopilot_avionics_calibration",
