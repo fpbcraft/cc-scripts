@@ -781,6 +781,13 @@ function UI.run(core)
             notify(err or (ok and "Pairing requested" or "Pairing failed"))
           end,"DEVICE","pairing")
       end,C.orange)
+      if w>=42 then
+        button(panel,24,16,math.min(18,w-26),1,"PAIR FROM DISK",function()
+          local ok,status=core.remote:pairFromDisk(remoteId)
+          notify(status or (ok and "Pairing requested" or "Pairing failed"))
+          render()
+        end,C.blue)
+      end
     end
     button(panel,3,13,math.min(17,w-5),2,"RENAME",function()
       fieldInput("Device name",dev.alias,false,function(value)
