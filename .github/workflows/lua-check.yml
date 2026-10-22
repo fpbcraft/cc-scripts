@@ -15,5 +15,12 @@ jobs:
           find . -type f -name '*.lua' -not -path './.git/*' -print0 | xargs -0 -n1 luac5.3 -p
       - name: Factory core mock tests
         run: lua5.3 tests/core_test.lua
+      - name: Airship Basalt mock UI
+        run: lua5.3 tests/airship_ui_test.lua
+      - name: Airship controller/timer integration
+        run: lua5.3 tests/airship_core_integration_test.lua
+      - name: Airship installer migration/rollback
+        run: lua5.3 tests/airship_installer_test.lua
       - name: CraftOS module loader regression
         run: lua5.3 tests/loader_test.lua
+
