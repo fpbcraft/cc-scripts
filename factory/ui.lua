@@ -31,6 +31,7 @@ local function matchMetric(s)
 end
 function UI.run(core)
   local basalt=require("basalt")
+  local completion=require("completions")
   basalt.use("charts")
   local terminal=basalt.getMainFrame()
   terminal.background=C.black
@@ -77,7 +78,20 @@ function UI.run(core)
   local editMode="new"
   local editPage=1
   local kbPage=1
-  local kb={value="",title="",returnPage="HOME",callback=nil,numeric=false}
+  local kb={value="",title="",returnPage="HOME",callback=nil,numeric=false,kind=""}
+  local appClipboard=""
+  local terminalEditor=nil
+  local terminalInput=nil
+  local finishField -- shared by touchscreen DONE and computer Enter
+  local ensureComputerEditor
+  local function synchronizeTerminal(value)
+    if terminalInput and terminalInput.text~=value then terminalInput.text=value end
+  end
+  local function setKeyboardValue(value)
+    kb.value=tostring(value or ""):sub(1,160)
+    synchronizeTerminal(kb.value)
+    render()
+  end
   local render
   local function label(parent,x,y,value,color,width)
     if y<1 or y>h-2 then return end
@@ -103,14 +117,66 @@ function UI.run(core)
   local function navigateTo(p)
     page=p
     genericPage=1
+    if p~="KEYBOARD" and terminalEditor then
+      terminalEditor:destroy()
+      terminalEditor=nil
+      terminalInput=nil
+    end
     render()
   end
-  local function fieldInput(title,initial,numeric,callback,back)
+  local function fieldInput(title,initial,numeric,callback,back,kind)
     kb={title=title,value=tostring(initial or ""),numeric=numeric or false,
-      callback=callback,returnPage=back or page}
+      callback=callback,returnPage=back or page,kind=kind or ""}
     kbPage=1
     page="KEYBOARD"
+    ensureComputerEditor()
     render()
+    if terminalInput then terminalInput:focus() end
+  end
+  finishField=function()
+    local value=kb.value
+    if kb.numeric and value~="" and tonumber(value)==nil then
+      notify("Enter a valid number or leave blank")
+      return
+    end
+    local cb,dest=kb.callback,kb.returnPage
+    if cb then cb(value) end
+    navigateTo(dest)
+  end
+  ensureComputerEditor=function()
+    if not monitorName or terminalEditor then return end
+    local tw,th=term.getSize()
+    terminalEditor=terminal:addFrame({
+      x=1,y=1,width=tw,height=th,background=C.black
+    })
+    terminalEditor:addLabel({x=2,y=2,width=tw-3,
+      text="FACTORY MANAGER / KEYBOARD",foreground=C.cyan})
+    terminalEditor:addLabel({x=2,y=4,width=tw-3,
+      text="Type or Ctrl+V (Cmd+V on Mac)",foreground=C.lightGray})
+    terminalInput=terminalEditor:addInput({
+      x=2,y=6,width=math.max(10,tw-4),height=1,
+      text=kb.value,maxLength=160,
+      background=C.gray,foreground=C.white
+    })
+    terminalInput:onChange(function(_,value)
+      if page~="KEYBOARD" or kb.value==value then return end
+      kb.value=value
+      render()
+    end)
+    terminalInput:onEnter(function() finishField() end)
+    local done=terminalEditor:addButton({
+      x=2,y=9,width=11,height=1,text="APPLY",
+      background=C.green,foreground=C.black
+    })
+    done:onClick(function() finishField() end)
+    local cancel=terminalEditor:addButton({
+      x=15,y=9,width=11,height=1,text="CANCEL",
+      background=C.red,foreground=C.white
+    })
+    cancel:onClick(function() navigateTo(kb.returnPage) end)
+    terminalEditor:addLabel({x=2,y=12,width=tw-3,
+      text="Monitor keypad and this input stay in sync.",
+      foreground=C.lightGray})
   end
   local function choose(target,list,pageNumber,perPage,action,formatter)
     local first=(pageNumber-1)*perPage+1
@@ -205,7 +271,7 @@ function UI.run(core)
     button(panel,w-26,3,9,1,"SEARCH",function()
       fieldInput("Search stock",invQuery,false,function(value)
         invQuery=value;genericPage=1;invPage=1
-      end,"INVENTORY")
+      end,"INVENTORY","search")
     end)
     button(panel,w-16,3,7,1,"CLEAR",function()
       invQuery="";invPage=1;render()
@@ -252,7 +318,7 @@ function UI.run(core)
       fieldInput("Order quantity",quantity,true,function(value)
         quantity=math.max(1,math.min(selected.count,core.config.maxOrder,
           math.floor(tonumber(value) or 1)))
-      end,"ITEM")
+      end,"ITEM","quantity")
     end)
     button(panel,17,16,math.min(18,w-19),2,"SEND TO HUB",function()
       navigateTo("ORDER CONFIRM")
@@ -367,7 +433,7 @@ function UI.run(core)
           else
             editor[f[1]]=value
           end
-        end,"MACHINE EDIT")
+        end,"MACHINE EDIT",f[1])
       end,C.gray)
     end
     label(panel,3,h-6,("Fields page %d/%d"):format(editPage,pages),C.lightGray)
@@ -758,17 +824,17 @@ function UI.run(core)
     button(panel,3,6,15,1,"RENAME",function()
       fieldInput("Factory name",core.config.site,false,function(s)
         core:configure({site=s})
-      end,"SETTINGS")
+      end,"SETTINGS","site")
     end)
     button(panel,3,9,15,1,"HUB ADDRESS",function()
       fieldInput("Package destination",core.config.hubAddress,false,function(s)
         core:configure({hubAddress=s})
-      end,"SETTINGS")
+      end,"SETTINGS","hubAddress")
     end)
     button(panel,3,12,15,1,"INTERVAL",function()
       fieldInput("Poll every X seconds",core.config.refreshSeconds,true,function(s)
         core:configure({refreshSeconds=tonumber(s)})
-      end,"SETTINGS")
+      end,"SETTINGS","refreshSeconds")
     end)
   end
   local function showKeyboard()
