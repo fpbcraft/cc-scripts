@@ -1,11 +1,11 @@
 -- FPBCRAFT factory entry point. Kept tiny for crash reporting and updates.
 local dir=fs.getDir(shell.getRunningProgram())
-local function load(name)
-  return dofile(fs.combine(dir,name..".lua"))
-end
-local core=load("core").new(dir)
+-- Use the per-program require injected by the CraftOS shell. Unlike dofile(),
+-- require() gives each module a module environment with require/package available.
+-- This is required by Basalt 2.5 and its optional chart modules.
+local core=require("core").new(dir)
 local ok,err=xpcall(function()
-  load("ui").run(core)
+  require("ui").run(core)
 end,debug.traceback)
 core:shutdown()
 if not ok then
