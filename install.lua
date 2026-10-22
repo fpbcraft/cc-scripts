@@ -3,7 +3,7 @@
 -- Optional: append a branch name for development builds.
 local args={...}
 local ref=args[1] or "main"
-if not ref:match("^[a-zA-Z0-9._/-]+$") or ref:find("%.%.",1,true) then
+if not ref:match("^[a-zA-Z0-9._/-]+$") or ref:find("..",1,true) then
   error("Invalid branch/ref",0)
 end
 local root="/fpb-factory"
@@ -82,9 +82,16 @@ if fs.exists(startup) then
   if previous~=launcher then
     local old="/startup.fpb-factory-backup.lua"
     if not fs.exists(old) then fs.copy(startup,old) end
-    -- Respect an existing startup. Do not silently overwrite unrelated automation.
-    print("Existing startup.lua left unchanged.")
-    print("Run /fpb-factory/main.lua manually or update startup yourself.")
+    local legacy=previous:find("factory.lua",1,true) or
+                 previous:find("fpb_factory",1,true)
+    if legacy then
+      write(startup,launcher)
+      print("Replaced old factory startup; backed up previous startup.lua")
+    else
+      -- Respect an existing startup with potentially unrelated programs.
+      print("Existing startup.lua left unchanged.")
+      print("Run /fpb-factory/main.lua manually or update startup yourself.")
+    end
   end
 else
   write(startup,launcher)
