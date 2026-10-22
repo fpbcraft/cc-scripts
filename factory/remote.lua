@@ -63,6 +63,44 @@ function Remote:pair(id,code)
   self:send(id,"heartbeat")
   return true,"Pairing requested; wait for authenticated reply"
 end
+-- Pair from a locally inserted ComputerCraft disk. The secret never
+-- traverses Rednet until it is used to sign a challenge/heartbeat.
+function Remote:pairFromDisk(id)
+  id=tonumber(id)
+  if not id or not self:online(self.nodes[id]) then
+    return false,"Node is offline"
+  end
+  local found=false
+  for _,name in ipairs(peripheral.getNames()) do
+    local isDrive=(peripheral.hasType and peripheral.hasType(name,"drive"))
+      or peripheral.getType(name)=="drive"
+    if isDrive then
+      local mount=disk.getMountPath(name)
+      if mount then
+        local path=fs.combine(mount,"fpb_pairing.db")
+        if fs.exists(path) then
+          found=true
+          local data=load(path)
+          if data.format==1 and data.node==id and
+             type(data.key)=="string" then
+            local ok,status=self:pair(id,data.key)
+            if ok and not fs.isReadOnly(path) then
+              -- Credential is saved on the hub; remove removable-disk copy.
+              fs.delete(path)
+            end
+            return ok,status
+          elseif data.format==1 then
+            return false,"Disk is for a different remote computer ID"
+          else
+            return false,"Invalid pairing file"
+          end
+        end
+      end
+    end
+  end
+  return false,found and "Pairing file invalid" or
+    "Insert an exported pairing floppy into an attached Disk Drive"
+end
 function Remote:send(id,action,target,side,on,polarity)
   id=tonumber(id)
   local pair=self.pairs[id]
