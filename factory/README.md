@@ -15,9 +15,9 @@ Repeat the same command to update. The installer:
 2. Installs Basalt 2.5 (minified) alongside the application.
 3. Preserves `/fpb-factory/data`, retaining configured machines, graphs, settings, and request history.
 4. Backs up the previous installation to `/fpb-factory.backup` before swapping.
-5. Creates `/startup.lua` only when that file does not already exist, without disturbing unrelated startup programs.
+5. **Always installs `/startup.lua`** to launch `/fpb-factory/main.lua` automatically on boot. Existing `/startup.lua` or extensionless `/startup` files are backed up under `/startup.fpb-factory-backup*` and no longer run automatically. This computer is dedicated to the factory manager.
 
-Then run `/fpb-factory/main.lua` or reboot if the installer created your startup file.
+**Reboot to launch the manager automatically.** You can also run `/fpb-factory/main.lua` immediately. CraftOS must have `shell.allow_startup` enabled; bootable programs on attached disks may take precedence over root startup scripts. Disconnect boot disks when using this dedicated controller.
 
 **Important:** The GitHub repository currently is **private**. Anonymous `wget` requests to `raw.githubusercontent.com` will return 404. You must either make the repository public, or publish a public, static distribution of these files and point the installer at that endpoint. The repo does *not* need to be public if you use a separate public distribution host. Don't put a GitHub personal access token in a ComputerCraft command or script.
 
