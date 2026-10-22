@@ -741,7 +741,16 @@ function UI.run(core)
     if #devices==0 then
       label(panel,3,7,"Attach wired modems and peripherals",C.orange)
     end
-    label(panel,3,h-6,"New devices appear after the next refresh",C.lightGray)
+    local nodeCount=0
+    for _,node in pairs(core.remote.nodes) do
+      if core.remote:online(node) then nodeCount=nodeCount+1 end
+    end
+    label(panel,3,h-6,
+      ("Local + remote peripherals | %d remote node(s)"):format(nodeCount),
+      C.lightGray)
+    if not core.remote.opened and h>=20 then
+      label(panel,3,h-8,"Attach Wireless/Ender Modem to this computer",C.orange)
+    end
   end
   local function showDevice()
     local dev=core.devices:get(selectedDevice)
@@ -753,6 +762,9 @@ function UI.run(core)
       dev.typeMismatch and "TYPE CHANGED" or "OFFLINE"),
       dev.online and C.lime or C.orange)
     label(panel,3,11,"Tracked readings: "..dev.readingCount)
+    if dev.name:find("^remote:") then
+      label(panel,3,12,"Wireless node / telemetry only",C.lightGray)
+    end
     button(panel,3,13,math.min(17,w-5),2,"RENAME",function()
       fieldInput("Device name",dev.alias,false,function(value)
         local ok,err=core.devices:rename(dev.name,value)
@@ -764,7 +776,8 @@ function UI.run(core)
         navigateTo("DEVICE METHODS")
       end,C.green)
     end
-    if dev.online and dev.type=="redstone_relay" and h>=23 then
+    if dev.online and dev.type=="redstone_relay" and
+       not dev.name:find("^remote:") and h>=23 then
       button(panel,3,17,math.min(23,w-5),1,"REGISTER AS MACHINE",function()
         editor={id="",name=dev.alias,device=dev.name,side="front",
           onSignal=true,stopAt=0,resumeBelow=0,item="",product=""}
@@ -1152,6 +1165,11 @@ function UI.run(core)
     sleep(0.5)
     title:destroy();subtitle:destroy()
     render()
+  end)
+  -- Background read-only radio receiver. Nodes broadcast automatically;
+  -- no manual hub address or node ID configuration is required.
+  basalt.schedule(function()
+    core.remote:serve()
   end)
   basalt.schedule(function()
     while true do
