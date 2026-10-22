@@ -528,9 +528,30 @@ function UI.run(core)
     local smoothing=m.rateWindowSeconds or core.config.rateWindowSeconds
     label(panel,3,11,("Smoothed net gain: %s/min (%.0fs avg)"):format(
       num(core.rates[m.id]),smoothing))
-    label(panel,3,12,"Stock: "..short(m.item,math.max(8,w-19)))
-    label(panel,3,13,("Stop >=%d, Resume <=%d"):format(m.stopAt,m.resumeBelow))
-    if core.errors[m.id] then label(panel,3,14,short(core.errors[m.id],w-5),C.red) end
+    local function stockLine(y,prefix,item)
+      if not item or item=="" then
+        label(panel,3,y,prefix..": not configured",C.lightGray)
+        return
+      end
+      local count,name,status=core:stockFor(item)
+      local value=count~=nil and ("x"..tostring(count)) or
+        status=="unavailable" and "unavailable" or "n/a"
+      local maxName=math.max(6,w-#prefix-#value-12)
+      label(panel,3,y,prefix..": "..short(name or item,maxName).."  "..value,
+        count~=nil and C.white or C.orange)
+    end
+    stockLine(12,"Target",m.item)
+    if m.product and m.product~="" and m.product~=m.item then
+      stockLine(13,"Output",m.product)
+    elseif m.product==m.item and m.product~="" then
+      label(panel,3,13,"Output: same as target",C.lightGray)
+    else
+      label(panel,3,13,"Output: not configured",C.lightGray)
+    end
+    label(panel,3,14,("Stop >=%d, Resume <=%d"):format(m.stopAt,m.resumeBelow))
+    if core.errors[m.id] then
+      label(panel,3,15,short(core.errors[m.id],w-5),C.red)
+    end
     button(panel,3,16,12,2,state==nil and "SAFE OFF" or state and "TURN OFF" or "TURN ON",function()
       local ok,err=core:toggle(m)
       notify(ok and "Output updated" or (err or "Error"))
