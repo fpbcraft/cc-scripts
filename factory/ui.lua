@@ -481,6 +481,13 @@ function UI.run(core)
         navigateTo("DEVICE METHODS")
       end,C.green)
     end
+    if dev.online and dev.type=="redstone_relay" and h>=23 then
+      button(panel,3,17,math.min(23,w-5),1,"REGISTER AS MACHINE",function()
+        editor={id="",name=dev.alias,device=dev.name,side="front",
+          onSignal=true,stopAt=0,resumeBelow=0,item="",product=""}
+        editMode="new";editPage=1;navigateTo("MACHINE EDIT")
+      end,C.green)
+    end
     if h>24 then
       label(panel,3,18,"To replace a device, relink each reading.",C.lightGray)
       label(panel,3,19,"No output methods are run automatically.",C.lightGray)
