@@ -281,6 +281,11 @@ function Core:evaluate(m)
 end
 function Core:toggle(m)
   if m.mode~="manual" then return false,"Set Manual mode first" end
+  if m.device:sub(1,7)=="remote:" and self:actual(m)==nil then
+    -- Unknown state after wireless interruption must be forced OFF first.
+    -- The operator can turn it on after receiving an authenticated ACK.
+    return self:setRunning(m,false,"operator safe-off")
+  end
   return self:setRunning(m,not m.enabled,"operator")
 end
 function Core:scan()
