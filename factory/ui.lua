@@ -72,6 +72,7 @@ function UI.run(core)
   local editor={}
   local editMode="new"
   local editPage=1
+  local kbPage=1
   local kb={value="",title="",returnPage="HOME",callback=nil,numeric=false}
   local render
   local function label(parent,x,y,value,color,width)
@@ -103,6 +104,7 @@ function UI.run(core)
   local function fieldInput(title,initial,numeric,callback,back)
     kb={title=title,value=tostring(initial or ""),numeric=numeric or false,
       callback=callback,returnPage=back or page}
+    kbPage=1
     page="KEYBOARD"
     render()
   end
@@ -485,18 +487,33 @@ function UI.run(core)
       "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-:. /"
     local cols=math.min(10,math.max(5,math.floor((w-4)/5)))
     local cw=math.max(4,math.floor((w-4)/cols))
-    local rows=math.ceil(#chars/cols)
-    local sy=5
-    for i=1,#chars do
-      local x=2+((i-1)%cols)*cw
-      local y=sy+math.floor((i-1)/cols)*2
-      button(panel,x,y,cw-1,1,chars:sub(i,i),function()
-        kb.value=kb.value..chars:sub(i,i)
+    local rows=math.max(1,math.floor((h-12)/2))
+    local perPage=cols*rows
+    local pages=math.max(1,math.ceil(#chars/perPage))
+    kbPage=math.min(kbPage,pages)
+    local start=(kbPage-1)*perPage+1
+    for pos=1,perPage do
+      local index=start+pos-1
+      if index>#chars then break end
+      local x=2+((pos-1)%cols)*cw
+      local y=5+math.floor((pos-1)/cols)*2
+      local ch=chars:sub(index,index)
+      button(panel,x,y,cw-1,1,ch==" " and "SPACE" or ch,function()
+        kb.value=kb.value..ch
         render()
       end,C.gray)
     end
-    local y=math.min(h-6,sy+rows*2+1)
-    local bw=math.max(7,math.floor((w-8)/4))
+    if pages>1 then
+      label(panel,2,h-8,("Keyboard %d/%d"):format(kbPage,pages),C.lightGray)
+      if kbPage>1 then button(panel,w-22,h-8,10,1,"< KEYS",function()
+        kbPage=kbPage-1;render()
+      end) end
+      if kbPage<pages then button(panel,w-11,h-8,10,1,"KEYS >",function()
+        kbPage=kbPage+1;render()
+      end) end
+    end
+    local y=h-5
+    local bw=math.max(6,math.floor((w-8)/4))
     button(panel,2,y,bw,2,"BACKSPACE",function()
       kb.value=kb.value:sub(1,-2);render()
     end,C.orange)
