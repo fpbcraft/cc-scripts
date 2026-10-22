@@ -13,8 +13,12 @@ function M.candidates(kind,core,context)
   if kind=="device" then
     offer(out,seen,"computer","computer (local redstone)")
     for _,entry in ipairs(core.devices and core.devices:list() or {}) do
-      if entry.online and entry.type=="redstone_relay" then
-        offer(out,seen,entry.name,(entry.alias or entry.name).." / relay")
+      local remoteId=tonumber(entry.name:match("^remote:(%d+):"))
+      local authorized=not remoteId or core.remote and core.remote:paired(remoteId)
+      if entry.online and authorized and
+         (entry.type=="redstone_relay" or entry.type=="remote_computer") then
+        offer(out,seen,entry.name,(entry.alias or entry.name)..
+          (remoteId and " / paired wireless" or " / wired relay"))
       end
     end
   elseif kind=="side" then
