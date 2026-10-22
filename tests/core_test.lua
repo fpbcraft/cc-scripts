@@ -96,6 +96,16 @@ assert(core:register({
 }))
 local fast=core.machines[2]
 core:scan()
+local available,label,status=core:stockFor("minecraft:iron_nugget")
+assert(available==30 and label=="Iron Nugget" and status==nil)
+local empty=core:stockFor("minecraft:andesite")
+assert(empty==0,"Known available inventory with no matching items must show 0")
+local unset,_,missing=core:stockFor("")
+assert(unset==nil and missing=="unconfigured")
+core.snapshot.stockError="Disconnected"
+local unavailable,_,why=core:stockFor("minecraft:iron_nugget")
+assert(unavailable==nil and why=="unavailable")
+core.snapshot.stockError=nil
 assert(core.rates.iron==0 and core.rates.fast==0)
 assert(m.enabled==false)
 assert(core.snapshot.stress[1].used==500)
