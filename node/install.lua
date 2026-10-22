@@ -1,78 +1,83 @@
--- One-command FPBCRAFT remote node installer/updater.
--- wget run <raw.../node/install.lua> [git_ref] [node_name]
+-- FPBCRAFT Remote Node: one-command, no-backup installer/updater.
+-- wget run .../node/install.lua [git_ref] [node_name]
 local args={...}
 local ref=args[1] or "main"
 local label=args[2]
-if not ref:match("^[%w._/-]+$") or ref:find("..",1,true) then
-  error("Invalid Git reference",0)
+assert(ref:match("^[%w._/-]+$") and not ref:find("..",1,true),"Invalid ref")
+local root="/fpb-node"
+local url="https://raw.githubusercontent.com/fpbcraft/cc-scripts/"..ref.."/"
+local files={
+  ["main.lua"]=url.."node/main.lua",
+  ["auth.lua"]=url.."factory/auth.lua"
+}
+local function remove(path) if fs.exists(path) then fs.delete(path) end end
+local function read(path)
+  if not fs.exists(path) then return nil end
+  local f=fs.open(path,"r");if not f then return nil end
+  local data=f.readAll();f.close();return data
 end
-local dest="/fpb-node"
-local staged="/fpb-node.next"
-local backup="/fpb-node.backup"
-local address="https://raw.githubusercontent.com/fpbcraft/cc-scripts/"..
-  ref.."/node/main.lua"
 local function write(path,bytes)
   local f,err=fs.open(path,"w")
-  if not f then error("Cannot write "..path..": "..tostring(err),0) end
-  f.write(bytes)
-  f.close()
+  assert(f,"Cannot write "..path..": "..tostring(err))
+  f.write(bytes);f.close()
 end
-local function read(path)
-  if not fs.exists(path) or fs.isDir(path) then return nil end
-  local f=fs.open(path,"r")
-  if not f then return nil end
-  local value=f.readAll();f.close()
-  return value
+local function get(address)
+  local h,err=http.get(address,nil,true)
+  assert(h,"HTTP failure: "..tostring(err))
+  local status=h.getResponseCode and h.getResponseCode() or 200
+  local bytes=h.readAll();h.close()
+  assert(status==200 and bytes and #bytes>20,"Download failed: "..status)
+  assert(load(bytes,"@node module","t"),"Downloaded Lua failed parsing")
+  return bytes
 end
-local function fetch(url)
-  local response,err=http.get(url,nil,true)
-  if not response then error("Download failed: "..tostring(err),0) end
-  local code=response.getResponseCode and response.getResponseCode() or 200
-  local body=response.readAll()
-  response.close()
-  if code~=200 or not body or #body<100 then
-    error("Download failed (HTTP "..tostring(code)..")",0)
-  end
-  return body
+local launcher="shell.run('/fpb-node/main.lua')\n"
+local boot=read("/startup.lua")
+local shadow=read("/startup")
+if boot and boot~=launcher and
+   not boot:find("/fpb-node/",1,true) and
+   not boot:find("node/main.lua",1,true) then
+  error("Unrelated startup.lua exists; move it manually. No backup is made.",0)
 end
-print("FPBCRAFT Remote Node installer")
-print("Source: "..ref)
-local script=fetch(address)
-if fs.exists(staged) then fs.delete(staged) end
-fs.makeDir(staged)
-write(fs.combine(staged,"main.lua"),script)
-local original=fs.combine(dest,"config.db")
-local cfg={}
-local raw=read(original)
-if raw then
-  local ok,result=pcall(textutils.unserialize,raw)
-  if ok and type(result)=="table" then cfg=result end
+if shadow and not shadow:find("fpb-node",1,true) then
+  error("Unrelated /startup exists; move it manually.",0)
 end
-if label and label~="" then cfg.name=label:sub(1,40) end
-if not cfg.name or cfg.name=="" then
-  cfg.name="Factory Node "..os.getComputerID()
+print("FPBCRAFT Remote Node updater (no backups)")
+if not fs.exists(root) then fs.makeDir(root) end
+if fs.exists("/fpb-node.backup") and not fs.exists(root.."/config.db")
+    and fs.exists("/fpb-node.backup/config.db") then
+  fs.move("/fpb-node.backup/config.db",root.."/config.db")
 end
-write(fs.combine(staged,"config.db"),textutils.serialize(cfg))
--- Always retain an installation backup before swapping.
-if fs.exists(backup) then fs.delete(backup) end
-if fs.exists(dest) then fs.move(dest,backup) end
-local ok,err=pcall(fs.move,staged,dest)
-if not ok then
-  if fs.exists(backup) then fs.move(backup,dest) end
-  error("Activation failed: "..tostring(err),0)
+remove("/fpb-node.backup")
+remove("/fpb-node.next")
+remove("/startup.lua.fpb-node-backup")
+remove("/startup.fpb-node-backup")
+print("Old installer backups cleared")
+-- Download both code files before replacing either.
+local loaded={}
+for name,address in pairs(files) do loaded[name]=get(address) end
+for name,code in pairs(loaded) do
+  local target=root.."/"..name
+  local tmp=target..".new"
+  remove(tmp);write(tmp,code)
+  remove(target);fs.move(tmp,target)
 end
--- Dedicated node computers always start this agent on boot. Existing startup
--- programs are backed up but not run simultaneously.
-for _,p in ipairs({"/startup","/startup.lua"}) do
-  if fs.exists(p) and not fs.isDir(p) then
-    local backupName=p..".fpb-node-backup"
-    if fs.exists(backupName) then fs.delete(backupName) end
-    fs.copy(p,backupName)
-    fs.delete(p)
-  end
+local old=read(root.."/config.db")
+local config={}
+if old then
+  local ok,val=pcall(textutils.unserialize,old)
+  if ok and type(val)=="table" then config=val end
 end
-write("/startup.lua","shell.run('/fpb-node/main.lua')\n")
-print("Installed node: "..cfg.name)
-print("Startup: /fpb-node/main.lua")
-print("Previous version: "..backup)
-print("Reboot to start automatically or run /fpb-node/main.lua")
+if label and label~="" then config.name=label:sub(1,40) end
+if not config.name then config.name="Factory Node "..os.getComputerID() end
+local tmp=root.."/config.db.new"
+remove(tmp);write(tmp,textutils.serialize(config))
+remove(root.."/config.db");fs.move(tmp,root.."/config.db")
+if shadow then remove("/startup") end
+if boot~=launcher then
+  local t="/startup.fpb-node-next.lua"
+  remove(t);write(t,launcher)
+  remove("/startup.lua");fs.move(t,"/startup.lua")
+end
+print("Installed without backup, retained pairing configuration")
+print("Node: "..config.name.." | Auto-start enabled")
+print("Reboot, then copy the pairing key displayed on this node")
