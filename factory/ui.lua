@@ -364,62 +364,65 @@ function UI.run(core)
   local function showOverview()
     local snap=core.snapshot
     label(panel,3,3,"KINETIC & LOGISTICS",C.cyan)
-    local s=snap.stress[1]
-    local percent=s and s.capacity and s.capacity>0 and
-      s.used/s.capacity*100 or nil
+    local stress=snap.stress[1]
+    local percent=stress and stress.capacity and stress.capacity>0 and
+      stress.used/stress.capacity*100 or nil
     label(panel,3,5,"Stress: "..num(percent).."%",C.white)
-    label(panel,3,7,"Shaft: "..num(snap.speed[1] and snap.speed[1].rpm).." RPM",C.white)
+    label(panel,3,6,"Shaft: "..num(snap.speed[1] and snap.speed[1].rpm).." RPM",C.white)
     local total=0
-    for _,i in ipairs(snap.stock) do total=total+i.count end
-    label(panel,3,9,snap.stockError or ("Stock: "..total.." items"),C.white)
-    label(panel,3,11,"Machines: "..#core.machines,C.white)
+    for _,item in ipairs(snap.stock) do total=total+item.count end
+    label(panel,3,7,snap.stockError or ("Stock: "..total.." items"),C.white)
     local running=0
     for _,m in ipairs(core.machines) do
       if core:actual(m)==true then running=running+1 end
     end
-    label(panel,3,13,"Outputs ON: "..running,C.lime)
-    local readingCount=#core.devices.readings
-    local warnings={}
+    label(panel,3,8,("Machines: %d    Running: %d"):format(#core.machines,running),
+      C.lightGray)
+    local alerts={}
     local online=0
     for _,r in ipairs(core.devices.readings) do
       local v=core.devices.values[r.id]
       if v and v.status=="online" then online=online+1 end
-      if v and v.warning then
-        warnings[#warnings+1]=r.label..": "..v.warning
+      if v and v.warning then alerts[#alerts+1]=r.label..": "..v.warning end
+    end
+    label(panel,3,9,("Sensors: %d/%d online"):format(
+      online,#core.devices.readings),C.lightGray)
+    if h>=19 then
+      local bw=math.min(17,math.floor((w-8)/3))
+      button(panel,3,11,bw,1,"SWITCHBOARD",function()navigateTo("SWITCHBOARD")end)
+      button(panel,4+bw,11,bw,1,"INVENTORY",function()navigateTo("INVENTORY")end)
+      button(panel,5+2*bw,11,bw,1,"READINGS",function()navigateTo("READINGS")end)
+      label(panel,3,13,("Warnings: %d"):format(#alerts),
+        #alerts>0 and C.orange or C.lime)
+      if alerts[1] then label(panel,3,14,short(alerts[1],w-6),C.orange) end
+    end
+    -- Do not require a 64-char monitor: on standard 3x2 monitors this
+    -- renders short charts BELOW the summary, rather than not rendering.
+    if h>=26 and w>=32 then
+      local cols=w>=50 and 2 or 1
+      local tileW=math.floor((w-4-(cols-1)*2)/cols)
+      local tileH=8
+      local rows=h>=34 and 2 or 1
+      local firstY=h-3-rows*(tileH+1)
+      local candidates={METRICS[1],METRICS[2],METRICS[3]}
+      for _,m in ipairs(core.machines) do
+        if m.product and m.product~="" then
+          candidates[#candidates+1]={
+            "rate_"..m.id,m.name.." / RATE","items/min",C.pink}
+          break
+        end
       end
-    end
-    label(panel,3,14,("Sensors: %d/%d online"):format(online,readingCount),
-      C.lightGray)
-    if h>=28 then
-      button(panel,3,22,math.min(20,w-5),2,"READINGS",function()
-        navigateTo("READINGS")
-      end)
-      label(panel,3,25,("Warnings: %d"):format(#warnings),
-        #warnings>0 and C.orange or C.lime)
-      for i=1,math.min(#warnings,math.floor((h-29)/2)) do
-        label(panel,3,25+2*i,short(warnings[i],w-6),C.orange)
-      end
-    end
-    if h>=24 then
-      button(panel,3,16,math.min(20,w-5),2,"SWITCHBOARD",function()navigateTo("SWITCHBOARD")end)
-      button(panel,3,19,math.min(20,w-5),2,"INVENTORY",function()navigateTo("INVENTORY")end)
-    end
-    -- Small live telemetry previews on the right. Left-side operations and
-    -- warnings remain reachable; the layout falls back to text on small screens.
-    if w>=64 and h>=30 then
-      local gx,gw=35,w-38
-      local previews={
-        METRICS[1],METRICS[2],METRICS[3]
-      }
-      local count=h>=36 and 3 or 2
+      local count=math.min(#candidates,cols*rows)
       for i=1,count do
-        local item=previews[i]
-        drawChart(panel,item,gx,5+(i-1)*10,gw,9,true,function()
+        local col=(i-1)%cols
+        local row=math.floor((i-1)/cols)
+        local x=2+col*(tileW+2)
+        local y=firstY+row*(tileH+1)
+        local item=candidates[i]
+        drawChart(panel,item,x,y,tileW,tileH,true,function()
           graphKey=item[1];navigateTo("GRAPH DETAIL")
         end)
       end
-    elseif h>=30 then
-      label(panel,3,h-4,"Open GRAPHS for live trends",C.lightGray,w-6)
     end
   end
   local function showInventory()
@@ -534,7 +537,9 @@ function UI.run(core)
       state==nil and C.orange or state and C.lime or C.red)
     label(panel,3,7,"Mode: "..m.mode:upper())
     label(panel,3,9,"Relay: "..m.device.." / "..m.side)
-    label(panel,3,11,"Rate*: "..num(core.rates[m.id]).." / min")
+    local smoothing=m.rateWindowSeconds or core.config.rateWindowSeconds
+    label(panel,3,11,("Smoothed net gain: %s/min (%.0fs avg)"):format(
+      num(core.rates[m.id]),smoothing))
     label(panel,3,12,"Stock: "..short(m.item,math.max(8,w-19)))
     label(panel,3,13,("Stop >=%d, Resume <=%d"):format(m.stopAt,m.resumeBelow))
     if core.errors[m.id] then label(panel,3,14,short(core.errors[m.id],w-5),C.red) end
@@ -556,12 +561,12 @@ function UI.run(core)
       end)
     end
     if h>=25 then
-      label(panel,3,20,"*Net inventory gain; consumption can reduce rate",C.lightGray)
+      label(panel,3,20,"*Estimated from net stock changes, not output count",C.lightGray)
     end
     if h>=32 and w>=32 then
       if m.product and m.product~="" then
         local metric={"rate_"..m.id,
-          "PRODUCTION: "..m.name.." / NET RATE","items/min",C.pink}
+          "PRODUCTION: "..m.name.." / SMOOTHED NET RATE","items/min",C.pink}
         drawChart(panel,metric,3,22,w-6,h-26,true,function()
           graphKey=metric[1];navigateTo("GRAPH DETAIL")
         end)
@@ -574,6 +579,7 @@ function UI.run(core)
   local machineFields={
     {"id","ID",false},{"name","NAME",false},{"device","RELAY / computer",false},
     {"side","SIDE",false},{"product","OUTPUT ITEM ID",false},
+    {"rateWindowSeconds","RATE AVG SECONDS",true},
     {"item","RULE STOCK ITEM",false},{"stopAt","STOP AT",true},
     {"resumeBelow","RESUME BELOW",true},
     {"onSignal","SIGNAL WHEN RUNNING (1=ON)",false}
@@ -604,6 +610,11 @@ function UI.run(core)
           end
         end,"MACHINE EDIT",f[1])
       end,C.gray)
+    end
+    if h>=19 then
+      label(panel,3,h-7,
+        "Remote computers: telemetry-only; no wireless machine control",
+        C.orange,w-5)
     end
     label(panel,3,h-6,("Fields page %d/%d"):format(editPage,pages),C.lightGray)
     if editPage>1 then
@@ -638,7 +649,8 @@ function UI.run(core)
     end,function(m) return m.name.." ("..m.device..")" end)
     button(panel,3,h-4,13,1,"+ ADD",function()
       editor={id="",name="",device="computer",side="back",onSignal=true,
-        stopAt=0,resumeBelow=0,product="",item=""}
+        stopAt=0,resumeBelow=0,product="",item="",
+        rateWindowSeconds=core.config.rateWindowSeconds}
       editMode="new";editPage=1;navigateTo("MACHINE EDIT")
     end,C.green)
   end
@@ -780,7 +792,8 @@ function UI.run(core)
        not dev.name:find("^remote:") and h>=23 then
       button(panel,3,17,math.min(23,w-5),1,"REGISTER AS MACHINE",function()
         editor={id="",name=dev.alias,device=dev.name,side="front",
-          onSignal=true,stopAt=0,resumeBelow=0,item="",product=""}
+          onSignal=true,stopAt=0,resumeBelow=0,item="",product="",
+          rateWindowSeconds=core.config.rateWindowSeconds}
         editMode="new";editPage=1;navigateTo("MACHINE EDIT")
       end,C.green)
     end
@@ -1017,6 +1030,8 @@ function UI.run(core)
     label(panel,3,5,"Factory: "..core.config.site)
     label(panel,3,8,"Hub address: "..core.config.hubAddress)
     label(panel,3,11,"Poll interval: "..core.config.refreshSeconds.."s")
+    label(panel,3,14,"Default rate smoothing: "..
+      core.config.rateWindowSeconds.."s")
     button(panel,3,6,15,1,"RENAME",function()
       fieldInput("Factory name",core.config.site,false,function(s)
         core:configure({site=s})
@@ -1031,6 +1046,13 @@ function UI.run(core)
       fieldInput("Poll every X seconds",core.config.refreshSeconds,true,function(s)
         core:configure({refreshSeconds=tonumber(s)})
       end,"SETTINGS","refreshSeconds")
+    end)
+    button(panel,3,15,15,1,"RATE AVERAGE",function()
+      fieldInput("Default rate average (seconds)",
+        core.config.rateWindowSeconds,true,function(value)
+        local n=tonumber(value)
+        if n then core:configure({rateWindowSeconds=n}) end
+      end,"SETTINGS","rateWindowSeconds")
     end)
   end
   local function showKeyboard()
