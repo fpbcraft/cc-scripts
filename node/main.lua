@@ -32,6 +32,9 @@ if not cfg.key or #cfg.key<32 then
 end
 cfg.managed=cfg.managed or {}
 cfg.lastSeq=tonumber(cfg.lastSeq) or 0
+-- Never replay an ACK belonging to a previous boot.
+cfg.lastAck=nil
+local bootId=tostring(os.epoch("utc"))..":"..tostring(os.getComputerID())
 saveConfig(cfg)
 local CONTROL="fpb.factory.control.v1"
 local lastAuthenticated=os.epoch("utc")/1000
@@ -178,10 +181,10 @@ local function receiveCommand(sender,msg)
   end
   local ack={
     kind="ack",version=1,seq=msg.seq,status=status,
-    on=msg.on==true,polarity=msg.polarity==true
+    on=msg.on==true,polarity=msg.polarity==true,bootId=bootId
   }
   ack.mac=Auth.mac(cfg.key,Auth.frame("ack:"..msg.action,sender,
-    os.getComputerID(),msg.seq,target,side,ack.on,ack.polarity,status))
+    os.getComputerID(),msg.seq,target,side,ack.on,ack.polarity,status.."#"..bootId))
   cfg.lastAck=ack
   saveConfig(cfg) -- Persist replay counter and managed outputs before ACK.
   rednet.send(sender,ack,CONTROL)
