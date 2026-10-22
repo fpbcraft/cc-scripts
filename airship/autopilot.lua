@@ -809,7 +809,7 @@ function controller.snapshot()
     bowOffset=CFG.BOW_OFFSET,invertSteering=CFG.INVERT_STEERING,
     autoMap=CFG.AUTO_MAP,engineAuto=CFG.ENGINE_AUTO,
     tick=controlTicks,tickAge=os.clock()-lastFlightCompleted,
-    tickDuration=flightTickDuration,stage=flightStage,error=controlError,
+    tickDuration=flightTickDuration,stage=flightStage,controlError=controlError,
     navName=navName,bridgeName=bridgeName,displayLinks=#displayLinks}
 end
 function controller.fly(x,z,name)

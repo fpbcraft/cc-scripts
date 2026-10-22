@@ -72,7 +72,7 @@ package.preload.ui=function()
    assert(controller.snapshot().mode=='idle')
    assert(controller.addPreset(100,200,'Dock'))
    assert(controller.addRoute(0,500,'First',0))
-   assert(controller.addRoute(0,1000,'Second',1))
+   assert(controller.addRoute(200,1000,'Second',1))
    assert(controller.flyRouteFrom(2))
    assert(controller.snapshot().routeIndex==2)
    for i=1,200 do os.pullEventRaw('timer') end
@@ -86,6 +86,9 @@ print=function()end
 local chunk=assert(loadfile('airship/autopilot.lua'))
 chunk()
 assert(lastSnapshot and lastSnapshot.tick>=30,'flight tick stalled while UI active')
+assert(type(lastSnapshot.error)=='number' and math.abs(lastSnapshot.error)>0.1,
+  'numeric heading error lost or overwritten in controller.snapshot()')
+assert(lastSnapshot.controlError==nil,'unexpected flight-controller error')
 assert(#writes>4,'no controls were sent')
 assert(files['airship/.airship_avionics_route'],'route not saved')
 assert(files['airship/.airship_avionics_presets'],'preset not saved')

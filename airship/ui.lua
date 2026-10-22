@@ -266,7 +266,7 @@ function UI.run(api)
     label(panel,3,11,"Nav "..s.navName,C.lightGray)
     label(panel,3,12,"Bridge "..s.bridgeName,C.lightGray)
     label(panel,3,13,"Display Links "..s.displayLinks,C.lightGray)
-    if s.error then label(panel,3,15,"ERROR: "..s.error,C.red) end
+    if s.controlError then label(panel,3,15,"ERROR: "..s.controlError,C.red) end
   end
   local function showConfirm()
     label(panel,3,6,confirm and confirm.title or "Confirm?",C.yellow)
