@@ -84,6 +84,7 @@ function UI.run(core)
   local terminalInput=nil
   local finishField -- shared by touchscreen DONE and computer Enter
   local ensureComputerEditor
+  local render
   local function synchronizeTerminal(value)
     if terminalInput and terminalInput.text~=value then terminalInput.text=value end
   end
@@ -92,7 +93,6 @@ function UI.run(core)
     synchronizeTerminal(kb.value)
     render()
   end
-  local render
   local function label(parent,x,y,value,color,width)
     if y<1 or y>h-2 then return end
     return parent:addLabel({x=x,y=y,width=width or math.max(1,w-x),
