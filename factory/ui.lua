@@ -33,6 +33,7 @@ function UI.run(core)
   local basalt=require("basalt")
   local completion=require("completions")
   local layout=require("layout")
+  local graphMetrics=require("graph_metrics")
   basalt.use("charts")
   local terminal=basalt.getMainFrame()
   terminal.background=C.black
@@ -238,17 +239,8 @@ function UI.run(core)
     return string.format("%.2f",v)
   end
   local function availableMetrics()
-    local all={}
-    for _,metric in ipairs(METRICS) do all[#all+1]=metric end
-    for _,m in ipairs(core.machines) do
-      if m.product and m.product~="" then
-        all[#all+1]={"rate_"..m.id,m.name.." / NET RATE","items/min",C.pink}
-      end
-    end
-    for _,r in ipairs(core.devices:charts()) do
-      all[#all+1]={r.id,r.label,r.unit,C.magenta}
-    end
-    return all
+    return graphMetrics.available(METRICS,core.snapshot,core.machines,
+      core.devices:charts(),C)
   end
   local function collectSeries(key,limit)
     local points={}
@@ -544,6 +536,21 @@ function UI.run(core)
       notify(ok and "Output updated" or (err or "Error"))
       render()
     end,state and C.red or C.green)
+    -- Quick rate averaging presets; the editor supports custom 15-900 s.
+    if m.product and m.product~="" and w>=44 and h>=27 then
+      local options={{30,"30s"},{60,"1m"},{120,"2m"},
+        {300,"5m"},{600,"10m"}}
+      local bw=math.floor((w-6)/#options)
+      for i,preset in ipairs(options) do
+        local seconds,text=preset[1],preset[2]
+        local x=3+(i-1)*bw
+        button(panel,x,19,bw-1,1,text,function()
+          local ok,err=core:setRateWindow(m,seconds)
+          notify(ok and ("Average window: "..text) or (err or "Invalid window"))
+          render()
+        end,smoothing==seconds and C.purple or C.gray)
+      end
+    end
     button(panel,17,16,12,2,m.mode=="manual" and "USE AUTO" or "MANUAL",function()
       local ok,err=core:setMode(m,m.mode=="manual" and "auto" or "manual")
       notify(ok and "Mode updated" or err)
@@ -557,13 +564,13 @@ function UI.run(core)
       end)
     end
     if h>=25 then
-      label(panel,3,20,"*Estimated from net stock changes, not output count",C.lightGray)
+      label(panel,3,21,"*Estimated net stock gain; select averaging window above",C.lightGray)
     end
-    if h>=32 and w>=32 then
+    if h>=34 and w>=32 then
       if m.product and m.product~="" then
         local metric={"rate_"..m.id,
           "PRODUCTION: "..m.name.." / SMOOTHED NET RATE","items/min",C.pink}
-        drawChart(panel,metric,3,22,w-6,h-26,true,function()
+        drawChart(panel,metric,3,23,w-6,h-27,true,function()
           graphKey=metric[1];navigateTo("GRAPH DETAIL")
         end)
       else
@@ -717,7 +724,29 @@ function UI.run(core)
     button(panel,w-15,3,13,1,"< ALL GRAPHS",function()
       navigateTo("GRAPHS")
     end,C.gray)
-    drawChart(panel,chosen,2,5,w-4,h-11,false,nil)
+    local rateId=graphKey:match("^rate_(.+)$")
+    local chartTop=5
+    if rateId then
+      for _,m in ipairs(core.machines) do
+        if m.id==rateId then
+          local options={{30,"30s"},{60,"1m"},{120,"2m"},
+            {300,"5m"},{600,"10m"}}
+          local bw=math.floor((w-5)/5)
+          for i,preset in ipairs(options) do
+            local seconds,text=preset[1],preset[2]
+            button(panel,2+(i-1)*bw,5,bw-1,1,text,function()
+              local ok,err=core:setRateWindow(m,seconds)
+              notify(ok and ("Average window: "..text) or err)
+              render()
+            end,(m.rateWindowSeconds or core.config.rateWindowSeconds)==seconds
+              and C.purple or C.gray)
+          end
+          chartTop=7
+          break
+        end
+      end
+    end
+    drawChart(panel,chosen,2,chartTop,w-4,h-chartTop-6,false,nil)
   end
   local function showDevices()
     local devices={}
