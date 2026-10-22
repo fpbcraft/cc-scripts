@@ -4,7 +4,7 @@ assert(ref:match("^[%w._/-]+$") and not ref:find("..",1,true),"Invalid git ref")
 local root="/fpb-factory"
 local base="https://raw.githubusercontent.com/fpbcraft/cc-scripts/"..ref.."/factory/"
 local names={"main.lua","ui.lua","core.lua","devices.lua","completions.lua",
-  "remote.lua","auth.lua","layout.lua"}
+  "remote.lua","auth.lua","layout.lua","graph_metrics.lua"}
 local function remove(path)
   if fs.exists(path) then fs.delete(path) end
 end
