@@ -10,7 +10,7 @@ local root="/fpb-factory"
 local nextDir="/fpb-factory.next"
 local backup="/fpb-factory.backup"
 local url="https://raw.githubusercontent.com/fpbcraft/cc-scripts/"..ref.."/factory/"
-local files={"main.lua","ui.lua","core.lua","devices.lua","completions.lua"}
+local files={"main.lua","ui.lua","core.lua","devices.lua","completions.lua","remote.lua"}
 local function fail(msg)
   printError("Installation failed: "..msg)
   error(msg,0)
