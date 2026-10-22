@@ -15,3 +15,5 @@ jobs:
           find . -type f -name '*.lua' -not -path './.git/*' -print0 | xargs -0 -n1 luac5.3 -p
       - name: Factory core mock tests
         run: lua5.3 tests/core_test.lua
+      - name: CraftOS module loader regression
+        run: lua5.3 tests/loader_test.lua
