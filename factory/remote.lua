@@ -103,16 +103,14 @@ function Remote:find(fullName)
   end
 end
 function Remote:serve()
-  self:open()
   while true do
-    if not self.opened then
-      self:open()
-      sleep(3)
-    else
+    -- Re-enumerate regularly: a modem may be attached or removed while
+    -- the manager is running.
+    if self:open() then
       local sender,message=rednet.receive(self.PROTOCOL,3)
       if sender then self:ingest(sender,message) end
-      -- Re-open modem if the player reconnects the wired network.
-      if not self.opened then self:open() end
+    else
+      sleep(3)
     end
   end
 end
