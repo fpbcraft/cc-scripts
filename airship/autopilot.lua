@@ -228,15 +228,9 @@ end
 local activeMonitor=findMonitor()
 if activeMonitor then
   activeMonitorName=activeMonitor.name
-  pcall(function()
-    nativeTerm.setCursorPos(1,1)
-    nativeTerm.clear()
-    nativeTerm.write("Airship UI: "..activeMonitorName)
-    nativeTerm.setCursorPos(1,2)
-    nativeTerm.write("Input remains on computer")
-  end)
-  term.redirect(activeMonitor.monitor)
 end
+-- Basalt manages its own monitor frame, not term.redirect(). The controller
+-- never draws to a monitor or calls Basalt from its 10 Hz flight loop.
 local telemetryModems={}
 local function openTelemetryNetwork()
   if not CFG.TELEMETRY_ENABLED then return end
@@ -285,6 +279,9 @@ if type(rawRoute)=="table" then
     end
   end
 end
+-- Loop mode is stored alongside waypoint progress, independently from
+-- navigation settings. Older array-only route files default to one-shot.
+local routeLoop=routeData.loop==true
 local routeNext=clamp(math.floor(tonumber(routeData.nextIndex) or 1),
   1,math.max(1,#route))
 if routeData.nextWaypointId then
@@ -294,9 +291,9 @@ if routeData.nextWaypointId then
 end
 local function saveRoute()
   local current=route[routeNext]
-  return writeTable(routeFile,{version=2,points=route,
-    nextIndex=routeNext,nextWaypointId=current and current.id or nil,
-    nextId=nextWaypointId})
+  return writeTable(routeFile,{version=3,points=route,
+    loop=routeLoop,nextIndex=routeNext,
+    nextWaypointId=current and current.id or nil,nextId=nextWaypointId})
 end
 
 local presetFile=sibling(".airship_avionics_presets")
@@ -619,11 +616,18 @@ local function update(now)
   lastDist,lastTick,lastErr,lastPos=dist,now,err,p
 
   -- Fly THROUGH intermediate waypoints; do not brake to a full stop at each.
-  if mode=="route" and routeIndex<#route and dist<=CFG.PASS_RADIUS then
-    routeIndex=routeIndex+1
+  -- Loop routes wrap after the last waypoint rather than entering ARRIVED.
+  -- One-stop routes still use the usual arrival behavior: repeatedly
+  -- reacquiring an already-reached destination would be unsafe.
+  if mode=="route" and dist<=CFG.PASS_RADIUS
+     and (routeIndex<#route or (routeLoop and #route>1)) then
+    local previous=routeIndex
+    routeIndex=routeIndex<#route and routeIndex+1 or 1
     routeNext=routeIndex
     saveRoute()
-    notice=("Waypoint reached; next "..routeIndex.."/"..#route)
+    notice=previous==#route and "Route loop completed; returning to stop 1"
+      or ("Waypoint reached; next "..routeIndex.."/"..#route)
+    trace("ROUTE advance "..previous.." -> "..routeIndex..(routeLoop and " loop" or ""))
     motionReset()
     zeroHorizontal()
     return
@@ -750,7 +754,7 @@ local function sendTelemetry(now)
   local t=telemetry
   local msg={
     tick=controlTicks, mode=mode,
-    routeIndex=routeIndex, routeCount=#route,
+    routeIndex=routeIndex, routeCount=#route, routeLoop=routeLoop,
     position=t.position, target=t.target,
     label=t.label, distance=t.distance, error=t.error,
     speed=t.speed, closing=t.closing,
@@ -766,386 +770,11 @@ end
 -- Computer (or Advanced Monitor when redirected) displays all 16 colors.
 -- Text, foreground, and background buffers are cached to avoid flicker.
 local lastLines,hitboxes={},{}
-local uiColor=(type(term.isColor)=="function" and term.isColor()) or false
-local UI = {
-  background=colors.black, text=colors.lightGray, muted=colors.gray,
-  titleText=colors.white, titleBackground=colors.blue,
-  accent=colors.cyan, good=colors.lime, warning=colors.orange,
-  selectedText=colors.black, selectedBackground=colors.lightBlue,
-}
-local function line(s)
-  return tostring(s or "")
-end
-local function buttonColors(action)
-  if screen=="settings" and action=="y" and CFG.AUTO_MAP then
-    return colors.black,colors.lime
-  end
-  if action=="s" and screen=="flight" or action=="q"
-      or action=="d" and (screen=="route" or screen=="presets")
-      or action=="x" or action=="cancel" or action=="stop" then
-    return colors.white,colors.red
-  end
-  if action=="submit" or action=="g" and screen=="presets"
-      or action=="p" and screen=="route" or action=="s" and screen=="route" then
-    return colors.black,colors.lime
-  end
-  if action:sub(1,3)=="kp:" or action=="list_up" or action=="list_down" then
-    return colors.black,colors.lightBlue
-  end
-  if action=="g" or action=="m" or action=="r" or action=="l"
-      or action=="n" or action=="a" or action=="e" then
-    return colors.white,colors.blue
-  end
-  if action=="c" or action=="o" or action=="p" or action=="i"
-      or action=="u" or action=="f" then
-    return colors.black,colors.orange
-  end
-  return colors.white,colors.gray
-end
-local function setupUi()
-  hitboxes={}
-  local rows={}
-  local w,h=term.getSize()
-  local function add(s,role)
-    rows[#rows+1]={text=line(s),role=role or "text",buttons={}}
-    return #rows
-  end
-  local function bar(options)
-    local fragments,buttons={},{}
-    local x=1
-    local function flush()
-      if #fragments==0 then return end
-      local y=add(table.concat(fragments,"  "),"toolbar")
-      for _,button in ipairs(buttons) do
-        button.y=y
-        rows[y].buttons[#rows[y].buttons+1]=button
-        hitboxes[#hitboxes+1]=button
-      end
-      fragments,buttons={},{}
-      x=1
-    end
-    for _,option in ipairs(options) do
-      local label=("[%s]"):format(option[1])
-      if #label>w then label=label:sub(1,w) end
-      if x>1 and x+#label-1>w then flush() end
-      fragments[#fragments+1]=label
-      buttons[#buttons+1]={x1=x,x2=x+#label-1,action=option[2]}
-      x=x+#label+2
-    end
-    flush()
-  end
-  local hr=string.rep("-",math.max(0,math.min(w,36)))
-  if screen=="flight" then
-    local state=(mode=="route") and ("ROUTE "..routeIndex.."/"..#route) or mode:upper()
-    add("AIRSHIP  "..state..(CFG.ENGINE_AUTO and "  ENG:AUTO" or ""),"title")
-    add(hr,"rule")
-    local p=telemetry.position
-    if p then add(("POS X%.0f Y%.0f Z%.0f"):format(p.x,p.y,p.z),"position")
-    else add("POS --","muted") end
-    if telemetry.target then
-      add("NEXT "..(telemetry.label or "Target"):sub(1,23),"target")
-      add(("X%.0f Z%.0f  DIST %.0f"):format(
-        telemetry.target.x,telemetry.target.z,telemetry.distance or 0),"target")
-      add(("ERR %+.1f  SPD %.1f"):format(telemetry.error or 0,telemetry.speed or 0))
-    else
-      add("NEXT none","muted")
-      add("DEST Enter coords, map or route","muted")
-    end
-    add(("DRIVE F%02d B%02d L%02d R%02d"):format(outputs.forward or 0,
-      outputs.reverse or 0,outputs.left or 0,outputs.right or 0))
-    add(hr,"rule")
-    bar({{"G Coords","g"},{"M Map","m"},{"R Route","r"}})
-    bar({{"L Presets","l"},{"S Stop","s"},{"T Settings","t"}})
-    bar({{"D Debug","debug"}})
-    add("INFO "..notice,"notice")
-  elseif screen=="settings" then
-    add("SETTINGS","title")
-    add(hr,"rule")
-    add("Bow: "..(CFG.BOW_OFFSET and (CFG.BOW_OFFSET.." deg") or "unset"))
-    add("Steering: "..(CFG.INVERT_STEERING and "REVERSED" or "NORMAL"))
-    add("Auto map: "..(CFG.AUTO_MAP and "ON" or "OFF"))
-    add("Engine auto: "..(CFG.ENGINE_AUTO and "ON" or "OFF"))
-    add("Engine link: HIGH=ON via inverted LAC", "muted")
-    add("Local display: "..#displayLinks.." link(s)","muted")
-    add(("Max forward %d  reverse %d"):format(CFG.MAX_FORWARD,CFG.MAX_REVERSE))
-    add(hr,"rule")
-    bar({{"O Bow +90","o"},{"P Flip 180","p"}})
-    bar({{"I Invert steer","i"},{"C Calibrate","c"}})
-    bar({{"Y Auto-map","y"},{"J Engine auto","engine"}})
-    bar({{"Back","back"}})
-    add("INFO "..notice,"notice")
-  elseif screen=="debug" then
-    add("FLIGHT DIAGNOSTICS", "title")
-    add(hr,"rule")
-    add(("Tick %d | %s"):format(controlTicks,mode))
-    add(("Last tick %.1fs ago"):format(os.clock()-lastFlightCompleted),"notice")
-    add("Stage: "..flightStage,"notice")
-    add(("Update time %.3fs"):format(flightTickDuration))
-    add("Map "..(mapPresent and "present" or "absent"))
-    add(("Bow %s | Nav %s"):format(tostring(CFG.BOW_OFFSET),navName or "?"))
-    add(("F%02d B%02d L%02d R%02d"):format(outputs.forward or 0,
-      outputs.reverse or 0,outputs.left or 0,outputs.right or 0))
-    add("Display Links: "..#displayLinks)
-    add("UI: "..(activeMonitorName or "computer"))
-    add("Engine: "..(CFG.ENGINE_AUTO and "AUTO" or "MANUAL")..
-      " (TX="..tostring(outputs.engine or 0)..")")
-    if controlError then add("ERROR: "..controlError:sub(1,100),"notice") end
-    add("Log: "..debugFile,"muted")
-    add(hr,"rule")
-    bar({{"Back","back"},{"S Stop","s"},{"X Clear log","x"}})
-  elseif screen=="route" then
-    add(("ROUTE  |  %d stops | NEXT %d"):format(#route,routeNext),"title")
-    add("Click stop to select; P resumes","muted")
-    add(hr,"rule")
-    bar({{"^ Up","list_up"},{"v Down","list_down"}})
-    local n=math.max(1,h-11)
-    local start=clamp(routeSelected-math.floor(n/2),1,
-      math.max(1,#route-n+1))
-    for i=start,math.min(#route,start+n-1) do
-      local p=route[i]
-      local status=(i==routeNext and "*" or " ")
-      local text=("%s%s%02d %-12s %d,%d"):format(i==routeSelected and ">" or " ",
-        status,i,(p.name~="" and p.name or "Waypoint"):sub(1,12),round(p.x),round(p.z))
-      local y=add(text,i==routeSelected and "selected" or "text")
-      hitboxes[#hitboxes+1]={x1=1,x2=w,y=y,action="pick:"..i}
-    end
-    if #route==0 then add("(Empty route)","muted") end
-    add("")
-    bar({{"N Add","n"},{"L Presets","l"},{"E Edit","e"},{"D Del","d"}})
-    bar({{"U Up","u"},{"F Down","f"},{"X Clear","x"}})
-    bar({{"P Resume","p"},{"S From here","s"},{"Back","back"}})
-    add("INFO "..notice,"notice")
-  elseif screen=="presets" then
-    add(("PRESET WAYPOINTS  |  %d saved"):format(#presets),"title")
-    add("G fly directly  |  A add to route","muted")
-    add(hr,"rule")
-    bar({{"^ Up","list_up"},{"v Down","list_down"}})
-    local n=math.max(1,h-11)
-    local start=clamp(presetSelected-math.floor(n/2),1,
-      math.max(1,#presets-n+1))
-    for i=start,math.min(#presets,start+n-1) do
-      local p=presets[i]
-      local text=("%s%02d %-13s %d,%d"):format(i==presetSelected and ">" or " ",
-        i,(p.name or "Waypoint"):sub(1,13),round(p.x),round(p.z))
-      local y=add(text,i==presetSelected and "selected" or "text")
-      hitboxes[#hitboxes+1]={x1=1,x2=w,y=y,action="preset:"..i}
-    end
-    if #presets==0 then add("(No saved presets)","muted") end
-    add("")
-    bar({{"N Save pos","n"},{"C Add coords","c"},{"E Edit","e"}})
-    bar({{"G Fly","g"},{"A To route","a"},{"D Delete","d"}})
-    bar({{"Back","back"}})
-    add("INFO "..notice,"notice")
-  else -- prompt
-    add("ENTER "..prompt.title,"title")
-    add(hr,"rule")
-    add(prompt.help or "","muted")
-    add(prompt.error or "","notice")
-    -- Keep the editable end in view when the input is wider than the terminal.
-    local visible = math.max(1,w-3)
-    add("> "..prompt.input:sub(-visible),"prompt")
-    if prompt.numeric then
-      bar({{"7","kp:7"},{"8","kp:8"},{"9","kp:9"},{"DEL","kp:del"}})
-      bar({{"4","kp:4"},{"5","kp:5"},{"6","kp:6"},{"-","kp:-"}})
-      bar({{"1","kp:1"},{"2","kp:2"},{"3","kp:3"},{".","kp:."}})
-      bar({{"X/Z","kp:space"},{"0","kp:0"},{"CLR","kp:clear"}})
-    end
-    bar({{"OK","submit"},{"Cancel","cancel"},{"Stop","stop"}})
-    add("INFO "..notice,"notice")
-  end
-  return rows
-end
-local function rowColors(row)
-  if row and row.role=="title" then return UI.titleText,UI.titleBackground end
-  if row and row.role=="selected" then
-    return UI.selectedText,UI.selectedBackground
-  end
-  if row and row.role=="rule" then return UI.muted,UI.background end
-  if row and row.role=="muted" or row and row.role=="notice" then
-    return UI.muted,UI.background
-  end
-  if row and row.role=="target" then return UI.warning,UI.background end
-  if row and row.role=="position" or row and row.role=="prompt" then
-    return UI.accent,UI.background
-  end
-  return UI.text,UI.background
-end
-local function paint(rows)
-  local w,h=term.getSize()
-  for y=1,h do
-    local row=rows[y]
-    local txt=tostring(row and row.text or ""):sub(1,w)
-    txt=txt..string.rep(" ",math.max(0,w-#txt))
-    local fore,back=rowColors(row)
-    local fg=string.rep(colors.toBlit(fore),w)
-    local bg=string.rep(colors.toBlit(back),w)
-    if row then
-      for _,button in ipairs(row.buttons) do
-        local btnFore,btnBack=buttonColors(button.action)
-        if not uiColor then
-          -- Keep buttons distinct and high-contrast on normal computers.
-          btnFore,btnBack=colors.black,colors.lightGray
-          if button.action=="s" or button.action=="q"
-              or button.action=="cancel" or button.action=="stop" then
-            btnFore,btnBack=colors.white,colors.gray
-          end
-        end
-        local start=clamp(button.x1,1,w)
-        local stop=clamp(button.x2,1,w)
-        if start<=stop then
-          local count=stop-start+1
-          fg=fg:sub(1,start-1)..string.rep(colors.toBlit(btnFore),count)..fg:sub(stop+1)
-          bg=bg:sub(1,start-1)..string.rep(colors.toBlit(btnBack),count)..bg:sub(stop+1)
-        end
-      end
-    end
-    local cache=txt.."|"..fg.."|"..bg
-    if cache~=lastLines[y] then
-      term.setCursorPos(1,y)
-      if term.blit then term.blit(txt,fg,bg)
-      else term.setTextColor(fore); term.setBackgroundColor(back); term.write(txt) end
-      lastLines[y]=cache
-    end
-  end
-  for y=h+1,#lastLines do lastLines[y]=nil end
-end
-local function redraw()
-  local rows=setupUi()
-  paint(rows)
-  if term.setCursorBlink then
-    term.setCursorBlink(screen=="prompt")
-    if screen=="prompt" then
-      local w=term.getSize()
-      term.setCursorPos(math.min(w,3+math.min(#prompt.input,math.max(1,w-3))),5)
-    end
-  end
-end
-
--- Prompts never suspend the 10Hz navigation control loop.
-local function openPrompt(kind,title,help,initial)
-  screen="prompt"
-  local numerical={coords=true,add=true,edit=true,preset_add=true,preset_edit=true}
-  prompt={kind=kind,title=title,help=help,input=initial or "",error=nil,
-    numeric=numerical[kind]==true}
-end
-local function editWaypoints()
-  if mode=="calibration" then notice="Calibration running; press S to abort" return end
-  stopHorizontal("Route editor: horizontal thrust stopped")
-  routeSelected=clamp(routeSelected,1,math.max(1,#route))
-  screen="route"
-end
-local function parseWaypoint(input)
-  -- Numeric X/Y/Z is allowed as input for compatibility; Y is ignored.
-  local tok={}
-  for word in input:gmatch("%S+") do tok[#tok+1]=word end
-  local x,b=cleanNumber(tok[1]),cleanNumber(tok[2])
-  if not x or not b then return nil,"Enter X Z or X Y Z" end
-  local c=cleanNumber(tok[3])
-  local z,first=b,3
-  if c then z,first=c,4 end
-  local label={}
-  for i=first,#tok do label[#label+1]=tok[i] end
-  return {x=x,z=z,name=table.concat(label," ")}
-end
-local function routeAdd(point,editing)
-  if editing then
-    local old=route[routeSelected]
-    if not old then return end
-    point.id=old.id
-    route[routeSelected]=point
-    notice="Waypoint updated"
-  else
-    if #route>=100 then notice="Route limited to 100 waypoints" return end
-    point.id=makeId()
-    local index=clamp(routeSelected+1,1,#route+1)
-    if #route>0 and index<=routeNext then routeNext=routeNext+1 end
-    table.insert(route,index,point)
-    routeSelected=index
-    notice="Waypoint added to route"
-  end
-  routeNext=clamp(routeNext,1,math.max(1,#route))
-  saveRoute()
-end
-local function presetAdd(point,editing)
-  if editing then
-    presets[presetSelected]=point
-    notice="Preset updated"
-  else
-    if #presets>=200 then notice="Preset limit (200) reached" return end
-    presets[#presets+1]=point
-    presetSelected=#presets
-    notice="Preset saved: "..point.name
-  end
-  savePresets()
-end
-local function openPresets(origin)
-  presetReturn=origin or screen
-  presetSelected=clamp(presetSelected,1,math.max(1,#presets))
-  screen="presets"
-end
-local function promptSubmit(p)
-  if not p then return end
-  local input=p.input
-  p.error=nil
-  -- Validate while the prompt is still open. Previously a bad entry closed
-  -- the dialog without any visible result, making it appear unresponsive.
-  local parsed
-  if p.kind=="coords" or p.kind=="add" or p.kind=="edit"
-      or p.kind=="preset_add" or p.kind=="preset_edit" then
-    local err
-    parsed,err=parseWaypoint(input)
-    if not parsed then p.error=err; return end
-    if (p.kind=="preset_add" or p.kind=="preset_edit") and parsed.name=="" then
-      parsed.name=("Preset %d,%d"):format(round(parsed.x),round(parsed.z))
-    end
-  elseif p.kind=="preset_position" then
-    local name=input:match("^%s*(.-)%s*$")
-    if name=="" then p.error="Enter a waypoint name"; return end
-    parsed={x=p.origin.x,z=p.origin.z,name=name}
-  end
-  -- Apply the action only after successful validation. The navigation timer
-  -- keeps running while the prompt is open.
-  if p.kind=="coords" then
-    directTarget=parsed
-    beginNavigation("direct")
-  elseif p.kind=="add" or p.kind=="edit" then
-    routeAdd(parsed,p.kind=="edit")
-  elseif p.kind=="preset_position" or p.kind=="preset_add" or p.kind=="preset_edit" then
-    presetAdd(parsed,p.kind=="preset_edit")
-  elseif p.kind=="clear" then
-    if input:lower()=="yes" then
-      route={}
-      routeSelected=1
-      routeNext=1
-      local saved=saveRoute()
-      notice=saved and "Route cleared" or "Route cleared (not saved)"
-    else notice="Cancelled" end
-  end
-  screen=p.returnScreen or "flight"
-  prompt=nil
-end
-local function keyFlight(k)
-  if k=="g" then
-    stopHorizontal("Enter destination X/Z")
-    openPrompt("coords","DESTINATION","X Z [name] or X Y Z (Y ignored)")
-  elseif k=="m" then
-    currentMap=mapTarget()
-    beginNavigation("map")
-  elseif k=="r" then editWaypoints()
-  elseif k=="l" then openPresets("flight")
-  elseif k=="s" then
-    if mode=="calibration" then cal=nil end
-    stopHorizontal("Navigation stopped")
-  elseif k=="t" then screen="settings"
-  elseif k=="d" or k=="debug" then screen="debug"
-  elseif k=="q" then running=false end
-end
+-- Basalt owns rendering and mouse events. Settings changes preserve the
+-- existing navigation calibration and engine options without touching flight
+-- timer ownership.
 local function keySettings(k)
-  if k=="back" or k=="escape" then screen="flight"
-  elseif k=="c" then
-    screen="flight"
-    calibrateStart()
-  elseif k=="o" or k=="p" then
+  if k=="o" or k=="p" then
     stopHorizontal("Bow changed; resume navigation")
     CFG.BOW_OFFSET=((CFG.BOW_OFFSET or (k=="o" and -90 or 0))
       +(k=="o" and 90 or 180))%360
@@ -1156,7 +785,7 @@ local function keySettings(k)
     CFG.INVERT_STEERING=not CFG.INVERT_STEERING
     saveSettings()
     notice="Steering: "..(CFG.INVERT_STEERING and "REVERSED" or "NORMAL")
-  elseif k=="engine" or k=="j" then
+  elseif k=="j" then
     CFG.ENGINE_AUTO=not CFG.ENGINE_AUTO
     saveSettings()
     notice=CFG.ENGINE_AUTO and "Engine automation ON (inverted LAC)" or "Engine automation disabled"
@@ -1167,158 +796,178 @@ local function keySettings(k)
     notice="Auto map: "..(CFG.AUTO_MAP and "ON" or "OFF")
   end
 end
-local function keyRoute(k)
-  if k=="back" or k=="r" then screen="flight"
-  elseif k=="j" then routeSelected=math.min(#route,routeSelected+1)
-  elseif k=="k" then routeSelected=math.max(1,routeSelected-1)
-  elseif k=="n" then
-    openPrompt("add","ADD ROUTE STOP","X Z [name] or X Y Z (Y ignored)")
-    prompt.returnScreen="route"
-  elseif k=="l" then openPresets("route")
-  elseif k=="e" and #route>0 then
-    local t=route[routeSelected]
-    openPrompt("edit","EDIT ROUTE STOP","X Z [name]; Y ignored",
-      tostring(t.x).." "..tostring(t.z)..(t.name~="" and " "..t.name or ""))
-    prompt.returnScreen="route"
-  elseif k=="d" and #route>0 then
-    local removed=routeSelected
-    table.remove(route,removed)
-    if removed<routeNext then routeNext=routeNext-1 end
-    routeNext=clamp(routeNext,1,math.max(1,#route))
-    routeSelected=clamp(routeSelected,1,math.max(1,#route))
-    saveRoute()
-    notice="Route stop deleted"
-  elseif (k=="u" or k=="f") and #route>1 then
-    local other=routeSelected+(k=="u" and -1 or 1)
-    if other>=1 and other<=#route then
-      if routeNext==routeSelected then routeNext=other
-      elseif routeNext==other then routeNext=routeSelected end
-      route[routeSelected],route[other]=route[other],route[routeSelected]
-      routeSelected=other
-      saveRoute()
-    end
-  elseif k=="p" then
-    screen="flight"
-    beginNavigation("route") -- resume from saved next waypoint
-  elseif k=="s" then
-    screen="flight"
-    beginNavigation("route",routeSelected) -- explicit new starting point
-  elseif k=="x" then
-    openPrompt("clear","CLEAR ROUTE","Type yes to confirm")
-    prompt.returnScreen="route"
-  end
+
+-- Flight/persistence adapter for Basalt. UI callbacks do not own any
+-- propulsion or navigation timers. No coordinates are persisted outside the
+-- existing per-script route, preset and calibration files.
+local controller={monitor=activeMonitor and activeMonitor.monitor or nil,
+  monitorName=activeMonitorName}
+local function validDestination(x,z)
+  x,z=cleanNumber(x),cleanNumber(z)
+  if not x or not z then return nil,nil,"World X and Z must be finite coordinates" end
+  return x,z
 end
-local function keyPresets(k)
-  if k=="back" or k=="escape" then screen=presetReturn
-  elseif k=="j" then presetSelected=math.min(#presets,presetSelected+1)
-  elseif k=="k" then presetSelected=math.max(1,presetSelected-1)
-  elseif k=="n" then
-    local here=shipPosition()
-    openPrompt("preset_position","SAVE CURRENT POSITION","Enter a name for this position",
-      ("At %d,%d"):format(round(here.x),round(here.z)))
-    prompt.origin={x=round(here.x),z=round(here.z)}
-    prompt.returnScreen="presets"
-  elseif k=="c" then
-    openPrompt("preset_add","NEW PRESET","X Z Name, or X Y Z Name (Y ignored)")
-    prompt.returnScreen="presets"
-  elseif k=="e" and #presets>0 then
-    local p=presets[presetSelected]
-    openPrompt("preset_edit","EDIT PRESET","X Z Name (Y ignored)",
-      tostring(p.x).." "..tostring(p.z).." "..p.name)
-    prompt.returnScreen="presets"
-  elseif k=="d" and #presets>0 then
-    table.remove(presets,presetSelected)
-    presetSelected=clamp(presetSelected,1,math.max(1,#presets))
-    savePresets()
-    notice="Preset deleted"
-  elseif k=="g" and #presets>0 then
-    local p=presets[presetSelected]
-    directTarget={x=p.x,z=p.z,name=p.name}
-    screen="flight"
-    beginNavigation("direct")
-    notice="Flying to "..p.name
-  elseif k=="a" and #presets>0 then
-    local p=presets[presetSelected]
-    routeAdd({x=p.x,z=p.z,name=p.name},false)
-    screen="route"
-    notice="Added preset to route: "..p.name
-  end
+function controller.setPage(name)
+  -- Prevent automatic map engagement while editing waypoints/settings.
+  screen=(name=="FLIGHT") and "flight" or tostring(name or ""):lower()
 end
-local function keyDebug(k)
-  if k=="back" or k=="escape" or k=="d" then screen="flight"
-  elseif k=="s" then stopHorizontal("Stopped from diagnostics")
-  elseif k=="x" then
-    pcall(function() if fs.exists(debugFile) then fs.delete(debugFile) end end)
-    trace("Log cleared by user")
-    notice="Debug log cleared"
-  end
+function controller.snapshot()
+  return {mode=mode,notice=notice,position=telemetry.position,
+    target=telemetry.target,label=telemetry.label,distance=telemetry.distance,
+    error=telemetry.error,speed=telemetry.speed,outputs=outputs,
+    route=route,routeNext=routeNext,routeIndex=routeIndex,
+    routeLoop=routeLoop,presets=presets,
+    bowOffset=CFG.BOW_OFFSET,invertSteering=CFG.INVERT_STEERING,
+    autoMap=CFG.AUTO_MAP,engineAuto=CFG.ENGINE_AUTO,
+    tick=controlTicks,tickAge=os.clock()-lastFlightCompleted,
+    tickDuration=flightTickDuration,stage=flightStage,controlError=controlError,
+    navName=navName,bridgeName=bridgeName,displayLinks=#displayLinks}
 end
-local function clickAt(x,y)
-  if screen=="prompt" and y==5 then return end
-  for _,hit in ipairs(hitboxes) do
-    if hit.y==y and x>=hit.x1 and x<=hit.x2 then
-      if screen=="prompt" and hit.action:sub(1,3)=="kp:" then
-        local action=hit.action:sub(4)
-        if action=="del" then prompt.input=prompt.input:sub(1,-2)
-        elseif action=="clear" then prompt.input=""
-        elseif action=="space" then
-          if #prompt.input<180 then prompt.input=prompt.input:gsub("%s+$","").." " end
-        elseif #prompt.input<180 then prompt.input=prompt.input..action end
-        prompt.error=nil
-      elseif hit.action=="list_up" then
-        if screen=="route" then keyRoute("k") else keyPresets("k") end
-      elseif hit.action=="list_down" then
-        if screen=="route" then keyRoute("j") else keyPresets("j") end
-      elseif hit.action:sub(1,7)=="preset:" then
-        presetSelected=tonumber(hit.action:sub(8)) or presetSelected
-      elseif hit.action:sub(1,5)=="pick:" then
-        routeSelected=tonumber(hit.action:sub(6)) or routeSelected
-      elseif hit.action=="submit" and screen=="prompt" then
-        promptSubmit(prompt)
-      elseif hit.action=="cancel" and screen=="prompt" then
-        screen=prompt.returnScreen or "flight"
-        prompt=nil
-        notice="Cancelled"
-      elseif hit.action=="stop" and screen=="prompt" then
-        stopHorizontal("Navigation stopped")
-        screen="flight"
-        prompt=nil
-      elseif screen=="flight" then keyFlight(hit.action)
-      elseif screen=="settings" then keySettings(hit.action)
-      elseif screen=="route" then keyRoute(hit.action)
-      elseif screen=="presets" then keyPresets(hit.action)
-      elseif screen=="debug" then keyDebug(hit.action) end
-      return
-    end
-  end
+function controller.fly(x,z,name)
+  local err; x,z,err=validDestination(x,z)
+  if not x then return false,err end
+  directTarget={x=x,z=z,name=tostring(name or "")}
+  if not beginNavigation("direct") then return false,notice end
+  return true
 end
--- UI errors should be visible without killing propulsion.
--- Actual controller/peripheral errors still go through the main crash cutoff.
-local function safeUI(action)
-  local ok,err=pcall(action)
+function controller.flyMap()
+  local ok,dst=pcall(mapTarget)
+  if not ok then return false,"Could not read Navigation Table: "..tostring(dst) end
+  currentMap=dst
+  if not beginNavigation("map") then return false,notice end
+  return true
+end
+function controller.stop()
+  if mode=="calibration" then cal=nil end
+  stopHorizontal("Navigation stopped by operator")
+  return true
+end
+function controller.resumeRoute()
+  if not beginNavigation("route") then return false,notice end
+  return true
+end
+function controller.setRouteLoop(enabled)
+  routeLoop=(enabled==true)
+  local ok,err=saveRoute()
   if not ok then
-    local msg=tostring(err):match("^[^\n]+") or "unknown error"
-    notice=("INPUT ERROR: "..msg):sub(1,150)
-    trace(notice)
-    if screen=="prompt" and prompt then prompt.error=notice end
+    return false,"Unable to persist loop setting: "..tostring(err)
   end
+  notice=routeLoop and "Route will repeat after the last waypoint"
+    or "Route will stop at the last waypoint"
+  trace("ROUTE looping "..(routeLoop and "ON" or "OFF"))
+  return true
 end
-local function safeRedraw()
-  local ok,err=pcall(redraw)
-  if not ok then
-    local msg=tostring(err):match("^[^\n]+") or "unknown error"
-    notice=("DISPLAY ERROR: "..msg):sub(1,150)
-    trace(notice)
-    pcall(function()
-      term.setCursorBlink(false)
-      term.setBackgroundColor(colors.black)
-      term.setTextColor(colors.white)
-      term.clear()
-      term.setCursorPos(1,1)
-      print(notice)
-    end)
+function controller.flyRouteFrom(index)
+  index=tonumber(index)
+  if not index or index%1~=0 or index<1 or index>#route then
+    return false,"Select an existing route stop"
   end
+  if not beginNavigation("route",index) then return false,notice end
+  return true
 end
+function controller.addRoute(x,z,name,after)
+  local err; x,z,err=validDestination(x,z)
+  if not x then return false,err end
+  if #route>=100 then return false,"Route is limited to 100 stops" end
+  if mode=="route" then stopHorizontal("Route edited; press Resume") end
+  local item={id=makeId(),x=x,z=z,name=tostring(name or "")}
+  local idx=clamp(math.floor(tonumber(after) or #route)+1,1,#route+1)
+  if #route>0 and idx<=routeNext then routeNext=routeNext+1 end
+  table.insert(route,idx,item)
+  routeNext=clamp(routeNext,1,#route)
+  saveRoute();notice="Route stop added"
+  return true
+end
+function controller.editRoute(index,x,z,name)
+  local err; x,z,err=validDestination(x,z)
+  if not x then return false,err end
+  index=tonumber(index)
+  if not index or not route[index] then return false,"Unknown route stop" end
+  if mode=="route" then stopHorizontal("Route edited; press Resume") end
+  local id=route[index].id
+  route[index]={id=id,x=x,z=z,name=tostring(name or "")}
+  saveRoute();notice="Route stop updated"
+  return true
+end
+function controller.removeRoute(index)
+  index=tonumber(index)
+  if not index or not route[index] then return false,"Unknown route stop" end
+  if mode=="route" then stopHorizontal("Route edited; press Resume") end
+  table.remove(route,index)
+  if index<routeNext then routeNext=routeNext-1 end
+  routeNext=clamp(routeNext,1,math.max(1,#route))
+  saveRoute();notice="Route stop deleted"
+  return true
+end
+function controller.moveRoute(index,by)
+  index=tonumber(index)
+  local other=index and (index+by)
+  if not other or other<1 or other>#route then return index end
+  if mode=="route" then stopHorizontal("Route reordered; press Resume") end
+  if routeNext==index then routeNext=other
+  elseif routeNext==other then routeNext=index end
+  route[index],route[other]=route[other],route[index]
+  saveRoute();notice="Route stop moved"
+  return other
+end
+function controller.addPreset(x,z,name)
+  local err; x,z,err=validDestination(x,z)
+  if not x then return false,err end
+  if #presets>=200 then return false,"200 preset limit" end
+  presets[#presets+1]={x=x,z=z,
+    name=name and name~="" and tostring(name) or ("Waypoint "..#presets+1)}
+  savePresets();notice="Preset saved"
+  return true
+end
+function controller.editPreset(index,x,z,name)
+  local err; x,z,err=validDestination(x,z)
+  if not x then return false,err end
+  index=tonumber(index)
+  if not index or not presets[index] then return false,"Unknown preset" end
+  presets[index]={x=x,z=z,name=tostring(name or "")}
+  savePresets();notice="Preset updated"
+  return true
+end
+function controller.removePreset(index)
+  index=tonumber(index)
+  if not index or not presets[index] then return false,"Unknown preset" end
+  table.remove(presets,index)
+  savePresets();notice="Preset deleted"
+  return true
+end
+function controller.capturePreset()
+  local ok,p=pcall(shipPosition)
+  if not ok then return false,"Position unavailable: "..tostring(p) end
+  local x,z=round(p.x),round(p.z)
+  return controller.addPreset(x,z,("Current %d,%d"):format(x,z))
+end
+function controller.flyPreset(index)
+  local p=presets[tonumber(index) or -1]
+  if not p then return false,"Select a preset" end
+  return controller.fly(p.x,p.z,p.name)
+end
+function controller.presetToRoute(index)
+  local p=presets[tonumber(index) or -1]
+  if not p then return false,"Select a preset" end
+  return controller.addRoute(p.x,p.z,p.name,#route)
+end
+function controller.setting(id)
+  local map={bow90="o",bow180="p",invert="i",autoMap="y",engineAuto="j"}
+  if not map[id] then return false,"Unknown setting" end
+  keySettings(map[id]);return true
+end
+function controller.calibrate()
+  local ok,err=pcall(calibrateStart)
+  if not ok then return false,tostring(err) end
+  return true
+end
+local function uiBasaltLoop()
+  -- CraftOS shell-injected require resolves ./ui.lua and ./basalt.lua beside
+  -- this running autopilot.lua (same loading mechanism as the factory app).
+  require("ui").run(controller)
+  running=false
+end
+
 -- Independent CC:Tweaked event loops: the UI always remains responsive, and
 -- main-thread peripheral calls cannot consume the NEXT flight timer event.
 -- This preserves the timer fix from the T10 freeze on target changes.
@@ -1352,85 +1001,6 @@ local function flightLoop()
   end
 end
 
-local function uiLoop()
-  while running do
-    local ev,a,b,c=os.pullEventRaw()
-    if ev=="terminate" then
-      trace("TERMINATE requested")
-      running=false
-      return
-    elseif ev=="monitor_touch" and activeMonitorName==a then
-      safeUI(function() clickAt(b,c) end)
-      safeRedraw()
-    elseif ev=="mouse_click" and not activeMonitorName then
-      safeUI(function() clickAt(b,c) end)
-      safeRedraw()
-    elseif ev=="mouse_scroll" and not activeMonitorName
-       and (screen=="route" or screen=="presets") then
-      safeUI(function()
-        if screen=="route" then
-          routeSelected=clamp(routeSelected+(a>0 and 1 or -1),1,math.max(1,#route))
-        else
-          presetSelected=clamp(presetSelected+(a>0 and 1 or -1),1,math.max(1,#presets))
-        end
-      end)
-      safeRedraw()
-    elseif ev=="char" then
-      safeUI(function()
-        if screen=="prompt" then
-          if #prompt.input<180 then
-            prompt.input=prompt.input..a
-            prompt.error=nil
-          end
-        elseif screen=="route" then keyRoute(a:lower())
-        elseif screen=="presets" then keyPresets(a:lower())
-        elseif screen=="settings" then keySettings(a:lower())
-        elseif screen=="debug" then keyDebug(a:lower())
-        else keyFlight(a:lower()) end
-      end)
-      safeRedraw()
-    elseif ev=="paste" and screen=="prompt" then
-      safeUI(function()
-        prompt.input=(prompt.input..tostring(a)):sub(1,180)
-        prompt.error=nil
-      end)
-      safeRedraw()
-    elseif ev=="key" then
-      safeUI(function()
-        if screen=="prompt" then
-          if a==keys.enter or a==keys.numPadEnter then
-            promptSubmit(prompt)
-          elseif a==keys.backspace then
-            prompt.input=prompt.input:sub(1,-2)
-            prompt.error=nil
-          elseif a==keys.escape then
-            screen=prompt.returnScreen or "flight"
-            prompt=nil
-            notice="Entry cancelled"
-          end
-        elseif screen=="route" or screen=="presets" then
-          if a==keys.up then
-            if screen=="route" then keyRoute("k") else keyPresets("k") end
-          elseif a==keys.down then
-            if screen=="route" then keyRoute("j") else keyPresets("j") end
-          elseif a==keys.escape then
-            if screen=="route" then screen="flight" else screen=presetReturn end
-          end
-        elseif screen=="settings" or screen=="debug" then
-          if a==keys.escape then screen="flight" end
-        elseif a==keys.escape then
-          if mode=="calibration" then cal=nil end
-          stopHorizontal("Navigation stopped")
-        end
-      end)
-      safeRedraw()
-    elseif ev=="term_resize" or (ev=="monitor_resize" and a==activeMonitorName) then
-      lastLines={}
-      term.clear()
-      safeRedraw()
-    end
-  end
-end
 local function watchdogLoop()
   local timer=os.startTimer(1)
   while running do
@@ -1446,26 +1016,10 @@ local function watchdogLoop()
     end
   end
 end
--- UI redrawing is isolated from propulsion. Wired monitors can yield
--- during blit(); the flight timer must never depend on monitor responsiveness.
-local function uiRefreshLoop()
-  local timer=os.startTimer(0)
-  while running do
-    local ev,id=os.pullEventRaw("timer")
-    if ev=="timer" and id==timer then
-      safeRedraw()
-      timer=os.startTimer(CFG.UI_REFRESH_PERIOD)
-    end
-  end
-end
--- Local Create Display Link updates use a separate coroutine and independent
--- timer. They NEVER run inside the flight tick. Disable DISPLAY_ENABLED above
--- if your Sable installation stalls while talking to a local Display Link;
--- a second display computer via rednet is the safest fallback.
 local function displayLines(maxRows)
   local t=telemetry
-  local status=mode=="route" and ("ROUTE "..routeIndex.."/"..#route)
-    or mode:upper()
+  local status=mode=="route" and ("ROUTE "..routeIndex.."/"..#route
+    ..(routeLoop and " LOOP" or "")) or mode:upper()
   local name=t.label or "--"
   local headingError=t.error and ("E%+.0f"):format(t.error) or ""
   local dist=t.distance and ("D%.0f"):format(t.distance) or ""
@@ -1530,13 +1084,10 @@ local function telemetryLoop()
 end
 local function main()
   zeroHorizontal()
-  term.setBackgroundColor(colors.black)
-  term.setTextColor(colors.white)
-  term.clear()
   lastFlightCompleted=os.clock()
   trace("BOOT independent flight/UI/display loops; local displays="..#displayLinks)
-  safeRedraw()
-  parallel.waitForAny(uiLoop, flightLoop, watchdogLoop, displayLoop, telemetryLoop, engineLoop, uiRefreshLoop)
+  parallel.waitForAny(uiBasaltLoop, flightLoop, watchdogLoop,
+    displayLoop, telemetryLoop, engineLoop)
 end
 local ok,err=xpcall(main,function(e)
   if debug and debug.traceback then return debug.traceback(tostring(e),2) end
@@ -1551,8 +1102,8 @@ end
 if CFG.ENGINE_AUTO or engineEverEnabled or outputs.engine~=nil then
   pcall(function() outputs.engine=nil; send("engine",0) end)
 end
--- Do not write Display Links from the shutdown handler.
-if activeMonitorName then term.redirect(nativeTerm) end
+-- Restore the local computer terminal, not the Basalt monitor frame.
+if term.redirect then term.redirect(nativeTerm) end
 if term.setCursorBlink then term.setCursorBlink(false) end
 term.setBackgroundColor(colors.black)
 term.setTextColor(colors.white)
