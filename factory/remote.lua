@@ -85,12 +85,21 @@ function Remote:handleAck(sender,msg)
       type(msg.seq)~="number" or type(msg.status)~="string" then return false end
   local pending=self.pending[sender] and self.pending[sender][msg.seq]
   if not pending then return false end
+  if type(msg.bootId)~="string" or #msg.bootId>80 then return false end
   local signature=Auth.frame("ack:"..pending.action,os.getComputerID(),
     sender,msg.seq,pending.target,pending.side,msg.on==true,
-    msg.polarity==true,msg.status)
+    msg.polarity==true,msg.status.."#"..msg.bootId)
   if not Auth.equal(Auth.mac(pair.key,signature),msg.mac) then return false end
   self.pending[sender][msg.seq]=nil
   if msg.status=="ok" then
+    if pair.bootId and pair.bootId~=msg.bootId then
+      for key in pairs(self.outputs) do
+        if key:sub(1,#("remote:"..sender..":"))=="remote:"..sender..":" then
+          self.outputs[key]=nil
+        end
+      end
+    end
+    pair.bootId=msg.bootId
     pair.ready=true
     pair.lastSecure=now()
     self.errors[sender]=nil
@@ -171,6 +180,8 @@ function Remote:tick()
         commands[seq]=nil
         if p.action=="set" then
           self.errors[id]="Command unacknowledged"
+        elseif not self:paired(id) then
+          self.errors[id]="Pairing timed out; check the node key"
         end
       end
     end
