@@ -32,6 +32,7 @@ function UI.run(core)
   local graphMetrics=require("graph_metrics")
   local Graphics=require("graphics_capabilities")
   local Pixel=require("pixel_view")
+  local Dashboard=require("screen_dashboard")
   basalt.use("charts")
   local terminal=basalt.getMainFrame()
   terminal.background=C.black
@@ -726,20 +727,14 @@ function UI.run(core)
     end)
     label(panel,3,h-6,"AUTO stops high, resumes low; Manual bypasses rules",C.lightGray)
   end
-  -- Never switch the Basalt primary display into graphics mode. Prefer
-  -- a second monitor, then the local computer screen as a companion display.
+  -- Switch the PRIMARY Advanced Monitor into CC Graphics pixel mode.
+  -- Do not use the computer terminal as an unintended companion display.
   local function findPixelSurface()
-    for _,name in ipairs(mons) do
-      if name~=monitorName then
-        local candidate=peripheral.wrap(name)
-        if Pixel.supported(candidate) then
-          return candidate,"Monitor "..name,name
-        end
-      end
-    end
     if monitorName then
-      local native=term.native and term.native() or term
-      if Pixel.supported(native) then return native,"Computer terminal" end
+      local primary=peripheral.wrap(monitorName)
+      if Pixel.supported(primary) then
+        return primary,"Main Advanced Monitor",monitorName
+      end
     end
     return nil,nil
   end
@@ -782,6 +777,7 @@ function UI.run(core)
     end
     pixelScreen=nil
     pixelMonitorName=nil
+    root.visible=true
     pixelStatus="Stopped"
   end
   local function redrawPixels()
@@ -798,21 +794,23 @@ function UI.run(core)
     if pixelViewer then return true end
     local surface,title=findPixelSurface()
     if not surface then
-      pixelStatus="Attach a second CC Graphics monitor, or use the computer screen"
+      pixelStatus="The main Advanced Monitor does not expose CC Graphics"
       notify(pixelStatus)
       return false
     end
     local ok,viewer=pcall(Pixel.new,surface)
     if not ok then pixelStatus=tostring(viewer);return false end
+    root.visible=false
     local started,worked,err=pcall(viewer.start,viewer)
     if not started or not worked then
+      root.visible=true
       pixelStatus=tostring(err or worked)
       return false
     end
     pixelViewer=viewer
     pixelScreen=surface
     pixelScreenLabel=title
-    pixelMonitorName=select(3,findPixelSurface())
+    pixelMonitorName=monitorName
     pixelStatus="Running on "..title
     redrawPixels()
     return pixelViewer~=nil
@@ -1495,6 +1493,51 @@ function UI.run(core)
     title:destroy();subtitle:destroy()
     render()
   end)
+  -- Independent secondary read-only workspaces: each has its own page,
+  -- chart selection and drag/drop order. Factory automation remains central.
+  local additionalScreens={}
+  local function discoverAdditionalScreens()
+    local live={}
+    for _,name in ipairs(peripheral.getNames()) do
+      local kind=peripheral.getType(name)
+      local terminalDevice=kind=="terminal" or
+        (peripheral.hasType and peripheral.hasType(name,"terminal"))
+      if name~=monitorName and (kind=="monitor" or terminalDevice) then
+        local ok,surface=pcall(peripheral.wrap,name)
+        if ok and surface and surface.getSize and surface.write and
+           surface.setCursorPos and surface.setBackgroundColor and
+           surface.setTextColor then
+          local sized,sw,sh=pcall(surface.getSize)
+          if sized and sw>=32 and sh>=19 then
+            live[name]=true
+            if not additionalScreens[name] then
+              additionalScreens[name]=Dashboard.new(name,surface,core,
+                availableMetrics,terminalDevice and "terminal" or "monitor")
+              pcall(additionalScreens[name].draw,additionalScreens[name])
+            end
+          end
+        end
+      end
+    end
+    for name in pairs(additionalScreens) do
+      if not live[name] then additionalScreens[name]=nil end
+    end
+  end
+  discoverAdditionalScreens()
+  basalt.schedule(function()
+    while true do
+      local event,a,b,c,d=os.pullEvent()
+      if event=="monitor_touch" or event=="terminal_mouse_click" or
+         event=="terminal_mouse_drag" or event=="terminal_mouse_up" or
+         event=="terminal_mouse_scroll" then
+        local display=additionalScreens[a]
+        if display then pcall(display.handle,display,event,a,b,c,d) end
+      elseif event=="peripheral" or event=="peripheral_detach" or
+         event=="monitor_resize" or event=="term_resize" then
+        discoverAdditionalScreens()
+      end
+    end
+  end)
   -- Background read-only radio receiver. Nodes broadcast automatically;
   -- no manual hub address or node ID configuration is required.
   basalt.schedule(function()
@@ -1511,11 +1554,20 @@ function UI.run(core)
         if ok and tw>0 and th>0 then
           local px=(x-0.5)*pixelViewer.w/tw
           local py=(y-0.5)*pixelViewer.h/th
-          local key=pixelViewer:hitTest(px,py)
-          if key then
-            if pixelFocus==key then pixelFocus=nil else pixelFocus=key end
+          local action,value=pixelViewer:hitAction(px,py)
+          if action=="exit" then
+            stopPixelViewer()
+            navigateTo("GRAPHS")
+          elseif action=="range" then
+            pixelRange=value
+            savePixelOptions()
             redrawPixels()
-            if page=="PIXEL VIEW" then render() end
+          else
+            local key=pixelViewer:hitTest(px,py)
+            if key then
+              if pixelFocus==key then pixelFocus=nil else pixelFocus=key end
+              redrawPixels()
+            end
           end
         end
       end
@@ -1526,6 +1578,9 @@ function UI.run(core)
       sleep(core.config.refreshSeconds)
       local scanned,errorMessage=pcall(function()core:scan()end)
       if pixelViewer then redrawPixels() end
+      for _,screen in pairs(additionalScreens) do
+        pcall(screen.draw,screen)
+      end
       if not scanned then notify("Scan error: "..tostring(errorMessage)) end
       -- Do not interrupt an edit or an on-screen keyboard.
       if page~="KEYBOARD" and page~="MACHINE EDIT" then
