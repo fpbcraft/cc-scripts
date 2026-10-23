@@ -30,20 +30,37 @@ function UI.run(core)
   local completion=require("completions")
   local layout=require("layout")
   local graphMetrics=require("graph_metrics")
-  local Dashboard=require("screen_dashboard")
+  local ScreenManager=require("screen_manager")
   basalt.use("charts")
   local terminal=basalt.getMainFrame()
   terminal.background=C.black
   local mons={}
   for _,name in ipairs(peripheral.getNames()) do
-    if peripheral.getType(name)=="monitor" then mons[#mons+1]=name end
+    if peripheral.getType(name)=="monitor" or
+       (peripheral.hasType and peripheral.hasType(name,"monitor")) then
+      local ok,screen=pcall(peripheral.wrap,name)
+      if ok and screen and screen.getSize then
+        -- The largest connected monitor is the primary control surface.
+        -- This avoids selecting a tiny peripheral simply because its
+        -- network name sorts before the main factory control monitor.
+        if screen.setTextScale then
+          pcall(screen.setTextScale,core.config.textScale)
+        end
+        local measured,mw,mh=pcall(screen.getSize)
+        if measured then
+          mons[#mons+1]={name=name,area=mw*mh,w=mw,h=mh}
+        end
+      end
+    end
   end
-  table.sort(mons)
+  table.sort(mons,function(a,b)
+    if a.area==b.area then return a.name<b.name end
+    return a.area>b.area
+  end)
   local root=terminal
-  local monitorName=mons[1]
+  local monitorName=mons[1] and mons[1].name or nil
   if monitorName then
     local monitor=peripheral.wrap(monitorName)
-    monitor.setTextScale(core.config.textScale)
     root=basalt.createFrame(monitor,monitorName)
     root.background=C.black
     terminal:addLabel({x=2,y=2,text="FPBCRAFT FACTORY CONTROL",
@@ -67,6 +84,7 @@ function UI.run(core)
   local genericPage=1
   local graphKey="stress"
   local graphPage=1
+  local screens -- forward reference for Settings diagnostics
   local selected=nil
   local quantity=1
   local selectedMachine=nil
@@ -1084,6 +1102,15 @@ function UI.run(core)
     label(panel,3,11,"Poll interval: "..core.config.refreshSeconds.."s")
     label(panel,3,14,"Default rate smoothing: "..
       core.config.rateWindowSeconds.."s")
+    if h>=23 then
+      local count,errors=screens:status()
+      label(panel,3,18,("Secondary displays: %d connected"):format(count),
+        count>0 and C.lime or C.orange,w-6)
+      if errors[1] then
+        label(panel,3,19,short("Display error: "..errors[1],w-6),
+          C.orange,w-6)
+      end
+    end
     button(panel,3,6,15,1,"RENAME",function()
       fieldInput("Factory name",core.config.site,false,function(s)
         core:configure({site=s})
@@ -1240,49 +1267,14 @@ function UI.run(core)
     title:destroy();subtitle:destroy()
     render()
   end)
-  -- Independent secondary read-only workspaces: each has its own page,
-  -- chart selection and drag/drop order. Factory automation remains central.
-  local additionalScreens={}
-  local function discoverAdditionalScreens()
-    local live={}
-    for _,name in ipairs(peripheral.getNames()) do
-      local kind=peripheral.getType(name)
-      local terminalDevice=kind=="terminal" or
-        (peripheral.hasType and peripheral.hasType(name,"terminal"))
-      if name~=monitorName and (kind=="monitor" or terminalDevice) then
-        local ok,surface=pcall(peripheral.wrap,name)
-        if ok and surface and surface.getSize and surface.write and
-           surface.setCursorPos and surface.setBackgroundColor and
-           surface.setTextColor then
-          local sized,sw,sh=pcall(surface.getSize)
-          if sized and sw>=32 and sh>=19 then
-            live[name]=true
-            if not additionalScreens[name] then
-              additionalScreens[name]=Dashboard.new(name,surface,core,
-                availableMetrics,terminalDevice and "terminal" or "monitor")
-              pcall(additionalScreens[name].draw,additionalScreens[name])
-            end
-          end
-        end
-      end
-    end
-    for name in pairs(additionalScreens) do
-      if not live[name] then additionalScreens[name]=nil end
-    end
-  end
-  discoverAdditionalScreens()
+  -- Independently navigable monitors and CC: Terminals; all read from
+  -- the one factory automation core. Detection/paint errors are visible.
+  screens=ScreenManager.new(core,availableMetrics,monitorName)
+  screens:discover()
   basalt.schedule(function()
     while true do
       local event,a,b,c,d=os.pullEvent()
-      if event=="monitor_touch" or event=="terminal_mouse_click" or
-         event=="terminal_mouse_drag" or event=="terminal_mouse_up" or
-         event=="terminal_mouse_scroll" then
-        local display=additionalScreens[a]
-        if display then pcall(display.handle,display,event,a,b,c,d) end
-      elseif event=="peripheral" or event=="peripheral_detach" or
-         event=="monitor_resize" or event=="term_resize" then
-        discoverAdditionalScreens()
-      end
+      screens:handle(event,a,b,c,d)
     end
   end)
   -- Background read-only radio receiver. Nodes broadcast automatically;
@@ -1294,9 +1286,7 @@ function UI.run(core)
     while true do
       sleep(core.config.refreshSeconds)
       local scanned,errorMessage=pcall(function()core:scan()end)
-      for _,screen in pairs(additionalScreens) do
-        pcall(screen.draw,screen)
-      end
+      screens:refresh()
       if not scanned then notify("Scan error: "..tostring(errorMessage)) end
       -- Do not interrupt an edit or an on-screen keyboard.
       if page~="KEYBOARD" and page~="MACHINE EDIT" then
