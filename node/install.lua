@@ -12,7 +12,8 @@ local files={
   ["unpair.lua"]=url.."node/unpair.lua",
   ["export_pairing.lua"]=url.."node/export_pairing.lua",
   ["pairing.lua"]=url.."node/pairing.lua",
-  ["ui.lua"]=url.."node/ui.lua"
+  ["ui.lua"]=url.."node/ui.lua",
+  ["ui_text.lua"]=url.."factory/ui_text.lua"
 }
 local function remove(path) if fs.exists(path) then fs.delete(path) end end
 local function read(path)
