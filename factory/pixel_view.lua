@@ -1,5 +1,5 @@
--- CC: Graphics optional high-resolution renderer for a SECONDARY display.
--- Never calls setGraphicsMode() on the Basalt primary display.
+-- CC: Graphics full-screen renderer for the primary Advanced Monitor.
+-- Basalt is hidden while pixel mode is active and restored on exit.
 -- Compatible with CraftOS-PC/CC: Graphics pixels and 0-based positions.
 local Viewer={}
 Viewer.__index=Viewer
@@ -304,6 +304,14 @@ end
 -- Returns the metric tapped on a secondary monitor, in pixel coordinates.
 -- The caller handles the transition; the graphics module never changes
 -- the main control display or its event routing.
+function Viewer:hitAction(x,y)
+  for _,button in ipairs(self.actions or {}) do
+    if x>=button.x and x<button.x+button.w and
+       y>=button.y and y<button.y+button.h then
+      return button.action,button.value
+    end
+  end
+end
 function Viewer:hitTest(x,y)
   if not self.active then return nil end
   for _,card in ipairs(self.cards or {}) do
@@ -333,9 +341,29 @@ function Viewer:render(samples,metrics,options)
   end
   if self.screen.setFrozen then pcall(self.screen.setFrozen,true) end
   self.cards={}
+  self.actions={}
   local ok,err=pcall(function()
     self:fill(0,0,self.w,self.h,C.background)
     self:text(12,10,"FPBCRAFT / HIGH RES TELEMETRY",C.cyan,1,43)
+    local actionX=self.w-72
+    self:fill(actionX-3,5,70,19,C.red)
+    self:text(actionX,10,"< EXIT",C.text,1,8)
+    self.actions[#self.actions+1]={
+      action="exit",x=actionX-3,y=5,w=70,h=19
+    }
+    local ranges={{60,"1M"},{300,"5M"},{900,"15M"},
+      {1800,"30M"},{0,"ALL"}}
+    local buttonW=math.max(30,math.floor((self.w-24)/#ranges))
+    local bottomY=self.h-43
+    for i,r in ipairs(ranges) do
+      local xx=12+(i-1)*buttonW
+      self:fill(xx,bottomY,buttonW-5,18,range==r[1] and C.blue or C.panel)
+      self:text(xx+6,bottomY+6,r[2],C.text,1,5)
+      self.actions[#self.actions+1]={
+        action="range",value=r[1],x=xx,y=bottomY,
+        w=buttonW-5,h=18
+      }
+    end
     local count=#toDraw
     -- A small computer screen is often only ~170 pixel rows: show two
     -- useful charts rather than four tiny charts with invisible plot areas.
@@ -369,7 +397,7 @@ function Viewer:render(samples,metrics,options)
     if count==0 then
       self:text(20,self.h/2,"NO TRACKED METRICS",C.orange,2,35)
     end
-    self:text(12,self.h-13,"CONTROL FROM MAIN MONITOR - PIXEL VIEW IS READ ONLY",
+    self:text(12,self.h-13,"TAP CHART TO EXPAND / EXIT FOR FACTORY CONTROLS",
       C.muted,1,69)
   end)
   if self.screen.setFrozen then pcall(self.screen.setFrozen,false) end
