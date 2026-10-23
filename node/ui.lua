@@ -3,12 +3,8 @@
 local UI={}
 UI.__index=UI
 local C=colors
-local function crop(s,n)
-  s=tostring(s or "")
-  n=math.max(1,n)
-  if #s>n then return s:sub(1,n-1).."~" end
-  return s
-end
+local Text=require("ui_text")
+local crop=Text.clip
 function UI.new(opts)
   assert(type(opts)=="table" and type(opts.info)=="function")
   assert(type(opts.export)=="function")
