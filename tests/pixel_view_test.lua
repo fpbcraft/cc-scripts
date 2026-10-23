@@ -56,12 +56,25 @@ assert(Viewer.series(samples,"stock",300,t)[1].time==705)
 local ok,err=renderer:render(samples,metrics,{range=300,clock=t})
 assert(ok,err)
 assert(state.filled>50 and state.pixels>0 and renderer.drawCount==1)
+assert(#renderer.cards==4)
+local firstCard=renderer.cards[1]
+assert(renderer:hitTest(firstCard.x+1,firstCard.y+1)=="stress")
+assert(renderer:hitTest(0,0)==nil)
 assert(not state.frozen)
 local before=state.pixels
 ok,err=renderer:render(samples,metrics,{range=60,detail="stress",
   overlay=true,clock=t})
 assert(ok,err)
 assert(state.pixels>before,"Multi-series rendering should update plot")
+assert(#renderer.cards==1)
+assert(renderer:hitTest(renderer.cards[1].x+3,renderer.cards[1].y+3)=="stress")
+-- Short companion monitors must page through selected charts.
+height=180
+renderer.h=180
+assert(renderer:render(samples,metrics,{range=300,clock=t,page=2}))
+assert(#renderer.cards==2 and renderer.cards[1].key=="stock")
+height=348
+renderer.h=348
 local missing=renderer:render(samples,{{"missing","No Data","W"}},{range=60,clock=t})
 assert(missing)
 renderer:stop()
