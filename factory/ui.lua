@@ -432,8 +432,10 @@ function UI.run(core)
       if m.product and m.product~="" then
         candidates[#candidates+1]={
           "rate_"..m.id,m.name.." / RATE","items/min",C.pink}
-        break
       end
+    end
+    for _,r in ipairs(core.devices:charts()) do
+      candidates[#candidates+1]={r.id,r.label,r.unit,C.magenta}
     end
     for _,tile in ipairs(layout.overviewCharts(w,h,#candidates)) do
       local item=candidates[tile.index]
@@ -933,21 +935,12 @@ function UI.run(core)
     button(panel,w-14,3,12,1,"PIXEL VIEW",function()
       navigateTo("PIXEL VIEW")
     end,C.blue)
-    local cols=(w>=84 and 3) or (w>=53 and 2) or 1
-    local tileW=math.floor((w-4-(cols-1)*2)/cols)
-    local tileH=(h>=29 and 10) or (h>=19 and 8) or 7
-    local rows=math.max(1,math.floor((h-10)/(tileH+1)))
-    local per=cols*rows
-    local pages=math.max(1,math.ceil(#metrics/per))
-    graphPage=math.max(1,math.min(graphPage,pages))
-    for idx=1,per do
-      local metric=metrics[(graphPage-1)*per+idx]
-      if not metric then break end
-      local column=(idx-1)%cols
-      local row=math.floor((idx-1)/cols)
-      local x=2+column*(tileW+2)
-      local y=5+row*(tileH+1)
-      drawChart(panel,metric,x,y,tileW,tileH,true,function()
+    local grid=layout.graphGrid(w,h,#metrics,graphPage)
+    graphPage=grid.page
+    local pages=grid.pages
+    for _,tile in ipairs(grid.tiles) do
+      local metric=metrics[tile.index]
+      drawChart(panel,metric,tile.x,tile.y,tile.width,tile.height,true,function()
         graphKey=metric[1]
         navigateTo("GRAPH DETAIL")
       end)
