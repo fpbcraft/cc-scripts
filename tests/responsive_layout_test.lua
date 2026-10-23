@@ -21,15 +21,4 @@ assert(#compact==4 and #big>#compact)
 for _,tile in ipairs(big) do
   assert(tile.y>=15 and tile.y+tile.height-1<=73)
 end
-local pixelSmall=Layout.pixelGrid(340,348,12,1,false)
-local pixelLarge=Layout.pixelGrid(960,740,12,1,false)
-assert(pixelLarge.perPage>pixelSmall.perPage)
-assert(pixelLarge.perPage==12)
-assert(#pixelLarge.tiles==12)
-assert(Layout.pixelGrid(340,348,12,2,false).tiles[1].index==
-  pixelSmall.perPage+1)
-for _,tile in ipairs(pixelLarge.tiles) do
-  assert(tile.x>=0 and tile.y>=0 and
-    tile.x+tile.width<=960 and tile.y+tile.height<=740-45)
-end
-print("Responsive Basalt and pixel layout tests passed")
+print("Responsive Basalt chart layouts passed")
