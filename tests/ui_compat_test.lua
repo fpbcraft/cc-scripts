@@ -13,7 +13,7 @@ assert(Text.clip("日本語",5)=="日本~",
   "Full-width glyphs need two terminal columns")
 assert(Text.columns("ÁB")==2,
   "Combining accent should not take another cell")
-assert(Text.clip("ÁBC",3)=="ÁB~")
+assert(Text.clip("ÁBC",2)=="Á~")
 assert(Text.clip("",6)=="")
 assert(Text.clip("a",1)=="a")
 assert(Text.clip("abc",1)=="~")
