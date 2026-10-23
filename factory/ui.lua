@@ -15,12 +15,8 @@ local METRICS={
   {"battery","BATTERY CHARGE","%",C.green},
   {"energy","ENERGY METER","J",C.purple}
 }
-local function short(value,n)
-  value=tostring(value or "")
-  n=math.max(1,n or 16)
-  if #value>n then return value:sub(1,n-1).."~" end
-  return value
-end
+local Text=require("ui_text")
+local short=Text.clip
 local function num(n,places)
   if type(n)~="number" then return "-" end
   return string.format("%."..tostring(places or 1).."f",n)
@@ -92,7 +88,7 @@ function UI.run(core)
     if terminalInput and terminalInput.text~=value then terminalInput.text=value end
   end
   local function setKeyboardValue(value)
-    kb.value=tostring(value or ""):sub(1,160)
+    kb.value=Text.limit(value,160)
     synchronizeTerminal(kb.value)
     render()
   end
