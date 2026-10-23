@@ -96,7 +96,7 @@ function UI.run(core)
             local seen={}
             for _,key in ipairs(prev.keys) do
               if type(key)=="string" and #key<80 and not seen[key] and
-                #pixelKeys<4 then
+                #pixelKeys<12 then
                 pixelKeys[#pixelKeys+1]=key
                 seen[key]=true
               end
@@ -744,10 +744,10 @@ function UI.run(core)
     local result={}
     for _,key in ipairs(pixelKeys) do enabled[key]=true end
     for _,metric in ipairs(available) do
-      if enabled[metric[1]] and #result<4 then result[#result+1]=metric end
+      if enabled[metric[1]] and #result<12 then result[#result+1]=metric end
     end
     if #result==0 then
-      for i=1,math.min(4,#available) do
+      for i=1,math.min(12,#available) do
         result[#result+1]=available[i]
       end
     end
@@ -761,7 +761,7 @@ function UI.run(core)
       if not found then
         for _,m in ipairs(available) do
           if m[1]==pixelFocus then
-            if #result>=4 then table.remove(result,4) end
+            if #result>=12 then table.remove(result,12) end
             table.insert(result,1,m)
             break
           end
@@ -819,7 +819,7 @@ function UI.run(core)
     local surface,labelName=findPixelSurface()
     if #pixelKeys==0 then
       for _,metric in ipairs(availableMetrics()) do
-        if #pixelKeys>=4 then break end
+        if #pixelKeys>=12 then break end
         pixelKeys[#pixelKeys+1]=metric[1]
       end
       if #pixelKeys>0 then savePixelOptions() end
@@ -865,7 +865,7 @@ function UI.run(core)
           redrawPixels();render()
         end,pixelOverlay and C.purple or C.gray)
     else
-      label(panel,3,16,"SELECT UP TO 4 CHARTS / TAP A METRIC",C.cyan)
+      label(panel,3,16,"SELECT UP TO 12 CHARTS / TAP A METRIC",C.cyan)
     end
     if pixelViewer and pixelViewer.h<255 and #selectedPixelMetrics()>2 and
        not pixelFocus then
@@ -894,10 +894,10 @@ function UI.run(core)
         end
         if index then
           table.remove(pixelKeys,index)
-        elseif #pixelKeys<4 then
+        elseif #pixelKeys<12 then
           pixelKeys[#pixelKeys+1]=metric[1]
         else
-          notify("Maximum four graphs: deselect one first")
+          notify("Maximum twelve graphs: deselect one first")
         end
         savePixelOptions()
         redrawPixels();render()
@@ -1558,6 +1558,12 @@ function UI.run(core)
           if action=="exit" then
             stopPixelViewer()
             navigateTo("GRAPHS")
+          elseif action=="next" then
+            pixelPage=pixelPage+1
+            redrawPixels()
+          elseif action=="prev" then
+            pixelPage=math.max(1,pixelPage-1)
+            redrawPixels()
           elseif action=="range" then
             pixelRange=value
             savePixelOptions()
