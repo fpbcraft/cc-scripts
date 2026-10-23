@@ -4,8 +4,8 @@ assert(ref:match("^[%w._/-]+$") and not ref:find("..",1,true),"Invalid git ref")
 local root="/fpb-factory"
 local base="https://raw.githubusercontent.com/fpbcraft/cc-scripts/"..ref.."/factory/"
 local names={"main.lua","ui.lua","core.lua","devices.lua","completions.lua",
-  "remote.lua","auth.lua","layout.lua","graph_metrics.lua","ui_text.lua","graphics_capabilities.lua",
-  "pixel_view.lua","screen_dashboard.lua"}
+  "remote.lua","auth.lua","layout.lua","graph_metrics.lua","ui_text.lua",
+  "screen_dashboard.lua","screen_manager.lua"}
 local function remove(path)
   if fs.exists(path) then fs.delete(path) end
 end
@@ -75,6 +75,11 @@ for _,name in ipairs(names) do
   fs.move(temp,target)
   downloaded[name]=nil
 end
+-- Remove only obsolete code and settings from the discontinued graphics
+-- mode. Factory telemetry, machines, pairing, and other user data are kept.
+remove(root.."/pixel_view.lua")
+remove(root.."/graphics_capabilities.lua")
+remove(root.."/data/pixel_graphs.db")
 -- Reuse installed Basalt. Only download dependency on first installation.
 if not fs.exists(root.."/basalt.lua") then
   print("Installing Basalt...")
