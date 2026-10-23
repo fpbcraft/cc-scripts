@@ -31,6 +31,7 @@ function UI.run(core)
   local layout=require("layout")
   local graphMetrics=require("graph_metrics")
   local Graphics=require("graphics_capabilities")
+  local Pixel=require("pixel_view")
   basalt.use("charts")
   local terminal=basalt.getMainFrame()
   terminal.background=C.black
@@ -67,6 +68,13 @@ function UI.run(core)
   local genericPage=1
   local graphKey="stress"
   local graphPage=1
+  local pixelViewer=nil
+  local pixelScreen=nil
+  local pixelScreenLabel=""
+  local pixelRange=300
+  local pixelFocus=nil
+  local pixelKeys={}
+  local pixelStatus="Not started"
   local selected=nil
   local quantity=1
   local selectedMachine=nil
@@ -685,6 +693,154 @@ function UI.run(core)
     end)
     label(panel,3,h-6,"AUTO stops high, resumes low; Manual bypasses rules",C.lightGray)
   end
+  -- Never switch the Basalt primary display into graphics mode. Prefer
+  -- a second monitor, then the local computer screen as a companion display.
+  local function findPixelSurface()
+    for _,name in ipairs(mons) do
+      if name~=monitorName then
+        local candidate=peripheral.wrap(name)
+        if Pixel.supported(candidate) then
+          return candidate,"Monitor "..name
+        end
+      end
+    end
+    if monitorName then
+      local native=term.native and term.native() or term
+      if Pixel.supported(native) then return native,"Computer terminal" end
+    end
+    return nil,nil
+  end
+  local function selectedPixelMetrics()
+    local available=availableMetrics()
+    local enabled={}
+    local result={}
+    for _,key in ipairs(pixelKeys) do enabled[key]=true end
+    for _,metric in ipairs(available) do
+      if enabled[metric[1]] and #result<4 then result[#result+1]=metric end
+    end
+    if #result==0 then
+      for i=1,math.min(4,#available) do
+        result[#result+1]=available[i]
+      end
+    end
+    return result
+  end
+  local function stopPixelViewer()
+    if pixelViewer then
+      pcall(pixelViewer.stop,pixelViewer)
+      pixelViewer=nil
+    end
+    pixelScreen=nil
+    pixelStatus="Stopped"
+  end
+  local function redrawPixels()
+    if not pixelViewer then return end
+    local ok,success,err=pcall(pixelViewer.render,pixelViewer,
+      core.samples,selectedPixelMetrics(),
+      {range=pixelRange,detail=pixelFocus})
+    if not ok or not success then
+      pixelStatus="Pixel rendering failed: "..tostring(err or success)
+      stopPixelViewer()
+    end
+  end
+  local function startPixelViewer()
+    if pixelViewer then return true end
+    local surface,title=findPixelSurface()
+    if not surface then
+      pixelStatus="Attach a second CC Graphics monitor, or use the computer screen"
+      notify(pixelStatus)
+      return false
+    end
+    local ok,viewer=pcall(Pixel.new,surface)
+    if not ok then pixelStatus=tostring(viewer);return false end
+    local started,worked,err=pcall(viewer.start,viewer)
+    if not started or not worked then
+      pixelStatus=tostring(err or worked)
+      return false
+    end
+    pixelViewer=viewer
+    pixelScreen=surface
+    pixelScreenLabel=title
+    pixelStatus="Running on "..title
+    redrawPixels()
+    return pixelViewer~=nil
+  end
+  local function showPixelSettings()
+    local surface,labelName=findPixelSurface()
+    label(panel,3,3,"HIGH-RES PIXEL GRAPH VIEWER",C.cyan)
+    label(panel,3,5,"Output: "..short(labelName or "Not available",w-14),
+      surface and C.lime or C.orange)
+    label(panel,3,7,short(pixelStatus,w-6),
+      pixelViewer and C.lime or C.lightGray)
+    button(panel,3,9,17,2,pixelViewer and "STOP VIEWER" or "START VIEWER",
+      function()
+        if pixelViewer then stopPixelViewer() else startPixelViewer() end
+        render()
+      end,pixelViewer and C.red or C.green)
+    button(panel,22,9,math.min(20,w-24),2,
+      pixelFocus and "SHOW DASHBOARD" or "EXPAND SELECTED",
+      function()
+        if pixelFocus then
+          pixelFocus=nil
+        else
+          local first=selectedPixelMetrics()[1]
+          pixelFocus=first and first[1] or nil
+        end
+        redrawPixels()
+        render()
+      end,C.blue)
+    local ranges={{60,"1M"},{300,"5M"},{900,"15M"},{1800,"30M"},{0,"ALL"}}
+    label(panel,3,12,"TIME WINDOW (X-AXIS)",C.cyan)
+    local bw=math.max(6,math.floor((w-6)/5))
+    for i,r in ipairs(ranges) do
+      local seconds,text=r[1],r[2]
+      button(panel,2+(i-1)*bw,14,bw-1,1,text,function()
+        pixelRange=seconds
+        redrawPixels();render()
+      end,pixelRange==seconds and C.purple or C.gray)
+    end
+    label(panel,3,16,"SELECT UP TO 4 CHARTS / TAP A METRIC",C.cyan)
+    local metrics=availableMetrics()
+    local per=math.max(1,math.floor((h-23)/2))
+    local first=(genericPage-1)*per+1
+    local chosen={}
+    for _,key in ipairs(pixelKeys) do chosen[key]=true end
+    for i=1,per do
+      local metric=metrics[first+i-1]
+      if not metric then break end
+      local selectedMetric=chosen[metric[1]]
+      local y=18+(i-1)*2
+      button(panel,3,y,w-6,1,(selectedMetric and "[X] " or "[ ] ")..
+        short(metric[2],w-13),function()
+        local index=nil
+        for j,k in ipairs(pixelKeys) do
+          if k==metric[1] then index=j;break end
+        end
+        if index then
+          table.remove(pixelKeys,index)
+        elseif #pixelKeys<4 then
+          pixelKeys[#pixelKeys+1]=metric[1]
+        else
+          notify("Maximum four graphs: deselect one first")
+        end
+        redrawPixels();render()
+      end,selectedMetric and C.blue or C.gray)
+    end
+    local maxPage=math.max(1,math.ceil(#metrics/per))
+    local py=h-4
+    if genericPage>1 then
+      button(panel,3,py,10,1,"< PREV",function()
+        genericPage=genericPage-1;render()
+      end)
+    end
+    label(panel,math.floor(w/2)-5,py,
+      string.format("%d/%d",genericPage,maxPage),C.lightGray,9)
+    if genericPage<maxPage then
+      button(panel,w-11,py,10,1,"NEXT >",function()
+        genericPage=genericPage+1;render()
+      end)
+    end
+  end
   local function showGraphPicker()
     label(panel,3,3,"SELECT GRAPH METRIC",C.cyan)
     local per=math.max(2,math.floor((h-11)/2))
@@ -697,6 +853,9 @@ function UI.run(core)
   local function showGraphs()
     local metrics=availableMetrics()
     label(panel,3,3,("LIVE GRAPHS  /  %d METRICS"):format(#metrics),C.cyan)
+    button(panel,w-14,3,12,1,"PIXEL VIEW",function()
+      navigateTo("PIXEL VIEW")
+    end,C.blue)
     local cols=(w>=84 and 3) or (w>=53 and 2) or 1
     local tileW=math.floor((w-4-(cols-1)*2)/cols)
     local tileH=(h>=29 and 10) or (h>=19 and 8) or 7
@@ -742,6 +901,13 @@ function UI.run(core)
     button(panel,w-15,3,13,1,"< ALL GRAPHS",function()
       navigateTo("GRAPHS")
     end,C.gray)
+    if w>=42 then
+      button(panel,w-29,3,12,1,"PIXEL VIEW",function()
+        pixelFocus=graphKey
+        if not pixelViewer then startPixelViewer() else redrawPixels() end
+        navigateTo("PIXEL VIEW")
+      end,C.blue)
+    end
     local rateId=graphKey:match("^rate_(.+)$")
     local chartTop=5
     if rateId then
@@ -1230,7 +1396,7 @@ function UI.run(core)
       SWITCHBOARD=showSwitchboard,MACHINES=showMachines,
       MACHINE=showMachine,["MACHINE EDIT"]=showMachineEdit,
       RULES=showRules,GRAPHS=showGraphs,["GRAPH DETAIL"]=showGraphDetail,
-      ["GRAPH PICKER"]=showGraphPicker,
+      ["GRAPH PICKER"]=showGraphPicker,["PIXEL VIEW"]=showPixelSettings,
       DEVICES=showDevices,DEVICE=showDevice,
       ["DEVICE METHODS"]=showMethods,READINGS=showReadings,READING=showReading,
       ["READING OPTIONS"]=showReadingOptions,
@@ -1268,6 +1434,7 @@ function UI.run(core)
     while true do
       sleep(core.config.refreshSeconds)
       local scanned,errorMessage=pcall(function()core:scan()end)
+      if pixelViewer then redrawPixels() end
       if not scanned then notify("Scan error: "..tostring(errorMessage)) end
       -- Do not interrupt an edit or an on-screen keyboard.
       if page~="KEYBOARD" and page~="MACHINE EDIT" then
@@ -1276,6 +1443,7 @@ function UI.run(core)
     end
   end)
   basalt.run()
+  stopPixelViewer()
   core:shutdown()
 end
 return UI
