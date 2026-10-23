@@ -10,12 +10,7 @@ Run this command on the CC:Tweaked computer:
 wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install.lua
 ```
 
-Repeat the same command to update. The installer:
-1. Downloads the core, peripheral registry, autocomplete engine, remote-node listener, Basalt UI, and launcher into `/fpb-factory.next`.
-2. Installs Basalt 2.5 (minified) alongside the application.
-3. Preserves `/fpb-factory/data`, retaining configured machines, graphs, settings, and request history.
-4. Backs up the previous installation to `/fpb-factory.backup` before swapping.
-5. **Always installs `/startup.lua`** to launch `/fpb-factory/main.lua` automatically on boot. Existing `/startup.lua` or extensionless `/startup` files are backed up under `/startup.fpb-factory-backup*` and no longer run automatically. This computer is dedicated to the factory manager.
+Repeat the same command to update. The current installer downloads the modules, updates code **in place without creating backups**, preserves `/fpb-factory/data`, installs Basalt only when needed, and configures automatic startup. It refuses to overwrite unrelated startup scripts.
 
 **Reboot to launch the manager automatically.** You can also run `/fpb-factory/main.lua` immediately. CraftOS must have `shell.allow_startup` enabled; bootable programs on attached disks may take precedence over root startup scripts. Disconnect boot disks when using this dedicated controller.
 
@@ -189,3 +184,14 @@ Rates remain based on net Stock Ticker changes, not exact per-machine production
 - This controls the time constant for the existing exponentially smoothed net-stock-gain rate, not the graph's X-axis history range. Changing the rate time constant clears that machine's previous rate graph samples to avoid showing mixed averaging periods; other saved telemetry stays intact.
 - The default rate averaging period under **Settings > Rate Average** applies to newly created machines. Existing machines keep their chosen values.
 
+
+## Optional CC: Graphics and Unicode enhancements
+
+Both mods are optional for this Lua application. **The default Basalt interface remains a normal 16-color text terminal.**
+
+- **CC: Tweaked Unicode Support (NeoForge 1.21.1):** improves client/server handling of UTF-8 input, paste, and rendering. Factory Manager and Remote Node now clip text by Unicode display columns and limit field input without splitting multibyte characters. For names such as `Électricité`, `Chaudière`, or `Andrésite`, this avoids malformed text from byte-based truncation. Some Basalt-internal operations may still need compatibility testing with the mod.
+- **CC: Graphics:** exposes `getGraphicsMode`, `setGraphicsMode`, `drawPixels`, and higher-resolution 16-/256-color pixel modes. In **Settings**, the Factory Manager now reports whether the active display exposes this API and its pixel resolution, **without enabling graphics mode**. Graphics mode replaces the visible text terminal rather than overlaying on top of Basalt, so the existing touch UI intentionally stays in text mode.
+- **Future graphics-viewer design:** a dedicated full-screen graph view or a second Advanced Monitor driven by a separate graphics renderer. Keep normal buttons, machine controls, and navigation in Basalt; never switch its monitor out of text mode from a background polling callback. Pixel drawing should batch updates and use the supported `drawPixels` API, with a classic graph fallback.
+- **Compatibility:** CC: Tweaked Unicode Support requires CC:Tweaked 1.120.2+ and installation on **both client and server**. CC: Graphics supports NeoForge 1.21.1 and requires CC:Tweaked 1.117.0+. Test the combination with the actual modpack versions: its compatibility with every other UI/peripheral mod is not established by these checks.
+
+The glyph-width calculations assume conventional Unicode column widths. Font/rendering differences still require visual verification in game.
