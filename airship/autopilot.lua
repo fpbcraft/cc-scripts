@@ -21,6 +21,12 @@ local CFG = {
   -- Leave disabled until the receiver is inverted and wired correctly.
   ENGINE_AUTO = false,
   ENGINE_PERIOD = 0.5,
+  ALT_ASSIST = false,         -- opt-in: requires verified lift direction
+  ALT_RISE_SIGN = 1,         -- +1 if increasing link strength raises ship
+  ALT_CORRECTION_MAX = 3,   -- limit deviation from recorded lift baseline
+  ALT_TARGET_DEADBAND = 0.6,
+  ALT_ASSIST_PERIOD = 0.35,
+
   -- Optional broadcast to a SECOND display computer using display_receiver.lua
   TELEMETRY_ENABLED = false,
   TELEMETRY_PERIOD = 1.0,
@@ -143,13 +149,18 @@ if settings then
   end
   if type(settings.autoMap)=="boolean" then CFG.AUTO_MAP=settings.autoMap end
   if type(settings.engineAuto)=="boolean" then CFG.ENGINE_AUTO=settings.engineAuto end
+  if type(settings.altAssist)=="boolean" then CFG.ALT_ASSIST=settings.altAssist end
+  if settings.altRiseSign==-1 or settings.altRiseSign==1 then
+    CFG.ALT_RISE_SIGN=settings.altRiseSign
+  end
 
 end
 local CHANNELS
 local function saveSettings()
   return writeTable(settingsFile,{bowOffset=CFG.BOW_OFFSET,
     invertSteering=CFG.INVERT_STEERING,autoMap=CFG.AUTO_MAP,
-    engineAuto=CFG.ENGINE_AUTO,signals=CHANNELS})
+    engineAuto=CFG.ENGINE_AUTO,altAssist=CFG.ALT_ASSIST,
+    altRiseSign=CFG.ALT_RISE_SIGN,signals=CHANNELS})
 end
 
 CHANNELS = {
@@ -286,6 +297,8 @@ local function validWaypoint(p)
   if not x or not z then return nil end
   local q={x=x,z=z,name=tostring(p.name or ""):sub(1,64),id=tonumber(p.id),
     station=p.station==true,wait=clamp(tonumber(p.wait) or 0,0,86400)}
+  local yt=tonumber(p.yTolerance)
+  if yt and yt==yt and yt>=0.5 and yt<=10 then q.yTolerance=yt end
   if p.radius~=nil then
     local r=tonumber(p.radius)
     if r and r==r and r>=0.5 and r<=10 then q.radius=r end
@@ -413,6 +426,11 @@ local engineEverEnabled=false
 local stopEnteredAt=nil
 local stopStableSince=nil
 local liftWaypointId=nil
+local heightOverrideId=nil       -- operator-only, for the current leg
+local manualEngineLevel=nil      -- nil: no manual engine request
+local observedLevels={}          -- aggregate Redstone Link network levels
+local lastAltStep=0
+local lastHeightPos,lastHeightTime,lastHeightSpeed=nil,nil,0
 -- Diagnostics are deliberately independent of peripheral displays.
 -- Diagnostics are deliberately independent of Display Links and rednet.
 -- The flight and UI loops use separate event queues (parallel API).
@@ -474,6 +492,15 @@ local function motionReset()
   trimStable,trimUntil,trimReady,trimDir=nil,0,0,0
 end
 local function stopHorizontal(message)
+  -- Release any closed-loop lift trim to the recorded baseline on Stop.
+  -- Do not alter manually configured lift signals when assist is OFF.
+  if mode=="route" and CFG.ALT_ASSIST then
+    local leg=route[routeIndex]
+    if leg then
+      if leg.main~=nil then send("main",leg.main) end
+      if leg.fine~=nil then send("fine",leg.fine) end
+    end
+  end
   if mode=="route" then
     routeNext=clamp(routeIndex,1,math.max(1,#route))
     saveRoute()
@@ -483,6 +510,7 @@ local function stopHorizontal(message)
   motionReset()
   telemetry={}
   stopEnteredAt=nil;stopStableSince=nil;liftWaypointId=nil
+  heightOverrideId=nil
   if message then notice=message; trace("STOP "..message) end
 end
 
@@ -515,6 +543,7 @@ local function beginNavigation(kind,startAt)
   zeroHorizontal()
   motionReset()
   stopEnteredAt=nil;stopStableSince=nil;liftWaypointId=nil
+  heightOverrideId=nil
   if kind=="route" then
     routeIndex=clamp(startAt or routeNext,1,#route)
     routeNext=routeIndex
@@ -632,6 +661,40 @@ local function calibrateStep(now,p)
   calibrateStop("Bow set to "..best.." deg (saved)")
 end
 
+-- Optional bounded Y feedback around the waypoint's RECORDED lift levels.
+-- This is not a fully-calibrated altitude PID. Sign must be verified manually.
+-- No height correction is attempted when Y or BOTH baseline levels are absent.
+-- Run the correction at 0.35s intervals, not every 10Hz flight tick.
+local function assistAltitude(t,p,now)
+  if not CFG.ALT_ASSIST or heightOverrideId==t.id or t.y==nil
+     or t.main==nil or t.fine==nil then return end
+  if now-lastAltStep<CFG.ALT_ASSIST_PERIOD then return end
+  lastAltStep=now
+  local vz=0
+  if lastHeightPos and lastHeightTime and now>lastHeightTime then
+    vz=clamp((p.y-lastHeightPos)/(now-lastHeightTime),-10,10)
+  end
+  lastHeightPos,lastHeightTime=p.y,now
+  lastHeightSpeed=lastHeightSpeed*0.65+vz*0.35
+  local err=clamp(t.y-p.y,-16,16)
+  if math.abs(err)<CFG.ALT_TARGET_DEADBAND and math.abs(lastHeightSpeed)<0.15 then
+    err=0
+  end
+  -- Apply proportional height correction plus damping for vertical inertia.
+  local correction=CFG.ALT_RISE_SIGN*(0.48*err-0.85*lastHeightSpeed)
+  local coarse=math.abs(err)>3 and clamp(round(correction*0.7),
+    -CFG.ALT_CORRECTION_MAX,CFG.ALT_CORRECTION_MAX) or 0
+  local fine=clamp(round(correction-coarse),
+    -CFG.ALT_CORRECTION_MAX,CFG.ALT_CORRECTION_MAX)
+  local function rateLimited(key,target)
+    local current=outputs[key]
+    if current==nil then current=key=="main" and t.main or t.fine end
+    send(key,clamp(target,current-1,current+1))
+  end
+  rateLimited("main",clamp(t.main+coarse,0,15))
+  rateLimited("fine",clamp(t.fine+fine,0,15))
+end
+
 local function update(now)
   flightStage="read position"
   local p=shipPosition()
@@ -675,7 +738,9 @@ local function update(now)
     if t.main~=nil then send("main",t.main) end
     if t.fine~=nil then send("fine",t.fine) end
     liftWaypointId=t.id
+    lastAltStep=0;lastHeightPos=nil;lastHeightTime=nil;lastHeightSpeed=0
   end
+  if mode=="route" then assistAltitude(t,p,now) end
   flightStage="read heading"
   local bow=heading()
   if not bow then stopHorizontal("Bow orientation unavailable") return end
@@ -719,12 +784,13 @@ local function update(now)
     notice=(previous==#route and "Circuit complete; returning to first stop")
       or ("Waypoint reached; next "..routeIndex.."/"..#route)
     motionReset();zeroHorizontal()
-    stopEnteredAt=nil;stopStableSince=nil;liftWaypointId=nil
+    stopEnteredAt=nil;stopStableSince=nil;liftWaypointId=nil; heightOverrideId=nil
     return
   end
   local stationHeadingError=t.heading and math.abs(wrap(t.heading-bow)) or 0
   local aligned=stationHeadingError<=(station and 5 or 9)
-  local heightGood=t.y==nil or not station or math.abs(p.y-t.y)<=1.5
+  local heightGood=t.y==nil or not station or heightOverrideId==t.id
+    or math.abs(p.y-t.y)<=(t.yTolerance or 1.5)
   -- Heading must remain aligned for a full second to avoid falsely declaring
   -- an accurate station arrival during a transient sensor reading.
   local settled=sampled and dist<=targetRadius and speed<=targetSpeed
@@ -746,6 +812,8 @@ local function update(now)
   telemetry.station=station
   telemetry.headingError=stationHeadingError
   telemetry.heightGood=heightGood
+  telemetry.heightError=t.y and (t.y-p.y) or nil
+  telemetry.heightOverride=heightOverrideId==t.id
   if stable and stopEnteredAt and now-stopEnteredAt>=waypointWait then
     zeroHorizontal()
     if canAdvance then
@@ -753,13 +821,17 @@ local function update(now)
       routeIndex=routeIndex<#route and routeIndex+1 or 1
       routeNext=routeIndex
       saveRoute()
-      motionReset();stopEnteredAt=nil;stopStableSince=nil;liftWaypointId=nil
+      motionReset();stopEnteredAt=nil;stopStableSince=nil;liftWaypointId=nil; heightOverrideId=nil
       notice="Stop "..previous.." complete; next "..routeIndex
       return
     end
     if isRoute then routeNext=routeIndex;saveRoute() end
+    if isRoute and CFG.ALT_ASSIST then
+      if t.main~=nil then send("main",t.main) end
+      if t.fine~=nil then send("fine",t.fine) end
+    end
     mode="arrived";motionReset()
-    stopEnteredAt=nil;stopStableSince=nil;liftWaypointId=nil
+    stopEnteredAt=nil;stopStableSince=nil;liftWaypointId=nil; heightOverrideId=nil
     notice=station and "Station reached and aligned" or "Arrived at destination"
     return
   end
@@ -839,11 +911,12 @@ end
 -- The controller never sends OFF (15) directly to an uninverted receiver.
 -- When automation is switched off, release our previous HIGH request.
 local function engineStep()
-  if not CFG.ENGINE_AUTO and not engineEverEnabled then return end
+  if not CFG.ENGINE_AUTO and not engineEverEnabled and manualEngineLevel==nil then return end
   local active=CFG.ENGINE_AUTO and
     (mode=="map" or mode=="direct" or mode=="route" or mode=="calibration")
   -- Deassert engine request when inactive or automation was disabled.
-  send("engine",active and 15 or 0)
+  local desired=CFG.ENGINE_AUTO and (active and 15 or 0) or (manualEngineLevel or 0)
+  send("engine",desired)
   engineEverEnabled=CFG.ENGINE_AUTO
 end
 local function engineLoop()
@@ -950,6 +1023,9 @@ function controller.snapshot()
     savedRoutes=routeLibrary,
     waitRemaining=telemetry.waitRemaining,station=telemetry.station,
     heightGood=telemetry.heightGood,headingError=telemetry.headingError,
+    heightError=telemetry.heightError,heightOverride=telemetry.heightOverride,
+    altitudeAssist=CFG.ALT_ASSIST,altRiseSign=CFG.ALT_RISE_SIGN,
+    manualEngineLevel=manualEngineLevel,observedLevels=observedLevels,
     signals=CHANNELS,
     bowOffset=CFG.BOW_OFFSET,invertSteering=CFG.INVERT_STEERING,
     autoMap=CFG.AUTO_MAP,engineAuto=CFG.ENGINE_AUTO,
@@ -957,6 +1033,62 @@ function controller.snapshot()
     tickDuration=flightTickDuration,stage=flightStage,controlError=controlError,
     navName=navName,bridgeName=bridgeName,displayLinks=#displayLinks}
 end
+-- Direct flight controls: signal levels are requests to the bridge, not
+-- direct actuator measurements. Other Redstone Link transmitters may win.
+function controller.setPower(channel,level)
+  if channel~="main" and channel~="fine" and channel~="engine" then
+    return false,"Unknown power control" end
+  level=tonumber(level)
+  if not level or level~=level or level%1~=0 or level<0 or level>15 then
+    return false,"Power must be an integer 0..15" end
+  if channel=="engine" then
+    CFG.ENGINE_AUTO=false;manualEngineLevel=level
+    saveSettings()
+  else
+    -- A manual power edit disables automatic vertical trim, otherwise the
+    -- next assist tick would overwrite the operator's request.
+    CFG.ALT_ASSIST=false
+    saveSettings()
+    -- If a route is active, use this strength as the current-leg baseline;
+    -- the saved waypoint is never silently modified.
+  end
+  local ok,err=pcall(send,channel,level)
+  if not ok then return false,"Signal write failed: "..tostring(err) end
+  notice=(channel:upper().." link set to "..level)
+  return true
+end
+function controller.altitudeSetting(key)
+  if key=="assist" then
+    CFG.ALT_ASSIST=not CFG.ALT_ASSIST
+    lastAltStep=0;lastHeightPos=nil;lastHeightTime=nil;lastHeightSpeed=0
+    if not CFG.ALT_ASSIST and mode=="route" then
+      local leg=route[routeIndex]
+      if leg then
+        if leg.main~=nil then send("main",leg.main) end
+        if leg.fine~=nil then send("fine",leg.fine) end
+      end
+    end
+  elseif key=="direction" then
+    CFG.ALT_RISE_SIGN=-CFG.ALT_RISE_SIGN
+  else return false,"Unknown altitude setting" end
+  local ok,err=saveSettings()
+  if not ok then return false,err end
+  notice=CFG.ALT_ASSIST and "ALT ASSIST ACTIVE: verify rise direction" or "Altitude assist OFF"
+  return true
+end
+function controller.acceptCurrentHeight()
+  if mode~="route" then return false,"Only an active route station can bypass Y" end
+  local t=route[routeIndex]
+  if not t or not t.station or t.y==nil then return false,"Current stop has no station Y" end
+  local p=telemetry.position
+  if not p or distance(p,t)>(t.radius or 1.5) then
+    return false,"Move inside the station X/Z radius first" end
+  if speed>0.5 then return false,"Stop moving before overriding height" end
+  heightOverrideId=t.id
+  notice="Y override for this stop ONLY; station X/Z and heading still required"
+  return true
+end
+
 function controller.fly(x,z,name)
   local err; x,z,err=validDestination(x,z)
   if not x then return false,err end
@@ -1055,7 +1187,7 @@ function controller.editStop(index,fields)
   for k,v in pairs(p) do q[k]=v end
   if fields.name~=nil then q.name=tostring(fields.name):sub(1,64) end
   if fields.station~=nil then q.station=fields.station==true end
-  for _,field in ipairs({"wait","heading","y","main","fine","radius"}) do
+  for _,field in ipairs({"wait","heading","y","main","fine","radius","yTolerance"}) do
     if fields[field]~=nil then
       local v=fields[field]
       if v=="" or v==false then q[field]=nil
@@ -1068,6 +1200,8 @@ function controller.editStop(index,fields)
         if field=="y" and not cleanNumber(v) then return false,"Invalid Y" end
         if field=="radius" and (v<0.5 or v>10) then
           return false,"Station radius must be between 0.5 and 10 blocks" end
+        if field=="yTolerance" and (v<0.5 or v>10) then
+          return false,"Y tolerance must be 0.5..10 blocks" end
         q[field]=field=="heading" and v%360 or v
       end
     end
@@ -1105,6 +1239,7 @@ function controller.captureStop(index)
   local pose,err=capturePose()
   if not pose then return false,err end
   pose.station=p.station;pose.wait=p.wait;pose.radius=p.radius
+  pose.yTolerance=p.yTolerance
   pose.id=p.id;pose.name=p.name
   if mode=="route" then stopHorizontal("Recorded stop updated; press Resume") end
   route[index]=pose
@@ -1435,6 +1570,22 @@ local function displayLoop()
     end
   end
 end
+local function linkMonitorLoop()
+  local timer=os.startTimer(0.8)
+  while running do
+    local ev,id=os.pullEventRaw("timer")
+    if ev=="timer" and id==timer then
+      for _,key in ipairs({"main","fine","engine"}) do
+        local pair=CHANNELS[key]
+        local ok,val=pcall(bridge.getLinkSignal,pair[1],pair[2])
+        if ok and type(val)=="number" then observedLevels[key]=clamp(round(val),0,15)
+        else observedLevels[key]=nil end
+      end
+      timer=os.startTimer(0.8)
+    end
+  end
+end
+
 local function telemetryLoop()
   local timer=os.startTimer(CFG.TELEMETRY_PERIOD)
   while running do
@@ -1451,7 +1602,7 @@ local function main()
   lastFlightCompleted=os.clock()
   trace("BOOT independent flight/UI/display loops; local displays="..#displayLinks)
   parallel.waitForAny(uiBasaltLoop, flightLoop, watchdogLoop,
-    displayLoop, telemetryLoop, engineLoop)
+    displayLoop, telemetryLoop, engineLoop, linkMonitorLoop)
 end
 local ok,err=xpcall(main,function(e)
   if debug and debug.traceback then return debug.traceback(tostring(e),2) end

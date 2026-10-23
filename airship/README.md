@@ -137,3 +137,9 @@ imported files result in separate saved routes.
 The installer additionally preserves `.airship_route_library` and its
 `.backup` recovery copy across upgrades. Always keep a backup of your
 recorded station routes before changing hardware or world coordinates.
+
+## Refined route and power interface
+
+The route screen now shows rounded X/Z coordinates, saved Y targets, and wait durations for each stop. A dedicated **PWR** tab displays requested and observed normal/fine lift strengths and engine link levels, with manual step controls. Per-station Y tolerance and a confirmation-only, one-leg Y override prevent an impossible height match from silently advancing a route. Optional bounded altitude assist is **OFF by default** until you confirm lift polarity on the ship.
+
+See [Power Controls and Docking Guide](POWER_GUIDE.md) for instructions, link semantics, safety restrictions, and the height-assist limitations.

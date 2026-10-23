@@ -27,6 +27,8 @@ jobs:
         run: lua5.3 tests/airship_route_features_test.lua
       - name: Route planner touchscreen and keyboard
         run: lua5.3 tests/airship_route_ui_test.lua
+      - name: Airship altitude feedback and power UI
+        run: lua5.3 tests/airship_altitude_power_test.lua
       - name: CraftOS module loader regression
         run: lua5.3 tests/loader_test.lua
 

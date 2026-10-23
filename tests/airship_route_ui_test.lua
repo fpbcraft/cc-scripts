@@ -14,7 +14,8 @@ local api={}
 function api.snapshot()return {
  mode='idle',route=route,routeNext=1,routeIndex=1,routeLoop=false,
  savedRoutes=routes,routeName='Ferry',routeKey='route-a',presets=presets,
- position={x=10,y=80,z=20},outputs={},signals=signals,
+ position={x=10,y=80,z=20},outputs={main=8,fine=7},signals=signals,
+ observedLevels={main=8,fine=7,engine=0},altitudeAssist=false,altRiseSign=1,engineAuto=false,
  notice='Ready',navName='nav',bridgeName='bridge',displayLinks=0,tick=1,tickAge=0,tickDuration=0,stage='waiting'
 } end
 function api.recordWaypoint(name,station)
@@ -26,6 +27,9 @@ function api.editStop(index,field)
  actions[#actions+1]='stop:'..index
  return true
 end
+function api.setPower(name,level) actions[#actions+1]='power:'..name..':'..level;return true end
+function api.altitudeSetting(key) actions[#actions+1]='assist:'..key;return true end
+function api.acceptCurrentHeight() actions[#actions+1]='override';return true end
 function api.setSignal(name,a,b) signals[name]={a,b};actions[#actions+1]='signal:'..name;return true end
 function api.createRoute(name,dup)
  routes[#routes+1]={key='r'..#routes,name=name,points=dup and route or {}}
@@ -58,11 +62,11 @@ function api.setting()return true end
 function api.calibrate()return true end
 colors={black=1,white=2,lightBlue=4,cyan=8,lightGray=16,gray=32,blue=64,yellow=128,lime=256,red=512,orange=1024}
 term={getSize=function()return 35,16 end}
-local buttons,inputs={},{}
+local buttons,inputs,labels={},{},{}
 local function frame()
  local f={}
  function f:addFrame(_)return frame()end
- function f:addLabel(arg)return {text=arg.text,destroy=function()end}end
+ function f:addLabel(arg) labels[#labels+1]=arg.text;return {text=arg.text,destroy=function()end}end
  function f:addInput(arg)
    local input={text=arg.text}
    function input:onChange(fn)self.changed=fn end
@@ -92,6 +96,11 @@ end
 function basalt.run()
  jobs[1]() -- run splash + initial render
  click('RT')
+ local readable=false
+ for _,row in ipairs(labels) do
+  if row:find('X10 Z20 Y80 W0s',1,true) then readable=true end
+ end
+ assert(readable,'route row did not expose rounded X/Z, target altitude, wait')
  click('DETAIL')
  click('SET STATION')
  assert(route[1].station)
@@ -100,6 +109,10 @@ function basalt.run()
  input.text='12.5';input.changed(input)
  click('SAVE')
  assert(route[1].wait==12.5,'Wait edit through keyboard failed')
+ click('Y TOLERANCE')
+ input=inputs[#inputs]; input.text='2.5';input.changed(input)
+ click('SAVE')
+ assert(route[1].yTolerance==2.5,'station Y tolerance editor failed')
  click('BACK')
  click('RECORD')
  assert(#route==3 and actions[#actions]=='record','record button failed')
@@ -121,6 +134,18 @@ function basalt.run()
  input.text='minecraft:diamond minecraft:redstone';input.changed(input)
  click('SAVE')
  assert(actions[#actions]=='signal:forward','config item ID paste failed')
+ click('PWR')
+ local linkReadout=false
+ for _,row in ipairs(labels) do
+  if row:find('Link 8',1,true) then linkReadout=true end
+ end
+ assert(linkReadout,'POWER page must show observed Redstone Link levels')
+ click('+') -- engine row is the last + button on the page
+ assert(actions[#actions]=='power:engine:1','engine power controls did not send level')
+ click('Y ASSIST OFF')
+ assert(actions[#actions]=='assist:assist','Y assist UI toggle missing')
+ click('RISE: +SIGN')
+ assert(actions[#actions]=='assist:direction','rise direction UI toggle missing')
 end
 package.preload.basalt=function()return basalt end
 assert(loadfile('airship/ui.lua'))().run(api)
