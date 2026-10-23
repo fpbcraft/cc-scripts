@@ -1,4 +1,4 @@
-package.path="./node/?.lua;"..package.path
+package.path="./node/?.lua;./factory/?.lua;"..package.path
 local Pairing=require("pairing")
 local files={disk=true,["disk/notes.txt"]="keep this file"}
 local function serialize(t)
