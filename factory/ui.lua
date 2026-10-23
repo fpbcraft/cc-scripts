@@ -73,6 +73,7 @@ function UI.run(core)
   local pixelScreenLabel=""
   local pixelRange=300
   local pixelFocus=nil
+  local pixelPage=1
   local pixelOverlay=false
   local pixelKeys={}
   local pixelStatus="Not started"
@@ -783,7 +784,7 @@ function UI.run(core)
     if not pixelViewer then return end
     local ok,success,err=pcall(pixelViewer.render,pixelViewer,
       core.samples,selectedPixelMetrics(),
-      {range=pixelRange,detail=pixelFocus,overlay=pixelOverlay})
+      {range=pixelRange,detail=pixelFocus,overlay=pixelOverlay,page=pixelPage})
     if not ok or not success then
       stopPixelViewer()
       pixelStatus="Pixel rendering failed: "..tostring(err or success)
@@ -813,6 +814,13 @@ function UI.run(core)
   end
   local function showPixelSettings()
     local surface,labelName=findPixelSurface()
+    if #pixelKeys==0 then
+      for _,metric in ipairs(availableMetrics()) do
+        if #pixelKeys>=4 then break end
+        pixelKeys[#pixelKeys+1]=metric[1]
+      end
+      if #pixelKeys>0 then savePixelOptions() end
+    end
     label(panel,3,3,"HIGH-RES PIXEL GRAPH VIEWER",C.cyan)
     label(panel,3,5,"Output: "..short(labelName or "Not available",w-14),
       surface and C.lime or C.orange)
@@ -855,6 +863,15 @@ function UI.run(core)
         end,pixelOverlay and C.purple or C.gray)
     else
       label(panel,3,16,"SELECT UP TO 4 CHARTS / TAP A METRIC",C.cyan)
+    end
+    if pixelViewer and pixelViewer.h<255 and #selectedPixelMetrics()>2 and
+       not pixelFocus then
+      button(panel,w-18,12,16,1,
+        pixelPage==1 and "NEXT PIXEL PAGE" or "FIRST PIXEL PAGE",
+        function()
+          pixelPage=pixelPage==1 and 2 or 1
+          redrawPixels();render()
+        end,C.blue)
     end
     local metrics=availableMetrics()
     local per=math.max(1,math.floor((h-23)/2))
@@ -1499,8 +1516,9 @@ function UI.run(core)
       end
     end
   end)
-  basalt.run()
+  local worked,err=xpcall(function()basalt.run()end,debug.traceback)
   stopPixelViewer()
   core:shutdown()
+  if not worked then error(err,0) end
 end
 return UI
