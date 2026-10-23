@@ -148,7 +148,7 @@ Connect relevant gauges to the wired peripheral network. The script uses these P
 ## Safety and compatibility
 
 - Redstone outputs are **not** safety interlocks. A computer restart, unloaded chunk, network disconnection, or missing relay may cause unexpected actuator states. Use physical emergency stops and fail-safe wiring.
-- This version is **single-computer**, not distributed Rednet; remote relays must be on the same wired modem network. Wireless buildings will need a separate controller node in a later release.
+- Wireless remote nodes can publish telemetry and, once explicitly paired, accept authenticated redstone commands. A local wired network also supports directly attached relays.
 - Auto rules do not act on stale/unavailable Stock Ticker readings.
 - Machine type and side are configurable; no Andesite Farm names or device IDs are hard-coded.
 - The application does not manage chunkloading.
@@ -185,55 +185,31 @@ Rates remain based on net Stock Ticker changes, not exact per-machine production
 - The default rate averaging period under **Settings > Rate Average** applies to newly created machines. Existing machines keep their chosen values.
 
 
-## Optional CC: Graphics and Unicode enhancements
+## Unicode support and normal Basalt charts
 
-Both mods are optional for this Lua application. **The default Basalt interface remains a normal 16-color text terminal.**
+The **CC: Graphics high-resolution graphics-mode integration has been removed**. Factory Manager now uses only the familiar Basalt 2.5 UI and its ordinary `addPixelGraph()` line charts. There is no CC: Graphics mode switching, no secondary pixel renderer, and no graphics output on the computer terminal. The **CC: Tweaked Unicode Support** mod remains optional; the Factory Manager and Remote Node use UTF-8-aware truncation and input limits to preserve accented labels.
 
-- **CC: Tweaked Unicode Support (NeoForge 1.21.1):** improves client/server handling of UTF-8 input, paste, and rendering. Factory Manager and Remote Node now clip text by Unicode display columns and limit field input without splitting multibyte characters. For names such as `Électricité`, `Chaudière`, or `Andrésite`, this avoids malformed text from byte-based truncation. Some Basalt-internal operations may still need compatibility testing with the mod.
-- **CC: Graphics:** exposes `getGraphicsMode`, `setGraphicsMode`, `drawPixels`, and higher-resolution 16-/256-color pixel modes. In **Settings**, the Factory Manager now reports whether the active display exposes this API and its pixel resolution, **without enabling graphics mode**. Graphics mode replaces the visible text terminal rather than overlaying on top of Basalt, so the existing touch UI intentionally stays in text mode.
-- **Pixel Viewer:** a dedicated full-screen chart view now runs on the main Advanced Monitor, with an on-display EXIT button to restore Basalt; no second display is required.
-- **Compatibility:** CC: Tweaked Unicode Support requires CC:Tweaked 1.120.2+ and installation on **both client and server**. CC: Graphics supports NeoForge 1.21.1 and requires CC:Tweaked 1.117.0+. Test the combination with the actual modpack versions: its compatibility with every other UI/peripheral mod is not established by these checks.
+### Multiple displays
 
-The glyph-width calculations assume conventional Unicode column widths. Font/rendering differences still require visual verification in game.
+Connect any number of **separate Advanced Monitors** to the main Factory Manager through Wired Modems and Networking Cable. The biggest monitor becomes the primary Basalt control screen. All other discovered monitors show independent pages for Overview, Graphs, Machines and Readings. Their data comes from the same central automation engine.
 
-## Responsive multi-display Factory Manager
+You can also connect **CC: Terminals** workstations. Advanced Terminals offer native click-and-drag tile reordering. Advanced Monitors only emit single `monitor_touch` events: switch on Reorder, tap the source chart and tap its destination instead.
 
-The main computer can drive **multiple Advanced Monitors and CC: Terminals workstations** on the same wired peripheral network. No second factory computer is required just to add a screen. Automation and inventory monitoring continue running once in the central Factory Manager.
+Every secondary display is enumerated on startup **and** on each telemetry refresh. Small Advanced Monitors are automatically set to text scale 0.5. A very small screen shows a compact factory status instead of remaining blank. Any rendering error is shown on the affected screen; **Settings** on the primary screen shows the number of secondary displays and the first error. **Settings → Rescan Displays** retries discovery and drawing.
 
-- The **first Advanced Monitor** remains the main interactive Basalt UI, with the full machine editor and switchboard. Attach additional Advanced Monitors through Wired Modems + Networking Cable, or place **CC: Terminals Advanced Terminal** peripherals on that network.
-- Each **additional** display automatically shows its **own independent workspace** with Overview, Graphs, Machines, and Readings tabs. Navigating a page, selecting charts, changing a graph's history range or ordering tiles does not change any other screen.
-- The secondary Machines and Readings screens are currently **read-only** by design. Make automation changes from the main Basalt screen until input paths have been fully tested on the modded workstation hardware.
-- Monitors emit `monitor_touch` (single tap only). To rearrange chart tiles, enable **Reorder** and tap the source tile, then tap its destination.
-- A **CC: Terminals Advanced Terminal** emits `terminal_mouse_click`, `terminal_mouse_drag` and `terminal_mouse_up`; drag a graph tile onto another to reorder. It also supports keyboard and paste events. A normal CC: Terminals Terminal has keyboard input but no native mouse events.
-- Secondary screens use the CC:Tweaked terminal drawing API and repaint at the configured telemetry polling interval. They remain usable when CC: Graphics is not available.
+**Important:** Adjacent Minecraft monitor blocks automatically combine into **one multiblock peripheral**. Leave a one-block gap between separate monitor structures if you want them to behave as independent screens. Each monitor on a wired network also requires the appropriate connected modem.
 
-### Responsive graph layouts
+### Responsive graphs
 
-The original graph grid had fixed width thresholds. Now chart geometry adapts to the actual monitor width and height, showing extra columns and rows as space allows. On large monitors, more than a dozen graph tiles can be visible together instead of always limiting the dashboard to 2–3 charts. Overview grows similarly and includes configured production-rate and custom sensor plots in addition to the base stress/RPM/stock charts.
+Graph dashboards and the Overview choose their number of chart columns and rows based on the actual display size. On a larger monitor, more live charts are visible at once; smaller screens paginate without changing the tracked data. Existing time-weighted rate smoothing, stock labels, machine controls, and Power Grid no-data filtering remain unchanged.
 
-There are independent pagination controls when even a large display cannot fit every tracked metric. Standard Advanced Monitors keep tap navigation.
+The secondary Machines and Readings pages are intentionally read-only. All machine control is still performed on the main Basalt screen.
 
-## High-resolution graphics on the main Advanced Monitor
-
-**Graphs → Pixel View → Start Viewer** temporarily switches the **same main Advanced Monitor** from Basalt text mode into CC: Graphics mode 2 (256-color) or mode 1 (16-color fallback). It **does not draw graphics on the computer's terminal** and does not require a second monitor.
-
-Pixel mode is a dedicated full-screen view. Basalt's main frame is hidden until you press **EXIT** on the pixel display. Switching out of pixel mode restores the regular Basalt interface and its machine controls. Automation, polling and secondary workspaces continue running while the graph viewer is open.
-
-- Tap a chart to expand it and tap again to return to the grid.
-- The pixel viewer has **EXIT**, **previous/next page** (when required), and history range buttons (**1m, 5m, 15m, 30m, all**) on the same monitor.
-- Metrics can be chosen from the Basalt **Pixel View** page before starting it, with up to **12** selected charts. Larger pixel displays show more graphs per page; smaller displays paginate automatically. Available history remains bounded by the samples stored in the Factory Manager.
-- Expanded charts optionally overlay additional measurements with the **same unit** on a shared Y-axis. The selection, range and overlay settings remain saved in `/fpb-factory/data/pixel_graphs.db`.
-- Pixel charts have colored lines, labeled numeric/timeline axes and latest measured values. The compact pixel-font renderer transliterates accented text; the standard Basalt UI retains the Unicode-aware display helpers.
-
-**CC: Graphics is optional.** Without its pixel APIs, continue using Basalt's standard multi-chart page. Secondary workspaces use normal text graphics and do not switch their mode when the primary viewer opens. Drag and drop is only enabled where the peripheral exposes continuous mouse events.
-
-### Install the test branch
-
-On the main computer:
+### Install the test version
 
 ```sh
 wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/feat/unicode-and-graphics-readiness/install.lua feat/unicode-and-graphics-readiness
 reboot
 ```
 
-The installer preserves `/fpb-factory/data`, sets automatic startup and does **not** create whole-installation backups. Validate actual graphics mode switching and CC: Terminals mouse events in Minecraft before merging PR #6.
+The installer updates in place, preserves machines and sensor data, removes the obsolete graphics-mode source files, and **does not create backups**. Actual in-game monitor enumeration and Basalt interactions should be verified before merging the draft PR.
