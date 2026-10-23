@@ -76,6 +76,34 @@ function UI.run(core)
   local pixelOverlay=false
   local pixelKeys={}
   local pixelStatus="Not started"
+  local function savePixelOptions()
+    core:save("pixel_graphs",{range=pixelRange,keys=pixelKeys,overlay=pixelOverlay})
+  end
+  do
+    local path=fs.combine(core.dir,"pixel_graphs.db")
+    if fs.exists(path) then
+      local file=fs.open(path,"r")
+      if file then
+        local data=file.readAll();file.close()
+        local ok,prev=pcall(textutils.unserialize,data)
+        if ok and type(prev)=="table" then
+          local valid={[0]=true,[60]=true,[300]=true,[900]=true,[1800]=true}
+          if valid[prev.range] then pixelRange=prev.range end
+          if type(prev.keys)=="table" then
+            local seen={}
+            for _,key in ipairs(prev.keys) do
+              if type(key)=="string" and #key<80 and not seen[key] and
+                #pixelKeys<4 then
+                pixelKeys[#pixelKeys+1]=key
+                seen[key]=true
+              end
+            end
+          end
+          pixelOverlay=prev.overlay==true
+        end
+      end
+    end
+  end
   local selected=nil
   local quantity=1
   local selectedMachine=nil
@@ -814,6 +842,7 @@ function UI.run(core)
       local seconds,text=r[1],r[2]
       button(panel,2+(i-1)*bw,14,bw-1,1,text,function()
         pixelRange=seconds
+        savePixelOptions()
         redrawPixels();render()
       end,pixelRange==seconds and C.purple or C.gray)
     end
@@ -821,6 +850,7 @@ function UI.run(core)
       button(panel,3,16,math.min(30,w-6),1,
         pixelOverlay and "OVERLAY: SAME-UNIT ON" or "OVERLAY: OFF",function()
           pixelOverlay=not pixelOverlay
+          savePixelOptions()
           redrawPixels();render()
         end,pixelOverlay and C.purple or C.gray)
     else
@@ -849,6 +879,7 @@ function UI.run(core)
         else
           notify("Maximum four graphs: deselect one first")
         end
+        savePixelOptions()
         redrawPixels();render()
       end,selectedMetric and C.blue or C.gray)
     end
