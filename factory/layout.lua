@@ -67,4 +67,32 @@ function M.overviewCharts(w,h,count)
   end
   return result
 end
+-- Responsive pixel chart grid, reserving footer for range controls.
+function M.pixelGrid(w,h,count,page,detail)
+  local columns=detail and 1 or
+    (w>=900 and 4 or w>=600 and 3 or w>=290 and 2 or 1)
+  local rows=detail and 1 or
+    (h>=650 and 3 or h>=255 and 2 or 1)
+  local perPage=columns*rows
+  local total=math.max(0,tonumber(count) or 0)
+  local pages=math.max(1,math.ceil(total/perPage))
+  page=math.max(1,math.min(pages,math.floor(tonumber(page) or 1)))
+  local margin,top,bottom=12,32,45
+  local tileWidth=math.floor((w-margin*(columns+1))/columns)
+  local tileHeight=math.floor((h-top-bottom-margin*(rows+1))/rows)
+  local tiles={}
+  for slot=1,perPage do
+    local index=(page-1)*perPage+slot
+    if index>total then break end
+    local c=(slot-1)%columns
+    local r=math.floor((slot-1)/columns)
+    tiles[#tiles+1]={
+      index=index,x=margin+c*(tileWidth+margin),
+      y=top+margin+r*(tileHeight+margin),
+      width=tileWidth,height=tileHeight
+    }
+  end
+  return {columns=columns,rows=rows,perPage=perPage,pages=pages,
+    page=page,tiles=tiles}
+end
 return M
