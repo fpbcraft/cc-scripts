@@ -73,8 +73,21 @@ height=180
 renderer.h=180
 assert(renderer:render(samples,metrics,{range=300,clock=t,page=2}))
 assert(#renderer.cards==2 and renderer.cards[1].key=="stock")
+local action=renderer:hitAction(width-117,10)
+assert(action=="next","Short pixel screens need on-display paging")
 height=348
 renderer.h=348
+width,height=960,740
+renderer.w,renderer.h=width,height
+local expanded={}
+for i=1,12 do
+  expanded[i]={"metric_"..i,"Metric "..i,"U",colors.cyan}
+end
+assert(renderer:render(samples,expanded,{range=300,clock=t,page=1}))
+assert(#renderer.cards==12,"Large pixel displays should show twelve charts")
+assert(renderer:hitAction(width-70,10)=="exit")
+width,height=340,348
+renderer.w,renderer.h=width,height
 local missing=renderer:render(samples,{{"missing","No Data","W"}},{range=60,clock=t})
 assert(missing)
 renderer:stop()
