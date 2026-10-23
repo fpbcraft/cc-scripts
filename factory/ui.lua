@@ -1110,6 +1110,14 @@ function UI.run(core)
         label(panel,3,19,short("Display error: "..errors[1],w-6),
           C.orange,w-6)
       end
+      if h>=25 then
+        button(panel,3,21,18,1,"RESCAN DISPLAYS",function()
+          local found=screens:discover()
+          screens:refresh()
+          notify(("Detected %d secondary display(s)"):format(found))
+          render()
+        end,C.blue)
+      end
     end
     button(panel,3,6,15,1,"RENAME",function()
       fieldInput("Factory name",core.config.site,false,function(s)
