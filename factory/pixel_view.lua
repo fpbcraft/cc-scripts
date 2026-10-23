@@ -350,13 +350,26 @@ function Viewer:render(samples,metrics,options)
   self.actions={}
   local ok,err=pcall(function()
     self:fill(0,0,self.w,self.h,C.background)
-    self:text(12,10,"FPBCRAFT / HIGH RES TELEMETRY",C.cyan,1,43)
+    self:text(12,10,"FPBCRAFT / LIVE GRAPHS",C.cyan,1,
+      math.floor((self.w-200)/6))
     local actionX=self.w-72
     self:fill(actionX-3,5,70,19,C.red)
     self:text(actionX,10,"< EXIT",C.text,1,8)
     self.actions[#self.actions+1]={
       action="exit",x=actionX-3,y=5,w=70,h=19
     }
+    if grid.pages>1 then
+      for _,ctl in ipairs({
+        {x=self.w-164,label="<",action="prev"},
+        {x=self.w-119,label=">",action="next"}
+      }) do
+        self:fill(ctl.x,5,38,19,C.blue)
+        self:text(ctl.x+13,10,ctl.label,C.text,1,1)
+        self.actions[#self.actions+1]={
+          action=ctl.action,x=ctl.x,y=5,w=38,h=19
+        }
+      end
+    end
     local ranges={{60,"1M"},{300,"5M"},{900,"15M"},
       {1800,"30M"},{0,"ALL"}}
     local buttonW=math.max(30,math.floor((self.w-24)/#ranges))
