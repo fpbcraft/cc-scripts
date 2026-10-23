@@ -22,7 +22,7 @@ function Screen.new(id,surface,core,metrics,kind)
   return setmetatable({
     id=id,surface=surface,core=core,metrics=metrics,kind=kind or "monitor",
     page="OVERVIEW",focus=nil,graphPage=1,range=300,
-    order={},buttons={},tiles={},selection=nil,dragged=nil,
+    order={},buttons={},tiles={},selection=nil,dragged=nil,reorder=false,
     status="",reorderCount=0
   },Screen)
 end
@@ -141,6 +141,15 @@ function Screen:draw()
       self:tile(metrics[tile.index],tile.x,tile.y,tile.width,tile.height)
     end
   elseif self.page=="GRAPHS" then
+    if self.reorder and not self.focus then
+      self:button(2,h-6,15,"REORDER: ON",function()
+        self.reorder=false;self.selection=nil
+      end)
+    elseif not self.focus then
+      self:button(2,h-6,15,"REORDER: OFF",function()
+        self.reorder=true;self.selection=nil
+      end)
+    end
     if self.focus then
       for _,metric in ipairs(metrics) do
         if metric[1]==self.focus then
@@ -244,8 +253,11 @@ function Screen:activate(x,y)
   end
   local id=self:tileAt(x,y)
   if not id then return false end
-  if self.selection then
-    self:moveChart(self.selection,id)
+  if self.reorder then
+    if self.selection then
+      if id==self.selection then self.selection=nil
+      else self:moveChart(self.selection,id) end
+    else self.selection=id end
   elseif self.page=="GRAPHS" then
     self.focus=id
   else
