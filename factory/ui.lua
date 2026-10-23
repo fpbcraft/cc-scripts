@@ -30,6 +30,7 @@ function UI.run(core)
   local completion=require("completions")
   local layout=require("layout")
   local graphMetrics=require("graph_metrics")
+  local Graphics=require("graphics_capabilities")
   basalt.use("charts")
   local terminal=basalt.getMainFrame()
   terminal.background=C.black
@@ -1090,6 +1091,18 @@ function UI.run(core)
     label(panel,3,11,"Poll interval: "..core.config.refreshSeconds.."s")
     label(panel,3,14,"Default rate smoothing: "..
       core.config.rateWindowSeconds.."s")
+    if h>=24 then
+      -- Graphics modes hide text: report capability, do not enable pixels
+      -- while the Basalt dashboard is active.
+      local active=(monitorName and peripheral.wrap(monitorName)) or term
+      local gfx=Graphics.inspect(active)
+      local description=gfx.available and
+        ("CC Graphics: pixel modes supported ("..tostring(gfx.width or "?")..
+          "x"..tostring(gfx.height or "?")..")") or
+        "CC Graphics: pixel API unavailable"
+      label(panel,3,18,description,gfx.available and C.lime or C.lightGray,w-5)
+      label(panel,3,19,"Basalt dashboard remains in text mode",C.lightGray,w-5)
+    end
     button(panel,3,6,15,1,"RENAME",function()
       fieldInput("Factory name",core.config.site,false,function(s)
         core:configure({site=s})
