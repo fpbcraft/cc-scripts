@@ -293,6 +293,18 @@ function Viewer:chart(samples,metric,x,y,w,h,range,clock,palette,overlays)
     self:text(plotX+10,plotY+plotH/2,"NO NUMERIC DATA",C.orange,1,20)
   end
 end
+-- Returns the metric tapped on a secondary monitor, in pixel coordinates.
+-- The caller handles the transition; the graphics module never changes
+-- the main control display or its event routing.
+function Viewer:hitTest(x,y)
+  if not self.active then return nil end
+  for _,card in ipairs(self.cards or {}) do
+    if x>=card.x and y>=card.y and
+       x<card.x+card.w and y<card.y+card.h then
+      return card.key
+    end
+  end
+end
 function Viewer:render(samples,metrics,options)
   assert(self.active,"Graphics viewer is not active")
   samples=samples or {}
@@ -312,6 +324,7 @@ function Viewer:render(samples,metrics,options)
     for i=1,math.min(4,#metrics) do toDraw[#toDraw+1]=metrics[i] end
   end
   if self.screen.setFrozen then pcall(self.screen.setFrozen,true) end
+  self.cards={}
   local ok,err=pcall(function()
     self:fill(0,0,self.w,self.h,C.background)
     self:text(12,10,"FPBCRAFT / HIGH RES TELEMETRY",C.cyan,1,43)
@@ -338,6 +351,9 @@ function Viewer:render(samples,metrics,options)
       local iy=math.floor((i-1)/cols)
       local px=margin+ix*(cw+margin)
       local py=top+margin+iy*(ch+margin)
+      self.cards[#self.cards+1]={
+        key=metric[1],x=px,y=py,w=cw,h=ch
+      }
       self:chart(samples,metric,px,py,cw,ch,range,clock,
         ({C.cyan,C.green,C.orange,C.pink})[i],
         detail and options.overlay and metrics or nil)
