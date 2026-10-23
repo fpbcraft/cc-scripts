@@ -71,6 +71,7 @@ function UI.run(core)
   local pixelViewer=nil
   local pixelScreen=nil
   local pixelScreenLabel=""
+  local pixelMonitorName=nil
   local pixelRange=300
   local pixelFocus=nil
   local pixelPage=1
@@ -730,7 +731,7 @@ function UI.run(core)
       if name~=monitorName then
         local candidate=peripheral.wrap(name)
         if Pixel.supported(candidate) then
-          return candidate,"Monitor "..name
+          return candidate,"Monitor "..name,name
         end
       end
     end
@@ -778,6 +779,7 @@ function UI.run(core)
       pixelViewer=nil
     end
     pixelScreen=nil
+    pixelMonitorName=nil
     pixelStatus="Stopped"
   end
   local function redrawPixels()
@@ -808,6 +810,7 @@ function UI.run(core)
     pixelViewer=viewer
     pixelScreen=surface
     pixelScreenLabel=title
+    pixelMonitorName=select(3,findPixelSurface())
     pixelStatus="Running on "..title
     redrawPixels()
     return pixelViewer~=nil
@@ -1503,6 +1506,27 @@ function UI.run(core)
   -- no manual hub address or node ID configuration is required.
   basalt.schedule(function()
     core.remote:serve()
+  end)
+  -- Graphics monitor touches are expressed in terminal-cell coordinates.
+  -- Convert to pixel coordinates, then hit-test the last rendered cards.
+  -- Basalt's own primary-monitor controls remain fully independent.
+  basalt.schedule(function()
+    while true do
+      local _,name,x,y=os.pullEvent("monitor_touch")
+      if pixelViewer and pixelMonitorName and name==pixelMonitorName then
+        local ok,tw,th=pcall(pixelScreen.getSize)
+        if ok and tw>0 and th>0 then
+          local px=(x-0.5)*pixelViewer.w/tw
+          local py=(y-0.5)*pixelViewer.h/th
+          local key=pixelViewer:hitTest(px,py)
+          if key then
+            pixelFocus=(pixelFocus==key and nil or key)
+            redrawPixels()
+            if page=="PIXEL VIEW" then render() end
+          end
+        end
+      end
+    end
   end)
   basalt.schedule(function()
     while true do
