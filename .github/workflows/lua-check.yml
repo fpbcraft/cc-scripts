@@ -43,3 +43,5 @@ jobs:
         run: lua5.3 tests/graph_metrics_test.lua
       - name: Unicode and CC Graphics compatibility
         run: lua5.3 tests/ui_compat_test.lua
+      - name: CC Graphics pixel viewer and mode cleanup
+        run: lua5.3 tests/pixel_view_test.lua
