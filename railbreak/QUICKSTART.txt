@@ -1,0 +1,16 @@
+RAILBREAK: KINETIC FRONTIER
+--------------------------
+1. Connect a 5x5 colour Advanced Monitor to a computer.
+2. Run: wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-railbreak.lua
+3. Run: /railbreak/main.lua
+4. New Expedition -> choose 1-4 engineers -> Start.
+5. Tap the WORKSHOP's SHIFT 5 button to run the starter mechanical press.
+6. Tap any machine for detailed descriptions, RPM, recipes, and controls.
+7. BUILD MACHINES -> choose a blueprint -> tap an empty tile.
+8. RAILWAY -> inspect contract and destination resource costs.
+9. Craft sheets, planks, gravel, track kits and bridge sections; deliver and travel.
+10. Four railway legs completed = victory. There are no real-time countdowns.
+
+Saves: /railbreak/data/save.lua; installer always keeps data/.
+Optional autostart: run installer with --startup on a dedicated computer.
+See README.md for recipes and gameplay instructions.

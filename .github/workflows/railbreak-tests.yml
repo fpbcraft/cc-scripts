@@ -1,0 +1,25 @@
+name: Railbreak Lua tests
+
+on:
+  push:
+    paths:
+      - 'railbreak/**'
+      - 'install-railbreak.lua'
+      - '.github/workflows/railbreak-tests.yml'
+  pull_request:
+    paths:
+      - 'railbreak/**'
+      - 'install-railbreak.lua'
+      - '.github/workflows/railbreak-tests.yml'
+
+jobs:
+  lua-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua
+        run: sudo apt-get update && sudo apt-get install -y lua5.3
+      - name: Integration and gameplay regression
+        run: lua5.3 railbreak/tests/run.lua
+      - name: Installer transactional behavior
+        run: lua5.3 railbreak/tests/installer.lua
