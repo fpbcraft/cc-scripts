@@ -30,8 +30,6 @@ function UI.run(core)
   local completion=require("completions")
   local layout=require("layout")
   local graphMetrics=require("graph_metrics")
-  local Graphics=require("graphics_capabilities")
-  local Pixel=require("pixel_view")
   local Dashboard=require("screen_dashboard")
   basalt.use("charts")
   local terminal=basalt.getMainFrame()
@@ -69,44 +67,6 @@ function UI.run(core)
   local genericPage=1
   local graphKey="stress"
   local graphPage=1
-  local pixelViewer=nil
-  local pixelScreen=nil
-  local pixelScreenLabel=""
-  local pixelMonitorName=nil
-  local pixelRange=300
-  local pixelFocus=nil
-  local pixelPage=1
-  local pixelOverlay=false
-  local pixelKeys={}
-  local pixelStatus="Not started"
-  local function savePixelOptions()
-    core:save("pixel_graphs",{range=pixelRange,keys=pixelKeys,overlay=pixelOverlay})
-  end
-  do
-    local path=fs.combine(core.dir,"pixel_graphs.db")
-    if fs.exists(path) then
-      local file=fs.open(path,"r")
-      if file then
-        local data=file.readAll();file.close()
-        local ok,prev=pcall(textutils.unserialize,data)
-        if ok and type(prev)=="table" then
-          local valid={[0]=true,[60]=true,[300]=true,[900]=true,[1800]=true}
-          if valid[prev.range] then pixelRange=prev.range end
-          if type(prev.keys)=="table" then
-            local seen={}
-            for _,key in ipairs(prev.keys) do
-              if type(key)=="string" and #key<80 and not seen[key] and
-                #pixelKeys<12 then
-                pixelKeys[#pixelKeys+1]=key
-                seen[key]=true
-              end
-            end
-          end
-          pixelOverlay=prev.overlay==true
-        end
-      end
-    end
-  end
   local selected=nil
   local quantity=1
   local selectedMachine=nil
@@ -727,197 +687,6 @@ function UI.run(core)
     end)
     label(panel,3,h-6,"AUTO stops high, resumes low; Manual bypasses rules",C.lightGray)
   end
-  -- Switch the PRIMARY Advanced Monitor into CC Graphics pixel mode.
-  -- Do not use the computer terminal as an unintended companion display.
-  local function findPixelSurface()
-    if monitorName then
-      local primary=peripheral.wrap(monitorName)
-      if Pixel.supported(primary) then
-        return primary,"Main Advanced Monitor",monitorName
-      end
-    end
-    return nil,nil
-  end
-  local function selectedPixelMetrics()
-    local available=availableMetrics()
-    local enabled={}
-    local result={}
-    for _,key in ipairs(pixelKeys) do enabled[key]=true end
-    for _,metric in ipairs(available) do
-      if enabled[metric[1]] and #result<12 then result[#result+1]=metric end
-    end
-    if #result==0 then
-      for i=1,math.min(12,#available) do
-        result[#result+1]=available[i]
-      end
-    end
-    -- Opening any graph detail must always include that focus metric,
-    -- regardless of whether it is in the four selected dashboard metrics.
-    if pixelFocus then
-      local found=false
-      for _,m in ipairs(result) do
-        if m[1]==pixelFocus then found=true;break end
-      end
-      if not found then
-        for _,m in ipairs(available) do
-          if m[1]==pixelFocus then
-            if #result>=12 then table.remove(result,12) end
-            table.insert(result,1,m)
-            break
-          end
-        end
-      end
-    end
-    return result
-  end
-  local function stopPixelViewer()
-    if pixelViewer then
-      pcall(pixelViewer.stop,pixelViewer)
-      pixelViewer=nil
-    end
-    pixelScreen=nil
-    pixelMonitorName=nil
-    root.visible=true
-    pixelStatus="Stopped"
-  end
-  local function redrawPixels()
-    if not pixelViewer then return end
-    local ok,success,err=pcall(pixelViewer.render,pixelViewer,
-      core.samples,selectedPixelMetrics(),
-      {range=pixelRange,detail=pixelFocus,overlay=pixelOverlay,page=pixelPage})
-    if not ok or not success then
-      stopPixelViewer()
-      pixelStatus="Pixel rendering failed: "..tostring(err or success)
-    end
-  end
-  local function startPixelViewer()
-    if pixelViewer then return true end
-    local surface,title=findPixelSurface()
-    if not surface then
-      pixelStatus="The main Advanced Monitor does not expose CC Graphics"
-      notify(pixelStatus)
-      return false
-    end
-    local ok,viewer=pcall(Pixel.new,surface)
-    if not ok then pixelStatus=tostring(viewer);return false end
-    root.visible=false
-    local started,worked,err=pcall(viewer.start,viewer)
-    if not started or not worked then
-      root.visible=true
-      pixelStatus=tostring(err or worked)
-      return false
-    end
-    pixelViewer=viewer
-    pixelScreen=surface
-    pixelScreenLabel=title
-    pixelMonitorName=monitorName
-    pixelStatus="Running on "..title
-    redrawPixels()
-    return pixelViewer~=nil
-  end
-  local function showPixelSettings()
-    local surface,labelName=findPixelSurface()
-    if #pixelKeys==0 then
-      for _,metric in ipairs(availableMetrics()) do
-        if #pixelKeys>=12 then break end
-        pixelKeys[#pixelKeys+1]=metric[1]
-      end
-      if #pixelKeys>0 then savePixelOptions() end
-    end
-    label(panel,3,3,"HIGH-RES PIXEL GRAPH VIEWER",C.cyan)
-    label(panel,3,5,"Output: "..short(labelName or "Not available",w-14),
-      surface and C.lime or C.orange)
-    label(panel,3,7,short(pixelStatus,w-6),
-      pixelViewer and C.lime or C.lightGray)
-    button(panel,3,9,17,2,pixelViewer and "STOP VIEWER" or "START VIEWER",
-      function()
-        if pixelViewer then stopPixelViewer() else startPixelViewer() end
-        render()
-      end,pixelViewer and C.red or C.green)
-    button(panel,22,9,math.min(20,w-24),2,
-      pixelFocus and "SHOW DASHBOARD" or "EXPAND SELECTED",
-      function()
-        if pixelFocus then
-          pixelFocus=nil
-        else
-          local first=selectedPixelMetrics()[1]
-          pixelFocus=first and first[1] or nil
-        end
-        redrawPixels()
-        render()
-      end,C.blue)
-    local ranges={{60,"1M"},{300,"5M"},{900,"15M"},{1800,"30M"},{0,"ALL"}}
-    label(panel,3,12,"TIME WINDOW (X-AXIS)",C.cyan)
-    local bw=math.max(6,math.floor((w-6)/5))
-    for i,r in ipairs(ranges) do
-      local seconds,text=r[1],r[2]
-      button(panel,2+(i-1)*bw,14,bw-1,1,text,function()
-        pixelRange=seconds
-        savePixelOptions()
-        redrawPixels();render()
-      end,pixelRange==seconds and C.purple or C.gray)
-    end
-    if pixelFocus then
-      button(panel,3,16,math.min(30,w-6),1,
-        pixelOverlay and "OVERLAY: SAME-UNIT ON" or "OVERLAY: OFF",function()
-          pixelOverlay=not pixelOverlay
-          savePixelOptions()
-          redrawPixels();render()
-        end,pixelOverlay and C.purple or C.gray)
-    else
-      label(panel,3,16,"SELECT UP TO 12 CHARTS / TAP A METRIC",C.cyan)
-    end
-    if pixelViewer and pixelViewer.h<255 and #selectedPixelMetrics()>2 and
-       not pixelFocus then
-      button(panel,w-18,12,16,1,
-        pixelPage==1 and "NEXT PIXEL PAGE" or "FIRST PIXEL PAGE",
-        function()
-          pixelPage=pixelPage==1 and 2 or 1
-          redrawPixels();render()
-        end,C.blue)
-    end
-    local metrics=availableMetrics()
-    local per=math.max(1,math.floor((h-23)/2))
-    local first=(genericPage-1)*per+1
-    local chosen={}
-    for _,key in ipairs(pixelKeys) do chosen[key]=true end
-    for i=1,per do
-      local metric=metrics[first+i-1]
-      if not metric then break end
-      local selectedMetric=chosen[metric[1]]
-      local y=18+(i-1)*2
-      button(panel,3,y,w-6,1,(selectedMetric and "[X] " or "[ ] ")..
-        short(metric[2],w-13),function()
-        local index=nil
-        for j,k in ipairs(pixelKeys) do
-          if k==metric[1] then index=j;break end
-        end
-        if index then
-          table.remove(pixelKeys,index)
-        elseif #pixelKeys<12 then
-          pixelKeys[#pixelKeys+1]=metric[1]
-        else
-          notify("Maximum twelve graphs: deselect one first")
-        end
-        savePixelOptions()
-        redrawPixels();render()
-      end,selectedMetric and C.blue or C.gray)
-    end
-    local maxPage=math.max(1,math.ceil(#metrics/per))
-    local py=h-4
-    if genericPage>1 then
-      button(panel,3,py,10,1,"< PREV",function()
-        genericPage=genericPage-1;render()
-      end)
-    end
-    label(panel,math.floor(w/2)-5,py,
-      string.format("%d/%d",genericPage,maxPage),C.lightGray,9)
-    if genericPage<maxPage then
-      button(panel,w-11,py,10,1,"NEXT >",function()
-        genericPage=genericPage+1;render()
-      end)
-    end
-  end
   local function showGraphPicker()
     label(panel,3,3,"SELECT GRAPH METRIC",C.cyan)
     local per=math.max(2,math.floor((h-11)/2))
@@ -930,9 +699,6 @@ function UI.run(core)
   local function showGraphs()
     local metrics=availableMetrics()
     label(panel,3,3,("LIVE GRAPHS  /  %d METRICS"):format(#metrics),C.cyan)
-    button(panel,w-14,3,12,1,"PIXEL VIEW",function()
-      navigateTo("PIXEL VIEW")
-    end,C.blue)
     local grid=layout.graphGrid(w,h,#metrics,graphPage)
     graphPage=grid.page
     local pages=grid.pages
@@ -969,13 +735,6 @@ function UI.run(core)
     button(panel,w-15,3,13,1,"< ALL GRAPHS",function()
       navigateTo("GRAPHS")
     end,C.gray)
-    if w>=42 then
-      button(panel,w-29,3,12,1,"PIXEL VIEW",function()
-        pixelFocus=graphKey
-        if not pixelViewer then startPixelViewer() else redrawPixels() end
-        navigateTo("PIXEL VIEW")
-      end,C.blue)
-    end
     local rateId=graphKey:match("^rate_(.+)$")
     local chartTop=5
     if rateId then
@@ -1325,18 +1084,6 @@ function UI.run(core)
     label(panel,3,11,"Poll interval: "..core.config.refreshSeconds.."s")
     label(panel,3,14,"Default rate smoothing: "..
       core.config.rateWindowSeconds.."s")
-    if h>=24 then
-      -- Graphics modes hide text: report capability, do not enable pixels
-      -- while the Basalt dashboard is active.
-      local active=(monitorName and peripheral.wrap(monitorName)) or term
-      local gfx=Graphics.inspect(active)
-      local description=gfx.available and
-        ("CC Graphics: pixel modes supported ("..tostring(gfx.width or "?")..
-          "x"..tostring(gfx.height or "?")..")") or
-        "CC Graphics: pixel API unavailable"
-      label(panel,3,18,description,gfx.available and C.lime or C.lightGray,w-5)
-      label(panel,3,19,"Basalt dashboard remains in text mode",C.lightGray,w-5)
-    end
     button(panel,3,6,15,1,"RENAME",function()
       fieldInput("Factory name",core.config.site,false,function(s)
         core:configure({site=s})
@@ -1464,7 +1211,7 @@ function UI.run(core)
       SWITCHBOARD=showSwitchboard,MACHINES=showMachines,
       MACHINE=showMachine,["MACHINE EDIT"]=showMachineEdit,
       RULES=showRules,GRAPHS=showGraphs,["GRAPH DETAIL"]=showGraphDetail,
-      ["GRAPH PICKER"]=showGraphPicker,["PIXEL VIEW"]=showPixelSettings,
+      ["GRAPH PICKER"]=showGraphPicker,
       DEVICES=showDevices,DEVICE=showDevice,
       ["DEVICE METHODS"]=showMethods,READINGS=showReadings,READING=showReading,
       ["READING OPTIONS"]=showReadingOptions,
@@ -1543,47 +1290,10 @@ function UI.run(core)
   basalt.schedule(function()
     core.remote:serve()
   end)
-  -- Graphics monitor touches are expressed in terminal-cell coordinates.
-  -- Convert to pixel coordinates, then hit-test the last rendered cards.
-  -- Basalt's own primary-monitor controls remain fully independent.
-  basalt.schedule(function()
-    while true do
-      local _,name,x,y=os.pullEvent("monitor_touch")
-      if pixelViewer and pixelMonitorName and name==pixelMonitorName then
-        local ok,tw,th=pcall(pixelScreen.getSize)
-        if ok and tw>0 and th>0 then
-          local px=(x-0.5)*pixelViewer.w/tw
-          local py=(y-0.5)*pixelViewer.h/th
-          local action,value=pixelViewer:hitAction(px,py)
-          if action=="exit" then
-            stopPixelViewer()
-            navigateTo("GRAPHS")
-          elseif action=="next" then
-            pixelPage=pixelPage+1
-            redrawPixels()
-          elseif action=="prev" then
-            pixelPage=math.max(1,pixelPage-1)
-            redrawPixels()
-          elseif action=="range" then
-            pixelRange=value
-            savePixelOptions()
-            redrawPixels()
-          else
-            local key=pixelViewer:hitTest(px,py)
-            if key then
-              if pixelFocus==key then pixelFocus=nil else pixelFocus=key end
-              redrawPixels()
-            end
-          end
-        end
-      end
-    end
-  end)
   basalt.schedule(function()
     while true do
       sleep(core.config.refreshSeconds)
       local scanned,errorMessage=pcall(function()core:scan()end)
-      if pixelViewer then redrawPixels() end
       for _,screen in pairs(additionalScreens) do
         pcall(screen.draw,screen)
       end
@@ -1595,7 +1305,6 @@ function UI.run(core)
     end
   end)
   local worked,err=xpcall(function()basalt.run()end,debug.traceback)
-  stopPixelViewer()
   core:shutdown()
   if not worked then error(err,0) end
 end
