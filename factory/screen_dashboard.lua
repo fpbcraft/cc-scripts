@@ -281,6 +281,7 @@ function Screen:handle(event,a,b,c,d)
   elseif event=="terminal_mouse_up" and b==1 then
     local source=self.dragged
     self.dragged=nil
+    if not source then return false end
     local target=self:tileAt(c,d)
     if source and target and source~=target then
       self:moveChart(source,target)
