@@ -41,3 +41,5 @@ jobs:
         run: lua5.3 tests/node_ui_test.lua
       - name: Power Grid graph visibility
         run: lua5.3 tests/graph_metrics_test.lua
+      - name: Unicode and CC Graphics compatibility
+        run: lua5.3 tests/ui_compat_test.lua
