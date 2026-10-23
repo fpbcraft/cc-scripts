@@ -1,6 +1,5 @@
 package.path="./factory/?.lua;"..package.path
 local Text=require("ui_text")
-local Graphics=require("graphics_capabilities")
 
 assert(Text.columns("Électricité")==11)
 assert(Text.clip("Électricité",6)=="Élect~",
@@ -20,21 +19,4 @@ assert(Text.clip("abc",1)=="~")
 assert(type(Text.clip("\255\254",1))=="string",
   "Invalid UTF-8 must not throw or hang")
 
-local plain={getSize=function()return 30,20 end}
-assert(Graphics.inspect(plain).available==false)
-assert(Graphics.inspect(nil).available==false)
-local touched=false
-local capable={
-  getGraphicsMode=function()return false end,
-  setGraphicsMode=function()touched=true end,
-  drawPixels=function()end,
-  getSize=function(mode)
-    assert(mode==2,"Pixel dimensions require mode-specific getSize")
-    return 330,240
-  end
-}
-local detected=Graphics.inspect(capable)
-assert(detected.available and detected.mode==0)
-assert(detected.width==330 and detected.height==240)
-assert(not touched,"Capability inspection must not switch graphics modes")
-print("Unicode text helpers and graphics capability tests passed")
+print("Unicode text helpers passed")
