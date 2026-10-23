@@ -283,7 +283,8 @@ function Viewer:chart(samples,metric,x,y,w,h,range,clock,palette,overlays)
   for i=#data,1,-1 do
     if finite(data[i].value) then value=fmt(data[i].value);break end
   end
-  self:text(x+w-92,y+7,value.." "..(unit or ""),stroke,1,15)
+  self:text(x+10,y+19,value.." "..(unit or ""),stroke,1,
+    math.floor((w-18)/6))
   local shownRange=range==0 and "ALL" or range<3600 and
     (tostring(range/60).." MIN") or (tostring(range/3600).." HR")
   self:text(plotX,plotY+plotH+9,"-"..shownRange,C.muted,1,13)
