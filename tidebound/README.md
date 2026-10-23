@@ -2,7 +2,7 @@
 
 A two-player, pass-and-play **space 4X tabletop game** for CC:Tweaked. Stellaris-inspired, but intentionally designed for **one shared 3×3, 4×4 or 5×5 Advanced Monitor**. Explore a 24-system connected galaxy, expand borders, build colonies, operate fleets, compete in research, negotiate trade, and win by empire score.
 
-**Graphics:** The game *automatically uses [CC: Graphics](https://modrinth.com/mod/cc-graphics) mode 2* (256-colour pixel drawing) when the monitor supports it. This is a direct 2D pixel renderer, not Pine3D. All graphics (including **23 hand-coded icon sprites**, a custom font and the procedural space map) are embedded in the standalone Lua file; no image assets, libraries, or internet are required while playing. When graphics mode isn't present, it falls back to CC:Tweaked's native coloured terminal display. The pixel renderer uses batches and `setFrozen` to reduce flicker. The mod version with monitor support is 0.2.0 or later, and requires CC:Tweaked 1.117.0+ for Minecraft 1.21.1.
+**Graphics:** The game *automatically uses [CC: Graphics](https://modrinth.com/mod/cc-graphics) mode 2* (256-colour pixel drawing) when the monitor supports it. This is a direct 2D pixel renderer, not Pine3D. All graphics (including **26 hand-coded icon sprites**, a custom font and the procedural space map) are embedded in the standalone Lua file; no image assets, libraries, or internet are required while playing. When graphics mode isn't present, it falls back to CC:Tweaked's native coloured terminal display. The pixel renderer uses batches and `setFrozen` to reduce flicker. The mod version with monitor support is 0.2.0 or later, and requires CC:Tweaked 1.117.0+ for Minecraft 1.21.1.
 
 ## Install or update in Minecraft
 
