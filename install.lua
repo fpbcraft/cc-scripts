@@ -5,7 +5,7 @@ local root="/fpb-factory"
 local base="https://raw.githubusercontent.com/fpbcraft/cc-scripts/"..ref.."/factory/"
 local names={"main.lua","ui.lua","core.lua","devices.lua","completions.lua",
   "remote.lua","auth.lua","layout.lua","graph_metrics.lua","ui_text.lua","graphics_capabilities.lua",
-  "pixel_view.lua"}
+  "pixel_view.lua","screen_dashboard.lua"}
 local function remove(path)
   if fs.exists(path) then fs.delete(path) end
 end
