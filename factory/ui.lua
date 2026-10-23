@@ -73,6 +73,7 @@ function UI.run(core)
   local pixelScreenLabel=""
   local pixelRange=300
   local pixelFocus=nil
+  local pixelOverlay=false
   local pixelKeys={}
   local pixelStatus="Not started"
   local selected=nil
@@ -723,6 +724,23 @@ function UI.run(core)
         result[#result+1]=available[i]
       end
     end
+    -- Opening any graph detail must always include that focus metric,
+    -- regardless of whether it is in the four selected dashboard metrics.
+    if pixelFocus then
+      local found=false
+      for _,m in ipairs(result) do
+        if m[1]==pixelFocus then found=true;break end
+      end
+      if not found then
+        for _,m in ipairs(available) do
+          if m[1]==pixelFocus then
+            if #result>=4 then table.remove(result,4) end
+            table.insert(result,1,m)
+            break
+          end
+        end
+      end
+    end
     return result
   end
   local function stopPixelViewer()
@@ -737,10 +755,10 @@ function UI.run(core)
     if not pixelViewer then return end
     local ok,success,err=pcall(pixelViewer.render,pixelViewer,
       core.samples,selectedPixelMetrics(),
-      {range=pixelRange,detail=pixelFocus})
+      {range=pixelRange,detail=pixelFocus,overlay=pixelOverlay})
     if not ok or not success then
-      pixelStatus="Pixel rendering failed: "..tostring(err or success)
       stopPixelViewer()
+      pixelStatus="Pixel rendering failed: "..tostring(err or success)
     end
   end
   local function startPixelViewer()
@@ -799,7 +817,15 @@ function UI.run(core)
         redrawPixels();render()
       end,pixelRange==seconds and C.purple or C.gray)
     end
-    label(panel,3,16,"SELECT UP TO 4 CHARTS / TAP A METRIC",C.cyan)
+    if pixelFocus then
+      button(panel,3,16,math.min(30,w-6),1,
+        pixelOverlay and "OVERLAY: SAME-UNIT ON" or "OVERLAY: OFF",function()
+          pixelOverlay=not pixelOverlay
+          redrawPixels();render()
+        end,pixelOverlay and C.purple or C.gray)
+    else
+      label(panel,3,16,"SELECT UP TO 4 CHARTS / TAP A METRIC",C.cyan)
+    end
     local metrics=availableMetrics()
     local per=math.max(1,math.floor((h-23)/2))
     local first=(genericPage-1)*per+1
