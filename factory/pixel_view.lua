@@ -1,6 +1,7 @@
 -- CC: Graphics full-screen renderer for the primary Advanced Monitor.
 -- Basalt is hidden while pixel mode is active and restored on exit.
 -- Compatible with CraftOS-PC/CC: Graphics pixels and 0-based positions.
+local Layout=require("layout")
 local Viewer={}
 Viewer.__index=Viewer
 local C={
@@ -237,9 +238,9 @@ function Viewer:chart(samples,metric,x,y,w,h,range,clock,palette,overlays)
   self:fill(x,y,w,1,C.edge)
   self:text(x+10,y+7,title,C.text,1,math.floor((w-20)/6))
   local plotX=x+58
-  local plotY=y+35
+  local plotY=y+27
   local plotW=w-70
-  local plotH=h-66
+  local plotH=h-51
   if plotW<20 or plotH<15 then return end
   local data=Viewer.series(samples,key,range,clock)
   local combined={}
@@ -330,14 +331,19 @@ function Viewer:render(samples,metrics,options)
   local clock=options.clock or
     (#samples>0 and samples[#samples].time) or 0
   local detail=options.detail
-  local toDraw={}
+  local all={}
   if detail then
     for _,metric in ipairs(metrics) do
-      if metric[1]==detail then toDraw[1]=metric;break end
+      if metric[1]==detail then all[1]=metric;break end
     end
   end
-  if #toDraw==0 then
-    for i=1,math.min(4,#metrics) do toDraw[#toDraw+1]=metrics[i] end
+  if #all==0 then
+    for _,metric in ipairs(metrics) do all[#all+1]=metric end
+  end
+  local grid=Layout.pixelGrid(self.w,self.h,#all,options.page,detail~=nil)
+  local toDraw={}
+  for _,tile in ipairs(grid.tiles) do
+    toDraw[#toDraw+1]={metric=all[tile.index],tile=tile}
   end
   if self.screen.setFrozen then pcall(self.screen.setFrozen,true) end
   self.cards={}
@@ -365,34 +371,17 @@ function Viewer:render(samples,metrics,options)
       }
     end
     local count=#toDraw
-    -- A small computer screen is often only ~170 pixel rows: show two
-    -- useful charts rather than four tiny charts with invisible plot areas.
-    if not detail and self.h<255 and #toDraw>2 then
-      local page=options.page==2 and 2 or 1
-      if page==2 then
-        toDraw={toDraw[3],toDraw[4]}
-      else
-        toDraw={toDraw[1],toDraw[2]}
-      end
-      count=#toDraw
-    end
-    local cols=detail and 1 or (count>=2 and 2 or 1)
-    local rows=math.max(1,math.ceil(count/cols))
-    local margin=12
-    local top=32
-    local cw=math.floor((self.w-margin*(cols+1))/cols)
-    local ch=math.floor((self.h-top-margin*(rows+1))/rows)
-    for i,metric in ipairs(toDraw) do
-      local ix=(i-1)%cols
-      local iy=math.floor((i-1)/cols)
-      local px=margin+ix*(cw+margin)
-      local py=top+margin+iy*(ch+margin)
-      self.cards[#self.cards+1]={
-        key=metric[1],x=px,y=py,w=cw,h=ch
-      }
+    for i,entry in ipairs(toDraw) do
+      local metric,tile=entry.metric,entry.tile
+      local px,py,cw,ch=tile.x,tile.y,tile.width,tile.height
+      self.cards[#self.cards+1]={key=metric[1],x=px,y=py,w=cw,h=ch}
       self:chart(samples,metric,px,py,cw,ch,range,clock,
-        ({C.cyan,C.green,C.orange,C.pink})[i],
+        ({C.cyan,C.green,C.orange,C.pink})[((i-1)%4)+1],
         detail and options.overlay and metrics or nil)
+    end
+    if grid.pages>1 then
+      self:text(self.w-180,10,("PAGE %d/%d"):format(grid.page,grid.pages),
+        C.muted,1,20)
     end
     if count==0 then
       self:text(20,self.h/2,"NO TRACKED METRICS",C.orange,2,35)
