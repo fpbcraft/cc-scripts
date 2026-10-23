@@ -108,8 +108,28 @@ function Screen:tile(metric,x,y,w,h)
 end
 function Screen:draw()
   local w,h=self.surface.getSize()
-  if w<32 or h<19 then return end
   self.buttons={};self.tiles={}
+  -- A single-block or otherwise small monitor is still a display.
+  -- Show a compact readout instead of silently leaving it blank.
+  if w<32 or h<19 then
+    self.surface.setBackgroundColor(C.black)
+    self.surface.clear()
+    if w<8 or h<4 then return end
+    self:text(1,1,"FPBCRAFT",C.cyan,C.black,w)
+    self:text(1,2,Text.clip(self.id,w),C.lightGray,C.black,w)
+    local stock=0
+    for _,item in ipairs(self.core.snapshot.stock or {}) do
+      stock=stock+(item.count or 0)
+    end
+    self:text(1,3,"STOCK "..tostring(stock),C.white,C.black,w)
+    if h>=5 then self:text(1,5,
+      "MACHINES "..tostring(#self.core.machines),C.lime,C.black,w)
+    end
+    if h>=7 then self:text(1,7,
+      "Enlarge monitor for pages",C.orange,C.black,w)
+    end
+    return
+  end
   self.surface.setBackgroundColor(C.black)
   self.surface.clear()
   self:text(2,1,"FPBCRAFT / "..self.id,C.cyan,C.black,w-3)
@@ -210,7 +230,7 @@ function Screen:draw()
       local r=readings[i]
       local value=self.core.devices.values[r.id] or {}
       self:text(2,5+(i-1)*2,r.label..": "..
-        tostring(value.value or "--").." "..(r.unit or ""),
+        tostring(value.value==nil and "--" or value.value).." "..(r.unit or ""),
         value.status=="online" and C.lime or C.orange,C.black,w-4)
     end
   end
