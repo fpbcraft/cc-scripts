@@ -319,7 +319,12 @@ function Viewer:render(samples,metrics,options)
     -- A small computer screen is often only ~170 pixel rows: show two
     -- useful charts rather than four tiny charts with invisible plot areas.
     if not detail and self.h<255 and #toDraw>2 then
-      while #toDraw>2 do table.remove(toDraw) end
+      local page=options.page==2 and 2 or 1
+      if page==2 then
+        toDraw={toDraw[3],toDraw[4]}
+      else
+        toDraw={toDraw[1],toDraw[2]}
+      end
       count=#toDraw
     end
     local cols=detail and 1 or (count>=2 and 2 or 1)
