@@ -1,939 +1,1030 @@
--- TIDEBOUND: KINGDOMS v2.1
--- Two-player touch-screen empire game for CC:Tweaked Advanced Monitors.
--- Usage: tidebound [monitor-name]  OR  texlua tidebound.lua --self-test
-local argv = {...}
-if #argv == 0 and type(arg) == "table" and arg[1] then argv[1] = arg[1] end
-local RED, BLUE = 1, 2
-local MAX_TURNS, AP = 26, 3
-local MIN_W, MIN_H = 45, 34
-local MAX_RES = 50
-local COST = {
-  claim = {food=1, wood=1},
-  found = {wood=4, stone=2},
-  upgrade = {wood=4, stone=4},
-  recruit = {food=3, stone=1},
-  fort = {wood=2, stone=2},
-  attack = {food=1},
+-- TIDEBOUND: STELLAR FRONTIER v3.0
+-- Local 2-player CC:Tweaked space 4X. Optional CC: Graphics v0.2+ pixel-mode renderer.
+-- Run: tidebound [monitor-name] | texlua tidebound.lua --self-test
+local argv={...}
+if #argv==0 and type(arg)=="table" and arg[1] then argv[1]=arg[1] end
+local VERSION=3
+local SHORT_NAMES={"SOL","NOVA"}
+local KIND={"TERRAN","ORE","NEBULA","PLASMA","RELIC","ICE"}
+local SYSNAMES={"ASTER","VEGA","DENEB","LYRA","NASH","ARCADIA","CYGNUS","PROXIMA","VESTA","KOR","RHEA","ZENITH","HELIX","SIRIUS","ORION","ATLAS","NEXUS","ERIDAN","IONA","KHEPRI","TALOS","MERIDIAN","KEPLER","TITAN","PHOBOS","MIRA","ELARA","XENON","DRACO","AEGIS"}
+local PALETTE={
+  [0]=0x090E1D,[1]=0x111B30,[2]=0x1A2A40,[3]=0x294058,[4]=0x435A72,[5]=0x819BB5,
+  [6]=0xD5E5F1,[7]=0xF9FBFF,[8]=0x36B9C4,[9]=0x5BEEE3,[10]=0x305EAA,[11]=0x78A9FF,
+  [12]=0x9852BD,[13]=0xDDA9FA,[14]=0xA95B65,[15]=0xFF9A9A,[16]=0xCB9B4C,[17]=0xF4CC79,
+  [18]=0x2D795C,[19]=0x7FE4A4,[20]=0xD36D37,[21]=0xF8AB64,[22]=0x6D729E,[23]=0xD4D0C2,
+  [24]=0x142238,[25]=0x25354D,[26]=0xFFDBAA,[27]=0x4D899A,[28]=0x171429,[29]=0x5D3C73,
+  [30]=0xA1B4C9,[31]=0x2B263F,
 }
-local DIRS = {{1,0},{0,1},{-1,0},{0,-1}}
-local function clamp(x,a,b) return math.max(a, math.min(b, x)) end
-local function copy(t)
-  if type(t) ~= "table" then return t end
-  local n = {}; for k,v in pairs(t) do n[k] = copy(v) end; return n
+local TEXT_COLORS={
+ [0]=32768,[1]=128,[2]=2048,[3]=1024,[4]=256,[5]=8,[6]=1,[7]=1,[8]=512,[9]=32,
+ [10]=2048,[11]=8,[12]=8192,[13]=1024,[14]=16384,[15]=16384,[16]=4096,[17]=16,
+ [18]=8192,[19]=32,[20]=2,[21]=2,[22]=1024,[23]=1,[24]=128,[25]=2048,[26]=16,
+ [27]=512,[28]=32768,[29]=8192,[30]=8,[31]=128,
+}
+local FONT={
+ A={"01110","10001","10001","11111","10001","10001","10001"},B={"11110","10001","10001","11110","10001","10001","11110"},
+ C={"01111","10000","10000","10000","10000","10000","01111"},D={"11110","10001","10001","10001","10001","10001","11110"},
+ E={"11111","10000","10000","11110","10000","10000","11111"},F={"11111","10000","10000","11110","10000","10000","10000"},
+ G={"01111","10000","10000","10111","10001","10001","01111"},H={"10001","10001","10001","11111","10001","10001","10001"},
+ I={"11111","00100","00100","00100","00100","00100","11111"},J={"00111","00010","00010","00010","10010","10010","01100"},
+ K={"10001","10010","10100","11000","10100","10010","10001"},L={"10000","10000","10000","10000","10000","10000","11111"},
+ M={"10001","11011","10101","10101","10001","10001","10001"},N={"10001","11001","10101","10011","10001","10001","10001"},
+ O={"01110","10001","10001","10001","10001","10001","01110"},P={"11110","10001","10001","11110","10000","10000","10000"},
+ Q={"01110","10001","10001","10001","10101","10010","01101"},R={"11110","10001","10001","11110","10100","10010","10001"},
+ S={"01111","10000","10000","01110","00001","00001","11110"},T={"11111","00100","00100","00100","00100","00100","00100"},
+ U={"10001","10001","10001","10001","10001","10001","01110"},V={"10001","10001","10001","10001","10001","01010","00100"},
+ W={"10001","10001","10001","10101","10101","10101","01010"},X={"10001","10001","01010","00100","01010","10001","10001"},
+ Y={"10001","10001","01010","00100","00100","00100","00100"},Z={"11111","00001","00010","00100","01000","10000","11111"},
+ ["0"]={"01110","10011","10101","10101","11001","10001","01110"},["1"]={"00100","01100","00100","00100","00100","00100","01110"},
+ ["2"]={"01110","10001","00001","00010","00100","01000","11111"},["3"]={"11110","00001","00001","00110","00001","00001","11110"},
+ ["4"]={"00010","00110","01010","10010","11111","00010","00010"},["5"]={"11111","10000","11110","00001","00001","10001","01110"},
+ ["6"]={"00111","01000","10000","11110","10001","10001","01110"},["7"]={"11111","00001","00010","00100","01000","01000","01000"},
+ ["8"]={"01110","10001","10001","01110","10001","10001","01110"},["9"]={"01110","10001","10001","01111","00001","00010","11100"},
+ ["-"]={"00000","00000","00000","11111","00000","00000","00000"},["+"]={"00000","00100","00100","11111","00100","00100","00000"},
+ ["."]={"00000","00000","00000","00000","00000","00110","00110"},[":"]={"00000","00110","00110","00000","00110","00110","00000"},
+ ["/"]={"00001","00001","00010","00100","01000","10000","10000"},["?"]={"01110","10001","00001","00010","00100","00000","00100"},
+ ["!"]={"00100","00100","00100","00100","00100","00000","00100"},["("]={"00010","00100","01000","01000","01000","00100","00010"},
+ [")"]={"01000","00100","00010","00010","00010","00100","01000"},["="]={"00000","11111","00000","11111","00000","00000","00000"},
+ ["'"]={"00100","00100","00000","00000","00000","00000","00000"},["#"]={"01010","11111","01010","11111","01010","00000","00000"},
+ [" "]={"00000","00000","00000","00000","00000","00000","00000"},
+}
+local ICON={
+ star={"00100","00100","11111","01110","11011","10001","00000"},
+ planet={"01110","11011","10101","11101","10101","11011","01110"},
+ ship={"00100","01110","11111","10101","11111","01010","10001"},
+ scan={"11111","10001","10101","10101","10101","10001","11111"},
+ flag={"10000","11110","11011","11110","10000","10000","10000"},
+ colony={"00100","01110","11111","11111","10101","10101","11111"},
+ mine={"10001","01010","00100","11111","01110","01110","00100"},
+ forge={"00100","01110","11111","10111","01110","01110","00100"},
+ lab={"00100","01110","01110","00100","01110","11111","11111"},
+ dock={"10101","11111","01110","01110","01110","10101","10001"},
+ fort={"10101","11111","11111","11111","01110","01110","00100"},
+ energy={"00110","01100","11111","00110","01100","11000","10000"},
+ alloy={"00100","01110","11111","11111","11111","01110","00100"},
+ science={"10001","01010","00100","01110","01110","11111","01110"},
+ influence={"00100","01110","10101","11111","01110","00100","00100"},
+ research={"11011","01010","01110","00100","01110","01010","11011"},
+ move={"00100","00110","11111","00110","00100","00000","00000"},
+ war={"10001","01010","00100","01110","10101","10101","10001"},
+ trade={"10010","11101","00100","10111","01001","00000","00000"},
+ next={"10000","11000","11100","11110","11100","11000","10000"},
+ back={"00001","00011","00111","01111","00111","00011","00001"},
+ help={"01110","10001","00001","00110","00100","00000","00100"},
+ trophy={"10001","11111","11111","01110","00100","01110","11111"},
+ check={"00001","00011","10110","11100","01000","00000","00000"},
+ close={"10001","01010","00100","01010","10001","00000","00000"},
+ orbit={"01110","10001","10101","10101","10101","10001","01110"},
+}
+local function rng(seed)
+ local s=(tonumber(seed) or 2026)%2147483647
+ return function(n) s=(s*48271)%2147483647;return n and (1+s%n) or s/2147483647 end
 end
-local function clock()
-  return (os.epoch and os.epoch("utc")) or (os.clock() * 1000)
+local function clamp(n,l,h)return math.max(l,math.min(h,n)) end
+local function deepcopy(t)
+ if type(t)~="table" then return t end
+ local a={};for k,v in pairs(t)do a[k]=deepcopy(v) end;return a
 end
-local function coord(x,y) return x .. ":" .. y end
-local function inside(g,x,y) return x >= 1 and y >= 1 and x <= g.w and y <= g.h end
-local function tile(g,x,y) return inside(g,x,y) and g.map[y][x] or nil end
-local function adjacent(a,b,c,d) return math.abs(a-c) + math.abs(b-d) == 1 end
-local function namesafe(s)
-  return (tostring(s or ""):gsub("[^%w _%-]", ""):sub(1,12))
+local function trunc(s,n)
+ s=tostring(s or ""):upper();if #s>n then return s:sub(1,n-1).."." end;return s
 end
-local function other(p) return 3-p end
-local function mapSize(w,h)
-  -- Character dimensions, NOT monitor block dimensions: covers 3x3, 4x4, 5x5.
-  -- Keep provinces legible (at least ~5x3 characters) on every layout.
-  return clamp(math.floor(w/5.4),10,18), clamp(math.floor(h/3.5),9,17)
+local function properName(s)
+ return tostring(s or ""):upper():gsub("[^A-Z0-9 _%-]",""):sub(1,13)
 end
-local function costText(action)
-  local c = COST[action] or {}; local txt = {}
-  for _,r in ipairs({"food", "wood", "stone"}) do
-    if c[r] then txt[#txt+1] = ({food="F",wood="W",stone="S"})[r] .. c[r] end
+local function other(p)return 3-p end
+local function findLink(g,a,b)
+ for _,e in ipairs(g.links)do if (e[1]==a and e[2]==b) or (e[2]==a and e[1]==b) then return true end end
+ return false
+end
+local function neighbors(g,id)
+ local t={};for _,edge in ipairs(g.links) do if edge[1]==id then t[#t+1]=edge[2] elseif edge[2]==id then t[#t+1]=edge[1] end end
+ return t
+end
+local function border(g,id,p)
+ for _,n in ipairs(neighbors(g,id))do if g.systems[n].owner==p then return true end end
+ return false
+end
+local function fleetReach(g,from,to,p)
+ if findLink(g,from,to) then return true end
+ if g.tech[p].NAVIGATION==0 then return false end
+ for _,step in ipairs(neighbors(g,from))do
+  if g.systems[step].owner==p and findLink(g,step,to) then return true end
+ end
+ return false
+end
+local function newGame(a,b,shape,rounds,seed)
+ local random=rng(seed);local g={version=VERSION,seed=seed or 44821,round=1,limit=rounds or 18,turn=1,ap=3,
+  names={properName(a)~="" and properName(a) or SHORT_NAMES[1],properName(b)~="" and properName(b) or SHORT_NAMES[2]},
+  shape=shape or "CLUSTER",systems={},links={},capital={},resources={},tech={},logs={},pact=false,offer=0,conquests={0,0},result=nil}
+ local pos={}
+ local number=24
+ for i=1,number do
+  local col=(i-1)%6;local row=math.floor((i-1)/6)
+  local x=.09+.82*col/5+(random()-.5)*.047
+  local y=.105+.79*row/3+(random()-.5)*.068
+  if shape=="SPIRAL" then
+   local theta=math.atan2 and math.atan2(y-.5,x-.5) or math.atan(y-.5,x-.5)
+   y=clamp(y+math.sin(theta*1.5)*.034,.07,.93)
   end
-  return table.concat(txt," ")
+  pos[i]={x=clamp(x,.055,.945),y=clamp(y,.075,.925)}
+  g.systems[i]={id=i,name=SYSNAMES[i],x=pos[i].x,y=pos[i].y,kind=KIND[random(#KIND)],
+   owner=0,known=false,colony=false,buildings={mine=0,forge=0,lab=0,dock=0,fort=0},ships={0,0}}
+ end
+ local edges={};for i=1,number do for j=i+1,number do
+  local dx=(pos[i].x-pos[j].x)*1.1;local dy=pos[i].y-pos[j].y
+  edges[#edges+1]={i,j,dx*dx+dy*dy}
+ end end
+ table.sort(edges,function(a,b)return a[3]<b[3] end)
+ local parent={};for i=1,number do parent[i]=i end
+ local function root(i)while parent[i]~=i do i=parent[i] end;return i end
+ local degree={};for i=1,number do degree[i]=0 end
+ local function add(a,b)
+  g.links[#g.links+1]={a,b};degree[a]=degree[a]+1;degree[b]=degree[b]+1
+ end
+ for _,e in ipairs(edges)do
+  local aa,bb=root(e[1]),root(e[2]);if aa~=bb then parent[aa]=bb;add(e[1],e[2]) end
+ end
+ for _,e in ipairs(edges)do
+  if e[3]<.053 and degree[e[1]]<4 and degree[e[2]]<4 and random()<.56 and not findLink(g,e[1],e[2]) then add(e[1],e[2]) end
+ end
+ g.capital[1]=7;g.capital[2]=18
+ for p=1,2 do
+  local s=g.systems[g.capital[p]];s.name=p==1 and "SOL PRIME" or "NOVA PRIME";s.kind="TERRAN";
+  s.owner=p;s.known=true;s.colony=true;s.buildings.dock=1;s.ships[p]=3
+  g.resources[p]={energy=14,alloy=12,science=7,influence=10}
+  g.tech[p]={NAVIGATION=0,REACTORS=0,WEAPONS=0,UNITY=0}
+  for _,id in ipairs(neighbors(g,s.id))do g.systems[id].known=true end
+ end
+ return g
 end
-local function afford(g,p,action)
-  local cost = COST[action] or {}
-  for r,n in pairs(cost) do if g.stock[p][r] < n then return false end end
-  return true
+local function addLog(g,message)
+ table.insert(g.logs,1,("Y%02d %s"):format(g.round,tostring(message)))
+ while #g.logs>24 do table.remove(g.logs)end
 end
-local function pay(g,p,action)
-  for r,n in pairs(COST[action] or {}) do g.stock[p][r] = g.stock[p][r]-n end
+local ACTIONS={
+ scan={title="SURVEY",icon="scan",desc="Reveal a neighboring unsurveyed system. May find salvage.",cost={energy=2},ap=1},
+ annex={title="ANNEX",icon="flag",desc="Add a surveyed neutral system to your empire.",cost={influence=3},ap=1},
+ colonize={title="COLONIZE",icon="colony",desc="Found a colony. It grows your income and victory score.",cost={alloy=5,energy=2},ap=1},
+ mine={title="EXTRACTORS",icon="mine",desc="Build mines: +2 alloy/year on ORE; +2 energy elsewhere.",cost={alloy=4,energy=1},ap=1},
+ forge={title="FOUNDRY",icon="forge",desc="Build a foundry: +2 alloy production each year.",cost={alloy=5,energy=1},ap=1},
+ lab={title="LABORATORY",icon="lab",desc="Build a lab: +2 science production each year.",cost={alloy=4,energy=1},ap=1},
+ dock={title="SHIPYARD",icon="dock",desc="Build an orbital shipyard to unlock fleet construction.",cost={alloy=6,energy=2},ap=1},
+ build={title="BUILD FLEET",icon="ship",desc="Add two frigates at this system (maximum eight).",cost={alloy=4,energy=1},ap=1},
+ dispatch={title="DISPATCH",icon="move",desc="Send ships along a starlane. Hostile systems trigger battle.",cost={energy=1},ap=1},
+ fort={title="STARBASE",icon="fort",desc="Add +3 defense power against enemy fleet invasions.",cost={alloy=4,energy=1},ap=1},
+}
+local TECH={
+ {key="NAVIGATION",icon="move",title="HYPERDRIVES",desc="Ships can cross two starlanes via a friendly midpoint."},
+ {key="REACTORS",icon="energy",title="REACTORS",desc="Each colony generates +1 energy per level every year."},
+ {key="WEAPONS",icon="war",title="ARMAMENTS",desc="Each ship gains +1 battle power per level."},
+ {key="UNITY",icon="influence",title="CIVIC UNITY",desc="Gain +1 influence each year per level."},
+}
+local function costString(cost)
+ local a={};for _,k in ipairs({"energy","alloy","science","influence"})do
+  if cost[k] then a[#a+1]=k:sub(1,1):upper()..cost[k] end
+ end
+ return #a>0 and table.concat(a," ") or "FREE"
 end
-local function isLand(t) return t ~= nil and t.kind ~= "water" end
-local function isNeighborOwned(g,x,y,p)
-  for _,d in ipairs(DIRS) do
-    local n = tile(g,x+d[1],y+d[2])
-    if n and n.owner == p then return true end
-  end
-  return false
+local function owns(g,p)
+ local c=0;for _,s in ipairs(g.systems)do if s.owner==p then c=c+1 end end;return c
 end
-local function terrain(seed, style, x, y, w, h)
-  local v = math.random()
-  local shore = x == 1 or y == 1 or x == w or y == h
-  if v < (style == "isles" and (shore and .48 or .22) or (shore and .28 or .10)) then return "water" end
-  v = math.random()
-  if v < .31 then return "forest"
-  elseif v < .53 then return "hill"
-  elseif v < .59 then return "mountain"
-  else return "plain" end
+local function points(g,p)
+ local score=g.conquests[p]*2
+ for _,s in ipairs(g.systems)do if s.owner==p then score=score+1+(s.colony and 2 or 0) end end
+ for _,v in pairs(g.tech[p])do score=score+v*2 end
+ return score
 end
-local function makeGame(seed,w,h,names,style,target)
-  math.randomseed(seed)
-  w,h = math.max(9, math.floor(w)), math.max(9, math.floor(h))
-  local g = {
-    version=2, seed=seed, w=w, h=h, map={},
-    names={namesafe(names[1]),namesafe(names[2])}, style=style or "land", target=target or 30,
-    round=1, turn=RED, ap=AP, score={0,0}, winner=nil, log="Choose a tile to begin.",
-    stock={{food=6,wood=6,stone=4},{food=6,wood=6,stone=4}},
-    lastBattle=nil,
-  }
-  for y=1,h do
-    g.map[y] = {}
-    for x=1,w do g.map[y][x] = {kind="plain",owner=0,city=0,army=0,fort=0,relic=false,capital=false} end
+local function techCost(g,p,key)return 6+g.tech[p][key]*5 end
+local function actionReason(g,key,id)
+ local s=g.systems[id];local p=g.turn;local a=ACTIONS[key]
+ if not a then return "Unknown order" end
+ if g.ap<a.ap then return "No command points left" end
+ local r=g.resources[p];for k,v in pairs(a.cost)do if r[k]<v then return "Need "..v.." "..k end end
+ if key=="scan" then
+  if s.known then return "Already surveyed" end
+  if not border(g,id,p) then return "Requires a bordering owned system" end
+ elseif key=="annex" then
+  if not s.known or s.owner~=0 then return "Needs a surveyed neutral system" end
+  if not border(g,id,p) and s.ships[p]==0 then return "Requires adjacent territory or fleet" end
+ elseif key=="colonize" then
+  if s.owner~=p then return "Select your own system" end
+  if s.colony then return "Already colonized" end
+ elseif key=="dispatch" then
+  if s.ships[p]<1 then return "No ships to dispatch" end
+ elseif key=="build" then
+  if s.owner~=p or not s.colony or s.buildings.dock==0 then return "Needs a colony with shipyard" end
+  if s.ships[p]>6 then return "Fleet capacity eight" end
+ else
+  if s.owner~=p or not s.colony then return "Needs your colonized system" end
+  if (s.buildings[key] or 0)>=((key=="mine" or key=="forge" or key=="lab") and 2 or 1) then return "Building limit reached" end
+ end
+ return nil
+end
+local function pay(g,cost,ap)
+ local p=g.turn;local r=g.resources[p]
+ for k,v in pairs(cost)do r[k]=r[k]-v end
+ g.ap=g.ap-(ap or 1)
+end
+local function updateWinner(g)
+ if owns(g,1)==0 then g.result=2 elseif owns(g,2)==0 then g.result=1 end
+ if points(g,1)>=40 or points(g,2)>=40 then
+  if points(g,1)~=points(g,2)then g.result=points(g,1)>points(g,2) and 1 or 2 end
+ end
+end
+local function execute(g,key,id)
+ local why=actionReason(g,key,id);if why then return false,why end
+ local p=g.turn;local s=g.systems[id]
+ if key=="dispatch" then return false,"Choose a route on the map" end
+ pay(g,ACTIONS[key].cost)
+ if key=="scan" then
+  s.known=true
+  local event=(id*7+g.round+g.seed)%5
+  if event==0 then g.resources[p].science=g.resources[p].science+3;addLog(g,"Archive found at "..s.name.." (+3 science)")
+  elseif event==1 then g.resources[p].alloy=g.resources[p].alloy+3;addLog(g,"Salvage found at "..s.name.." (+3 alloy)")
+  elseif event==2 then g.resources[p].energy=g.resources[p].energy+3;addLog(g,"Energy cache found at "..s.name.." (+3 energy)")
+  else addLog(g,s.name.." fully surveyed")end
+ elseif key=="annex" then s.owner=p;addLog(g,g.names[p].." annexed "..s.name)
+ elseif key=="colonize" then s.colony=true;addLog(g,"Colony founded on "..s.name)
+ elseif key=="build" then s.ships[p]=s.ships[p]+2;addLog(g,"2 frigates constructed at "..s.name)
+ else s.buildings[key]=s.buildings[key]+1;addLog(g,ACTIONS[key].title.." built at "..s.name) end
+ updateWinner(g);return true,ACTIONS[key].title.." completed"
+end
+local function sendFleet(g,from,to,count)
+ local p=g.turn;local a=g.systems[from];local b=g.systems[to]
+ if not a or not b or a.owner~=p or a.ships[p]<1 then return false,"Choose a fleet at an owned system" end
+ if g.ap<1 or g.resources[p].energy<1 then return false,"Need 1 command and 1 energy" end
+ if not fleetReach(g,from,to,p) then return false,"Destination is not in jump range" end
+ count=clamp(math.floor(tonumber(count) or 1),1,a.ships[p])
+ if g.pact and b.owner==other(p) then return false,"Break the trade accord before attacking" end
+ if b.owner==p and b.ships[p]+count>8 then return false,"Destination fleet capacity is eight" end
+ pay(g,{energy=1})
+ a.ships[p]=a.ships[p]-count
+ local combat=nil
+ if b.owner==other(p) or b.ships[other(p)]>0 then
+  local enemy=other(p);local attack=count*(2+g.tech[p].WEAPONS)
+  local defend=b.ships[enemy]*(2+g.tech[enemy].WEAPONS)+(b.owner==enemy and (b.colony and 2 or 0)+b.buildings.fort*3 or 0)
+  local rollA=(g.round*7+from*3+to)%4;local rollD=(g.round*5+from+to*3)%4
+  if attack+rollA>defend+rollD then
+   local lost=clamp(math.floor(defend/math.max(2,2+g.tech[p].WEAPONS)),0,count-1)
+   b.ships[enemy]=0;b.ships[p]=clamp(b.ships[p]+count-lost,0,8)
+   if b.owner==enemy then b.owner=p;b.colony=false;b.buildings={mine=0,forge=0,lab=0,dock=0,fort=0};g.conquests[p]=g.conquests[p]+1 end
+   b.known=true;combat={win=true,lost=lost,attacker=count,defender=defend,name=b.name}
+   addLog(g,g.names[p].." seized "..b.name.." (lost "..lost.." ships)")
+  else
+   local lost=math.max(1,math.floor(attack/math.max(2,2+g.tech[enemy].WEAPONS)))
+   b.ships[enemy]=math.max(0,b.ships[enemy]-lost)
+   combat={win=false,lost=count,attacker=count,defender=defend,name=b.name}
+   addLog(g,"Invasion repelled at "..b.name)
   end
-  -- Rotational symmetry ensures that both opening positions have equal potential.
-  for y=1,h do for x=1,w do
-    local rx,ry = w+1-x,h+1-y
-    if y < ry or (y == ry and x <= rx) then
-      local k = terrain(seed,g.style,x,y,w,h)
-      g.map[y][x].kind=k; g.map[ry][rx].kind=k
-    end
-  end end
-  -- Two navigable central corridors; the archipelago cannot block expansion entirely.
-  local my = math.floor((h+1)/2)
-  for x=2,w-1 do
-    for _,y in ipairs({my,h+1-my}) do
-      if tile(g,x,y).kind == "water" then tile(g,x,y).kind = "plain" end
-    end
-  end
-  -- Paired ancient sites provide a Carcassonne-like incentive to reach special land.
-  local sites=0
-  for y=2,h-1 do for x=2,math.floor(w/2) do
-    local a,b=tile(g,x,y),tile(g,w+1-x,h+1-y)
-    if sites < math.max(2,math.floor(w*h/32)) and a.kind ~= "water" and math.random() < .08
-       and x>3 then a.relic=true; b.relic=true; sites=sites+1 end
-  end end
-  if sites == 0 then
-    local ax=math.floor(w/2); tile(g,ax,2).kind="plain"; tile(g,ax,2).relic=true
-    tile(g,w+1-ax,h-1).kind="plain"; tile(g,w+1-ax,h-1).relic=true
-  end
-  local cy=math.floor((h+1)/2)
-  local function start(p,cx,yy,sgn,vsgn)
-    local a=tile(g,cx,yy); a.kind="plain"; a.owner=p; a.city=2; a.army=5; a.capital=true; a.relic=false
-    local f=tile(g,cx+sgn,yy); f.kind="forest"; f.owner=p; f.relic=false
-    local s=tile(g,cx,yy+vsgn); s.kind="hill"; s.owner=p; s.relic=false
-    local v=tile(g,cx,yy-vsgn); v.kind="plain"; v.relic=false
-  end
-  start(RED,2,cy,1,-1)
-  start(BLUE,w-1,h+1-cy,-1,1)
-  return g
+ else
+  b.ships[p]=clamp(b.ships[p]+count,0,8)
+  addLog(g,count.." ships warped to "..b.name)
+ end
+ updateWinner(g);return true,combat
+end
+local function research(g,key)
+ local p=g.turn;local level=g.tech[p][key]
+ if level==nil then return false,"Unknown technology" end
+ if level>=3 then return false,"Already at maximum level" end
+ if g.ap<1 then return false,"No command points left" end
+ local cost=techCost(g,p,key)
+ if g.resources[p].science<cost then return false,"Need "..cost.." science" end
+ pay(g,{science=cost});g.tech[p][key]=level+1;addLog(g,g.names[p].." discovered "..key.." "..(level+1))
+ updateWinner(g);return true,"Research complete"
 end
 local function income(g,p)
-  local i={food=0,wood=0,stone=0,score=0,tiles=0}
-  for y=1,g.h do for x=1,g.w do
-    local t=g.map[y][x]
-    if t.owner == p then
-      i.tiles=i.tiles+1
-      if t.kind == "forest" then i.wood=i.wood+2
-      elseif t.kind == "hill" then i.stone=i.stone+2
-      elseif t.kind == "mountain" then i.stone=i.stone+1
-      elseif t.kind == "plain" then i.food=i.food+2 end
-      if t.city > 0 then i.score=i.score+(t.capital and 2 or t.city) end
-      if t.relic then i.score=i.score+1 end
-    end
-  end end
-  return i
-end
-local function countHoldings(g,p)
-  local total=0
-  for _,r in ipairs(g.map) do for _,t in ipairs(r) do if t.owner == p then total=total+1 end end end
-  return total
-end
-local function legal(g,action,x,y,tx,ty)
-  if g.winner or g.ap <= 0 then return false end
-  local p=g.turn
-  local a=tile(g,x,y)
-  if not a or not isLand(a) then return false end
-  if action == "claim" then
-    return a.owner == 0 and isNeighborOwned(g,x,y,p) and afford(g,p,action)
-  elseif action == "found" then
-    return a.owner == p and a.city == 0 and not a.relic and afford(g,p,action)
-  elseif action == "upgrade" then
-    return a.owner == p and a.city >= 1 and a.city < 3 and afford(g,p,action)
-  elseif action == "recruit" then
-    return a.owner == p and a.city >= 1 and a.army <= 7 and afford(g,p,action)
-  elseif action == "fort" then
-    return a.owner == p and a.fort < 2 and afford(g,p,action)
-  elseif action == "march" or action == "attack" then
-    local b=tile(g,tx,ty)
-    if a.owner ~= p or a.army <= 1 or not b or not isLand(b) or not adjacent(x,y,tx,ty) then return false end
-    if action == "march" then return b.owner == p and b.army < 9 end
-    return b.owner == other(p) and afford(g,p,action)
+ local v={energy=1,alloy=1,science=1,influence=2+g.tech[p].UNITY}
+ local totalShips=0
+ for _,s in ipairs(g.systems)do
+  totalShips=totalShips+s.ships[p]
+  if s.owner==p then
+   v.energy=v.energy+1
+   if s.colony then
+    v.energy=v.energy+g.tech[p].REACTORS
+    if s.kind=="ORE" then v.alloy=v.alloy+1 end
+    if s.kind=="RELIC" or s.kind=="NEBULA" then v.science=v.science+1 end
+    if s.kind=="PLASMA" or s.kind=="TERRAN" then v.energy=v.energy+1 end
+    v.energy=v.energy+s.buildings.mine*(s.kind=="ORE" and 0 or 2)
+    v.alloy=v.alloy+s.buildings.mine*(s.kind=="ORE" and 2 or 0)+s.buildings.forge*2
+    v.science=v.science+s.buildings.lab*2
+   end
   end
-  return false
-end
-local function randomDie() return math.random(1,3) end
-local function act(g,action,x,y,tx,ty)
-  if not legal(g,action,x,y,tx,ty) then return false,"Unavailable action" end
-  local p=g.turn
-  local a=tile(g,x,y)
-  local message,fxkind,tx0,ty0= "",action,x,y
-  if action == "claim" then
-    pay(g,p,action); a.owner=p
-    message="Province annexed. "..g.names[p].." expands."
-  elseif action == "found" then
-    pay(g,p,action); a.city=1; message="New village founded."
-  elseif action == "upgrade" then
-    pay(g,p,action); a.city=a.city+1; message="Settlement upgraded to level "..a.city.."."
-  elseif action == "recruit" then
-    pay(g,p,action); a.army=math.min(9,a.army+2); message="Two armies recruited."
-  elseif action == "fort" then
-    pay(g,p,action); a.fort=a.fort+1; message="Fortifications strengthened."
-  elseif action == "march" then
-    local b=tile(g,tx,ty)
-    local n=math.min(b.army >= 9 and 0 or 9-b.army, math.max(1,math.floor(a.army/2)))
-    a.army=a.army-n; b.army=b.army+n; message=n.." armies marched."
-    tx0,ty0=tx,ty
-  elseif action == "attack" then
-    local b=tile(g,tx,ty)
-    pay(g,p,action)
-    local force=a.army-1
-    local ra,rd=randomDie(),randomDie()
-    local defense=b.army + (b.fort*2) + (b.city>0 and b.city or 0)
-    -- Always evaluate the terrain modifier as a number.
-    if b.kind=="hill" then defense=defense+1 end
-    if b.kind=="mountain" then defense=defense+2 end
-    local won=force+ra > defense+rd
-    if won then
-      local losses=math.min(force-1,math.floor(b.army/2))
-      a.army=1; b.army=math.max(1,force-losses)
-      b.owner=p; b.fort=0
-      if b.capital then g.winner=p end
-      if b.city > 1 and not b.capital then b.city=b.city-1 end
-      message="VICTORY! "..force.." + "..ra.." vs "..defense.." + "..rd
-    else
-      local losses=math.max(1,math.ceil(force/2))
-      a.army=math.max(1,a.army-losses)
-      message="Repelled! "..force.." + "..ra.." vs "..defense.." + "..rd
-    end
-    g.lastBattle={attack=force+ra,defend=defense+rd,won=won}
-    tx0,ty0=tx,ty
-  end
-  g.ap=g.ap-1; g.log=message
-  return true,{kind=fxkind,x=x,y=y,tx=tx0,ty=ty0,ms=clock(),duration=760,message=message}
+ end
+ v.energy=v.energy-math.floor(totalShips/4)
+ return v
 end
 local function endTurn(g)
-  if g.winner then return end
-  if g.turn == RED then
-    g.turn=BLUE; g.ap=AP; g.log=g.names[BLUE].."'s turn."
-    return
-  end
-  -- Simultaneous production/scoring avoids a player-two opening resource advantage.
-  for p=RED,BLUE do
-    local inc=income(g,p)
-    for _,r in ipairs({"food","wood","stone"}) do g.stock[p][r]=math.min(MAX_RES,g.stock[p][r]+inc[r]) end
-    g.score[p]=g.score[p]+inc.score
-  end
-  if g.score[RED] >= g.target or g.score[BLUE] >= g.target or g.round>=MAX_TURNS then
-    if g.score[RED]>g.score[BLUE] then g.winner=RED
-    elseif g.score[BLUE]>g.score[RED] then g.winner=BLUE
-    elseif countHoldings(g,RED)>countHoldings(g,BLUE) then g.winner=RED
-    elseif countHoldings(g,BLUE)>countHoldings(g,RED) then g.winner=BLUE
-    else g.winner=3 end
-    return
-  end
-  g.round=g.round+1; g.turn=RED; g.ap=AP
-  g.log="Harvest complete. New round begins."
-end
-
--- 16-colour indexed, custom palette (all monitor output uses blit).
-local C={white="0",gold="1",magenta="2",sky="3",yellow="4",grass="5",pink="6",slate="7",stone="8",cyan="9",purple="a",water="b",earth="c",forest="d",red="e",night="f"}
-local PALETTE={
-  white=0xF3E9CE, orange=0xF2A65A, magenta=0xB27ACC, lightBlue=0x82C6E6,
-  yellow=0xF4D06D, lime=0x688C57, pink=0xDEB2A0, gray=0x344851,
-  lightGray=0x97A7AC, cyan=0x67CDD3, purple=0x74638D, blue=0x1B5366,
-  brown=0x9B8165, green=0x315E46, red=0xE57A65, black=0x142832,
-}
-local B={}; B.__index=B
-function B.new(w,h)
-  local self=setmetatable({w=w,h=h,rows={}},B)
-  for y=1,h do
-    local ch,fg,bg={},{},{}
-    for x=1,w do ch[x]=" "; fg[x]=C.white; bg[x]=C.night end
-    self.rows[y]={ch,fg,bg}
-  end
-  return self
-end
-function B:put(x,y,s,fg,bg)
-  if y<1 or y>self.h then return end
-  local row=self.rows[y]; s=tostring(s or "")
-  for i=1,#s do
-    local xx=x+i-1
-    if xx>=1 and xx<=self.w then
-      row[1][xx]=s:sub(i,i); if fg then row[2][xx]=fg end; if bg then row[3][xx]=bg end
-    end
-  end
-end
-function B:fill(x,y,w,h,bg,ch,fg)
-  for yy=math.max(1,y),math.min(self.h,y+h-1) do
-    local r=self.rows[yy]
-    for xx=math.max(1,x),math.min(self.w,x+w-1) do
-      r[1][xx]=ch or " "; r[2][xx]=fg or C.white; r[3][xx]=bg
-    end
-  end
-end
-function B:center(y,s,fg,bg) self:put(math.floor((self.w-#s)/2)+1,y,s,fg,bg) end
-function B:flush(m,prev)
-  local nextRows={}
-  for y=1,self.h do
-    local r=self.rows[y]
-    local c,f,b=table.concat(r[1]),table.concat(r[2]),table.concat(r[3])
-    local packed=c..f..b
-    nextRows[y]=packed
-    if not prev or prev[y]~=packed then
-      m.setCursorPos(1,y); m.blit(c,f,b)
-    end
-  end
-  return nextRows
-end
-local function teamColor(p) return p==RED and C.red or p==BLUE and C.cyan or C.white end
-local function shorten(s,max)
-  if #s > max then return s:sub(1,math.max(0,max-1)).."." end
-  return s
-end
-local function hit(ui,x,y,w,h,fn,tag)
-  ui.buttons[#ui.buttons+1]={x=x,y=y,w=w,h=h,fn=fn,tag=tag}
-end
-local function button(b,ui,x,y,w,h,label,fn,opts)
-  if w<3 or h<1 then return end
-  opts=opts or {}
-  local enabled=not opts.disabled
-  local color=opts.active and C.gold or (enabled and (opts.color or C.slate) or C.night)
-  local text=opts.active and C.night or (enabled and C.white or C.stone)
-  b:fill(x,y,w,h,color)
-  b:put(x,y,string.rep(opts.active and "=" or "-",w),opts.active and C.white or C.stone,color)
-  if h>=3 then b:put(x,y+h-1,string.rep("-",w),C.stone,color) end
-  b:put(x+math.max(0,math.floor((w-#label)/2)),y+math.floor(h/2),shorten(label,w),text,color)
-  if enabled then hit(ui,x,y,w,h,fn,label) end
-end
-local function rect(g,x,y,w,h)
-  return math.floor((x-1)*w/g.w)+1,math.floor((y-1)*h/g.h)+1,
-    math.floor(x*w/g.w),math.floor(y*h/g.h)
-end
-local function tcenter(g,x,y,w,h)
-  local ax,ay,bx,by=rect(g,x,y,w,h)
-  return math.floor((ax+bx)/2),math.floor((ay+by)/2)
-end
-local function legalTargets(g,ui)
-  local ret={}
-  if ui.mode and ui.sel then
-    for _,d in ipairs(DIRS) do
-      local x,y=ui.sel.x+d[1],ui.sel.y+d[2]
-      if legal(g,ui.mode,ui.sel.x,ui.sel.y,x,y) then ret[coord(x,y)]=true end
-    end
-  end
-  return ret
-end
-local function drawBoard(b,ui,g,when)
-  local targets=legalTargets(g,ui)
-  local wave=math.floor(when/420)
-  for y=1,g.h do for x=1,g.w do
-    local t=g.map[y][x]
-    local ax,ay,bx,by=rect(g,x,y,b.w,b.h)
-    local cw,ch=bx-ax+1,by-ay+1
-    local bg=({water=C.water,plain=C.grass,forest=C.forest,hill=C.earth,mountain=C.stone})[t.kind]
-    local chosen=ui.sel and ui.sel.x==x and ui.sel.y==y
-    local target=targets[coord(x,y)]
-    if target then bg=ui.mode=="attack" and C.red or C.gold end
-    if chosen then bg=C.purple end
-    b:fill(ax,ay,cw,ch,bg)
-    -- Thin cadastral boundaries are vital when neighbouring tiles share a biome.
-    local edge=t.kind=="water" and C.sky or t.kind=="forest" and C.grass
-      or t.kind=="plain" and C.forest or C.slate
-    if cw>=4 then
-      for yy=ay+1,by do
-        if yy%2==0 then b:put(bx,yy,".",edge,bg) end
-      end
-    end
-    if ch>=3 then
-      for xx=ax+1,bx-1,2 do b:put(xx,by,".",edge,bg) end
-    end
-    local ownerColor=teamColor(t.owner)
-    if t.owner>0 and ch>1 then
-      b:put(ax,ay,string.rep("=",cw),ownerColor,bg)
-      if cw>3 then b:put(ax+cw-1,math.min(by,ay+1),"|",ownerColor,bg) end
-    end
-    local midx,midy=tcenter(g,x,y,b.w,b.h)
-    local texture=t.kind=="water" and ((x+y+wave)%3==0 and "~" or ".")
-      or t.kind=="forest" and "*" or t.kind=="hill" and "^"
-      or t.kind=="mountain" and "M" or "."
-    local mark=t.city>0 and (t.capital and "K" or t.city==1 and "V" or t.city==2 and "T" or "C")
-      or t.relic and "#" or target and "+" or texture
-    b:put(midx,midy,mark, t.city>0 and ownerColor or target and C.night
-      or t.relic and C.yellow or (t.kind=="water" and C.sky or C.white),bg)
-    if t.army>0 then
-      local s=t.army.."A"
-      b:put(midx-math.floor(#s/2), math.min(by,midy+1),s,ownerColor,bg)
-    elseif t.fort>0 then
-      b:put(midx, math.min(by,midy+1),t.fort.."",C.gold,bg)
-    end
-    if t.owner>0 and t.city==0 and t.army==0 then
-      b:put(ax,by,t.owner==RED and ":" or ";",ownerColor,bg)
-    end
-  end end
-  local fx=ui.fx
-  if fx then
-    local t=(when-fx.ms)/fx.duration
-    if t>=1 then ui.fx=nil
-    elseif t>=0 then
-      local ex,ey=tcenter(g,fx.tx,fx.ty,b.w,b.h)
-      local sx,sy=tcenter(g,fx.x,fx.y,b.w,b.h)
-      if fx.kind=="march" or fx.kind=="attack" then
-        local z=t*t*(3-2*t) -- smoothstep, not a fixed per-cell jump
-        local px=math.floor(sx+(ex-sx)*z+.5)
-        local py=math.floor(sy+(ey-sy)*z+.5)
-        local pulse=(math.floor(t*12)%2==0) and C.yellow or C.white
-        b:fill(px-1,py-1,3,3,fx.kind=="attack" and C.red or pulse)
-        b:put(px,py,fx.kind=="attack" and "!" or ">",C.night)
-        if fx.kind=="attack" and t>.55 then
-          local r=math.floor((t-.55)*9)
-          b:put(ex-r,ey,"<",C.white);b:put(ex+r,ey,">",C.white)
-        end
-      elseif fx.kind~="turn" then
-        local r=math.floor(t*5)
-        local flash=(math.floor(t*13)%2==0) and C.yellow or C.white
-        b:put(ex-r,ey,"<"..string.rep("-",r),flash)
-        b:put(ex+1,ey,string.rep("-",r)..">",flash)
-      end
-    end
-  end
-end
-local function hud(b,ui,g)
-  local p=g.turn; local stock=g.stock[p]
-  b:fill(1,1,b.w,3,C.night)
-  local right=b.w-24
-  local scoreboard=shorten(g.names[RED],11).." "..g.score[RED].." : "..shorten(g.names[BLUE],11).." "..g.score[BLUE]
-  b:put(2,1,shorten(scoreboard,right-3),C.white,C.night)
-  b:put(2,2,shorten(g.names[p],11).." | "..g.ap.." AP | ROUND "..g.round.."/"..MAX_TURNS,teamColor(p),C.night)
-  b:put(2,3,"F:"..stock.food.."  W:"..stock.wood.."  S:"..stock.stone.."  GOAL:"..g.target,C.gold,C.night)
-  button(b,ui,b.w-24,1,10,3,"MENU",function()
-    ui.page="menu"; ui.sel=nil;ui.mode=nil;ui.fx=nil
-  end)
-  button(b,ui,b.w-13,1,13,3,"END TURN",function()
-    endTurn(g); ui.sel=nil; ui.mode=nil;ui.changed=true
-    ui.fx={kind="turn",x=math.ceil(g.w/2),y=math.ceil(g.h/2),
-      tx=math.ceil(g.w/2),ty=math.ceil(g.h/2),ms=clock(),duration=660}
-  end,{color=C.slate})
-end
-local function selectedLabel(g,t,x,y)
-  local titles={water="SEA",plain="MEADOW",forest="FOREST",hill="HIGHLANDS",mountain="MOUNTAIN"}
-  local o=t.owner==0 and "NEUTRAL" or g.names[t.owner]
-  local settlement=t.capital and " CAPITAL" or t.city>0 and (" LV"..t.city.." TOWN") or ""
-  local ruins=t.relic and " *ANCIENT SITE*" or ""
-  return (titles[t.kind] or "LAND").." ("..x..","..y..")  "..shorten(o,11)..settlement..ruins
-end
-local function overlay(b,ui,g)
-  local sel=ui.sel
-  if ui.mode then
-    local pw,ph=math.min(b.w-4,52),4
-    local x=math.floor((b.w-pw)/2)+1
-    local y=4
-    b:fill(x,y,pw,ph,C.night)
-    b:put(x+2,y,shorten("SELECT "..string.upper(ui.mode).." DESTINATION",pw-4),C.gold,C.night)
-    b:put(x+2,y+1,shorten(ui.mode=="attack" and "Choose a highlighted enemy province." or
-      "Choose a highlighted allied province.",pw-4),C.white,C.night)
-    button(b,ui,x+pw-18,y+2,17,2,"CANCEL",function()ui.mode=nil end)
-    return
-  end
-  local oh=9; local y=b.h-oh+1
-  b:fill(1,y,b.w,oh,C.night)
-  b:put(2,y,sel and selectedLabel(g,tile(g,sel.x,sel.y),sel.x,sel.y) or "",C.gold,C.night)
-  button(b,ui,b.w-8,y,8,2,"CLOSE",function() ui.sel=nil;ui.mode=nil end)
-  local t=tile(g,sel.x,sel.y)
-  if not isLand(t) then
-    b:put(3,y+3,"Open water cannot be settled.",C.white)
-    return
-  end
-  local p=g.turn
-  local actions={}
-  local function add(label,action,x,y,tx,ty)
-    actions[#actions+1]={label=label,action=action,x=x,y=y,tx=tx,ty=ty}
-  end
-  if legal(g,"claim",sel.x,sel.y) then add("CLAIM", "claim",sel.x,sel.y) end
-  if t.owner==p then
-    for _,action in ipairs({"found","upgrade","recruit","fort"}) do
-      if legal(g,action,sel.x,sel.y) then add(string.upper(action),action,sel.x,sel.y) end
-    end
-    for _,action in ipairs({"march","attack"}) do
-      for _,d in ipairs(DIRS) do
-        if legal(g,action,sel.x,sel.y,sel.x+d[1],sel.y+d[2]) then
-          add(string.upper(action),action,sel.x,sel.y); break
-        end
-      end
-    end
-  end
-  if #actions==0 then
-    b:put(2,y+3,t.owner==other(p) and "Rival territory. Attack it from your adjacent army." or "No orders available here. Select another province.",C.white)
-  else
-    local widths=math.max(12,math.floor((b.w-3)/3)-1)
-    for i,a in ipairs(actions) do
-      local col=(i-1)%3; local row=math.floor((i-1)/3)
-      local bx=2+col*(widths+1); local by=y+2+row*3
-      local label=a.label
-      if COST[a.action] then label=label.." "..costText(a.action) end
-      button(b,ui,bx,by,widths,3,label,function()
-        if a.action=="march" or a.action=="attack" then ui.mode=a.action
-        else
-          local ok,fx=act(g,a.action,a.x,a.y)
-          if ok then ui.fx=fx; ui.sel=nil; ui.mode=nil end
-        end
-      end)
-    end
-  end
-  if t.army>0 or t.fort>0 then
-    b:put(2,b.h,"ARMY "..t.army.."    FORT "..t.fort,C.stone,C.night)
-  end
-end
-local function gameDraw(b,ui,g,now)
-  drawBoard(b,ui,g,now)
-  hud(b,ui,g)
-  if ui.sel then overlay(b,ui,g)
-  else
-    -- Information is confined to a small top overlay: bottom map rows stay tappable.
-    b:put(2,4,shorten(g.log,b.w-4),C.gold,C.night)
-  end
-  if ui.fx and ui.fx.kind=="turn" and now-ui.fx.ms<660 then
-    local label=shorten(g.names[g.turn].."'S TURN",b.w-8)
-    local w=math.min(b.w-4,math.max(24,#label+8))
-    local x=math.floor((b.w-w)/2)+1; local y=math.floor(b.h/2)-2
-    b:fill(x,y,w,5,C.night)
-    b:put(x+math.floor((w-#label)/2),y+2,label,teamColor(g.turn),C.night)
-  end
-  if not ui.saveOK then b:put(2,5,"SAVE FAILED",C.red,C.night) end
-end
-local FONT={
- T={"###",".#.",".#.",".#.",".#."}, I={"###",".#.",".#.",".#.","###"},
- D={"##.","#.#","#.#","#.#","##."}, E={"###","#..","##.","#..","###"},
- B={"##.","#.#","##.","#.#","##."}, O={"###","#.#","#.#","#.#","###"},
- U={"#.#","#.#","#.#","#.#","###"}, N={"#.#","###","###","###","#.#"},
-}
-local function bigTitle(b,y)
-  local title="TIDEBOUND"; local width=#title*4-1
-  local x=math.floor((b.w-width)/2)+1
-  for i=1,#title do
-    local glyph=FONT[title:sub(i,i)]
-    for dy=1,5 do
-      local s=glyph[dy]
-      for dx=1,3 do
-        if s:sub(dx,dx)=="#" then b:put(x+(i-1)*4+dx-1,y+dy-1,"#",dy==1 and C.white or C.gold,C.night) end
-      end
-    end
-  end
-end
-local function frame(b,x,y,w,h,title)
-  b:fill(x,y,w,h,C.night)
-  b:put(x,y,"+"..string.rep("-",w-2).."+",C.gold,C.night)
-  b:put(x,y+h-1,"+"..string.rep("-",w-2).."+",C.gold,C.night)
-  for dy=1,h-2 do
-    b:put(x,y+dy,"|",C.gold,C.night)
-    b:put(x+w-1,y+dy,"|",C.gold,C.night)
-  end
-  if title then b:put(x+2,y,"[ "..title.." ]",C.white,C.night) end
-end
-local function backboard(b,ui,now)
-  drawBoard(b,ui,ui.demo,now)
-  b:fill(1,1,b.w,2,C.night)
-  b:put(2,1,"TIDEBOUND / KINGDOMS",C.gold,C.night)
-end
-local function menuDraw(b,ui,now)
-  backboard(b,ui,now)
-  local pw=math.min(51,b.w-4); local ph=math.min(27,b.h-4)
-  local x=math.floor((b.w-pw)/2)+1; local y=math.floor((b.h-ph)/2)+1
-  frame(b,x,y,pw,ph,"KINGDOMS OF THE INNER SEA")
-  bigTitle(b,y+3)
-  b:center(y+10,"BUILD  /  EXPAND  /  CONQUER",C.white,C.night)
-  b:center(y+12,"A TWO-PLAYER TOUCHSCREEN EMPIRE GAME",C.stone,C.night)
-  local twinkle=math.floor(now/450)%3
-  b:put(x+3,y+4,twinkle==0 and "+" or ".",C.gold,C.night)
-  b:put(x+pw-4,y+8,twinkle==1 and "+" or ".",C.sky,C.night)
-  local bw=math.min(pw-8,28); local bx=math.floor((b.w-bw)/2)+1
-  button(b,ui,bx,y+15,bw,3,"NEW KINGDOMS",function()ui.page="setup" end,{active=true})
-  button(b,ui,bx,y+19,bw,3,"CONTINUE",function()ui.page="game" end,{disabled=ui.game==nil})
-  button(b,ui,bx,y+23,bw,3,"RULES",function()ui.returnPage="menu";ui.page="rules" end)
-  b:put(x+2,y+ph-2,"V2.1  /  TOUCH TO BUILD YOUR EMPIRE",C.stone,C.night)
-end
-local function keyboard(b,ui,x,y,w,active,compact)
-  local keys={{"Q","W","E","R","T","Y","U","I","O","P"},
-    {"A","S","D","F","G","H","J","K","L"},
-    {"Z","X","C","V","B","N","M","-","<"}}
-  local stepY=compact and 2 or 3
-  for line,row in ipairs(keys) do
-    local bw=math.max(3,math.min(5,math.floor((w+1)/10)-1))
-    local step=bw+1
-    local start=x+math.floor((w-(#row*step-1))/2)
-    for i,k in ipairs(row) do
-      button(b,ui,start+(i-1)*step,y+(line-1)*stepY,bw,2,k,function()
-        if k=="<" then ui.setup.names[active]=ui.setup.names[active]:sub(1,-2)
-        elseif #ui.setup.names[active]<12 then ui.setup.names[active]=ui.setup.names[active]..k end
-      end)
-    end
-  end
-  local bw=math.floor((w-4)/3)
-  button(b,ui,x+1,y+(compact and 7 or 9),bw,2,"SPACE",function()
-    if #ui.setup.names[active]<12 then ui.setup.names[active]=ui.setup.names[active].." " end
-  end)
-  button(b,ui,x+2+bw,y+(compact and 7 or 9),bw,2,"CLEAR",function()ui.setup.names[active]="" end)
-  button(b,ui,x+3+bw*2,y+(compact and 7 or 9),bw,2,"NEXT",function()ui.setup.active=other(ui.setup.active) end)
-end
-local function setupDraw(b,ui,now)
-  backboard(b,ui,now)
-  local pw,ph=math.min(b.w-4,64),math.min(b.h-2,39)
-  local x=math.floor((b.w-pw)/2)+1;local y=math.floor((b.h-ph)/2)+1
-  frame(b,x,y,pw,ph,"FOUND YOUR KINGDOMS")
-  b:put(x+2,y+2,"TWO RULERS. ONE CONTINENT.",C.gold)
-  b:put(x+2,y+4,"PLAYER ONE",C.red)
-  button(b,ui,x+2,y+5,pw-4,2,ui.setup.names[1]~="" and ui.setup.names[1] or "(tap keyboard)",function()ui.setup.active=RED end,{active=ui.setup.active==RED})
-  b:put(x+2,y+8,"PLAYER TWO",C.cyan)
-  button(b,ui,x+2,y+9,pw-4,2,ui.setup.names[2]~="" and ui.setup.names[2] or "(tap keyboard)",function()ui.setup.active=BLUE end,{active=ui.setup.active==BLUE})
-  b:put(x+2,y+12,"WORLD",C.stone)
-  local half=math.floor((pw-5)/2)
-  button(b,ui,x+2,y+13,half,2,"CONTINENT",function()ui.setup.style="land" end,{active=ui.setup.style=="land"})
-  button(b,ui,x+3+half,y+13,half,2,"ISLANDS",function()ui.setup.style="isles" end,{active=ui.setup.style=="isles"})
-  b:put(x+2,y+16,"MATCH",C.stone)
-  button(b,ui,x+2,y+17,half,2,"SWIFT / 20",function()ui.setup.target=20 end,{active=ui.setup.target==20})
-  button(b,ui,x+3+half,y+17,half,2,"EPIC / 40",function()ui.setup.target=40 end,{active=ui.setup.target==40})
-  keyboard(b,ui,x+1,y+20,pw-2,ui.setup.active,b.h<38)
-  local btnW=math.floor((pw-5)/2)
-  button(b,ui,x+2,y+ph-3,btnW,2,"BACK",function()ui.page="menu" end)
-  button(b,ui,x+3+btnW,y+ph-3,btnW,2,"START GAME",function()
-    local a=namesafe(ui.setup.names[1]);local z=namesafe(ui.setup.names[2])
-    if a=="" then a="CRIMSON" end; if z=="" then z="AZURE" end
-    local seed=math.floor(clock()%2000000000)+1
-    local ww,hh=ui.size[1],ui.size[2]
-    local mw,mh=mapSize(ww,hh)
-    ui.pendingGame=makeGame(seed,mw,mh,{a,z},ui.setup.style,ui.setup.target)
-    if ui.game and not ui.game.winner then
-      ui.page="confirm"
-    else
-      ui.game=ui.pendingGame; ui.pendingGame=nil
-      ui.page="game";ui.sel=nil;ui.mode=nil;ui.fx=nil;ui.changed=true
-    end
-  end,{active=true})
-end
-local function confirmDraw(b,ui,now)
-  backboard(b,ui,now)
-  local w,h=math.min(b.w-4,45),16
-  local x,y=math.floor((b.w-w)/2)+1,math.floor((b.h-h)/2)+1
-  frame(b,x,y,w,h,"REPLACE SAVED CAMPAIGN?")
-  b:put(x+3,y+4,"An unfinished match already exists.",C.white)
-  b:put(x+3,y+6,"Replacing it cannot be undone.",C.gold)
-  button(b,ui,x+3,y+10,math.floor((w-7)/2),3,"KEEP SAVE",function()
-    ui.pendingGame=nil;ui.page="setup"
-  end)
-  button(b,ui,x+4+math.floor((w-7)/2),y+10,math.floor((w-7)/2),3,"REPLACE",function()
-    ui.game=ui.pendingGame;ui.pendingGame=nil;ui.page="game"
-    ui.sel=nil;ui.mode=nil;ui.fx=nil;ui.changed=true
-  end,{active=true})
-end
-local RULES={
-  "TIDEBOUND is a territory-building strategy game.",
-  "Both players act on the SAME touch monitor.",
-  "", "Each turn: 3 actions. Tap a province for orders.",
-  "CLAIM    Capture neutral land next to your border.",
-  "FOUND    Build a village on an owned province.",
-  "UPGRADE  Improve villages into cities.",
-  "RECRUIT  Add 2 armies to a city (max 9).",
-  "FORT     Increase defense on owned land.",
-  "MARCH    Move half an army to allied land.",
-  "ATTACK   From an army, select an adjacent rival.",
-  "", "After BOTH turns, provinces harvest resources:",
-  "MEADOW +2 FOOD   FOREST +2 WOOD",
-  "HILLS +2 STONE   MOUNTAIN +1 STONE",
-  "", "Cities and ancient sites generate prestige each",
-  "round. First to the selected goal wins.",
-  "Capturing the enemy CAPITAL wins immediately.",
-  "", "Attack: committed armies + D3 vs enemy armies,",
-  "forts, settlement/terrain bonus + D3.",
-  "You must leave 1 army behind to invade.",
-  "", "Tap a field, then action, then highlighted tile.",
-  "MENU keeps your saved match for later.",
-  "Tap END TURN in the top-right to pass play.",
-}
-local function rulesDraw(b,ui,now)
-  backboard(b,ui,now)
-  local w,h=math.min(b.w-4,62),math.min(b.h-4,34)
-  local x,y=math.floor((b.w-w)/2)+1,math.floor((b.h-h)/2)+1
-  frame(b,x,y,w,h,"FIELD MANUAL")
-  for i,s in ipairs(RULES) do
-    if i<=h-6 then b:put(x+2,y+i+1,shorten(s,w-4),i==1 and C.gold or C.white,C.night) end
-  end
-  button(b,ui,x+math.floor((w-18)/2),y+h-4,18,3,"BACK",function()ui.page=ui.returnPage or "menu" end)
-end
-local function overDraw(b,ui,now)
-  gameDraw(b,ui,ui.game,now)
-  local g=ui.game; local w,h=math.min(b.w-4,45),18
-  local x,y=math.floor((b.w-w)/2)+1,math.floor((b.h-h)/2)+1
-  frame(b,x,y,w,h,"THE CAMPAIGN IS OVER")
-  local champion=g.winner==3 and "DRAW" or (g.winner and g.names[g.winner].." REIGNS!") or "CAMPAIGN IN PROGRESS"
-  b:put(x+math.floor((w-#champion)/2),y+4,champion,C.gold)
-  b:put(x+4,y+7,g.names[RED].." - "..g.score[RED].." PRESTIGE",C.red)
-  b:put(x+4,y+9,g.names[BLUE].." - "..g.score[BLUE].." PRESTIGE",C.cyan)
-  b:put(x+4,y+11,"AFTER "..g.round.." ROUNDS",C.stone)
-  button(b,ui,x+3,y+14,math.floor((w-7)/2),3,"MENU",function()ui.page="menu" end)
-  button(b,ui,x+4+math.floor((w-7)/2),y+14,math.floor((w-7)/2),3,"PLAY AGAIN",function()ui.page="setup" end,{active=true})
-end
-local function newUI(w,h)
-  local ui={page="menu",game=nil,sel=nil,mode=nil,fx=nil,buttons={},saveOK=true,
-    changed=false,prev=nil,size={w,h},returnPage="menu",setup={names={"",""},active=RED,style="land",target=40}}
-  local mw,mh=mapSize(w,h)
-  ui.demo=makeGame(23111,mw,mh,{"CRIMSON","AZURE"},"isles",40)
-  return ui
-end
-local function render(m,ui,when)
-  local w,h=m.getSize()
-  if ui.size[1]~=w or ui.size[2]~=h then
-    ui.size={w,h}
-    local mw,mh=mapSize(w,h)
-    ui.demo=makeGame(23111,mw,mh,{"CRIMSON","AZURE"},"isles",40)
-    ui.prev=nil
-  end
-  local b=B.new(w,h);ui.buttons={}
-  if w<MIN_W or h<MIN_H then
-    b:center(math.max(2,math.floor(h/2)-2),"MONITOR TOO SMALL",C.red)
-    b:center(math.max(3,math.floor(h/2)),"Use a 3x3 or larger Advanced Monitor",C.white)
-    b:center(math.max(4,math.floor(h/2)+2),"at text scale 0.5",C.stone)
-  elseif ui.page=="game" and ui.game and ui.game.winner then ui.page="over";overDraw(b,ui,when)
-  elseif ui.page=="game" and ui.game then gameDraw(b,ui,ui.game,when)
-  elseif ui.page=="setup" then setupDraw(b,ui,when)
-  elseif ui.page=="confirm" then confirmDraw(b,ui,when)
-  elseif ui.page=="rules" then rulesDraw(b,ui,when)
-  elseif ui.page=="over" and ui.game then overDraw(b,ui,when)
-  else menuDraw(b,ui,when) end
-  ui.prev=b:flush(m,ui.prev)
-  return b
-end
-local function touch(ui,x,y)
-  for i=#ui.buttons,1,-1 do
-    local bt=ui.buttons[i]
-    if x>=bt.x and y>=bt.y and x<bt.x+bt.w and y<bt.y+bt.h then
-      bt.fn(); return bt.tag or "button"
-    end
-  end
-  if ui.page=="game" and ui.game and not ui.game.winner then
-    local g=ui.game
-    local tx=clamp(math.floor((x-1)*g.w/ui.size[1])+1,1,g.w)
-    local ty=clamp(math.floor((y-1)*g.h/ui.size[2])+1,1,g.h)
-    -- Overlay is modal only over its exact footprint.
-    if ui.sel and not ui.mode and y>=ui.size[2]-8 then return "panel" end
-    if y<=3 then return "header" end
-    if ui.sel and ui.mode and y>=4 and y<=7 and x>=math.floor((ui.size[1]-math.min(ui.size[1]-4,52))/2)+1 and
-      x < math.floor((ui.size[1]-math.min(ui.size[1]-4,52))/2)+1+math.min(ui.size[1]-4,52) then return "prompt" end
-    if ui.mode and ui.sel and legal(g,ui.mode,ui.sel.x,ui.sel.y,tx,ty) then
-      local ok,fx=act(g,ui.mode,ui.sel.x,ui.sel.y,tx,ty)
-      if ok then ui.fx=fx;ui.sel=nil;ui.mode=nil;ui.changed=true end
-      return "move"
-    end
-    ui.sel={x=tx,y=ty};ui.mode=nil
-    return "select"
-  end
-end
-local function savePath()
-  local script=shell and shell.getRunningProgram and shell.getRunningProgram() or "tidebound.lua"
-  return fs.combine(fs.getDir(script),"tidebound-kingdoms.save")
-end
-local function validSave(g)
-  if type(g)~="table" or g.version~=2 or type(g.w)~="number" or type(g.h)~="number"
-    or g.w<9 or g.h<9 or g.w>30 or g.h>25 or type(g.map)~="table" or
-    type(g.names)~="table" or type(g.stock)~="table" or type(g.score)~="table" or
-    (g.turn~=RED and g.turn~=BLUE) then return false end
-  for y=1,g.h do
-    if type(g.map[y])~="table" then return false end
-    for x=1,g.w do
-      local t=g.map[y][x]
-      if type(t)~="table" or not ({water=true,plain=true,forest=true,hill=true,mountain=true})[t.kind]
-        or type(t.owner)~="number" or t.owner<0 or t.owner>2 or type(t.army)~="number"
-        or type(t.city)~="number" then return false end
-    end
-  end
+ if g.result then return end
+ if g.turn==1 then g.turn=2;g.ap=3;addLog(g,g.names[2].." takes command")
+ else
   for p=1,2 do
-    if type(g.names[p])~="string" or type(g.stock[p])~="table" or type(g.score[p])~="number" then return false end
-    for _,r in ipairs({"food","wood","stone"}) do if type(g.stock[p][r])~="number" then return false end end
+   local v=income(g,p);for k,n in pairs(v)do g.resources[p][k]=clamp(g.resources[p][k]+n,0,99) end
+   if g.pact then
+    g.resources[p].energy=clamp(g.resources[p].energy+2,0,99)
+    g.resources[p].science=clamp(g.resources[p].science+1,0,99)
+   end
   end
-  return true
+  g.round=g.round+1;g.turn=1;g.ap=3
+  addLog(g,"Year "..g.round.." - resources collected")
+  if g.round>g.limit then
+   local a,b=points(g,1),points(g,2);g.result=a==b and 0 or (a>b and 1 or 2)
+  end
+ end
+ updateWinner(g)
 end
-local function saveGame(g)
-  if not fs or not textutils then return false end
-  return pcall(function()
-    local path=savePath();local tmp=path..".tmp";local bak=path..".bak"
-    local f=assert(fs.open(tmp,"w"));f.write(textutils.serialize(g));f.close()
-    if fs.exists(bak) then fs.delete(bak) end
-    if fs.exists(path) then fs.move(path,bak) end
-    local ok,err=pcall(fs.move,tmp,path)
-    if not ok then
-      if fs.exists(bak) and not fs.exists(path) then fs.move(bak,path) end
-      error(err)
-    end
-    if fs.exists(bak) then fs.delete(bak) end
-  end)
+local function offerPact(g)
+ if g.pact then return false,"Trade pact already active" end
+ if g.offer==g.turn then return false,"Proposal already pending" end
+ if g.ap<1 or g.resources[g.turn].influence<2 then return false,"Need 1 command and 2 influence" end
+ pay(g,{influence=2});g.offer=g.turn;addLog(g,g.names[g.turn].." proposed a trade accord")
+ return true,"Proposal sent. Rival can accept on their turn."
 end
-local function loadGame()
-  if not fs or not textutils then return nil end
-  for _,path in ipairs({savePath(),savePath()..".bak"}) do
-    local ok,g=pcall(function()
-      if not fs.exists(path) then return nil end
-      local f=assert(fs.open(path,"r"));local s=f.readAll();f.close()
-      return textutils.unserialize(s)
-    end)
-    if ok and validSave(g) then return g end
-  end
+local function answerPact(g,accept)
+ if g.offer==0 or g.offer==g.turn then return false,"No incoming offer" end
+ if accept then g.pact=true;addLog(g,"Trade accord signed: +2 energy and +1 science each year")
+ else addLog(g,"Trade accord rejected") end
+ g.offer=0;return true,accept and "Accord signed" or "Offer declined"
 end
-local function monitorSelect(requested)
-  if not peripheral then return nil,nil end
-  if requested then
-    local m=peripheral.wrap(requested)
-    if not m or peripheral.getType(requested)~="monitor" or (m.isColor and not m.isColor()) then
-      error("Monitor unavailable or monochrome: "..requested)
-    end
-    return m,requested
-  end
-  local best,name,area=nil,nil,-1
-  for _,n in ipairs(peripheral.getNames()) do
-    if peripheral.getType(n)=="monitor" then
-      local m=peripheral.wrap(n)
-      if not m.isColor or m.isColor() then
-        local ok,sz=pcall(function()
-          local prior=m.getTextScale();m.setTextScale(.5)
-          local w,h=m.getSize();m.setTextScale(prior);return w*h
-        end)
-        if ok and sz>area then best,name,area=m,n,sz end
-      end
-    end
-  end
-  return best,name
+local function endPact(g)
+ if not g.pact then return false,"No current pact" end
+ g.pact=false;g.resources[g.turn].influence=math.max(0,g.resources[g.turn].influence-3)
+ addLog(g,"Trade accord broken; -3 influence")
+ return true,"Pact cancelled"
 end
-local function tests()
-  local n=0
-  local function check(ok,s)
-    n=n+1; if not ok then error("TEST FAILURE #"..n..": "..s) end
+-- graphics canvas: logical units are the monitor's text cells; pixel mode expands each cell
+local Renderer={};Renderer.__index=Renderer
+function Renderer.new(mon,forceText)
+ local self=setmetatable({m=mon,kind="text",buttons={},frame=0},Renderer)
+ if mon.setTextScale then pcall(mon.setTextScale,0.5) end
+ self.w,self.h=mon.getSize();self.px,self.py=1,1
+ if not forceText and type(mon.setGraphicsMode)=="function" and type(mon.drawPixels)=="function" then
+  local ok=pcall(mon.setGraphicsMode,2)
+  if ok then
+   local success,pw,ph=pcall(mon.getSize,2)
+   if success and pw and ph and pw>self.w and ph>self.h then
+    self.kind="gfx";self.px=pw/self.w;self.py=ph/self.h
+    if mon.setPaletteColor then for c,rgb in pairs(PALETTE)do pcall(mon.setPaletteColor,c,rgb)end end
+   else pcall(mon.setGraphicsMode,0) end
   end
-  local function mock(w,h)
-    local m={writes=0}
-    m.getSize=function()return w,h end
-    m.setCursorPos=function(x,y)check(y>=1 and y<=h,"cursor bounds") end
-    m.blit=function(a,c,d)
-      check(#a==w and #c==w and #d==w,"blit dimensions")
-      m.writes=m.writes+1
-    end
-    return m
-  end
-  for i=1,50 do
-    local g=makeGame(i*71,11,12,{"A","B"},i%2==0 and "isles" or "land",20)
-    check(g.map[math.floor((g.h+1)/2)][2].capital,"P1 capital missing")
-    check(countHoldings(g,1)==3 and countHoldings(g,2)==3,"opening land imbalance")
-    for y=1,g.h do for x=1,g.w do
-      local a=tile(g,x,y); local b=tile(g,g.w+1-x,g.h+1-y)
-      -- Starting settlements modify a couple of tiles, otherwise the map remains symmetric.
-      if a.owner==0 and b.owner==0 then check(a.kind==b.kind,"world symmetry") end
-    end end
-  end
-  local g=makeGame(777,11,12,{"ALICE","BOB"},"land",20)
-  local cy=math.floor((g.h+1)/2)
-  check(legal(g,"claim",3,cy+1),"claim next to starter province")
-  check(act(g,"claim",3,cy+1),"claim execution")
-  check(g.ap==2 and tile(g,3,cy+1).owner==RED,"claim state")
-  check(act(g,"found",3,cy+1),"found execution")
-  check(tile(g,3,cy+1).city==1,"settlement")
-  check(act(g,"recruit",2,cy),"recruit execution")
-  check(tile(g,2,cy).army==7,"recruit increase")
-  check(g.ap==0,"AP limiting")
-  check(not legal(g,"upgrade",3,cy+1),"can't act without AP")
-  endTurn(g);check(g.turn==BLUE and g.round==1,"turn exchange")
-  endTurn(g);check(g.turn==RED and g.round==2,"full round")
-  check(g.score[RED]>=3 and g.stock[RED].food>=4,"score/resources")
-  -- Deterministic combat: source and destination must be adjacent and have ownership.
-  g.ap=3;g.stock[RED].food=10
-  local source,dest=tile(g,5,cy),tile(g,6,cy)
-  source.kind="plain";source.owner=RED;source.army=9
-  dest.kind="plain";dest.owner=BLUE;dest.army=0;dest.city=0;dest.fort=0
-  check(legal(g,"attack",5,cy,6,cy),"adjacent enemy target")
-  local ok=act(g,"attack",5,cy,6,cy)
-  check(ok and dest.owner==RED and source.army==1,"victorious attack")
-  check(not legal(g,"march",5,cy,8,cy),"non-adjacent march blocked")
-  for _,sz in ipairs({{48,35},{57,38},{65,50},{78,52},{82,63},{98,68}}) do
-    local m=mock(sz[1],sz[2]);local ui=newUI(sz[1],sz[2]);ui.game=g
-    for _,page in ipairs({"menu","setup","rules","game","over"}) do
-      ui.page=page;render(m,ui,clock())
-      check(#ui.buttons>0,"touch buttons on "..page)
-    end
-    ui.page="setup";render(m,ui,clock());local editBefore=#ui.setup.names[1]
-    for _,bt in ipairs(ui.buttons) do
-      if bt.tag=="Q" then touch(ui,bt.x+1,bt.y);break end
-    end
-    check(#ui.setup.names[1]==editBefore+1,"on-screen keyboard")
-    ui.page="game";render(m,ui,clock())
-    local xx,yy=tcenter(g,2,cy,sz[1],sz[2]);touch(ui,xx,yy)
-    check(ui.sel and ui.sel.x==2 and ui.sel.y==cy,"map tap mapping")
-    local prev=m.writes;render(m,ui,clock());check(m.writes>prev,"render after selection")
-    local prev2=m.writes;render(m,ui,clock());check(m.writes>=prev2,"buffered render")
-  end
-  local bad=copy(g);bad.version=1;check(not validSave(bad),"reject old format")
-  check(validSave(g),"v2 save integrity")
-  print("TIDEBOUND KINGDOMS v2.1: "..n.." checks passed")
+ end
+ return self
 end
-local function run()
-  local monitor,name=monitorSelect(argv[1])
-  if not monitor then
-    print("TIDEBOUND needs an Advanced Monitor (3x3 or larger).")
-    print("Usage: tidebound [monitor-name]")
-    return
-  end
-  local priorScale=monitor.getTextScale and monitor.getTextScale() or 1
-  local original={}
-  local function restore()
-    for c,v in pairs(original) do pcall(monitor.setPaletteColor,c,v[1],v[2],v[3]) end
-    pcall(monitor.setTextScale,priorScale)
-  end
-  local ok,err=pcall(function()
-    monitor.setTextScale(.5)
-    if colors and monitor.getPaletteColor and monitor.setPaletteColor then
-      for name,hex in pairs(PALETTE) do
-        local c=colors[name]
-        if c then original[c]={monitor.getPaletteColor(c)};monitor.setPaletteColor(c,hex) end
-      end
-    end
-    local w,h=monitor.getSize();local ui=newUI(w,h)
-    ui.game=loadGame();ui.setup.names=ui.game and copy(ui.game.names) or ui.setup.names
-    local speaker=peripheral.find and peripheral.find("speaker")
-    local function sound()
-      if speaker and speaker.playNote then pcall(speaker.playNote,"harp",.25,13) end
-    end
-    render(monitor,ui,clock())
-    local timer=os.startTimer(.08)
-    while true do
-      local ev,a,b,c=os.pullEvent()
-      if ev=="monitor_touch" and a==name then
-        local before=ui.page
-        local feedback=touch(ui,b,c)
-        if feedback and feedback~="panel" and feedback~="footer" then sound() end
-        if ui.changed then ui.saveOK=saveGame(ui.game);ui.changed=false end
-        render(monitor,ui,clock())
-      elseif ev=="char" and ui.page=="setup" then
-        local p=ui.setup.active;local s=namesafe(a:upper())
-        if #s==1 and #ui.setup.names[p]<12 then ui.setup.names[p]=ui.setup.names[p]..s end
-        render(monitor,ui,clock())
-      elseif ev=="paste" and ui.page=="setup" then
-        local p=ui.setup.active;ui.setup.names[p]=namesafe(ui.setup.names[p]..a:upper())
-        render(monitor,ui,clock())
-      elseif ev=="key" and ui.page=="setup" and keys and a==keys.backspace then
-        local p=ui.setup.active;ui.setup.names[p]=ui.setup.names[p]:sub(1,-2)
-        render(monitor,ui,clock())
-      elseif ev=="timer" and a==timer then
-        render(monitor,ui,clock())
-        -- 12.5 FPS during an effect, otherwise avoid expensive idle repaints.
-        timer=os.startTimer(ui.fx and .08 or ui.page=="menu" and .20 or .35)
-      elseif ev=="monitor_resize" and a==name then
-        ui.prev=nil;render(monitor,ui,clock())
-      end
-    end
-  end)
-  restore()
-  if not ok then error(err,0) end
+function Renderer:resize()
+ self.w,self.h=self.m.getSize()
+ if self.kind=="gfx" then
+  local ok,pw,ph=pcall(self.m.getSize,2)
+  if ok and pw and ph then self.px=pw/self.w;self.py=ph/self.h end
+ end
 end
-if argv[1]=="--test-api" then
-  return {makeGame=makeGame, mapSize=mapSize, tile=tile, legal=legal, act=act,
-    endTurn=endTurn, income=income, newUI=newUI, render=render, touch=touch,
-    validSave=validSave, copy=copy, clock=clock, tcenter=tcenter}
-elseif argv[1]=="--self-test" then tests() else run() end
+function Renderer:rect(x,y,w,h,c)
+ x=math.floor(x);y=math.floor(y);w=math.ceil(w);h=math.ceil(h)
+ if w<=0 or h<=0 then return end
+ local ex=math.min(self.w,x+w);local ey=math.min(self.h,y+h)
+ x=math.max(0,x);y=math.max(0,y);if ex<=x or ey<=y then return end
+ if self.kind=="gfx" then
+  local px=math.floor(x*self.px);local py=math.floor(y*self.py)
+  self.m.drawPixels(px,py,c,math.max(1,math.floor(ex*self.px)-px),math.max(1,math.floor(ey*self.py)-py))
+ else
+  self.m.setBackgroundColor(TEXT_COLORS[c] or 32768)
+  for iy=y,ey-1 do self.m.setCursorPos(x+1,iy+1);self.m.write(string.rep(" ",ex-x))end
+ end
+end
+function Renderer:pixel(px,py,c,size)
+ if self.kind=="gfx" then
+  size=size or 1;self.m.drawPixels(math.floor(px),math.floor(py),c,math.max(1,math.floor(size)),math.max(1,math.floor(size)))
+ else
+  local x=math.floor(px/self.px);local y=math.floor(py/self.py)
+  if x>=0 and y>=0 and x<self.w and y<self.h then
+   self.m.setCursorPos(x+1,y+1);self.m.setBackgroundColor(TEXT_COLORS[0]);self.m.setTextColor(TEXT_COLORS[c] or 1);self.m.write(".")
+  end
+ end
+end
+function Renderer:line(x1,y1,x2,y2,c)
+ if self.kind=="gfx" then
+  x1=x1*self.px;y1=y1*self.py;x2=x2*self.px;y2=y2*self.py
+  local d=math.max(math.abs(x2-x1),math.abs(y2-y1))
+  for i=0,d,2 do local t=i/math.max(1,d);self:pixel(x1+(x2-x1)*t,y1+(y2-y1)*t,c,1)end
+ else
+  local d=math.max(math.abs(x2-x1),math.abs(y2-y1))*1.3
+  for i=0,d,1 do local t=i/math.max(1,d);local x=math.floor(x1+(x2-x1)*t+.5);local y=math.floor(y1+(y2-y1)*t+.5)
+   if x>=0 and y>=0 and x<self.w and y<self.h then
+    self.m.setCursorPos(x+1,y+1);self.m.setBackgroundColor(TEXT_COLORS[0]);self.m.setTextColor(TEXT_COLORS[c] or 1);self.m.write(".")
+   end
+  end
+ end
+end
+function Renderer:disc(cx,cy,r,c)
+ if self.kind=="gfx" then
+  local x=cx*self.px;local y=cy*self.py;local rp=r*math.min(self.px,self.py)
+  for yy=-math.ceil(rp),math.ceil(rp) do
+   local dx=math.sqrt(math.max(0,rp*rp-yy*yy));local ax=math.floor(x-dx)
+   local length=math.max(1,math.floor(x+dx)-ax)
+   self.m.drawPixels(ax,math.floor(y+yy),c,length,1)
+  end
+ else
+  self.m.setBackgroundColor(TEXT_COLORS[0]);self.m.setTextColor(TEXT_COLORS[c] or 1)
+  self.m.setCursorPos(math.floor(cx)+1,math.floor(cy)+1);self.m.write("O")
+ end
+end
+function Renderer:text(x,y,str,c,maxlen)
+ x=math.floor(x);y=math.floor(y);str=trunc(str,maxlen or 255)
+ if y<0 or y>=self.h or x>=self.w then return end
+ if x<0 then str=str:sub(1-x);x=0 end
+ str=str:sub(1,math.max(0,self.w-x));if #str==0 then return end
+ if self.kind=="text" then
+  self.m.setCursorPos(x+1,y+1);self.m.setBackgroundColor(TEXT_COLORS[0]);self.m.setTextColor(TEXT_COLORS[c] or 1)
+  self.m.write(str);return
+ end
+ for i=1,#str do
+  local pattern=FONT[str:sub(i,i)] or FONT["?"]
+  local left=(x+i-1)*self.px;local top=y*self.py
+  for ry=1,7 do
+   local row=pattern[ry];local col=1
+   while col<=5 do
+    if row:sub(col,col)=="1" then
+     local start=col;while col<=5 and row:sub(col,col)=="1" do col=col+1 end
+     local px=math.floor(left+(start-1)*self.px/6);local xx=math.floor(left+col*self.px/6)
+     local py=math.floor(top+(ry-1)*self.py/9);local yy=math.floor(top+ry*self.py/9)
+     self.m.drawPixels(px,py,c,math.max(1,xx-px),math.max(1,yy-py))
+    else col=col+1 end
+   end
+  end
+ end
+end
+function Renderer:bigText(x,y,word,c,scale)
+ scale=scale or 2
+ if self.kind=="text" then return self:text(x,y,word,c) end
+ word=tostring(word):upper()
+ for i=1,#word do
+  local pattern=FONT[word:sub(i,i)] or FONT["?"]
+  local left=(x+(i-1)*scale)*self.px;local top=y*self.py
+  for ry=1,7 do
+   local line=pattern[ry];local k=1
+   while k<=5 do
+    if line:sub(k,k)=="1" then
+     local start=k;while k<=5 and line:sub(k,k)=="1" do k=k+1 end
+     local px=math.floor(left+(start-1)*scale*self.px/6);local xx=math.floor(left+k*scale*self.px/6)
+     local py=math.floor(top+(ry-1)*scale*self.py/9);local yy=math.floor(top+ry*scale*self.py/9)
+     self.m.drawPixels(px,py,c,math.max(1,xx-px),math.max(1,yy-py))
+    else k=k+1 end
+   end
+  end
+ end
+end
+function Renderer:key(x,y,w,h,label,fn)
+ self:rect(x,y,w,h,2);self:rect(x,y,1,h,4)
+ self:text(x+math.floor((w-1)/2),y+1,label,7,1)
+ self.buttons[#self.buttons+1]={x=x,y=y,w=w,h=h,fn=fn}
+end
+function Renderer:icon(x,y,name,c)
+ local data=ICON[name] or ICON.star
+ if self.kind=="text" then
+  local fallback={star="*",planet="@",ship="^",scan="?",flag="F",colony="H",mine="M",forge="A",lab="S",dock="D",fort="#",energy="E",alloy="A",science="S",influence="I",research="R",move=">",war="X",trade="$",next=">",back="<",help="?",trophy="*",check="+",close="X",orbit="O"}
+  return self:text(x,y,fallback[name] or "*",c)
+ end
+ local left=x*self.px;local top=y*self.py
+ for ry=1,7 do local row=data[ry];local k=1
+  while k<=5 do
+   if row:sub(k,k)=="1" then
+    local start=k;while k<=5 and row:sub(k,k)=="1" do k=k+1 end
+    local xx=math.floor(left+(start-1)*self.px/6);local endx=math.floor(left+k*self.px/6)
+    local yy=math.floor(top+(ry-1)*self.py/9);local endy=math.floor(top+ry*self.py/9)
+    self.m.drawPixels(xx,yy,c,math.max(1,endx-xx),math.max(1,endy-yy))
+   else k=k+1 end
+  end
+ end
+end
+function Renderer:button(x,y,w,h,title,icon,tint,fn,detail,disabled)
+ self:rect(x,y,w,h,disabled and 1 or 2)
+ self:rect(x,y,1,h,disabled and 3 or tint)
+ self:icon(x+2,y+math.max(0,math.floor((h-1)/2)),icon,disabled and 4 or tint)
+ self:text(x+4,y+1,trunc(title,w-5),disabled and 4 or 7)
+ if detail and h>=4 then self:text(x+4,y+2,trunc(detail,w-5),disabled and 4 or 5) end
+ if not disabled and fn then self.buttons[#self.buttons+1]={x=x,y=y,w=w,h=h,fn=fn}end
+end
+function Renderer:beginFrame()
+ self.buttons={};self.frame=self.frame+1
+ if self.kind=="gfx" and self.m.setFrozen then pcall(self.m.setFrozen,true) end
+ self:rect(0,0,self.w,self.h,0)
+end
+function Renderer:endFrame()
+ if self.kind=="gfx" and self.m.setFrozen then pcall(self.m.setFrozen,false) end
+end
+function Renderer:hit(x,y)
+ for i=#self.buttons,1,-1 do local b=self.buttons[i]
+  if x>=b.x and x<b.x+b.w and y>=b.y and y<b.y+b.h then b.fn();return true end
+ end
+ return false
+end
+local Game={};Game.__index=Game
+function Game.new(mon,txt)
+ local self=setmetatable({},Game);self.r=Renderer.new(mon,txt);self.screen="title";self.selected=nil
+ self.g=nil;self.names={"SOL","NOVA"};self.shape="CLUSTER";self.rounds=18;self.editing=1
+ self.modal=nil;self.toast=nil;self.waiting=nil;self.fleetCount=1;self.tick=0;self.anim=nil
+ self.stars={};local rand=rng(44581)
+ for i=1,130 do self.stars[i]={x=rand(),y=rand(),brightness=rand(4)} end
+ return self
+end
+function Game:save()
+ if not fs or not textutils or not self.g then return end
+ local path="/tidebound/save.dat";if not fs.exists("/tidebound") then path="tidebound-save.dat" end
+ local tmp=path..".tmp";local h=fs.open(tmp,"w");if not h then return end
+ h.write(textutils.serialize(self.g));h.close()
+ if fs.exists(path)then fs.delete(path)end;fs.move(tmp,path)
+end
+function Game:load()
+ if not fs or not textutils then return false end
+ local path=fs.exists("/tidebound/save.dat") and "/tidebound/save.dat" or "tidebound-save.dat"
+ if not fs.exists(path)then return false end
+ local h=fs.open(path,"r");if not h then return false end
+ local raw=h.readAll();h.close();local ok,g=pcall(textutils.unserialize,raw)
+ if not ok or type(g)~="table" or g.version~=VERSION or type(g.systems)~="table" or #g.systems<12 or #g.links<10 then return false end
+ self.g=g;self.screen=g.result and "victory" or "map";self.selected=nil;return true
+end
+function Game:newMatch()
+ local seed=math.floor(((os.epoch and os.epoch("utc")) or os.clock()*1000)%900000)+7919
+ self.g=newGame(self.names[1],self.names[2],self.shape,self.rounds,seed)
+ self.screen="map";self.selected=nil;self.modal=nil;self.toast="Survey a neighboring star system to begin.";self:save()
+end
+function Game:change(action,system)
+ local ok,msg=execute(self.g,action,system)
+ self.toast=msg;self.anim=ok and {id=system,age=0} or nil
+ if ok then self:save() end
+end
+function Game:notify(s)self.toast=s;self.tick=0 end
+function Game:position(s)
+ return math.floor(3+s.x*(self.r.w-7)), math.floor(6+s.y*(self.r.h-13))
+end
+function Game:background()
+ local r=self.r
+ if self.screen=="map" then
+  local clouds={{.22,.29,6,24},{.74,.57,8,28},{.48,.82,5,31}}
+  for _,cloud in ipairs(clouds) do
+   local x=math.floor(cloud[1]*r.w);local y=math.floor(cloud[2]*r.h)
+   r:disc(x,y,cloud[3],cloud[4])
+  end
+ end
+ for _,s in ipairs(self.stars)do
+  local x=math.floor(s.x*(r.w-1));local y=math.floor(s.y*(r.h-1))
+  if (self.tick+s.brightness)%5==0 then r:rect(x,y,1,1,3) elseif s.brightness==4 then r:rect(x,y,1,1,1) end
+ end
+end
+function Game:mapBase()
+ local r=self.r;self:background()
+ for _,edge in ipairs(self.g.links)do
+  local a,b=self.g.systems[edge[1]],self.g.systems[edge[2]]
+  local x,y=self:position(a);local xx,yy=self:position(b)
+  r:line(x,y,xx,yy,(a.known and b.known) and 3 or 1)
+ end
+ for _,s in ipairs(self.g.systems)do
+  local x,y=self:position(s)
+  local isTarget=self.waiting and self.waiting.from~=s.id and fleetReach(self.g,self.waiting.from,s.id,self.g.turn)
+  local starHue={TERRAN=19,ORE=17,NEBULA=12,PLASMA=9,RELIC=13,ICE=11}
+  local col=s.owner==1 and 9 or (s.owner==2 and 13 or (s.known and starHue[s.kind] or 4))
+  if s.id==self.selected then r:disc(x,y,2.15,3);r:disc(x,y,1.75,2) end
+  if self.anim and self.anim.id==s.id then r:disc(x,y,1.3+(self.anim.age%5)*.4,8) end
+  if isTarget then r:disc(x,y,1.3+(self.tick%3)*.14,18) end
+  r:disc(x,y,s.colony and 1.25 or .85,col)
+  if s.colony then r:disc(x-.15,y-.22,.4,7)end
+  if s.owner~=0 then r:icon(x-2,y-1,"flag",s.owner==1 and 11 or 13) end
+  if s.ships[1]+s.ships[2]>0 then
+   local p=s.ships[1]>0 and 1 or 2
+   r:icon(x+1,y-1,"ship",p==1 and 9 or 15)
+   r:text(x+2,y,tostring(s.ships[p]),7)
+  end
+  if s.known then r:text(x-math.floor(#s.name/2),y+2,trunc(s.name,14),s.owner==0 and 5 or 6)
+  else r:text(x,y+1,"?",4) end
+ end
+ if self.anim and self.anim.from and self.anim.id then
+  local f=self.g.systems[self.anim.from];local t=self.g.systems[self.anim.id]
+  local ax,ay=self:position(f);local bx,by=self:position(t)
+  local progress=clamp((self.anim.age+1)/6,0,1)
+  r:line(ax,ay,ax+(bx-ax)*progress,ay+(by-ay)*progress,9)
+  r:disc(ax+(bx-ax)*progress,ay+(by-ay)*progress,.5,19)
+ end
+end
+function Game:header()
+ local r=self.r;local g=self.g;local p=g.turn;local c=p==1 and 9 or 13
+ r:rect(0,0,r.w,5,1);r:rect(0,4,r.w,1,3)
+ r:icon(2,1,"flag",c);r:text(4,1,trunc(g.names[p],16),c)
+ r:button(1,0,math.min(26,r.w-46),3,g.names[p],"flag",c,function()self.modal="empire"end)
+ r:text(2,3,"YEAR "..g.round.."/"..g.limit.."  COMMANDS "..g.ap.."/3",5)
+ local x=math.max(27,r.w-42);local resource=g.resources[p]
+ local list={{"energy",resource.energy,17},{"alloy",resource.alloy,21},{"science",resource.science,11},{"influence",resource.influence,13}}
+ for i,item in ipairs(list)do local ix=x+(i-1)*10
+  r:icon(ix,1,item[1],item[3]);r:text(ix+2,1,tostring(item[2]),7)
+ end
+end
+function Game:bottom()
+ local r=self.r;local w=r.w;local y=r.h-5;local narrow=w<94;local cmd=narrow and 15 or 18
+ r:rect(0,y,w,5,1);r:rect(0,y,w,1,3)
+ r:button(1,y+1,narrow and 12 or 15,4,"TECH","research",11,function()self.modal="tech"end)
+ r:button(narrow and 14 or 17,y+1,narrow and 13 or 16,4,"DIPLOMACY","trade",13,function()self.modal="diplomacy"end)
+ r:button(narrow and 28 or 35,y+1,narrow and 12 or 15,4,"JOURNAL","scan",17,function()self.modal="log"end)
+ r:button(w-cmd-17,y+1,15,4,"GUIDE","help",8,function()self.modal="help"end)
+ r:button(w-cmd-1,y+1,cmd,4,"END TURN","next",19,function()
+  endTurn(self.g);self.selected=nil;self.waiting=nil;self:save();self:notify(self.g.result and "Game finished" or (self.g.names[self.g.turn].." - your move"))
+  if self.g.result then self.screen="victory" end
+ end)
+end
+function Game:overlay(x,y,w,h,heading)
+ local r=self.r;r:rect(x,y,w,h,1);r:rect(x,y,w,1,3);r:rect(x,y,1,h,3)
+ if heading then r:text(x+2,y+1,trunc(heading,w-5),7) end
+end
+function Game:systemInfo()
+ local s=self.selected and self.g.systems[self.selected]
+ if not s then return end
+ local r=self.r;local p=self.g.turn
+ local w=math.min(43,math.max(33,math.floor(r.w*.39)));local x=r.w-w-1;local y=6;local h=r.h-12
+ self:overlay(x,y,w,h,s.known and s.name or "UNSURVEYED SYSTEM")
+ r:button(x+w-7,y+1,6,3,"X","close",15,function()self.selected=nil;self.waiting=nil end)
+ r:icon(x+2,y+3,"planet",s.owner==1 and 9 or (s.owner==2 and 13 or 17))
+ r:text(x+5,y+3,s.known and s.kind or "UNKNOWN",5)
+ local occup=s.owner==0 and "UNCLAIMED" or (s.owner==p and "YOUR TERRITORY" or "RIVAL TERRITORY")
+ r:text(x+2,y+5,occup,s.owner==p and 9 or (s.owner==0 and 17 or 13))
+ if s.known then
+  r:icon(x+2,y+7,"ship",6);r:text(x+4,y+7,"FLEETS "..s.ships[1].." / "..s.ships[2].."     ("..self.g.names[1].." / "..self.g.names[2]..")",5,w-6)
+  local col=s.colony and "COLONY" or "UNSETTLED"
+  r:text(x+2,y+9,col.."  BUILDINGS "..(s.buildings.mine+s.buildings.forge+s.buildings.lab+s.buildings.dock+s.buildings.fort),5)
+ end
+ local keys
+ if not s.known then keys={"scan"}
+ elseif s.owner==0 then keys=s.ships[p]>0 and {"annex","dispatch"} or {"annex"}
+ elseif s.owner==p then
+  keys={"colonize","mine","forge","lab","dock","build","fort","dispatch"}
+ else keys={"dispatch"} end
+ local offset=y+11;local available=h-16;local per=4
+ local maxButtons=math.max(1,math.floor(available/per));local page=self.actionPage or 1
+ local pages=math.ceil(#keys/maxButtons);page=clamp(page,1,pages);self.actionPage=page
+ for index=(page-1)*maxButtons+1,math.min(#keys,page*maxButtons)do
+  local key=keys[index];local act=ACTIONS[key];local n=index-(page-1)*maxButtons;local yy=offset+(n-1)*per
+  local why=actionReason(self.g,key,s.id)
+  if key=="dispatch" and s.owner~=p and s.ships[p]==0 then
+   why="Select a friendly fleet, then choose this as destination"
+  end
+  local detail=costString(act.cost).." | "..(why and trunc(why,w-14) or "READY")
+  r:button(x+2,yy,w-4,4,act.title,act.icon,why and 4 or 9,function()
+   self.order={key=key,id=s.id};self.modal="order"
+  end,detail,false)
+ end
+ if pages>1 then
+  r:button(x+2,y+h-5,math.floor((w-5)/2),3,"PREV","back",8,function()self.actionPage=clamp(page-1,1,pages)end,nil,page==1)
+  r:button(x+math.floor(w/2),y+h-5,math.floor((w-5)/2),3,"NEXT","next",8,function()self.actionPage=clamp(page+1,1,pages)end,nil,page>=pages)
+ else
+  r:text(x+2,y+h-3,"TAP AN ORDER TO LEARN MORE",4,w-5)
+ end
+ -- Use the top toast as action explanation: tapping a disabled action never consumes a turn.
+end
+function Game:routeInfo()
+ local r=self.r;local w=math.min(45,math.max(34,math.floor(r.w*.39)));local x=r.w-w-1;local y=7
+ self:overlay(x,y,w,18,"FLEET TRANSFER")
+ local s=self.g.systems[self.waiting.from]
+ r:icon(x+2,y+4,"ship",9);r:text(x+5,y+4,"FROM "..s.name,7)
+ r:text(x+2,y+6,"Ships available "..s.ships[self.g.turn],5)
+ r:text(x+2,y+8,"FLEET SIZE: "..self.fleetCount,7)
+ r:button(x+2,y+10,9,4,"LESS","back",11,function()self.fleetCount=clamp(self.fleetCount-1,1,s.ships[self.g.turn])end)
+ r:button(x+13,y+10,9,4,"MORE","next",11,function()self.fleetCount=clamp(self.fleetCount+1,1,s.ships[self.g.turn])end)
+ r:button(x+24,y+10,w-26,4,"CANCEL","close",15,function()self.waiting=nil end)
+ r:text(x+2,y+15,"TAP HIGHLIGHTED STAR TO WARP",9,w-4)
+end
+function Game:drawMap()
+ self:mapBase();self:header();self:bottom()
+ if self.waiting then self:routeInfo() elseif self.selected then self:systemInfo() else
+  local r=self.r;r:rect(1,6,math.min(38,r.w-3),4,1);r:icon(3,7,"orbit",8)
+  r:text(6,7,"SELECT A STAR TO ISSUE ORDERS",6,30)
+ end
+ if self.toast then
+  local r=self.r;local txt=trunc(self.toast,r.w-9);local x=math.max(2,math.floor((r.w-#txt-5)/2))
+  r:rect(x,r.h-9,#txt+5,3,2);r:text(x+2,r.h-8,txt,7)
+ end
+end
+function Game:clickMap(x,y)
+ local nearest=nil;local dist=1e9
+ for _,s in ipairs(self.g.systems)do local a,b=self:position(s);local d=((a-x)*1.1)^2+(b-y)^2
+  if d<dist then dist=d;nearest=s end
+ end
+ if not nearest or dist>18 then self.selected=nil;return end
+ if self.waiting then
+  local from=self.waiting.from;if nearest.id==from then return end
+  if not fleetReach(self.g,from,nearest.id,self.g.turn) then self:notify("No hyperlane route to that system");return end
+  if nearest.owner==other(self.g.turn) and self.g.pact then
+   self:notify("Break the trade accord in Diplomacy before attacking");return
+  end
+  local ok,result=sendFleet(self.g,from,nearest.id,self.fleetCount)
+  if ok then
+   self.waiting=nil;self.selected=nearest.id;self.actionPage=1;self.anim={id=nearest.id,from=from,age=0};self:save()
+   if type(result)=="table" then self.modal="combat";self.combat=result
+   else self:notify("Fleet arrived at "..nearest.name)end
+   if self.g.result then self.screen="victory" end
+  else self:notify(result) end
+ else self.selected=nearest.id;self.actionPage=1;self.toast=nil end
+end
+function Game:window(heading,w,h)
+ local r=self.r;w=math.min(w,r.w-4);h=math.min(h,r.h-7)
+ local x=math.floor((r.w-w)/2);local y=math.floor((r.h-h)/2)
+ self:overlay(x,y,w,h,heading)
+ r:button(x+w-8,y+1,7,3,"X","close",15,function()self.modal=nil end)
+ return x,y,w,h
+end
+local function wrapWords(input,limit)
+ local lines={};local line=""
+ for word in tostring(input or ""):gmatch("%S+")do
+  if #line+#word+1>limit and #line>0 then lines[#lines+1]=line;line=word
+  else line=(line=="" and word or line.." "..word) end
+ end
+ if line~=""then lines[#lines+1]=line end
+ return lines
+end
+function Game:drawModal()
+ if not self.modal then return end
+ local r=self.r;local g=self.g;local p=g.turn
+ if self.modal=="empire" then
+  local x,y,w,h=self:window("EMPIRE SITUATION REPORT",57,32)
+  r:icon(x+3,y+5,"flag",p==1 and 9 or 13);r:text(x+7,y+5,g.names[p].." - YEAR "..g.round,7)
+  r:text(x+3,y+8,"VICTORY POINTS     "..points(g,p),17)
+  r:text(x+3,y+10,"RIVAL POINTS       "..points(g,other(p)),13)
+  r:text(x+3,y+12,"CONTROLLED SYSTEMS "..owns(g,p),6)
+  r:text(x+3,y+14,"ANNUAL INCOME FORECAST",9)
+  local v=income(g,p);local pos=16
+  for _,key in ipairs({"energy","alloy","science","influence"})do
+   r:icon(x+3,y+pos,key,17);r:text(x+7,y+pos,string.upper(key).."   "..(v[key]>=0 and "+" or "")..v[key],6);pos=pos+3
+  end
+  r:text(x+3,y+h-3,"TRADE ACCORD ADDS EXTRA E2 S1 PER YEAR",5,w-6)
+ elseif self.modal=="order" then
+  local a=self.order;local action=ACTIONS[a.key];local system=g.systems[a.id]
+  local x,y,w,h=self:window(action.title.." - ORDER BRIEFING",61,23)
+  r:icon(x+4,y+5,action.icon,9)
+  r:text(x+8,y+5,"SYSTEM: "..system.name,7)
+  local lines=wrapWords(action.desc,w-9)
+  for i,line in ipairs(lines)do r:text(x+4,y+7+i,line,6)end
+  local why=actionReason(g,a.key,a.id)
+  r:text(x+4,y+13,"COST: "..costString(action.cost).." + "..action.ap.." COMMAND",17)
+  r:text(x+4,y+15,why and ("UNAVAILABLE: "..trunc(why,w-18)) or "AVAILABLE: READY TO EXECUTE",why and 15 or 19)
+  r:button(x+3,y+h-6,math.floor((w-8)/2),4,"CANCEL","back",8,function()self.modal=nil end)
+  r:button(x+5+math.floor((w-8)/2),y+h-6,math.floor((w-8)/2),4,"CONFIRM","check",why and 4 or 19,function()
+   self.modal=nil
+   if a.key=="dispatch" then
+    self.waiting={from=system.id};self.fleetCount=math.min(2,system.ships[p]);self.selected=nil
+    self:notify("Choose a destination star on the map")
+   else self:change(a.key,a.id)end
+  end,nil,why~=nil)
+ elseif self.modal=="tech" then
+  local x,y,w,h=self:window("RESEARCH DIRECTORATE",57,34)
+  r:icon(x+3,y+4,"science",11);r:text(x+6,y+4,"SCIENCE STOCKPILE: "..g.resources[p].science,11)
+  for i,t in ipairs(TECH)do
+   local yy=y+7+(i-1)*6;local level=g.tech[p][t.key];local cost=techCost(g,p,t.key)
+   local reason=level>=3 and "MAX LEVEL" or (g.ap<1 and "NO COMMANDS" or (g.resources[p].science<cost and "INSUFFICIENT SCIENCE" or nil))
+   r:button(x+3,yy,w-6,5,t.title.."  "..level.."/3",t.icon,11,function()
+    local ok,msg=research(g,t.key);self:notify(msg);if ok then self:save()end
+   end,"S"..cost.." | "..(reason or "UPGRADE AVAILABLE"),reason~=nil)
+   r:text(x+4,yy+4,trunc(t.desc,w-8),5)
+  end
+ elseif self.modal=="diplomacy" then
+  local x,y,w,h=self:window("DIPLOMATIC CHANNEL",56,27)
+  r:icon(x+3,y+5,"trade",13);r:text(x+6,y+5,g.pact and "ACTIVE TRADE ACCORD" or "NO CURRENT ACCORD",7)
+  r:text(x+3,y+7,"TRADE: BOTH SIDES GET +2 ENERGY",5)
+  r:text(x+3,y+8,"AND +1 SCIENCE EACH YEAR",5)
+  r:text(x+3,y+10,"ATTACKING IS BLOCKED WHILE ACCORD ACTIVE",5)
+  if g.offer~=0 and g.offer~=p then
+   r:text(x+3,y+12,g.names[g.offer].." IS OFFERING PEACEFUL TRADE",17)
+   r:button(x+3,y+15,22,4,"ACCEPT","check",19,function()local ok,msg=answerPact(g,true);self:notify(msg);if ok then self:save()end end)
+   r:button(x+27,y+15,22,4,"DECLINE","close",15,function()local ok,msg=answerPact(g,false);self:notify(msg);if ok then self:save()end end)
+  elseif g.pact then
+   r:button(x+3,y+15,37,4,"BREAK ACCORD","war",15,function()local ok,msg=endPact(g);self:notify(msg);if ok then self:save()end end,"COST: -3 INFLUENCE")
+  elseif g.offer==p then r:text(x+3,y+15,"YOUR OFFER AWAITS A REPLY",17)
+  else
+   r:button(x+3,y+15,37,4,"OFFER TRADE","trade",19,function()local ok,msg=offerPact(g);self:notify(msg);if ok then self:save()end end,"1 COMMAND + 2 INFLUENCE")
+  end
+ elseif self.modal=="log" then
+  local x,y,w,h=self:window("GALACTIC JOURNAL",64,38)
+  for i=1,math.min(#g.logs,h-8)do r:text(x+3,y+3+i,trunc(g.logs[i],w-6),i==1 and 7 or 5)end
+ elseif self.modal=="help" then
+  local x,y,w,h=self:window("COMMANDER FIELD MANUAL",64,40)
+  local lines={
+   "GOAL: LEAD YOUR EMPIRE TO THE HIGHEST SCORE.",
+   "EARN POINTS BY ANNEXING, COLONIZING,", "CONQUERING AND RESEARCHING.",
+   "", "TAP A STAR SYSTEM TO SEE ITS AVAILABLE ORDERS.",
+   "SURVEY: SCAN NEARBY UNKNOWN STARS.",
+   "ANNEX: SPEND INFLUENCE TO CLAIM NEUTRAL LAND.",
+   "COLONIZE: FOUND A SETTLEMENT FOR INCOME.",
+   "EXTRACTORS: INCREASE ENERGY OR ALLOY INCOME.",
+   "FOUNDRY: BOOST ALLOY PRODUCTION.",
+   "LABORATORY: INCREASE ANNUAL SCIENCE.",
+   "SHIPYARD: UNLOCK FRIGATE CONSTRUCTION.",
+   "BUILD FLEET: BUILD TWO FRIGATES AT A SHIPYARD.",
+   "STARBASE: BOOST DEFENSE AGAINST INVASION.",
+   "DISPATCH: PICK SHIP COUNT AND TAP A DESTINATION.",
+   "RESEARCH: SPEND SCIENCE TO UNLOCK BONUSES.",
+   "DIPLOMACY: PROPOSE OR BREAK A TRADE ACCORD.",
+   "", "EACH SIDE HAS THREE COMMANDS PER TURN.",
+   "BOTH EMPIRES EARN INCOME AFTER PLAYER TWO.",
+   "NO HIDDEN INFORMATION: SHARED TABLETOP MAP.",
+   "END THE LAST YEAR TO COMPARE VICTORY SCORES."
+  }
+  for i,v in ipairs(lines)do r:text(x+3,y+2+i,trunc(v,w-6),i==1 and 9 or 6)end
+ elseif self.modal=="combat" then
+  local c=self.combat;local x,y,w,h=self:window(c.win and "VICTORY AT "..c.name or "DEFEAT AT "..c.name,55,23)
+  r:icon(x+5,y+5,c.win and "trophy" or "war",c.win and 19 or 15)
+  r:text(x+10,y+5,c.win and "ENEMY STAR SYSTEM SECURED" or "OUR FLEET WAS DEFEATED",7)
+  r:text(x+5,y+9,"ATTACKING SHIPS: "..c.attacker,6)
+  r:text(x+5,y+11,"DEFENSE POWER: "..c.defender,6)
+  r:text(x+5,y+13,"OUR SHIPS LOST: "..c.lost,6)
+  r:button(x+10,y+h-6,w-20,4,"RETURN TO MAP","next",9,function()self.modal=nil end)
+ end
+end
+function Game:titleScreen()
+ local r=self.r;self:background()
+ local cx=math.floor(r.w/2);local cy=math.floor(r.h*.33)
+ -- orbital title illustration, animated planetary rings
+ r:disc(cx,cy,5.3,2);r:disc(cx,cy,4.2,10);r:disc(cx,cy,3.3,11)
+ r:disc(cx+1,cy-1,1.5,9)
+ for j=0,25 do
+  local angle=j*math.pi/13+self.tick*.08;local x=cx+11*math.cos(angle);local y=cy+6*math.sin(angle)
+  r:disc(x,y,.22,j%2==0 and 8 or 3)
+ end
+ local word="STELLAR FRONTIER";local titleScale=r.w>=92 and 3 or 2;local x=math.floor((r.w-#word*titleScale)/2)
+ r:bigText(x,math.max(2,cy-14),word,7,titleScale)
+ r:text(cx-11,cy+8,"TIDEBOUND / VERSION 3",5)
+ local bw=math.min(38,r.w-12);local bx=math.floor((r.w-bw)/2)
+ r:button(bx,cy+12,bw,5,"NEW GALAXY","star",9,function()self.screen="setup"end,"TWO COMMANDERS / ONE MAP")
+ r:button(bx,cy+18,bw,5,"CONTINUE","next",11,function()
+  if not self:load()then self:notify("NO SAVED CAMPAIGN FOUND")end
+ end,nil,false)
+ r:button(bx,cy+24,bw,4,"HOW TO PLAY","help",17,function()self.screen="guide"end)
+ r:text(math.max(1,cx-23),r.h-3,"LOCAL TWO PLAYER STRATEGY FOR CC:TWEAKED",4)
+ if self.toast then r:text(math.max(1,cx-17),cy+30,self.toast,15,36) end
+end
+function Game:keyboard(x,y,w)
+ local r=self.r;local rows={"QWERTYUIOP","ASDFGHJKL","ZXCVBNM"};local step=math.max(4,math.floor((w-6)/10))
+ for j,s in ipairs(rows)do local dx=x+math.floor((w-#s*step)/2)
+  for i=1,#s do local ch=s:sub(i,i)
+   r:key(dx+(i-1)*step,y+(j-1)*4,step-1,4,ch,function()
+    self.names[self.editing]=properName(self.names[self.editing]..ch)
+   end)
+  end
+ end
+ r:button(x+2,y+12,math.floor((w-6)/3),4,"SPACE","next",11,function()self.names[self.editing]=properName(self.names[self.editing].." ")end)
+ r:button(x+4+math.floor((w-6)/3),y+12,math.floor((w-6)/3),4,"DELETE","back",15,function()self.names[self.editing]=self.names[self.editing]:sub(1,-2)end)
+ r:button(x+6+math.floor(2*(w-6)/3),y+12,math.floor((w-6)/3)-2,4,"SWITCH","trade",17,function()self.editing=other(self.editing)end)
+end
+function Game:setupScreen()
+ local r=self.r;self:background();local w=math.min(80,r.w-6);local x=math.floor((r.w-w)/2)
+ local off=math.max(0,math.floor((r.h-44)/2))
+ r:bigText(math.floor((r.w-16*2)/2),off+1,"GALACTIC CONQUEST",7,2)
+ r:button(1,off+1,12,3,"BACK","back",8,function()self.screen="title"end)
+ r:icon(x+2,off+4,"flag",9);r:text(x+5,off+4,"EMPIRE A",6)
+ r:button(x+2,off+6,math.floor(w/2)-3,3,trunc(self.names[1],13),"planet",self.editing==1 and 9 or 5,function()self.editing=1 end)
+ r:icon(x+math.floor(w/2)+2,off+4,"flag",13);r:text(x+math.floor(w/2)+5,off+4,"EMPIRE B",6)
+ r:button(x+math.floor(w/2)+2,off+6,math.floor(w/2)-3,3,trunc(self.names[2],13),"planet",self.editing==2 and 13 or 5,function()self.editing=2 end)
+ local keyY=off+9;self:keyboard(x,keyY,w)
+ r:text(x+3,off+26,"GALAXY TOPOLOGY",5)
+ r:button(x+4,off+28,math.floor((w-10)/2),4,"CLUSTER","star",self.shape=="CLUSTER" and 9 or 4,function()self.shape="CLUSTER"end)
+ r:button(x+6+math.floor((w-10)/2),off+28,math.floor((w-10)/2),4,"SPIRAL","orbit",self.shape=="SPIRAL" and 9 or 4,function()self.shape="SPIRAL"end)
+ r:text(x+3,off+33,"GAME LENGTH",5)
+ local options={{"SHORT",12},{"STANDARD",18},{"EPIC",26}}
+ for i,o in ipairs(options)do local bw=math.floor((w-8)/3)
+  r:button(x+2+(i-1)*(bw+1),off+34,bw,4,o[1],"next",self.rounds==o[2] and 19 or 4,function()self.rounds=o[2]end)
+ end
+ r:button(x+3,off+39,w-6,5,"LAUNCH CAMPAIGN","next",9,function()
+  if properName(self.names[1])=="" or properName(self.names[2])=="" then self:notify("Enter both empire names") else self:newMatch()end
+ end)
+ if self.toast then r:text(x+4,off+38,trunc(self.toast,w-7),15)end
+end
+function Game:drawVictory()
+ self:background();local r=self.r;local g=self.g;local cx=math.floor(r.w/2)
+ r:icon(cx-1,math.floor(r.h/4),"trophy",17)
+ r:bigText(cx-14,math.floor(r.h/4)+3,"CAMPAIGN ENDED",7,2)
+ if g.result==0 then r:text(cx-8,math.floor(r.h/4)+7,"GALACTIC STALEMATE",17)
+ else r:text(cx-13,math.floor(r.h/4)+7,trunc(g.names[g.result],14).." VICTORIOUS",g.result==1 and 9 or 13)end
+ r:text(cx-10,math.floor(r.h/4)+12,g.names[1].." : "..points(g,1).." POINTS",9)
+ r:text(cx-10,math.floor(r.h/4)+15,g.names[2].." : "..points(g,2).." POINTS",13)
+ r:button(cx-16,math.floor(r.h/4)+21,32,5,"RETURN TO TITLE","back",11,function()self.screen="title"end)
+end
+function Game:draw()
+ local r=self.r;r:beginFrame()
+ if self.screen=="title"then self:titleScreen()
+ elseif self.screen=="setup"then self:setupScreen()
+ elseif self.screen=="map"then self:drawMap();if self.modal then self.r.buttons={};self:drawModal()end
+ elseif self.screen=="victory"then self:drawVictory()
+ elseif self.screen=="guide"then
+  self:background();r:text(4,3,"STELLAR FRONTIER - QUICK START",7)
+  local lines={"1. TWO EMPIRES SHARE ONE TOUCHSCREEN.","2. TAP A STAR. SURVEY UNKNOWN NEIGHBORS.","3. ANNEX NEUTRAL STARS USING INFLUENCE.",
+   "4. COLONIZE YOUR STARS AND BUILD INDUSTRY.","5. PRODUCE ALLOY, SCIENCE AND ENERGY EACH YEAR.","6. BUILD SHIPS AT SHIPYARDS. MOVE VIA LANES.",
+   "7. ENEMY FLEETS FIGHT AUTOMATICALLY.","8. RESEARCH FOR EMPIRE-WIDE BONUSES.","9. DIPLOMACY ALLOWS MUTUAL TRADE.",
+   "10. THREE ACTION POINTS EACH TURN.","11. WIN BY MOST POINTS WHEN TIME RUNS OUT.","12. YOU CAN CONSULT THE IN-GAME GUIDE."}
+  for i,v in ipairs(lines)do r:text(6,7+i*2,v,6,r.w-8)end
+  r:button(5,r.h-7,25,5,"TITLE SCREEN","back",9,function()self.screen="title"end)
+ end
+ r:endFrame()
+end
+function Game:touch(x,y)
+ x=x-1;y=y-1
+ if self.r:hit(x,y)then return end
+ if self.screen=="map"then
+  if self.modal then return end
+  self:clickMap(x,y)
+ end
+end
+function Game:loop(name)
+ self:load();self.screen="title";self:draw()
+ local timer=os.startTimer(.3)
+ while true do
+  local ev,a,b,c=os.pullEvent()
+  if ev=="monitor_touch" and (not name or a==name) then self:touch(b,c);self:draw()
+  elseif ev=="mouse_click" and self.r.m==term.current() then self:touch(b,c);self:draw()
+  elseif ev=="char" and self.screen=="setup" then self.names[self.editing]=properName(self.names[self.editing]..a);self:draw()
+  elseif ev=="key" and self.screen=="setup" and keys and a==keys.backspace then self.names[self.editing]=self.names[self.editing]:sub(1,-2);self:draw()
+  elseif ev=="monitor_resize" and (not name or a==name) then self.r:resize();self:draw()
+  elseif ev=="timer" and a==timer then
+   self.tick=self.tick+1
+   if self.anim then self.anim.age=self.anim.age+1;if self.anim.age>5 then self.anim=nil end end
+   self:draw();timer=os.startTimer(self.anim and .17 or .55)
+  end
+ end
+end
+local function selfTest()
+ local checks=0;local function test(x,s)checks=checks+1;assert(x,s or "failed")end
+ for shapeNo,shape in ipairs({"CLUSTER","SPIRAL"})do
+  local g=newGame("ALPHA","BETA",shape,12,224+shapeNo)
+  test(#g.systems==24);test(#g.links>=23);test(g.systems[g.capital[1]].owner==1)
+  test(g.systems[g.capital[2]].owner==2);test(g.resources[1].alloy==12)
+  local visit={[g.capital[1]]=true};local frontier={g.capital[1]};local k=1
+  while frontier[k]do for _,n in ipairs(neighbors(g,frontier[k]))do
+   if not visit[n]then visit[n]=true;frontier[#frontier+1]=n end
+  end;k=k+1 end
+  for i=1,24 do test(visit[i],"disconnected starlanes")end
+  local id=nil;for _,v in ipairs(neighbors(g,g.capital[1]))do if g.systems[v].owner==0 then id=v;break end end
+  test(id~=nil);test(actionReason(g,"annex",id)==nil)
+  test(execute(g,"annex",id));test(g.systems[id].owner==1)
+  test(execute(g,"colonize",id));test(g.systems[id].colony)
+  test(actionReason(g,"colonize",id)~=nil)
+  g.resources[1].alloy=99;g.resources[1].energy=99;g.ap=9
+  test(execute(g,"mine",id));test(g.systems[id].buildings.mine==1)
+  test(execute(g,"forge",id));test(execute(g,"lab",id))
+  local before=g.resources[1].science;g.resources[1].science=99
+  test(research(g,"NAVIGATION"));test(g.tech[1].NAVIGATION==1)
+  test(g.resources[1].science<99);test(before>=0)
+  g.ap=3;local money=deepcopy(g.resources[1]);endTurn(g);test(g.turn==2);test(g.round==1)
+  endTurn(g);test(g.turn==1);test(g.round==2);test(g.resources[1].energy>=money.energy-4)
+  test(type(points(g,1))=="number")
+  local gp=newGame("ONE","TWO","CLUSTER",12,77)
+  test(offerPact(gp));test(gp.offer==1);endTurn(gp);test(answerPact(gp,true));test(gp.pact)
+  local baseE=gp.resources[1].energy
+  endTurn(gp);test(gp.resources[1].energy>=baseE)
+  test(endPact(gp));test(not gp.pact)
+  gp.turn=2;gp.ap=3;local from=gp.capital[2];local to=neighbors(gp,from)[1]
+  test(sendFleet(gp,from,to,1));test(gp.systems[from].ships[2]==2)
+  -- Battle and capture deterministic with overwhelming force
+  local ba=newGame("AAA","BBB","CLUSTER",12,100)
+  local enemy=neighbors(ba,ba.capital[1])[1];ba.systems[enemy].owner=2;ba.systems[enemy].colony=true
+  ba.systems[ba.capital[1]].ships[1]=8;ba.tech[1].WEAPONS=3
+  local ok,battle=sendFleet(ba,ba.capital[1],enemy,8)
+  test(ok);test(type(battle)=="table");test(battle.win);test(ba.systems[enemy].owner==1)
+ end
+ -- all supported layouts and touch areas, optional graphics and text
+ for _,size in ipairs({{75,49},{106,70},{137,91}})do
+  for _,graphic in ipairs({false,true})do
+   local mon={calls=0,mode=0}
+   function mon.setTextScale()end
+   function mon.getSize(which) if which==2 then return size[1]*6,size[2]*9 end return size[1],size[2] end
+   function mon.setGraphicsMode(v)mon.mode=v end
+   function mon.drawPixels()mon.calls=mon.calls+1 end
+   function mon.setPaletteColor()end
+   function mon.setFrozen()end
+   function mon.setBackgroundColor()end
+   function mon.setTextColor()end
+   function mon.setCursorPos()end
+   function mon.write()mon.calls=mon.calls+1 end
+   local game=Game.new(mon,not graphic);game.g=newGame("ONE","TWO","CLUSTER",12,300)
+   test(game.r.kind==(graphic and "gfx" or "text"))
+   game.screen="title";game:draw();test(mon.calls>0)
+   game.screen="setup";game:draw();test(#game.r.buttons>10)
+   local ox=math.floor((size[1]-math.min(80,size[1]-6))/2);local off=math.max(0,math.floor((size[2]-44)/2))
+   local previous=game.names[1];game:touch(ox+6,off+11);test(game.names[1]~=previous,"keyboard touch input")
+   game:draw()
+   game.screen="map";game:draw();test(#game.r.buttons>=4)
+   game.selected=game.g.capital[1];game:draw();test(#game.r.buttons>=5)
+   local pw=math.min(43,math.max(33,math.floor(size[1]*.39)));game:touch(size[1]-pw+4,19)
+   test(game.modal=="order","order briefing opens from tap")
+   game:draw();test(#game.r.buttons>=2);game.modal=nil
+   game.modal="tech";game:draw();test(#game.r.buttons>=5)
+   game.modal=nil;game:draw();game:touch(2,size[2]-3);test(game.modal=="tech","tech button touch")
+  end
+ end
+ print("STELLAR FRONTIER: "..checks.." assertions passed")
+end
+if argv[1]=="--self-test" then selfTest();return end
+local function start()
+ local name=nil;local mon=nil
+ if peripheral then
+  if argv[1] then name=argv[1];mon=peripheral.wrap(name)
+  else mon=peripheral.find("monitor");if mon and peripheral.getName then name=peripheral.getName(mon) end end
+ end
+ if not mon then error("Connect an Advanced Monitor, or run tidebound <monitor name>.",0) end
+ local game=Game.new(mon)
+ if game.r.w<68 or game.r.h<44 then error("Monitor too small: use a 3x3, 4x4, or 5x5 Advanced Monitor at 0.5 scale.",0) end
+ local ok,reason=xpcall(function()game:loop(name)end,function(err)return tostring(err).."\n"..(debug and debug.traceback and debug.traceback() or "")end)
+ if game.r.kind=="gfx"then pcall(mon.setGraphicsMode,0)end
+ if not ok then error(reason,0)end
+end
+start()

@@ -1,0 +1,26 @@
+TIDEBOUND: STELLAR FRONTIER v3.0
+
+INSTALL (on a ComputerCraft computer):
+  wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-tidebound.lua
+
+RUN:
+  /tidebound/tidebound.lua
+
+OPTIONAL AUTOSTART ON DEDICATED COMPUTER:
+  wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-tidebound.lua --startup
+
+HOW TO PLAY:
+  New Galaxy -> set two names using touchscreen -> Launch Campaign
+  Tap a star -> tap an order -> read description -> Confirm
+  Survey -> Annex -> Colonize -> Build production -> Build ships
+  Research to unlock bonuses. Use fleets to capture rival systems.
+  Both players have 3 commands each turn; incomes accrue after both turn.
+  Empire name -> empire report; Guide -> rules.
+
+DISPLAY:
+  3x3 / 4x4 / 5x5 advanced monitors, auto-scale 0.5.
+  Pixel graphics preferred with CC: Graphics; terminal fallback included.
+
+SAVES:
+  /tidebound/save.dat. Updater preserves it.
+  Kingdoms 2.1 stays available as tidebound-kingdoms.lua.
