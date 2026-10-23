@@ -1,8 +1,10 @@
-# TIDEBOUND: Stellar Frontier (v3.0)
+# TIDEBOUND: Stellar Frontier (v3.0.1)
 
 A two-player, pass-and-play **space 4X tabletop game** for CC:Tweaked. Stellaris-inspired, but intentionally designed for **one shared 3×3, 4×4 or 5×5 Advanced Monitor**. Explore a 24-system connected galaxy, expand borders, build colonies, operate fleets, compete in research, negotiate trade, and win by empire score.
 
 **Graphics:** The game *automatically uses [CC: Graphics](https://modrinth.com/mod/cc-graphics) mode 2* (256-colour pixel drawing) when the monitor supports it. This is a direct 2D pixel renderer, not Pine3D. All graphics (including **26 hand-coded icon sprites**, a custom font and the procedural space map) are embedded in the standalone Lua file; no image assets, libraries, or internet are required while playing. When graphics mode isn't present, it falls back to CC:Tweaked's native coloured terminal display. The pixel renderer uses batches and `setFrozen` to reduce flicker. The mod version with monitor support is 0.2.0 or later, and requires CC:Tweaked 1.117.0+ for Minecraft 1.21.1.
+
+**v3.0.1 touch fix:** CC: Graphics mode 2 reports 0-based pixel coordinates from monitor touches, while native CC:Tweaked reports 1-based character coordinates. The game now converts the graphics coordinates before hit-testing buttons, map positions, and on-screen keyboard keys. Save format remains unchanged (v3).
 
 ## Install or update in Minecraft
 
@@ -76,11 +78,11 @@ Score: **one point per claimed system, two per colony, two per technology level,
 - Touch the active empire name to see the empire report.
 - On the shared monitor, no information is secret. Players may discuss diplomacy face to face.
 - The setup screen supports both on-screen keyboard input and a computer keyboard, if available.
-- For the optional graphics mode, **touch coordinates still use the CC:Tweaked monitor character grid**; the game converts those coordinates to pixel-rendered map locations.
+- Touch input is mapped automatically: CC: Graphics sends **0-based pixel coordinates** in graphics mode, while vanilla CC:Tweaked sends **1-based character coordinates** in text mode. Both are normalized to the same UI hitboxes (fixed in v3.0.1).
 
 ## Editions
 
-- `tidebound.lua` — **Stellar Frontier 3.0** (new game)
+- `tidebound.lua` — **Stellar Frontier 3.0.1** (new game)
 - `tidebound-kingdoms.lua` — Kingdoms 2.1 (original land-based game)
 - `tidebound-classic.lua` — TIDEBOUND naval combat (original)
 
@@ -94,6 +96,6 @@ Offline checks can run with a Lua interpreter:
 texlua tidebound.lua --self-test
 ```
 
-These checks cover procedural connected map generation, movement/warfare, research, economy, diplomacy, and rendering/touch hitboxes on representative 3×3, 4×4 and 5×5-sized screens in pixel and native modes. The game has **not been exercised on your Minecraft CC: Graphics mod build**, so test the first install in-game and report any exceptions or touch-coordinate mismatch.
+These checks cover procedural connected map generation, movement/warfare, research, economy, diplomacy, and rendering/touch hitboxes on representative 3×3, 4×4 and 5×5-sized screens in pixel and native modes. The game has **not been exercised on your Minecraft CC: Graphics mod build**. The graphics-mode touch mapping is verified against CC: Graphics source and simulated touch events; confirm responsiveness in-game after updating.
 
 The CC: Graphics plugin must be installed on both the server and clients, with HTTP enabled only for the installer. Actual refresh rates depend on network/server performance, and the current game deliberately limits update frequency on large monitors. Native graphics mode can be disabled via your graphics mod's options, in which case the fallback should work.

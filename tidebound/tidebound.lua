@@ -1,4 +1,4 @@
--- TIDEBOUND: STELLAR FRONTIER v3.0
+-- TIDEBOUND: STELLAR FRONTIER v3.0.1
 -- Local 2-player CC:Tweaked space 4X. Optional CC: Graphics v0.2+ pixel-mode renderer.
 -- Run: tidebound [monitor-name] | texlua tidebound.lua --self-test
 local argv={...}
@@ -844,7 +844,7 @@ function Game:titleScreen()
  end
  local word="STELLAR FRONTIER";local titleScale=r.w>=92 and 3 or 2;local x=math.floor((r.w-#word*titleScale)/2)
  r:bigText(x,math.max(2,cy-14),word,7,titleScale)
- r:text(cx-11,cy+8,"TIDEBOUND / VERSION 3",5)
+ r:text(cx-11,cy+8,"TIDEBOUND / VERSION 3.0.1",5)
  local bw=math.min(38,r.w-12);local bx=math.floor((r.w-bw)/2)
  r:button(bx,cy+12,bw,5,"NEW GALAXY","star",9,function()self.screen="setup"end,"TWO COMMANDERS / ONE MAP")
  r:button(bx,cy+18,bw,5,"CONTINUE","next",11,function()
@@ -925,12 +925,33 @@ function Game:touch(x,y)
   self:clickMap(x,y)
  end
 end
+-- CC: Graphics emits 0-based PIXEL monitor_touch coordinates in graphics mode.
+-- Vanilla CC:Tweaked emits 1-based CHARACTER coordinates in text mode.
+-- All game hitboxes and map positions use 0-based character-space units.
+-- Keep the conversion at this boundary so both renderers share the same UI.
+function Game:monitorTouch(x,y)
+ if type(x)~="number" or type(y)~="number" then return false end
+ local r=self.r
+ if r.kind=="gfx" then
+  -- Pixel range is [0, width*scale-1]. Do not clamp offscreen touches
+  -- into a clickable edge button.
+  if x<0 or y<0 or x>=r.w*r.px or y>=r.h*r.py then return false end
+  x=math.floor(x/r.px)+1
+  y=math.floor(y/r.py)+1
+ else
+  -- Native monitors already report character positions starting at 1.
+  if x~=math.floor(x) or y~=math.floor(y) then return false end
+ end
+ if x<1 or y<1 or x>r.w or y>r.h then return false end
+ self:touch(x,y)
+ return true
+end
 function Game:loop(name)
  self:load();self.screen="title";self:draw()
  local timer=os.startTimer(.3)
  while true do
   local ev,a,b,c=os.pullEvent()
-  if ev=="monitor_touch" and (not name or a==name) then self:touch(b,c);self:draw()
+  if ev=="monitor_touch" and (not name or a==name) then if self:monitorTouch(b,c) then self:draw() end
   elseif ev=="mouse_click" and self.r.m==term.current() then self:touch(b,c);self:draw()
   elseif ev=="char" and self.screen=="setup" then self.names[self.editing]=properName(self.names[self.editing]..a);self:draw()
   elseif ev=="key" and self.screen=="setup" and keys and a==keys.backspace then self.names[self.editing]=self.names[self.editing]:sub(1,-2);self:draw()
@@ -997,8 +1018,24 @@ local function selfTest()
    function mon.write()mon.calls=mon.calls+1 end
    local game=Game.new(mon,not graphic);game.g=newGame("ONE","TWO","CLUSTER",12,300)
    test(game.r.kind==(graphic and "gfx" or "text"))
+   -- Exercise the REAL monitor_touch event coordinate conventions rather
+   -- than directly calling Game:touch with character-space test values.
+   local function tap(button)
+    local xx=button.x+math.floor(button.w/2)
+    local yy=button.y+math.floor(button.h/2)
+    if graphic then return game:monitorTouch(xx*6+3,yy*9+4)
+    else return game:monitorTouch(xx+1,yy+1) end
+   end
    game.screen="title";game:draw();test(mon.calls>0)
-   game.screen="setup";game:draw();test(#game.r.buttons>10)
+   test(tap(game.r.buttons[1]),"monitor touch accepted")
+   test(game.screen=="setup","title button receives monitor_touch")
+   game:draw();test(#game.r.buttons>10)
+   local original=game.names[1]
+   test(tap(game.r.buttons[4]),"keyboard monitor touch accepted")
+   test(game.names[1]==original.."Q","pixel/character keyboard mapping")
+   test(not game:monitorTouch(-1,-1),"negative monitor touch rejected")
+   test(not game:monitorTouch(graphic and size[1]*6 or size[1]+1,graphic and size[2]*9 or size[2]+1),"outside monitor touch rejected")
+   game:draw()
    local ox=math.floor((size[1]-math.min(80,size[1]-6))/2);local off=math.max(0,math.floor((size[2]-44)/2))
    local previous=game.names[1];game:touch(ox+6,off+11);test(game.names[1]~=previous,"keyboard touch input")
    game:draw()
