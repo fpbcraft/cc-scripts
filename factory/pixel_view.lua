@@ -57,10 +57,18 @@ local function fmt(n)
 end
 local function shorten(s,limit)
   s=tostring(s or ""):upper()
-  s=s:gsub("[ÀÁÂÃÄÅ]","A"):gsub("[ÈÉÊË]","E")
-    :gsub("[ÌÍÎÏ]","I"):gsub("[ÒÓÔÕÖ]","O")
-    :gsub("[ÙÚÛÜ]","U"):gsub("Ç","C"):gsub("Ñ","N")
-    :gsub("[^A-Z0-9 %./:_+%-#|()]","?")
+  local accents={["À"]="A",["Á"]="A",["Â"]="A",["Ã"]="A",
+    ["Ä"]="A",["Å"]="A",["à"]="A",["á"]="A",["â"]="A",
+    ["ä"]="A",["È"]="E",["É"]="E",["Ê"]="E",["Ë"]="E",
+    ["è"]="E",["é"]="E",["ê"]="E",["ë"]="E",
+    ["Ì"]="I",["Í"]="I",["Î"]="I",["Ï"]="I",
+    ["Ò"]="O",["Ó"]="O",["Ô"]="O",["Õ"]="O",["Ö"]="O",
+    ["ò"]="O",["ó"]="O",["ô"]="O",["ö"]="O",
+    ["Ù"]="U",["Ú"]="U",["Û"]="U",["Ü"]="U",
+    ["ù"]="U",["ú"]="U",["û"]="U",["ü"]="U",
+    ["Ç"]="C",["ç"]="C",["Ñ"]="N",["ñ"]="N"}
+  for from,to in pairs(accents) do s=s:gsub(from,to) end
+  s=s:upper():gsub("[^A-Z0-9 %./:_+%-#|()]","?")
   return s:sub(1,math.max(1,limit))
 end
 local function tickStep(range)
@@ -83,7 +91,7 @@ function Viewer.supported(screen)
      type(screen.drawPixels)~="function" or
      type(screen.setPixel)~="function" then return false end
   local w,h=dimensions(screen)
-  return w~=nil and w>=120 and h>=90
+  return w~=nil and w>=220 and h>=145
 end
 function Viewer.new(screen)
   assert(Viewer.supported(screen),"Pixel graphics unsupported")
