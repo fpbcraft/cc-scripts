@@ -223,7 +223,7 @@ local function bounds(data)
   if high<=low then high=low+step end
   return low,high,#data
 end
-function Viewer:chart(samples,metric,x,y,w,h,range,clock,palette)
+function Viewer:chart(samples,metric,x,y,w,h,range,clock,palette,overlays)
   local key,title,unit=metric[1],metric[2],metric[3]
   self:fill(x,y,w,h,C.panel)
   self:fill(x,y,w,1,C.edge)
@@ -234,7 +234,17 @@ function Viewer:chart(samples,metric,x,y,w,h,range,clock,palette)
   local plotH=h-66
   if plotW<20 or plotH<15 then return end
   local data=Viewer.series(samples,key,range,clock)
-  local low,high=bounds(data)
+  local combined={}
+  for _,item in ipairs(data) do combined[#combined+1]=item end
+  local extra={}
+  for _,other in ipairs(overlays or {}) do
+    if other[1]~=key and other[3]==unit then
+      local series=Viewer.series(samples,other[1],range,clock)
+      extra[#extra+1]={metric=other,series=series}
+      for _,item in ipairs(series) do combined[#combined+1]=item end
+    end
+  end
+  local low,high=bounds(combined)
   local startTime=clock-(range==0 and
     (#data>1 and clock-data[1].time or 60) or range)
   if startTime==clock then startTime=clock-60 end
@@ -250,17 +260,24 @@ function Viewer:chart(samples,metric,x,y,w,h,range,clock,palette)
   self:line(plotX,plotY,plotX,plotY+plotH,C.text)
   self:line(plotX,plotY+plotH,plotX+plotW,plotY+plotH,C.text)
   local stroke=palette or C.cyan
-  local prev=nil
-  for _,point in ipairs(data) do
-    if finite(point.value) then
-      local xx=plotX+clamp((point.time-startTime)/(clock-startTime),0,1)*(plotW-1)
-      local yy=plotY+plotH-1-
-        clamp((point.value-low)/(high-low),0,1)*(plotH-1)
-      if prev then self:line(prev[1],prev[2],xx,yy,stroke) end
-      prev={xx,yy}
-    else
-      prev=nil
+  local function trace(points,color)
+    local prev=nil
+    for _,point in ipairs(points) do
+      if finite(point.value) then
+        local xx=plotX+clamp((point.time-startTime)/(clock-startTime),0,1)*(plotW-1)
+        local yy=plotY+plotH-1-
+          clamp((point.value-low)/(high-low),0,1)*(plotH-1)
+        if prev then self:line(prev[1],prev[2],xx,yy,color) end
+        prev={xx,yy}
+      else prev=nil end
     end
+  end
+  trace(data,stroke)
+  for i,extraLine in ipairs(extra) do
+    local color=({C.green,C.orange,C.pink})[((i-1)%3)+1]
+    trace(extraLine.series,color)
+    self:text(plotX+8,plotY+5+(i-1)*11,extraLine.metric[2],
+      color,1,math.floor((plotW-18)/6))
   end
   local value="--"
   for i=#data,1,-1 do
@@ -298,6 +315,12 @@ function Viewer:render(samples,metrics,options)
     self:fill(0,0,self.w,self.h,C.background)
     self:text(12,10,"FPBCRAFT / HIGH RES TELEMETRY",C.cyan,1,43)
     local count=#toDraw
+    -- A small computer screen is often only ~170 pixel rows: show two
+    -- useful charts rather than four tiny charts with invisible plot areas.
+    if not detail and self.h<255 and #toDraw>2 then
+      while #toDraw>2 do table.remove(toDraw) end
+      count=#toDraw
+    end
     local cols=detail and 1 or (count>=2 and 2 or 1)
     local rows=math.max(1,math.ceil(count/cols))
     local margin=12
@@ -310,7 +333,8 @@ function Viewer:render(samples,metrics,options)
       local px=margin+ix*(cw+margin)
       local py=top+margin+iy*(ch+margin)
       self:chart(samples,metric,px,py,cw,ch,range,clock,
-        ({C.cyan,C.green,C.orange,C.pink})[i])
+        ({C.cyan,C.green,C.orange,C.pink})[i],
+        detail and options.overlay and metrics or nil)
     end
     if count==0 then
       self:text(20,self.h/2,"NO TRACKED METRICS",C.orange,2,35)
