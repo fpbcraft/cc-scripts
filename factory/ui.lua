@@ -1520,7 +1520,7 @@ function UI.run(core)
           local py=(y-0.5)*pixelViewer.h/th
           local key=pixelViewer:hitTest(px,py)
           if key then
-            pixelFocus=(pixelFocus==key and nil or key)
+            if pixelFocus==key then pixelFocus=nil else pixelFocus=key end
             redrawPixels()
             if page=="PIXEL VIEW" then render() end
           end
