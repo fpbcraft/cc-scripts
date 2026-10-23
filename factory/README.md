@@ -202,13 +202,13 @@ The new pixel viewer is a **separate display** controlled through Basalt. It doe
 
 Connect a second Advanced Monitor to the computer, or use the computer's native terminal for pixels when Basalt is running on an Advanced Monitor. The Graphics mod must expose its pixel API on that display. The renderer chooses a second graphics-capable monitor first, then the computer terminal. It never switches the Basalt primary monitor out of text mode.
 
-Go to **Graphs → Pixel View → Start Viewer**. Select up to four chart metrics using the primary monitor. The high-resolution companion display shows up to four charts with smooth colored traces, numeric Y-axis ticks, time marks, latest readings and units. On a short display, it shows two larger charts instead of four tiny charts.
+Go to **Graphs → Pixel View → Start Viewer**. Select up to four chart metrics using the primary monitor. The high-resolution companion display shows up to four charts with smooth colored traces, numeric Y-axis ticks, time marks, latest readings and units. On a short display, it shows two larger charts instead of four tiny charts; use **Next Pixel Page** on the Basalt screen for metrics three and four.
 
 Use the Basalt time-range buttons to choose **1 minute, 5 minutes, 15 minutes, 30 minutes, or all stored data**. The viewer preserves sample timestamps and gaps. Use **Expand Selected** to show one chart full-screen, or choose **Pixel View** from the regular graph detail page. In expanded view you can enable **Overlay: Same Unit** to plot additional selected metrics sharing the same unit against one consistent Y-axis scale.
 
 The viewer selects CC: Graphics mode 2 (256-color palette) where supported, and falls back to mode 1 (16 colors). Batched pixel fills and optional frame freezing reduce redraw overhead. **Stop Viewer** restores normal text mode. The ordinary Basalt graphs work even without either optional mod.
 
-The graph selection, time range and overlay preference are saved in /fpb-factory/data/pixel_graphs.db. The no-backup installer retains these preferences across updates. The pixel output is **view-only**: touch interactions and machine control remain on the normal Basalt display. Pixel chart labels use a compact built-in bitmap font; Unicode support improves the normal Basalt UI, not that bitmap font. Available chart history is limited to the samples actually retained by Factory Manager.
+The graph selection, time range and overlay preference are saved in /fpb-factory/data/pixel_graphs.db. The no-backup installer retains these preferences across updates. The pixel output is **view-only for machine commands**. On a second Advanced Monitor, tapping a chart expands it; tapping the enlarged chart again returns to the grid. Metric selection, time windows and all machine controls remain on the normal Basalt display. Pixel chart labels use a compact built-in bitmap font; Unicode support improves the normal Basalt UI, not that bitmap font. Available chart history is limited to the samples actually retained by Factory Manager.
 
 ### Test before merging
 
