@@ -1,51 +1,78 @@
 # COGWORKS: Kinetic Lab
 
-A small, touchscreen-first kinetic routing puzzle inspired by **Create**. No Create blocks, peripherals, wireless networking, or external scripts are needed to play.
+A compact **construction puzzle** for CC:Tweaked, inspired by Create's rotational power transmission. Build mechanical networks with a limited inventory rather than rotating a prebuilt solution.
 
-**The objective:** rotate the preplaced shaft, elbow and gearbox tiles until all machines are supplied with the RPM and direction shown on them. Solved shafts glow amber and show animated moving power. The complete game includes ten hand-authored puzzles, progressively introducing branch lines, rotation reversal, and speed doubling.
+There are **12 handmade stages** on a 6 x 5 workshop grid, with obstacles, branching circuits, clockwise/counterclockwise requirements, and RPM multipliers. The later stages require powering as many as three machines at different speeds and/or directions.
 
-## Install and update
+## One-command install / update
 
-On a CC:Tweaked Advanced Computer with HTTP enabled:
+On an Advanced Computer with HTTP enabled:
 
 ```lua
 wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-cogworks.lua
 ```
 
-Then run:
+Run with:
 
 ```lua
 /cogworks/main.lua
 ```
 
-Pass `--startup` to the installer to automatically start on a **dedicated** computer if no other startup program exists. To test a branch before merging, pass a branch name to the installer: `wget run <installer-url> feat/cogworks-kinetic-puzzles` (after the installer exists on `main`; until then, use the branch URL itself). Updates preserve `/cogworks/save.dat`, validate every Lua download before activation, and roll back if installation fails.
+You can add `--startup` to the installer on a dedicated computer (existing unrelated startup scripts are never overwritten). The updater downloads and syntax-validates everything before activating, rolls back on failures, and preserves `/cogworks/save.dat`.
 
-## Requirements
+To test a development branch, install directly from its raw URL and pass the branch name as an argument:
 
-- Minecraft 1.21.1 CC:Tweaked, a color Advanced Computer, and a color Advanced Monitor (3x3 blocks or larger recommended).
-- **Recommended:** [CC: Graphics](https://modrinth.com/mod/cc-graphics) for pixel-mode animation and a nicer full-color UI. It must be installed for the game to switch to graphics mode (CC:Tweaked 1.117.0+).
-- Without CC: Graphics, the game stays **fully playable** using a character-grid view on a suitably large Advanced Monitor.
-- Automatically picks the largest color monitor. Optionally specify its network/peripheral name: `/cogworks/main.lua monitor_1`.
-
-## Controls
-
-Tap a movable tile to rotate it clockwise 90 degrees. Blue machines and the green input source cannot rotate. The four sidebar buttons are **HINT** (fixes one tile's rotation), **RESET**, **PREV** and **NEXT**. Next is available after the current level has been solved. Progress and best move counts persist.
-
-Keyboard (at the computer): `H` hint, `R` reset, `P` previous level, `N` next level, `Q` quit. Ctrl+T also exits safely.
-
-## Kinetic rules
-
-- Shafts (I), elbows (L) and tees (T) transmit their incoming RPM and rotation direction through every connected side.
-- A **gear reverser (G)** changes clockwise to counterclockwise (and vice versa).
-- A **2x speed controller (2/B)** doubles RPM from its arrow-marked input port to output; going backward halves RPM.
-- Parts only connect where the ports of **both** neighboring tiles touch.
-- Each machine displays its required speed and direction, e.g. `+2` means clockwise at 2x RPM, `-1` means counterclockwise at 1x.
-- Inconsistent rotation or speed constraints in a connected loop cause a **jam**. You must satisfy **every** machine without a jam to complete a puzzle.
-
-## Developer test
-
-```sh
-lua5.3 tests/cogworks_test.lua
+```lua
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/feat/cogworks-build-mode/install-cogworks.lua feat/cogworks-build-mode
 ```
 
-The simulation is standalone Lua; graphics and CraftOS peripherals are only used by the UI. No game progress can alter physical Create machinery.
+## How to play
+
+1. Identify the **green engine (S)** and **blue press targets (M)**. Each target displays a required sign and RPM, such as `+1`, `-1`, `+2` or `-2`.
+2. Select a component from the right-hand **PARTS** inventory. Its stock count is shown next to its name.
+3. Tap an empty workshop cell to **place** that part. Tap a part already placed to **rotate** it by 90 degrees.
+4. Select **REMOVE** to salvage a misplaced part (stock is refunded). You cannot change the source, goal presses, or stone walls.
+5. Connect ports so power flows from the source to **every target** at the correct RPM and direction. All goals must be satisfied simultaneously.
+6. Use **HINT** to fix one misplaced, missing, or misrotated piece at a time. **RESET** empties the board and restores your stock. Next levels unlock upon completion.
+
+Every puzzle starts empty, except for its fixed terminals and obstacles. Some levels reward thoughtful use of tees/splitters, others force you to reverse spin or double shaft speed using specialized parts.
+
+### Machinery legend
+
+| Part | Display | Function |
+|---|---|---|
+| **Generator** | Green S, fixed | Outputs clockwise `+1` power |
+| **Press** | Blue M with a numeric target, fixed | Must receive exactly the displayed power |
+| **Shaft** | Straight connector | Carries power through two opposite sides |
+| **Elbow** | Right-angle connector | Turns power through 90 degrees |
+| **Splitter** | Three-way connector | Carries power to multiple machines |
+| **Gear** | Purple toothed ring | Reverses rotation direction |
+| **2x Drive** | Amber `2` with a green input marker | Doubles RPM from input to output; reverse flow halves it |
+| **Stone** | Dark blocked square | Cannot hold machinery |
+
+The ports are always visibly marked on the corresponding edges. Connected, powered machinery animates with amber motion markers. A target turns green when its speed and rotation are correct. Inconsistent closed loops can cause a red **JAM** warning.
+
+### Other controls
+
+- Top bar: **PREV**, **NEXT**, **RESET**. NEXT unlocks as you complete levels.
+- Sidebar: **HINT** and **HELP** (illustrated legend).
+- Keyboard: `1`–`5` select parts; `6` remove; `H` hint; `R` reset; `P` previous; `N` next; `?` help; `Q` quit. Ctrl+T exits.
+- The game saves each board layout, current level, unlocked levels, and best hint-free move counts. Quitting/reinstalling does not wipe progress.
+
+## Displays and dependencies
+
+- CC:Tweaked Advanced Computer and a color Advanced Monitor. A **3×3 or larger** monitor is recommended.
+- [CC: Graphics](https://modrinth.com/mod/cc-graphics) enables the higher-resolution, animated pixel display.
+- Without CC: Graphics, the game automatically switches to a **fully playable text UI**, on a sufficiently large Advanced Monitor.
+- The game chooses the largest color monitor; optionally provide a monitor peripheral name, e.g. `/cogworks/main.lua monitor_1`.
+- No actual Create machinery is controlled. This is a standalone game inspired by Create's engineering.
+
+## Testing
+
+```bash
+lua5.3 tests/cogworks_test.lua
+lua5.3 tests/cogworks_renderer_test.lua
+lua5.3 tests/cogworks_installer_test.lua
+```
+
+The pure Lua engine includes canonical network solutions for all 12 levels. Regression tests verify inventory depletion/refunds, building, rotation, hint recovery, save serialization, target RPM and direction, pixel and text input, and installer rollback.
