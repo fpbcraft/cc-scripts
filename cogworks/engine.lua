@@ -1,7 +1,7 @@
 -- COGWORKS core: port-accurate, inventory-limited construction and simulation.
 -- Pure Lua, no peripheral dependencies. Coordinates are 1-based.
 local levels=require("cogworks.levels")
-local E={levels=levels,WIDTH=6,HEIGHT=5}
+local E={levels=levels,WIDTH=7,HEIGHT=6}
 local vectors={{0,-1},{1,0},{0,1},{-1,0}}
 local ports={S={0},M={0},I={0,2},L={0,1},T={0,1,3},G={0,2},B={0,2}}
 E.parts={
@@ -42,7 +42,8 @@ end
 function E.new(number,solved)
  local data=assert(levels[number],"Invalid level")
  local g={number=number,name=data.name,tip=data.tip,tiles={},map={},
-  stock=copy(data.stock),remaining=copy(data.stock),moves=0,hints=0}
+  stock=copy(data.stock),remaining=copy(data.stock),moves=0,hints=0,
+  fullNetwork=data.fullNetwork or false}
  add(g,data.source,true)
  for _,goal in ipairs(data.goals)do add(g,goal,true)end
  for _,v in ipairs(data.blocks)do add(g,{kind="X",x=v[1],y=v[2]},true)end
@@ -172,12 +173,23 @@ function E.evaluate(g)
   end
  end
  local lights,goals,correct,powered={},0,0,0
+ local openPorts,unpowered=0,0
  for _,tile in ipairs(g.tiles)do
   local slots=states[tile.id] or {}
   local sample=slots[next(slots)]
   local light={powered=sample~=nil,rate=sample and sample.rate or 0,
    sign=sample and sample.sign or 0,ports=slots}
   if sample then powered=powered+1 end
+  if E.parts[tile.kind] and not sample then unpowered=unpowered+1 end
+  if tile.kind~="X"then
+   for dir=0,3 do if E.hasPort(tile,dir)then
+    local delta=vectors[dir+1]
+    local other=E.get(g,tile.x+delta[1],tile.y+delta[2])
+    if not other or not E.hasPort(other,(dir+2)%4)then
+     openPorts=openPorts+1
+    end
+   end end
+  end
   if tile.kind=="M" then
    goals=goals+1
    local actual=slots[tile.r]
@@ -187,7 +199,13 @@ function E.evaluate(g)
   end
   lights[tile.id]=light
  end
+ local remaining=0
+ for _,amount in pairs(g.remaining)do remaining=remaining+amount end
+ local complete=not g.fullNetwork or
+  (openPorts==0 and unpowered==0 and remaining==0)
  return {lights=lights,powered=powered,goals=goals,correct=correct,
-  jam=jam,win=not jam and goals>0 and goals==correct}
+  jam=jam,fullNetwork=g.fullNetwork,openPorts=openPorts,
+  unpowered=unpowered,remaining=remaining,complete=complete,
+  win=not jam and goals>0 and goals==correct and complete}
 end
 return E
