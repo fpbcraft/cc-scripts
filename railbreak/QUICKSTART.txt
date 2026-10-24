@@ -17,7 +17,10 @@ HOW TO WIN
 5. Deliver cargo at the right station to earn cash and reputation.
 6. Complete at least 2 jobs / earn 2 reputation and arrive at EASTPORT.
 
-TRAIN: Tap wagons to select, then ADD / LV UP / TECH.
+TRAIN: Tap wagons to inspect, then ADD / LV UP / TECH.
+TOOLTIPS: Tap ? for screen help, icons for resource help, or an item
+  to see its benefits, costs and requirements. Choose BACK (no cost)
+  or CONFIRM. PREV / NEXT pages show longer descriptions.
 STATION: Repair, refuel, upgrade modules and run turn-based shifts.
 CREW: Optional P1/P2/P3/P4 attribution toggle; gameplay is shared.
 HELP: Includes main menu access. The game autosaves after successful actions.

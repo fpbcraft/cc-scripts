@@ -25,6 +25,18 @@ function M.save(g)
  end)
  return ok,err
 end
+-- Existing v2 saves had engine levels with no effects. Grant their missing
+-- maximum-fuel benefit once without changing their stored fuel or save schema.
+function M.migrate(g)
+ if not S.valid(g) then return nil end
+ if (g.balanceRevision or 0)<1 then
+  for _,wagon in ipairs(g.wagons) do
+   if wagon.id=='engine' then g.maxFuel=g.maxFuel+4*math.max(0,(wagon.level or 1)-1) end
+  end
+  g.balanceRevision=1
+ end
+ return g
+end
 function M.load()
  if not fs or not textutils then return nil end
  for _,path in ipairs({name,name..'.bak'})do
@@ -33,7 +45,7 @@ function M.load()
    local h=assert(fs.open(path,'r'));local raw=h.readAll();h.close()
    return textutils.unserialize(raw)
   end)
-  if ok and S.valid(g) then return g end
+  if ok and S.valid(g) then return M.migrate(g) end
  end
  return nil
 end

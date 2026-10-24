@@ -6,7 +6,7 @@ function S.new(opts)
  local count=U.clamp(tonumber(opts.count) or 1,1,4)
  local names={};for i=1,count do local n=U.name(opts.names and opts.names[i] or '') names[i]=n~='' and n or ('PLAYER '..i) end
  local built={};for _,e in ipairs(C.edges)do if e[1]==1 and e[2]==2 then built['1-2']=true end end
- local g={version=S.VERSION,seed=tonumber(opts.seed) or 48819,difficulty=opts.difficulty or 'standard',
+ local g={version=S.VERSION,balanceRevision=1,seed=tonumber(opts.seed) or 48819,difficulty=opts.difficulty or 'standard',
   players=names,currentPlayer=1,turn=0,shift=0,trips=0,location=1,coins=150,fuel=9,maxFuel=12,
   hull=100,maxHull=100,reputation=0,delivered=0,penalty=0,cargo={logs=1,planks=3,ore=2,sheets=1,parts=3,coal=1,food=1,passengers=0},
   wagons={{id='engine',level=1},{id='cargo',level=1},{id='passenger',level=1},{id='crane',level=1}},
@@ -42,7 +42,7 @@ function S.capacity(g)
   if w.id=='cargo' then cap=cap+8+((w.level or 1)-1)*4
   elseif w.id=='passenger' then cap=cap+4+((w.level or 1)-1)*2
   elseif w.id=='fuel' then cap=cap+2
-  elseif w.id=='crane' then cap=cap+2 end
+  elseif w.id=='crane' then cap=cap+2+((w.level or 1)-1)*2 end
  end
  if g.upgrades.loader then cap=cap+5 end
  if g.upgrades.whistle then cap=cap+2 end

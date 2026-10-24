@@ -1,4 +1,4 @@
--- RAILBREAK: KINETIC FRONTIER - Train-first Edition v2.0.4
+-- RAILBREAK: KINETIC FRONTIER - Train-first Edition v2.0.5
 -- Turn-based, 1-4 players, touch-operated monitor (3x3 to 5x5).
 local argv={...}
 -- Program-local imports: CC:Tweaked's require is relative to the running
@@ -28,6 +28,14 @@ if argv[1]=='--test-api' then
    if screen=='map' then testApp.selected=2 end
    if screen=='travel' then g.pending={to=2,from=1,event='rocks'}end
    testApp:draw()
+  end
+  -- Exercise descriptions and confirmation previews as part of the installer
+  -- smoke test, including narrow text-only screens.
+  g.pending=nil;testApp.scene='upgrades'
+  for _,kindId in ipairs({{'topic','upgrades'},{'upgrade','loader'},{'wagon',1},
+   {'module','sawmill'},{'good','planks'},{'contract',1},{'route',2}})do
+   testApp:inspect(kindId[1],kindId[2]);testApp:draw()
+   testApp.info=nil
   end
   testApp:close()
  end

@@ -8,7 +8,7 @@ shell={}
 function shell.run(path,arg)
  bootChecks=bootChecks+1
  assert(path=='/railbreak/main.lua' and arg=='--test-api','incorrect boot invocation')
- return not bootFails and files['/railbreak/main.lua']~=nil and files['/railbreak/train/ui.lua']~=nil
+ return not bootFails and files['/railbreak/main.lua']~=nil and files['/railbreak/train/ui.lua']~=nil and files['/railbreak/train/info.lua']~=nil
 end
 local function combine(a,b)return (a..'/'..b):gsub('//+','/')end
 local function getDir(p)return (p:match('^(.*)/[^/]*$') or '')end
@@ -53,6 +53,7 @@ install()
 ck(files['/railbreak/main.lua']~=nil,'main game installed')
 ck(bootChecks==1,'CraftOS boot check ran after install')
 ck(files['/railbreak/game/processing.lua']~=nil,'modules installed')
+ck(files['/railbreak/train/info.lua']~=nil,'tooltips installed')
 ck(files['/railbreak/data/save.lua']=='PRESERVE ME','save preserved')
 ck(files['/startup.lua']==nil,'no forced autostart')
 local original=files['/railbreak/main.lua']

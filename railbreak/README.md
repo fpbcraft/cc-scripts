@@ -39,7 +39,6 @@ Run from the repository root with Lua 5.3+:
 
 ```sh
 lua railbreak/tests/scale.lua       # prove monitor scale 0.5 is applied and restored
-lua railbreak/tests/scale.lua       # prove monitor scale 0.5 is applied and restored
 lua railbreak/tests/boot.lua        # CraftOS-style boot/module lookup regression
 lua railbreak/tests/train.lua       # train engine, campaign and responsive UI
 lua railbreak/tests/run.lua         # preserved factory-first edition regressions
@@ -61,3 +60,9 @@ renderer uses more of the available CC: Graphics pixels instead of upscaling
 text and controls by 3×. Layout mode is selected using monitor text-cell
 dimensions, so 3×3 and 4×3 displays still receive the compact interface.
 All six supported sizes are covered by graphics/text input and resize tests.
+
+## Context help and confirmations (v2.0.5)
+
+Tap **?** in the header of a screen for a short explanation of what to do. Tap the resource icons in the top strip to learn about coins, locomotive fuel, hull condition and reputation. Tapping a market item, station module, contract, route, wagon, or global upgrade opens its **details view**. This view describes the real gameplay effect, current inventory or level, exact costs, and any requirements. Use **BACK** to return without changes or the highlighted action button to confirm. Longer descriptions have **PREV / NEXT** pages even on 3×3 monitors. Travel event options also show their consequences before confirmation, without any time limit.
+
+The Steam Whistle is correctly described as adding **2 shared cargo slots** (not a separate passenger-only capacity). Locomotive level upgrades now add **4 maximum fuel and 4 fuel**; crane level upgrades add **2 cargo slots**. Existing v2 saves are upgraded once for any previously purchased locomotive levels, without overwriting saves. No gameplay time passes while inspecting information.

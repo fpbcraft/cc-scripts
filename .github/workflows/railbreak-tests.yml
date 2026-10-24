@@ -23,8 +23,6 @@ jobs:
         run: lua5.3 railbreak/tests/boot.lua
       - name: Monitor text scale 0.5 and restoration
         run: lua5.3 railbreak/tests/scale.lua
-      - name: Monitor text scale 0.5 and restoration
-        run: lua5.3 railbreak/tests/scale.lua
       - name: Train-first campaign and responsive UI
         run: lua5.3 railbreak/tests/train.lua
       - name: Original factory edition regressions

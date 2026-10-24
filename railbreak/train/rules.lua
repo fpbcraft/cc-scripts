@@ -133,6 +133,7 @@ function R.wagonUpgrade(g,index)
  if g.coins<price then return deny('NEED '..price..' COINS')end
  g.coins=g.coins-price;w.level=w.level+1
  if w.id=='fuel' then g.maxFuel=g.maxFuel+4 end
+ if w.id=='engine' then g.maxFuel=g.maxFuel+4;g.fuel=math.min(g.maxFuel,g.fuel+4)end
  return ok(g,'WAGON '..index..' UPGRADED TO LEVEL '..w.level)
 end
 function R.upgrade(g,id)

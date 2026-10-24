@@ -1,4 +1,4 @@
--- FPBCRAFT RAILBREAK / safe one-command installer and updater (v2.0.4)
+-- FPBCRAFT RAILBREAK / safe one-command installer and updater (v2.0.5)
 -- wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-railbreak.lua
 -- Optional: <git ref> --startup. Existing startup scripts are never silently overwritten.
 local args={...}
@@ -18,7 +18,7 @@ local files={
  'game/processing.lua','game/commands.lua','render/canvas.lua','ui/app.lua',
  'platform/storage.lua','README.md','QUICKSTART.txt',
  'classic.lua','train/catalog.lua','train/state.lua','train/rules.lua',
- 'train/render.lua','train/art.lua','train/ui.lua','train/storage.lua',
+ 'train/render.lua','train/art.lua','train/ui.lua','train/info.lua','train/storage.lua',
 }
 local function delete(path)if fs.exists(path)then fs.delete(path)end end
 local function write(path,contents)
@@ -38,7 +38,7 @@ local function fetch(file)
  end
  return text
 end
-print('RAILBREAK: TRAIN-FIRST EDITION v2.0.4')
+print('RAILBREAK: TRAIN-FIRST EDITION v2.0.5')
 print('Installing from fpbcraft/cc-scripts @ '..ref)
 if not fs.exists(ROOT) then fs.makeDir(ROOT) end
 delete(NEXT);fs.makeDir(NEXT)
@@ -91,7 +91,7 @@ if startup then
   write(path,launcher);print('Autostart enabled for this dedicated computer.')
  end
 end
-print('RAILBREAK v2.0.4 verified. Execute: /railbreak/main.lua')
+print('RAILBREAK v2.0.5 verified. Execute: /railbreak/main.lua')
 print('Train save: /railbreak/data/train-save.lua')
 print('Old factory game: /railbreak/classic.lua')
 print('Legacy saves in /railbreak/data/ are preserved.')

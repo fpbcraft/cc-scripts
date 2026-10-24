@@ -25,7 +25,7 @@ C.goods={
 C.goodsById={};for _,g in ipairs(C.goods)do C.goodsById[g.id]=g end
 C.wagons={
  {id='cargo',name='CARGO WAGON',icon='box',cost=58,cap=8,description='+8 goods capacity'},
- {id='passenger',name='PASSENGER',icon='people',cost=60,cap=4,description='+4 cargo, +passenger contracts'},
+ {id='passenger',name='PASSENGER',icon='people',cost=60,cap=4,description='+4 cargo capacity; +2 per level'},
  {id='fuel',name='FUEL TENDER',icon='coal',cost=55,cap=2,description='+8 fuel capacity'},
  {id='crane',name='CRANE WAGON',icon='crane',cost=95,cap=2,description='Clear obstructions cheaply'},
 }
@@ -44,7 +44,7 @@ C.upgrades={
  {id='burner',name='EFF. BURNER',icon='coal',cost=70,desc='-1 fuel on long routes'},
  {id='loader',name='AUTO LOADER',icon='box',cost=62,desc='+5 cargo space'},
  {id='relay',name='SIGNAL RELAY',icon='signal',cost=65,desc='Bypass signal failures'},
- {id='whistle',name='STEAM WHISTLE',icon='train',cost=40,desc='+2 passenger capacity'},
+ {id='whistle',name='STEAM WHISTLE',icon='train',cost=40,desc='+2 shared cargo capacity'},
  {id='armor',name='REINFORCEMENT',icon='wrench',cost=52,desc='+30 max hull, repair 30'},
 }
 C.upgradeById={};for _,u in ipairs(C.upgrades)do C.upgradeById[u.id]=u end
