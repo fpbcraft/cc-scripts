@@ -14,6 +14,7 @@ function A.new()
  return self
 end
 function A:slots()
+ if self.cachedSlots then return self.cachedSlots end
  local slots={}
  for i=1,3 do
   local p=self.store.load(i)
@@ -24,6 +25,7 @@ function A:slots()
     return count
    end)()} or {number=i,empty=true,level=1,unlocked=1,trophies=0}
  end
+ self.cachedSlots=slots
  return slots
 end
 function A:openLevel(index)
@@ -46,6 +48,7 @@ function A:enter(slot,newGame)
  self.progress=newGame and self.store.newProgress() or self.store.load(slot)
  if not self.progress then self.progress=self.store.newProgress()end
  self.settings.lastSlot=slot
+ self.cachedSlots=nil
  self.store.saveSettings(self.settings)
  self:openLevel(self.progress.level)
  self:save()
@@ -57,6 +60,7 @@ function A:save()
   parts=E.snapshot(self.game),moves=self.game.moves
  }
  local ok,err=self.store.save(self.slot,self.progress)
+ if ok then self.cachedSlots=nil end
  if not ok then self.message="SAVE ERROR: "..tostring(err):sub(1,24) end
  return ok
 end
