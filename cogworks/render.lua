@@ -337,6 +337,7 @@ function R:drawGame(m)
  if status==""then
   if result.win then status="CLEARED! BONUS TASKS ARE OPTIONAL"
   elseif result.jam then status="GEARS JAMMED"
+  elseif m.hasLeftInput then status="LEFT: PLACE/TURN   RIGHT: REMOVE"
   else status="CW = CLOCKWISE  /  CCW = COUNTERCLOCKWISE"end
  end
  self:fontFit(3,114,status,result.win and 9 or 5,160)
@@ -556,6 +557,22 @@ function R:draw(m)
  else self:drawHelp(m)end
  if mon.setFrozen then pcall(mon.setFrozen,false)end
  self.frame=self.frame+1
+end
+-- Optional FPB Monitor Input addon exposes normalized left-click positions.
+-- Translate those into the renderer's own pixel or character coordinates.
+function R:hitNormalized(nx,ny)
+ if type(nx)~="number" or type(ny)~="number" or
+  nx<0 or nx>=1 or ny<0 or ny>=1 then return nil end
+ local x,y
+ if self.mode=="graphics"then
+  x=math.floor(nx*self.pw)
+  y=math.floor(ny*self.ph)
+ else
+  local w,h=self.m.getSize()
+  x=math.floor(nx*w)+1
+  y=math.floor(ny*h)+1
+ end
+ return self:hit(x,y)
 end
 function R:hit(x,y)
  if type(x)~="number" or type(y)~="number"then return nil end
