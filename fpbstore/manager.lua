@@ -80,6 +80,7 @@ function M.remoteRevision()return latestCommit end
 
 function M.refreshVersions(ref)
  ref=ref or M.REF
+ latestCommit=nil -- A manual refresh must resolve the branch again.
  assert(ref:match("^[%w%._/-]+$") and not ref:find("..",1,true),"Invalid ref")
  local ok,result=pcall(function()
   local source=fetch(M.BASE..resolveRef(ref).."/fpbstore/catalog.lua")
