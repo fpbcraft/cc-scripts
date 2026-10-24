@@ -14,7 +14,7 @@ Then open it any time with `store` (or `/fpbstore/main.lua`). The installer inst
 
 ## What you can do
 
-- Browse **COGWORKS**, **RAILBREAK**, and **TIDEBOUND**. Games already installed through their own installers are detected automatically.
+- Browse **COGWORKS**, **RAILBREAK**, **TIDEBOUND**, and **CIVCRAFT**. Games already installed through their own installers are detected automatically.
 - Install a missing game with its existing, tested, one-command installer.
 - Update any installed game by running the current repository installer again, without changing its save data.
 - Launch a game and return to the store after the game exits.
@@ -45,4 +45,4 @@ An update is an on-demand reinstall from the latest configured repository revisi
 - `/fpbstore/installed/` — store-managed install metadata.
 - `/store.lua` — permanent shortcut.
 
-Existing /cogworks, /railbreak and /tidebound saves are preserved.
+Existing /cogworks, /railbreak, /tidebound and /civcraft saves are preserved.
