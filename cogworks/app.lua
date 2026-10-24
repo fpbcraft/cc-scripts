@@ -10,7 +10,7 @@ end
 function A.new()
  local self=setmetatable({scene="title",settings=S.loadSettings(),store=S,
   game=nil,result=nil,slot=nil,progress=nil,selected="I",message="",
-  returnScene="title",pending=nil},A)
+  returnScene="title",pending=nil,inspected=nil},A)
  return self
 end
 function A:slots()
@@ -36,6 +36,7 @@ function A:openLevel(index)
  self.progress.level=index
  self.result=E.evaluate(self.game)
  self.selected="I"
+ self.inspected=nil
  self.message=""
  self.scene="game"
 end
@@ -88,7 +89,8 @@ end
 function A:model()
  return {scene=self.scene,game=self.game,result=self.result,progress=self.progress,
   settings=self.settings,slot=self.slot,selected=self.selected,message=self.message,
-  slots=self:slots(),returnScene=self.returnScene,pending=self.pending}
+  slots=self:slots(),returnScene=self.returnScene,pending=self.pending,
+  inspected=self.inspected}
 end
 -- Return 'exit' only in direct response to player choosing Exit.
 function A:act(action,x,y)
@@ -107,10 +109,13 @@ function A:act(action,x,y)
    else self.scene="slots"end
   elseif action=="slots"then self.scene="slots"
   elseif action=="settings"then self.returnScene="title";self.scene="settings"
+  elseif action=="help"then self.returnScene="title";self.scene="help"
   end
  elseif scene=="slots"then
   if action=="back"then self.scene="title"
   elseif action=="slot"then self:enter(x,false)end
+ elseif scene=="help"then
+  if action=="back"then self.scene=self.returnScene end
  elseif scene=="settings"then
   if action=="back"then self.scene=self.returnScene
   elseif action=="toggleAnimations"then
@@ -127,16 +132,26 @@ function A:act(action,x,y)
    local tile=E.get(self.game,x,y)
    if action=="remove" or self.selected=="erase"then
     changed=E.remove(self.game,x,y)
+   elseif self.selected=="switch"then
+    changed=E.toggle(self.game,x,y)
+    if not changed then self.message="SELECT A PLACED CLUTCH" end
     if not changed then self.message="FIXED PART CANNOT BE REMOVED"end
    elseif tile then
     changed=E.rotate(self.game,x,y)
-    if not changed then self.message="FIXED PART CANNOT ROTATE"end
+    if tile.kind=="M" then
+     local current=self.result.lights[tile.id].ports[tile.r]
+     local wanted=(tile.sign<0 and "CCW" or "CW").." "..tile.speed.."X"
+     local got=current and ((current.sign<0 and "CCW" or "CW").." "..current.rate.."X") or "OFF"
+     self.message="NEED "..wanted.." / CURRENT "..got
+    elseif tile.kind=="S"then
+     self.message="GENERATOR: CW 1X (FIXED)"
+    elseif not changed then self.message="STONE BLOCKS THE WAY"end
    else
     changed=E.place(self.game,x,y,self.selected)
     if not changed then self.message="NO STOCK AVAILABLE"end
    end
   elseif action=="tool"then
-   if x=="erase" or E.parts[x]then self.selected=x end
+   if x=="erase" or x=="switch" or E.parts[x]then self.selected=x end
   elseif action=="next" or action=="prev"then
    local nextIndex=self.game.number+(action=="next" and 1 or -1)
    if nextIndex>=1 and nextIndex<=self.progress.unlocked then
@@ -146,6 +161,8 @@ function A:act(action,x,y)
    self.message=self:save()and"SAVED TO SLOT "..self.slot or self.message
   elseif action=="pause"then
    self:save();self.scene="pause"
+  elseif action=="help"then
+   self.returnScene="game";self.scene="help"
   elseif action=="reset"then
    self.game=E.new(self.game.number);changed=true
   end
@@ -154,6 +171,7 @@ function A:act(action,x,y)
   if action=="resume" or action=="back"then self.scene="game"
   elseif action=="save"then self.message=self:save()and"SAVED TO SLOT "..self.slot or self.message
   elseif action=="settings"then self.returnScene="pause";self.scene="settings"
+  elseif action=="help"then self.returnScene="pause";self.scene="help"
   elseif action=="levels"then self.scene="levels"
   elseif action=="title"then self:save();self.scene="title";self.message=""
   elseif action=="restart"then self.scene="confirm";self.pending="restart"
