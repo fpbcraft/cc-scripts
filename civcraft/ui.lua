@@ -22,6 +22,7 @@ local function ownerIndex(state,id)
 end
 function UI.new(m,dispatch)
  local self=setmetatable({r=Renderer.new(m),dispatch=dispatch,
+   mapMode="terrain",panX=0,panY=0,
   selected={x=2,y=2},source=nil,mode="map",frame=0,notice="",panel="context"},UI)
  return self
 end
@@ -179,9 +180,11 @@ function UI:draw(state,playerID,opts)
   end
   local y=h-37
   r:text(13,y-27,"MAP "..tostring(state.mapSize or "STANDARD"):upper()..
-   " / SEED "..tostring(state.mapSeed or 12345),8,1,w-25)
+   " / "..tostring(state.mapType or "continents"):upper()..
+    " / SEED "..tostring(state.mapSeed or 12345),8,1,w-25)
   r:button(12,y-15,52,12,"MAP SIZE",function()self:command("mapSize")end)
-  r:button(68,y-15,58,12,"REROLL SEED",function()self:command("mapSeed")end)
+  r:button(68,y-15,58,12,"MAP TYPE",function()self:command("mapType")end)
+   r:button(128,y-15,58,12,"REROLL SEED",function()self:command("mapSeed")end)
   if opts.localMode then
    r:button(12,y,40,15,"- PLAYER",function()self:command("removePlayer")end)
    r:button(56,y,40,15,"+ PLAYER",function()self:command("addPlayer")end)
@@ -466,85 +469,22 @@ function UI:draw(state,playerID,opts)
    " RNG"..(stats.range or 1)
  end
  r:text(8,barY,clip(description,math.floor((w-10)/4)),7)
- local actions={}
- local x,y=self.selected.x,self.selected.y
- local function act(label,name,args)
-  actions[#actions+1]={label,function()
-   self:command(name,args or {x=x,y=y})
-  end}
- end
- if selectedUnit and selectedUnit.owner==playerID then
-  if selectedUnit.kind=="settler"then act("FOUND","found")end
-  actions[#actions+1]={"MOVE",function()
-   if selectedUnit.moved then self.notice="ALREADY MOVED";return end
-   self.source={x=x,y=y}
-   self.reachable=Hex.reachable(state,selectedUnit,playerID,Systems)
-  end}
- elseif selectedCity and selectedCity.owner==playerID then
-  if self.panel=="context" then
-   actions[#actions+1]={"UNITS",function()self.panel="units";self.actionPage=1 end}
-   actions[#actions+1]={"BUILDINGS",function()self.panel="buildings";self.actionPage=1 end}
-   actions[#actions+1]={"POPULATION",function()self.panel="population";self.actionPage=1 end}
-   actions[#actions+1]={"TECH TREE",function()self.panel="tech";self.actionPage=1 end}
-  elseif self.panel=="units"then
-   for _,id in ipairs({"warrior","settler","scout","spearman","horseman","archer","explorer","ranger","swordsman","galley","navigator","frigate","flagship"})do
-    if Systems.canRecruit(mine,id) then
-     act(id:upper(),"recruit",{x=x,y=y,id=id})
-    end
-   end
-  elseif self.panel=="buildings"then
-   for _,id in ipairs({"farm","mine","library","walls","workshop","academy"})do
-    if Systems.canBuild(mine,selectedCity,id)then
-     act(id:upper(),"build",{x=x,y=y,id=id})
-    end
-   end
-  elseif self.panel=="population"then
-   for _,from in ipairs(Systems.jobs)do
-    for _,to in ipairs(Systems.jobs)do
-     if from~=to and selectedCity.jobs and selectedCity.jobs[from]>0 then
-      act(from:sub(1,1):upper()..">"..to:sub(1,1):upper(),"assign",
-       {x=x,y=y,from=from,to=to})
-     end
-    end
-   end
-  elseif self.panel=="tech"then
-   -- Research options live in the connected canvas, not the footer.
-  end
- else
-  actions[#actions+1]={"INSPECT",function()self.notice=terrain(x,y,state):upper()end}
- end
- -- Context lists can be much larger than the narrow bottom action bar.
- -- Paginate rather than drawing buttons over the map or beyond the screen.
- if #actions>4 then
-  self.actionPage=self.actionPage or 1
-  local itemsPerPage=3
-  local pages=math.ceil(#actions/itemsPerPage)
-  self.actionPage=math.max(1,math.min(self.actionPage,pages))
-  local page={}
-  for i=(self.actionPage-1)*itemsPerPage+1,
-     math.min(#actions,self.actionPage*itemsPerPage)do
-   page[#page+1]=actions[i]
-  end
-  if self.actionPage>1 then
-   page[#page+1]={"PREV",function()self.actionPage=self.actionPage-1 end}
-  end
-  if self.actionPage<pages then
-   page[#page+1]={"NEXT",function()self.actionPage=self.actionPage+1 end}
-  end
-  actions=page
- end
- actions[#actions+1]={"BACK",function()
-  self.panel="context";self.source=nil;self.reachable={}
- end}
- actions[#actions+1]={"END TURN",function()self:command("end")end}
- actions[#actions+1]={"PAUSE",function()self:command("pause")end}
- local cols=math.min(4,#actions);local gap=3;local buttonW=math.floor((w-18-(cols-1)*gap)/cols)
- local buttonH=math.max(10,math.floor((footer-20)/math.max(2,math.ceil(#actions/cols))))
+ local actions={
+  {"TECH TREE","bolt",function()self.panel="tech";self.actionPage=1 end},
+  {"BACK","back",function()
+   self.panel="context";self.source=nil;self.reachable={}
+  end},
+  {"END TURN","clock",function()self:command("end")end},
+  {"PAUSE","back",function()self:command("pause")end}
+ }
+ local gap=3
+ local cols=#actions
+ local buttonW=math.max(12,math.floor((w-16-(cols-1)*gap)/cols))
+ local buttonH=math.max(11,math.min(20,footer-13))
  for i,action in ipairs(actions)do
-  local col=(i-1)%cols;local row=math.floor((i-1)/cols)
-  r:button(8+col*(buttonW+gap),barY+11+row*(buttonH+2),
-   buttonW,buttonH,action[1],action[2],
-   {primary=i==6,selected=(i==1 and self.source~=nil)})
+  r:button(4+(i-1)*(buttonW+gap),barY+7,
+   buttonW,buttonH,action[1],action[3],
+   {icon=action[2],primary=i==3})
  end
  if self.panel=="tech" and selectedCity and selectedCity.owner==playerID then
   local ox,oy=math.max(5,math.floor(w*.06)),header+3
@@ -560,9 +500,36 @@ function UI:draw(state,playerID,opts)
  end
  r:finish()
 end
+-- All pan mutations are clamped using the same viewport geometry as drawing.
+function UI:pan(dx,dy)
+ local v=self.mapViewport
+ if not v then return end
+ self.panX=math.max(0,math.min(v.maxX,(self.panX or 0)+dx))
+ self.panY=math.max(0,math.min(v.maxY,(self.panY or 0)+dy))
+end
+function UI:drag(x,y)
+ local rx,ry=self.r:touch(x,y)
+ if not rx then self.lastDrag=nil;return false end
+ local v=self.mapViewport
+ if not v or rx<v.x or rx>v.x+v.w or ry<v.y or ry>v.y+v.h then
+  self.lastDrag=nil;return false
+ end
+ if self.lastDrag then
+  self:pan(self.lastDrag.x-rx,self.lastDrag.y-ry)
+ end
+ self.lastDrag={x=rx,y=ry}
+ return true
+end
+function UI:scroll(delta,x,y)
+ local rx,ry=self.r:touch(x,y)
+ local v=self.mapViewport
+ if not v or not rx or rx<v.x or rx>v.x+v.w or ry<v.y or ry>v.y+v.h then return false end
+ self:pan(0,delta*v.tile*2);return true
+end
 function UI:tap(x,y)
  local rx,ry=self.r:touch(x,y)
  if not rx then return false end
+ self.lastDrag=nil
  local modal=self.modalBounds
  if modal and rx>=modal.x and ry>=modal.y and
     rx<modal.x+modal.w and ry<modal.y+modal.h then
