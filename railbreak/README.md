@@ -1,101 +1,46 @@
-# RAILBREAK: Kinetic Frontier
+# RAILBREAK: Kinetic Frontier — Train-first Edition v2
 
-**Turn-based cooperative factory and railway roguelite for 1–4 players on CC:Tweaked Advanced Monitors from 3×3 to 5×5.** Inspired by the visible mechanical automation of Minecraft's Create mod. The game runs entirely inside ComputerCraft: it **does not modify or control** real Create machines, Minecraft tracks, or inventories.
+A **turn-based Create-inspired railway adventure** for **1–4 local players** on one ComputerCraft Advanced Monitor. Designed for 5×5, responsive down to **3×3**, with 4×3, 4×4, 4×5 and 5×4 sizes supported. Graphics mode provides pixel-art train, wagons, scenery, track map and machine icons; ordinary CC:Tweaked colour text is a fallback.
 
-## Install
-
-On a ComputerCraft computer connected to an **Advanced Monitor** (3×3 or larger):
+## Install / update
 
 ```sh
 wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-railbreak.lua
 /railbreak/main.lua
 ```
 
-The installer downloads and validates every Lua module into a staging directory before activating, preserves `/railbreak/data/`, and rolls back on activation failure. Use `--startup` to enable autostart on a *dedicated computer without an existing startup script*. It never silently replaces an existing `/startup.lua`. Supply a branch/tag as the installer argument to test another revision.
+For a specific attached screen: `/railbreak/main.lua monitor_0`. Without an argument, the game chooses the largest attached monitor. The installer stages downloads, validates Lua syntax, makes rollback backups, and never touches game saves. Use `--startup` only on a dedicated computer; existing startup programs are not overwritten.
 
-The game selects the largest color monitor automatically. Specify a monitor peripheral name for multiple attached displays:
+The original **factory-first RAILBREAK v1** remains playable: `/railbreak/classic.lua`. Its existing save `/railbreak/data/save.lua` is preserved. **The new train-first game uses a separate save** at `/railbreak/data/train-save.lua`; v1 saves cannot be loaded into v2. On the title screen, CONTINUE loads the v2 save, including an unresolved travel event.
 
-```sh
-/railbreak/main.lua monitor_0
-```
+## How to play
 
-The game sets monitor text scale to **0.5** and restores the original scale when the program exits. It tries to enable CC: Graphics pixel mode 2 if available, otherwise uses the native colored terminal. The renderer uses character-cell **layout** coordinates, but `monitor_touch` events are mode-specific: native CC:Tweaked supplies **1-based character coordinates**, while CC: Graphics supplies **0-based pixel coordinates**. RAILBREAK converts these at its input boundary using the pixel-to-character scaling returned by `getSize(2)`. No manual calibration is needed.
+1. Start an expedition, choose Explorer / Standard / Frontier, and optionally name 1–4 participants with the on-screen keyboard.
+2. Your train is the main hub. Tap a wagon to inspect and level it up, or buy additional cargo/passenger/fuel/crane wagons. Upgrades are accessed through **TRAIN → TECH**.
+3. Visit the station to buy/sell goods, repair/refuel, upgrade its simple Create-inspired production modules, or run **a production shift**. Modules are not freeform factory grids; each converts goods to other goods in one turn.
+4. Pick a railway connection on the **MAP**. Building an untravelled connection requires parts; travel consumes fuel. The train advances **only when you tap Depart**.
+5. Some departures trigger an event, e.g. rockslide or broken bridge. Read the consequences and choose an option. There are **no real-time countdowns**.
+6. Accept jobs on the **JOBS** board while at their origin station, carry the requested goods to the specified destination, and tap DELIVER. Up to 3 simultaneous contracts can be active.
+7. Complete **2 contracts** and earn **2 reputation**, then reach **EASTPORT** to win the expedition. A trip to Eastport before meeting these goals does not finish the run.
 
-Supported layouts at monitor scale 0.5: **3×3, 4×3, 4×4, 5×4, 4×5 and 5×5** (and compatible monitors with at least 70×49 text cells). Compact displays use a smaller workshop grid, responsive controls, paginated machine catalog and manual, and stacked railway cards. 5×5 remains the roomiest layout. Touchscreen hitboxes are verified in both graphics and text modes.
+### Resources and progression
 
-## Play
+The train has coins, fuel, hull condition, reputation, and finite wagon cargo slots. Larger wagons add capacity. Upgrades change real rules: an efficient burner uses less fuel on long routes, an auto loader adds cargo space, a signal relay improves event outcomes, and armour raises hull capacity. Stations have 4 module slots, each supporting up to 3 levels. Production, travel, and recovery jobs consume turns rather than real time.
 
-- **1–4 engineers, one shared monitor.** Enter names with the on-monitor keyboard. Players collaborate on the same workshop and resource pool. Tap **CREW** to attribute actions to a different engineer. There are no turn timers or simultaneous-touch requirements.
-- **Plan freely.** Select a workshop tile, tap **BUILD MACHINES**, choose the desired machine, and tap an empty tile to place it. Tap any existing machine to read its description, input/output recipe, rotation, stress, and buffer contents. Use **ROTATE** and **DISMANTLE** to adjust layouts. Dismantling returns 75% of build materials (rounded down) and all buffered items.
-- **Execute production shifts.** **1 SHIFT** advances one deterministic simulation tick. **5 SHIFTS** advances five. **AUTO** runs until four additional iron sheets enter the warehouse, a significant warning occurs, or twenty shifts pass. Animations are cosmetic; thinking and building do not consume time.
-- **Manufacture supplies.** A starter water wheel drives a shaft and mechanical press. An input depot sends iron along a belt to the press; completed sheets travel on an output belt to the collection chest and warehouse. Build saws, crushers, mixers and deployer assemblies to manufacture planks, gravel, railway track kits and bridge sections.
-- **Expand the railway.** The **RAILWAY** screen shows two destinations per chapter, their construction material requirements, and obtainable supplies. Craft what you need, then choose a route. Complete delivery contracts for bonus supplies and reputation. Four connected railway legs finish the expedition.
-- **No soft-locks.** If an experiment strands your supplies, **WAREHOUSE → EMERGENCY SCAVENGE** recovers raw materials for one shift and a score penalty. This is available in solo and co-op.
+**Soft-lock prevention:** Every station sells refuelling, repairs, parts, and raw ingredients. A station's local repair job earns 12 coins per turn if you're short of money. Event choices always have a fallback that can be taken without scarce goods. The game is fully playable solo; the same rules apply with 2–4 players, who share the train, goals, inventory and actions. Tap the P1/P2 indicator on the title bar to switch credited crew member; this is a social feature, not touchscreen identity detection.
 
-### Core machinery
+### Touchscreen / monitor behaviour
 
-| Machine | Role |
-|---|---|
-| Water Wheel | 32 stress-unit capacity, no fuel consumption |
-| Steam Engine | 80 stress-unit capacity, burns coal on powered shifts |
-| Shaft | Joins connected kinetic machine networks |
-| Speed Gear | Makes a network run at 32 RPM instead of 16 RPM, doubling stress demand |
-| Mechanical Press | One iron → one iron sheet |
-| Mechanical Saw | One log → two planks |
-| Crushing Wheels | One cobblestone → two gravel |
-| Mechanical Mixer | One gravel + one iron sheet → two track kits |
-| Deployer Assembly | Two planks + one iron sheet → one bridge section |
-| Input Depot | Extracts a chosen material from shared warehouse onto its facing belt |
-| Conveyor Belt | Moves a packet one tile per shift in its facing direction |
-| Storage Interface | Returns incoming belt products to the warehouse |
+With CC: Graphics, `monitor_touch` events are **zero-based pixel coordinates**; without it, events use **one-based character cells**. The renderer normalizes both into a virtual pixel canvas sized at twice the terminal text width and three times its text height. Controls are click targets in those same virtual coordinates. All six layouts and both modes are exercised in the offline test harness. Actual in-game performance has not yet been validated.
 
-**Physical layout matters:** items must reach machines by belt, machines must connect to rotational power, and processed items need a belt or storage interface at the machine's output face. An overstressed network stops its connected processing machines rather than destroying them. The kinetic calculation is intentionally a simplified Create-inspired network model, **not** a one-to-one reimplementation of Create's real gearbox/axle transmission.
+## Tests
 
-### Workstation orientation
-
-Facing directions cycle **East → South → West → North** when rotated. Belt and depot direction is important. The default input depot already feeds an east-facing belt into an east-facing press, and the press outputs to an east-facing belt and chest. Many parallel machines can share power if the stress budget allows.
-
-**Tip: build a saw line:** next to the starter press, add a saw at `(4, 5)`, a belt at `(3, 5)` fed by an input depot at `(2, 5)` filtered to `logs`, and an output belt/chest at `(5, 5)` and `(6, 5)`. Its power connects to the press above. Run shifts until you have planks. Additional recipes unlock after extending the railway.
-
-### Contracts, scores, and difficulty
-
-There are four expedition chapters. Each destination has its own route cost and resource reward; the choice order and small supply bonuses are generated deterministically from the expedition seed. Factory processing and railway decisions use that same seeded state. Contracts have shift-based deadlines, not real-world timers. Late contracts reduce reputation, but they don't end the expedition or prevent travel.
-
-The completed-run score accounts for earned reputation, fulfilled contracts, total crafted batches, shifts spent, emergency scavenging, and completed chapters. More engineers do **not** multiply available resources, shift count or factory throughput; multiplayer benefits from shared planning, not extra actions per person. Contributions are tracked by optional manual crew selection.
-
-## Code organization
-
-```text
-railbreak/
-  main.lua                  Peripheral setup and event loop
-  core/util.lua             Pure helpers, seeded RNG, inventory operations
-  content/catalog.lua       Machine data, recipes, routes, contracts
-  game/state.lua            Versioned game state, starting workshop, route choices
-  game/kinetics.lua         Connected network graph, RPM, capacity, stress
-  game/processing.lua       Ordered belt transfers, machine work, shift resolution
-  game/commands.lua         Validated build, dismantle, rotate, deliver, travel orders
-  render/canvas.lua         CC: Graphics pixel renderer + text-mode fallback
-  ui/app.lua                Screens, touch hitboxes, dialogs, setup keyboard
-  platform/storage.lua      Validated saves and backup recovery
-  tests/run.lua             Offline integration and simulation tests
-```
-
-The renderer consumes logical state and is not permitted to advance the simulation. Production and logistics only advance from explicit player commands. This allows fast headless tests with a mock terminal. The game does not depend on Basalt, Pine3D, network APIs, or third-party Lua libraries.
-
-## Validation and limitations
-
-Run unit/integration tests with Lua 5.3 (`texlua` is sufficient in the development environment):
+Run from the repository root with Lua 5.3+:
 
 ```sh
-texlua railbreak/tests/run.lua
+lua railbreak/tests/train.lua       # train engine, campaign and responsive UI
+lua railbreak/tests/run.lua         # preserved factory-first edition regressions
+lua railbreak/tests/installer.lua   # rollback and non-destructive update behaviour
 ```
 
-Tests cover the working starter conveyor line, warehouse conservation, machine construction, rotation and refunds, kinetic overstress, coal exhaustion, mixed-ingredient processing, route progression, multiplayer setup, and real pixel-mode and character-mode touch events, interactive buttons, panels, and display hitboxes for all six supported monitor sizes.
-
-**Not yet verified inside Minecraft:** This build has been validated offline against fake CC peripherals, not the actual graphics mod and multiplayer touchscreen. Rendering load, monitor scaling and the optional graphics API must be evaluated in-game. The initial release is a complete, playable **first campaign** rather than the full planned feature set: mechanical arms, complex signal automation, freeform rail track routing and animated encounter puzzles remain future enhancements.
-
-## Display compatibility and touch diagnosis
-
-Use the official CC: Graphics NeoForge build with monitor support if you want pixel rendering. If a touch still behaves strangely, confirm you are running the latest `/railbreak/` files and note the monitor size, graphics mod version, and reported touch event positions (`os.pullEvent("monitor_touch")`). The graphics mod intentionally changes `monitor_touch` to pixel coordinates when the monitor is in graphics mode; this is not the same event format as a normal CC:Tweaked monitor.
-
-Layout adaptations preserve the full 12×8 factory simulation and the same game/save state across monitor resizing. The rendering area and touchscreen hitboxes are recalculated when the monitor changes size.
+All artwork is procedural using CC: Graphics pixel primitives; no resource pack or extra peripherals are required. The game is a simulation *in* ComputerCraft and does not control your real Create infrastructure.

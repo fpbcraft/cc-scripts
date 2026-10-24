@@ -19,7 +19,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Lua
         run: sudo apt-get update && sudo apt-get install -y lua5.3
-      - name: Integration and gameplay regression
+      - name: Train-first campaign and responsive UI
+        run: lua5.3 railbreak/tests/train.lua
+      - name: Original factory edition regressions
         run: lua5.3 railbreak/tests/run.lua
-      - name: Installer transactional behavior
+      - name: Installer rollback and save preservation
         run: lua5.3 railbreak/tests/installer.lua

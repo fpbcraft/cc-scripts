@@ -17,6 +17,8 @@ local files={
  'main.lua','core/util.lua','content/catalog.lua','game/state.lua','game/kinetics.lua',
  'game/processing.lua','game/commands.lua','render/canvas.lua','ui/app.lua',
  'platform/storage.lua','README.md','QUICKSTART.txt',
+ 'classic.lua','train/catalog.lua','train/state.lua','train/rules.lua',
+ 'train/render.lua','train/art.lua','train/ui.lua','train/storage.lua',
 }
 local function delete(path)if fs.exists(path)then fs.delete(path)end end
 local function write(path,contents)
@@ -36,7 +38,7 @@ local function fetch(file)
  end
  return text
 end
-print('RAILBREAK: KINETIC FRONTIER')
+print('RAILBREAK: TRAIN-FIRST EDITION v2')
 print('Installing from fpbcraft/cc-scripts @ '..ref)
 if not fs.exists(ROOT) then fs.makeDir(ROOT) end
 delete(NEXT);fs.makeDir(NEXT)
@@ -84,4 +86,6 @@ if startup then
  end
 end
 print('Ready! Execute: /railbreak/main.lua')
-print('Saves in /railbreak/data/ are preserved across updates.')
+print('Train save: /railbreak/data/train-save.lua')
+print('Old factory game: /railbreak/classic.lua')
+print('Legacy saves in /railbreak/data/ are preserved.')

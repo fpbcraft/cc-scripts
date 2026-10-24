@@ -1,63 +1,65 @@
--- RAILBREAK: KINETIC FRONTIER / CC:Tweaked 3x3 through 5x5 Advanced Monitors
--- Usage: /railbreak/main.lua [monitor_name]
+-- RAILBREAK: KINETIC FRONTIER - Train-first Edition v2.0
+-- Turn-based, 1-4 players, touch-operated monitor (3x3 to 5x5).
 local argv={...}
-package.path='/?.lua;/?/init.lua;'..package.path
-local App=require('railbreak.ui.app')
-local S=require('railbreak.game.state')
-local K=require('railbreak.game.kinetics')
-local A=require('railbreak.game.commands')
-local function locate(requested)
- if not peripheral then return nil,nil end
- if requested then
-  local m=peripheral.wrap(requested)
-  if not m or peripheral.getType(requested)~='monitor' then error('Unknown monitor '..requested,0)end
-  return m,requested
- end
- local chosen,name,area=nil,nil,0
- for _,n in ipairs(peripheral.getNames()) do
-  if peripheral.getType(n)=='monitor' then
-   local mon=peripheral.wrap(n)
-   if not mon.isColor or mon.isColor() then
-    local ok,w,h=pcall(mon.getSize)
-    if ok and w*h>area then chosen,name,area=mon,n,w*h end
+local UI=require('railbreak.train.ui')
+local State=require('railbreak.train.state')
+local Rules=require('railbreak.train.rules')
+if argv[1]=='--test-api' then return {UI=UI,State=State,Rules=Rules}end
+local monitor,monitorName
+if peripheral then
+ if argv[1] and argv[1]~='--test-api' then
+  local chosen=peripheral.wrap and peripheral.wrap(argv[1])
+  assert(chosen and chosen.getSize,'No monitor peripheral named '..tostring(argv[1]))
+  monitor=chosen;monitorName=argv[1]
+ elseif peripheral.getNames then
+  local biggest=-1
+  for _,name in ipairs(peripheral.getNames())do
+   if peripheral.getType(name)=='monitor' then
+    local m=peripheral.wrap(name);local w,h=m.getSize();local area=w*h
+    if area>biggest then biggest=area;monitor=m;monitorName=name end
    end
   end
  end
- return chosen,name
+ if not monitor and peripheral.find then monitor=peripheral.find('monitor')end
 end
+if not monitor then monitor=term.current()end
+assert(monitor and monitor.getSize,'Attach an Advanced Monitor or run on an Advanced Computer')
+local oldScale=monitor.getTextScale and monitor.getTextScale() or nil
+if monitor.setTextScale then pcall(monitor.setTextScale,.5)end
+local app=UI.new(monitor)
 local function run()
- local mon,name=locate(argv[1]);assert(mon,'Attach a color Advanced Monitor.',0)
- local originalScale=mon.getTextScale and mon.getTextScale() or 1
- if mon.setTextScale then mon.setTextScale(.5) end
- local game=App.new(mon)
- local ok,err=xpcall(function()
-  game:draw()
-  local timer=nil
-  local function animate()
-   if game.animation>0 and not timer then timer=os.startTimer(.10)end
+ app:draw()
+ local timer=nil
+ local function animate()
+  if app.r.mode=='graphics' and (app.scene=='title' or app.scene=='hub' or app.scene=='travel') and os.startTimer then
+   timer=os.startTimer(1.2)
   end
-  while true do
-   local ev,a,b,c=os.pullEvent()
-   if ev=='monitor_touch' and a==name then
-    game:touch(b,c);game:draw();animate()
-   elseif ev=='monitor_resize' and a==name then
-    game.r:resize();game:draw()
-   elseif ev=='char' and game.scene=='setup' then
-    local U=require('railbreak.core.util')
-    game.names[game.editing]=U.name(game.names[game.editing]..a)
-    game:draw()
-   elseif ev=='key' and game.scene=='setup' and keys and a==keys.backspace then
-    game.names[game.editing]=game.names[game.editing]:sub(1,-2);game:draw()
-   elseif ev=='timer' and a==timer then
-    timer=nil;game.animation=game.animation-1
-    -- Cosmetic-only animation: simulation time is unaffected by timers.
-    if game.animation>0 then game:draw();animate()end
+ end
+ animate()
+ while true do
+  local event,a,b,c=os.pullEvent()
+  if event=='monitor_touch' then
+   -- CC Graphics graphics mode: zero-based pixel coordinates; mode 0: one-based cells.
+   -- Do not assume pointer positions are always character cells.
+   if monitorName and a~=monitorName then
+    -- Touch on another monitor; ignore.
+   else
+    app:touch(b,c);animate()
    end
+  elseif event=='mouse_click' and monitor==term.current()then
+   app:touch(b,c);animate()
+  elseif event=='monitor_resize' then app:resize();animate()
+  elseif event=='char' and app.scene=='setup' and app.editing then
+   local U=require('railbreak.core.util')
+   local name=app.names[app.editing]
+   app.names[app.editing]=U.name(name..a);app:draw()
+  elseif event=='key' and app.scene=='setup' and app.editing and keys and a==keys.backspace then
+   app.names[app.editing]=app.names[app.editing]:sub(1,-2);app:draw()
+  elseif event=='timer' and a==timer then
+   timer=nil;app.frame=app.frame+1;app:draw();animate()
   end
- end,function(message) return tostring(message)..'\n'..(debug and debug.traceback and debug.traceback() or '')end)
- game.r:close()
- if mon.setTextScale then pcall(mon.setTextScale,originalScale)end
- if not ok then error(err,0)end
+ end
 end
-if argv[1]=='--test-api' then return {App=App,State=S,Kinetics=K,Commands=A} end
-run()
+local success,why=xpcall(run,function(s)return tostring(s)..'\n'..(debug and debug.traceback and debug.traceback()or'')end)
+app:close();if oldScale and monitor.setTextScale then pcall(monitor.setTextScale,oldScale)end
+if not success then error(why,0)end

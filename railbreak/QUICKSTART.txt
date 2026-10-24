@@ -1,18 +1,26 @@
-RAILBREAK: KINETIC FRONTIER
---------------------------
-1. Connect a 3x3, 4x3, 4x4, 4x5, 5x4 or 5x5 colour Advanced Monitor to a computer.
-2. Run: wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-railbreak.lua
-3. Run: /railbreak/main.lua
-4. New Expedition -> choose 1-4 engineers -> Start.
-5. Tap the WORKSHOP's SHIFT 5 button to run the starter mechanical press.
-6. Tap any machine for detailed descriptions, RPM, recipes, and controls.
-7. BUILD MACHINES -> choose a blueprint -> tap an empty tile.
-8. RAILWAY -> inspect contract and destination resource costs.
-9. Craft sheets, planks, gravel, track kits and bridge sections; deliver and travel.
-10. Four railway legs completed = victory. There are no real-time countdowns.
+RAILBREAK: KINETIC FRONTIER v2 - TRAIN-FIRST EDITION
+=====================================================
 
-Saves: /railbreak/data/save.lua; installer always keeps data/.
-Optional autostart: run installer with --startup on a dedicated computer.
-See README.md for recipes and gameplay instructions.
+UPDATE: wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-railbreak.lua
+PLAY:   /railbreak/main.lua
+OLD FACTORY EDITION: /railbreak/classic.lua
 
-TOUCH FIX: Graphics mode uses 0-based pixel touch coordinates; text mode uses 1-based characters. Input maps automatically to the UI.
+Connect an Advanced Monitor (3x3 through 5x5). If multiple screens
+are attached, the largest will be used by default. Select one with:
+  /railbreak/main.lua monitor_0
+
+HOW TO WIN
+1. Use station MARKET to buy planks, ore, parts or fuel.
+2. Take CONTRACTS at their origin stations.
+3. Choose connected destinations on the MAP, pay track and fuel costs.
+4. Choose an event solution if the train is interrupted.
+5. Deliver cargo at the right station to earn cash and reputation.
+6. Complete at least 2 jobs / earn 2 reputation and arrive at EASTPORT.
+
+TRAIN: Tap wagons to select, then ADD / LV UP / TECH.
+STATION: Repair, refuel, upgrade modules and run turn-based shifts.
+CREW: Optional P1/P2/P3/P4 attribution toggle; gameplay is shared.
+HELP: Includes main menu access. The game autosaves after successful actions.
+
+SAVES: /railbreak/data/train-save.lua (v2) vs /railbreak/data/save.lua (old)
+No timers govern gameplay. Animation is cosmetic only.
