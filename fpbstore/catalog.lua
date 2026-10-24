@@ -3,7 +3,7 @@
 -- Never include save files or data folders in managedFiles.
 return {
  schema=1,
- storeVersion="1.1.2",
+ storeVersion="1.1.3",
  apps={
   {
    version="1.0.0",id="cogworks",name="COGWORKS",subtitle="KINETIC LAB",
@@ -40,8 +40,8 @@ return {
    saves={"/tidebound/v5-save.dat","/tidebound/v5-save.dat.bak"},
   },
   {
-   version="0.2.0",id="civcraft",name="CIVCRAFT",subtitle="POCKET CIVILIZATION",
-   description="Networked 2-4 player civilization-building 4X.",
+   version="0.2.1",id="civcraft",name="CIVCRAFT",subtitle="POCKET CIVILIZATION",
+   description="Local hotseat or networked 2-4 player civilization-building 4X.",
    icon="V",genre="4X / STRATEGY",root="/civcraft",
    entry="/civcraft/game.lua",installer="install-civcraft.lua",
    managedFiles={"game.lua","render.lua","ui.lua","README.md"},
