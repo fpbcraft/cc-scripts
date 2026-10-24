@@ -1,5 +1,6 @@
 -- Low-resolution CC: Graphics canvas. Layout coordinates are virtual pixels:
--- char grid 5x5 approx 135x92 -> 270x276 virtual canvas (3 real px/virtual px).
+-- Graphics mode uses a denser 3x4 virtual grid per text cell (2x2.25 real pixels).
+-- The native text fallback retains its original 2x3 layout for compatibility.
 -- In CC: Graphics mode monitor_touch is ZERO-based PIXELS. Vanilla is ONE-based cells.
 local R={} R.__index=R
 R.palette={
@@ -132,7 +133,8 @@ function R.new(mon)
   if success then
    local got,pw,ph=pcall(mon.getSize,2)
    if got and type(pw)=='number' and pw>cw then
-    self.mode='graphics';self.pw=pw;self.ph=ph;self.sx=pw/self.w;self.sy=ph/self.h
+    self.mode='graphics';self.w=cw*3;self.h=ch*4
+    self.pw=pw;self.ph=ph;self.sx=pw/self.w;self.sy=ph/self.h
     self.originalPalette={}
     for index,color in pairs(R.palette)do
      if mon.getPaletteColor then
@@ -147,7 +149,9 @@ function R.new(mon)
  return self
 end
 function R:resize()
- self.cw,self.ch=self.m.getSize();self.w=self.cw*2;self.h=self.ch*3
+ self.cw,self.ch=self.m.getSize()
+ if self.mode=='graphics' then self.w=self.cw*3;self.h=self.ch*4
+ else self.w=self.cw*2;self.h=self.ch*3 end
  if self.mode=='graphics' then
   local ok,pw,ph=pcall(self.m.getSize,2)
   if ok then self.pw=pw;self.ph=ph;self.sx=pw/self.w;self.sy=ph/self.h end

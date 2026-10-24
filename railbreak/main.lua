@@ -1,4 +1,4 @@
--- RAILBREAK: KINETIC FRONTIER - Train-first Edition v2.0.3
+-- RAILBREAK: KINETIC FRONTIER - Train-first Edition v2.0.4
 -- Turn-based, 1-4 players, touch-operated monitor (3x3 to 5x5).
 local argv={...}
 -- Program-local imports: CC:Tweaked's require is relative to the running
@@ -53,7 +53,12 @@ end
 if not monitor then monitor=term.current()end
 assert(monitor and monitor.getSize,'Attach an Advanced Monitor or run on an Advanced Computer')
 local oldScale=monitor.getTextScale and monitor.getTextScale() or nil
-if monitor.setTextScale then pcall(monitor.setTextScale,.5)end
+-- CC:Tweaked's smallest supported text scale is 0.5. Set this *before*
+-- reading the monitor dimensions / entering CC: Graphics mode.
+if monitor.setTextScale then
+ local applied,why=pcall(monitor.setTextScale,0.5)
+ if not applied then error('Cannot set monitor text scale to 0.5: '..tostring(why),0)end
+end
 local app=UI.new(monitor)
 local function run()
  app:draw()

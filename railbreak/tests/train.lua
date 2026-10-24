@@ -81,12 +81,15 @@ for _,dim in ipairs(sizes)do for _,graphics in ipairs({false,true})do
  local m=monitor(dim[1],dim[2],graphics)
  local ui=UI.new(m)
  ui:draw()
- eq(ui.r.w==dim[1] and ui.r.h==dim[2],'expected canvas dimensions')
+ eq(ui.r.w==(graphics and (dim[1]/2)*3 or dim[1]) and
+    ui.r.h==(graphics and (dim[2]/3)*4 or dim[2]),'expected canvas dimensions')
+ eq(ui.r.cw==dim[1]/2 and ui.r.ch==dim[2]/3,'terminal text-cell dimensions retained')
+ eq(ui:small()==(dim[1]<200 or dim[2]<206),'compact layout follows physical monitor, not framebuffer')
  eq(#ui.r.buttons>=2,'title buttons')
  local b=ui.r.buttons[1]
  local x=b.x+math.floor(b.w/2);local y=b.y+math.floor(b.h/2)
- local px=graphics and x*3 or math.floor(x/2)+1
- local py=graphics and y*3 or math.floor(y/3)+1
+ local px=graphics and math.floor(x*ui.r.sx) or math.floor(x/2)+1
+ local py=graphics and math.floor(y*ui.r.sy) or math.floor(y/3)+1
  eq(ui:touch(px,py)~=false,'touch activates title button')
  eq(ui.scene=='setup','click new expedition')
  -- Force gameplay and check every screen rendering, bounds and touch hitboxes.
@@ -95,6 +98,7 @@ for _,dim in ipairs(sizes)do for _,graphics in ipairs({false,true})do
   ui.scene=sc;ui:draw();eq(#ui.r.buttons>0,'touch targets present in '..sc)
   for _,hit in ipairs(ui.r.buttons)do
    eq(hit.w>0 and hit.h>0,'positive hit area')
+   if not(hit.x>=-10 and hit.x<=ui.r.w+2 and hit.y>=0 and hit.y<=ui.r.h+3)then print('OFFSCREEN',dim[1],dim[2],graphics,sc,hit.label,hit.x,hit.y,hit.w,hit.h,ui.r.w,ui.r.h)end
    eq(hit.x>=-10 and hit.x<=ui.r.w+2 and hit.y>=0 and hit.y<=ui.r.h+3,'hit box not grossly out of view '..sc)
   end
  end
@@ -111,8 +115,8 @@ for _,dim in ipairs(sizes)do for _,graphics in ipairs({false,true})do
  eq(depart~=nil,'connected route exposes depart action')
  local dx=depart.x+math.floor(depart.w/2)
  local dy=depart.y+math.floor(depart.h/2)
- local touchX=graphics and dx*3 or math.floor(dx/2)+1
- local touchY=graphics and dy*3 or math.floor(dy/3)+1
+ local touchX=graphics and math.floor(dx*ui.r.sx) or math.floor(dx/2)+1
+ local touchY=graphics and math.floor(dy*ui.r.sy) or math.floor(dy/3)+1
  eq(ui:touch(touchX,touchY)=='DEPART','touch dispatches departure')
  eq(ui.g.pending~=nil and ui.scene=='travel','departure triggers event scene')
  local resolve
@@ -127,12 +131,19 @@ for _,dim in ipairs(sizes)do for _,graphics in ipairs({false,true})do
  eq(resolve~=nil,'event choice has a button')
  local ex=resolve.x+math.floor(resolve.w/2)
  local ey=resolve.y+math.floor(resolve.h/2)
- local rtx=graphics and ex*3 or math.floor(ex/2)+1
- local rty=graphics and ey*3 or math.floor(ey/3)+1
+ local rtx=graphics and math.floor(ex*ui.r.sx) or math.floor(ex/2)+1
+ local rty=graphics and math.floor(ey*ui.r.sy) or math.floor(ey/3)+1
  eq(ui:touch(rtx,rty)~=false,'travel choice is touchable')
  eq(ui.g.location==2 and ui.g.pending==nil,'event resolves arrival')
 
  ui.scene='market';ui:draw();eq(#ui.r.buttons>=7,'market buttons present')
+ -- Full render modes share monitor scale 0.5. Graphics gets extra logical
+ -- pixel density without altering the native text grid or touch targets.
+ if graphics then
+  eq(ui.r.sx==2 and ui.r.sy==2.25,'denser graphics uses true 2x2.25 physical pixels')
+ else eq(ui.r.w==dim[1] and ui.r.h==dim[2],'text fallback unchanged') end
+ ui:resize()
+ eq(ui.r.sx==(graphics and 2 or .5),'resize retains appropriate coordinate transform')
  ui.scene='travel';ui.g.pending={from=1,to=2,event='rocks'};ui:draw();eq(#ui.r.buttons>=5,'event choices tappable')
  ui:close()
 end end

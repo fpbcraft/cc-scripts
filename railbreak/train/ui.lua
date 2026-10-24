@@ -43,7 +43,9 @@ function UI:resume()
  self.g=g;self.scene=g.finished and 'results' or g.pending and 'travel' or 'hub';self.page=1
  self:notify('EXPEDITION RESTORED')
 end
-function UI:small()return self.r.w<200 or self.r.h<206 end
+-- Compact layouts depend on physical monitor dimensions, not on the
+-- graphics renderer's virtual resolution (which can change independently).
+function UI:small()return self.r.cw<100 or self.r.ch<65 end
 function UI:header(title,sub)
  local r=self.r;local w=r.w
  r:fill(0,0,w,20,0);r:fill(0,19,w,1,9)
@@ -173,7 +175,7 @@ function UI:map()
   r:fill(x-5,py-5,11,11,s.id==g.location and 11 or s.id==self.selected and 8 or 1)
   r:outline(x-5,py-5,11,11,8)
   r:fill(x-2,py-2,5,5,s.id==g.location and 7 or 13)
-  if w>=204 then r:text(x-12,py+7,s.short,7,1,72)end
+  if r.cw>=100 and r.ch>=65 then r:text(x-12,py+7,s.short,7,1,72)end
   r.buttons[#r.buttons+1]={x=x-12,y=py-12,w=24,h=24,label=s.short,fn=function()self.selected=s.id end}
  end
  local sy=h-60;local station=C.stations[self.selected]
@@ -214,7 +216,7 @@ function UI:station()
 end
 function UI:modules()
  local r=self.r;local w,h=r.w,r.h;local g=self.g;self:header('STATION MODULES','SIMPLE PRODUCTION / UPGRADES')
- local y=24;local cols=w>=208 and 3 or 2;local rows=math.ceil(#C.modules/cols)
+ local y=24;local cols=not self:small() and w>=208 and 3 or 2;local rows=math.ceil(#C.modules/cols)
  local gap=4;local bw=math.floor((w-14-(cols-1)*gap)/cols)
  local bh=math.floor((h-53-y-(rows-1)*gap)/rows)
  local current=g.stations[g.location].modules
@@ -240,7 +242,7 @@ function UI:market()
  local top=23;local tabW=math.floor((w-21)/2)
  r:button(7,top,tabW,16,'BUY',function()self.marketSide='buy' end,{selected=self.marketSide=='buy'})
  r:button(14+tabW,top,tabW,16,'SELL',function()self.marketSide='sell' end,{selected=self.marketSide=='sell'})
- local cols=w>=210 and 4 or 2
+ local cols=not self:small() and w>=210 and 4 or 2
  local rows=2;local count=cols*rows;local pages=math.ceil(#C.goods/count)
  self.page=math.max(1,math.min(self.page,pages))
  local gap=4;local bw=math.floor((w-14-(cols-1)*gap)/cols)
@@ -296,12 +298,12 @@ function UI:contracts()
 end
 function UI:train()
  local r=self.r;local w,h=r.w,r.h;local g=self.g;self:header('TRAIN COMPOSITION','TAP A WAGON TO INSPECT')
- local artH=self:small() and 44 or math.floor((h-45)*.43)
+ local artH=self:small() and (r.mode=='graphics' and math.floor((h-64)*.45) or 44) or math.floor((h-45)*.43)
  local taps=Art.train(r,2,21,w-4,artH,g.wagons,self.frame,self.selectedWagon)
  for i,t in ipairs(taps)do local ix=i
   r.buttons[#r.buttons+1]={x=t.x,y=t.y,w=t.w,h=t.h,fn=function()self.selectedWagon=ix end,label='WAGON'}
  end
- local top=24+artH;local cols=w>=210 and 4 or 2
+ local top=24+artH;local cols=not self:small() and w>=210 and 4 or 2
  local start=(self.page-1)*cols+1;local bw=math.floor((w-14-(cols-1)*3)/cols)
  for i=1,cols do
   local idx=start+i-1;local wagon=g.wagons[idx]
@@ -316,7 +318,7 @@ function UI:train()
  end
  local maxPage=math.ceil(#g.wagons/cols)
  if maxPage>1 then
-  local arrows=self:small() and 24 or top+32
+  local arrows=top+32
   r:button(7,arrows,41,14,'<',function()self.page=math.max(1,self.page-1)end)
   r:button(w-48,arrows,41,14,'>',function()self.page=math.min(maxPage,self.page+1)end)
  end
@@ -352,7 +354,7 @@ function UI:wagons()
 end
 function UI:upgrades()
  local r=self.r;local w,h=r.w,r.h;self:header('TRAIN UPGRADES','CREATE-STYLE MODULES')
- local cols=w>=210 and 3 or 2;local rows=math.ceil(#C.upgrades/cols);local gap=4
+ local cols=not self:small() and w>=210 and 3 or 2;local rows=math.ceil(#C.upgrades/cols);local gap=4
  local bh=math.floor((h-50-24-(rows-1)*gap)/rows)
  local bw=math.floor((w-14-(cols-1)*gap)/cols)
  for i,spec in ipairs(C.upgrades)do

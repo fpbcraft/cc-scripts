@@ -31,13 +31,15 @@ The train has coins, fuel, hull condition, reputation, and finite wagon cargo sl
 
 ### Touchscreen / monitor behaviour
 
-With CC: Graphics, `monitor_touch` events are **zero-based pixel coordinates**; without it, events use **one-based character cells**. The renderer normalizes both into a virtual pixel canvas sized at twice the terminal text width and three times its text height. Controls are click targets in those same virtual coordinates. All six layouts and both modes are exercised in the offline test harness. Actual in-game performance has not yet been validated.
+With CC: Graphics, `monitor_touch` events are **zero-based pixel coordinates**; without it, events use **one-based character cells**. The game sets the monitor text scale to **0.5** before initializing graphics. CC: Graphics uses a higher-density virtual canvas (3× text columns by 4× text rows), rendered at 2×2.25 real pixels per virtual pixel. This fits more readable text and content without shrinking the physical touchable area of the monitor. The native text fallback retains its previous 2×3 virtual canvas. Both use normalized touch coordinates. Controls are click targets in those same virtual coordinates. All six layouts and both modes are exercised in the offline test harness. Actual in-game performance has not yet been validated.
 
 ## Tests
 
 Run from the repository root with Lua 5.3+:
 
 ```sh
+lua railbreak/tests/scale.lua       # prove monitor scale 0.5 is applied and restored
+lua railbreak/tests/scale.lua       # prove monitor scale 0.5 is applied and restored
 lua railbreak/tests/boot.lua        # CraftOS-style boot/module lookup regression
 lua railbreak/tests/train.lua       # train engine, campaign and responsive UI
 lua railbreak/tests/run.lua         # preserved factory-first edition regressions
@@ -51,3 +53,11 @@ All artwork is procedural using CC: Graphics pixel primitives; no resource pack 
 The v2.0.3 railway map uses the rules engine for route fuel costs, and normal labels use a compact 3×5 pixel font in CC: Graphics mode (headings remain larger). The text-mode fallback uses the native character font.
 
 The train edition imports modules relative to `/railbreak/` (`train.ui`, `train.rules`, `core.util`). The updater performs a CraftOS boot check **and renders key screens using a mock monitor** after installing; any failure triggers rollback to the prior files without modifying saved games. A stale cached installer can be bypassed by using the installation command with a pinned commit SHA for both installer and files.
+
+## Display-density update v2.0.4
+
+Advanced Monitors are explicitly set to **text scale 0.5**. In graphics mode, the
+renderer uses more of the available CC: Graphics pixels instead of upscaling
+text and controls by 3×. Layout mode is selected using monitor text-cell
+dimensions, so 3×3 and 4×3 displays still receive the compact interface.
+All six supported sizes are covered by graphics/text input and resize tests.
