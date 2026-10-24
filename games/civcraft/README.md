@@ -1,4 +1,4 @@
-# CIVCRAFT v0.6 — Territorial Hex Civilization
+# CIVCRAFT v0.6.1 — Territorial Hex Civilization
 
 A Civilization-inspired, turn-based hex 4X for **CC:Tweaked**, supporting local hot-seat (2–4 human/AI slots) or multiplayer over rednet. Local games use one computer or an Advanced Monitor; networked games use an authoritative host. Computers communicate through **rednet modems**, either wireless (within range) or wired (via the same wired modem network). It also works over interdimensional wireless modems. No HTTP or external web server is needed after installation.
 
@@ -38,9 +38,13 @@ generated terrain, territory, fog, technology, and production progress.
   on water, and settlers found cities at least three hexes apart. Fog hides
   unexplored land and enemy units outside current sight.
 - **Manage cities:** Each citizen works a tile and has a Food, Industry or Science
-  assignment. Use the city inspector's **JOBS** tab and direct **+ / -**
-  controls to reallocate workforce; the displayed turn yields update. Use
-  **TILES** to choose which owned hexes are worked.
+  assignment. Jobs and worked tiles share the same population pool. **JOBS +**
+  automatically chooses a free owned tile of that yield type; **-** unworks one
+  and makes that citizen idle. **TILES** (or **HEX** on compact screens) lets
+  you choose the exact tile. Jobs are derived from the tile's strongest yield,
+  with science winning ties, then industry if it exceeds food. No matching free
+  tile means that job cannot be added. Manual and automatic assignments update
+  the same yields; citizens cannot be counted twice.
 - **Production:** Choose **PROD**, then **UNITS** or **BUILDS**. City projects
   accumulate industry each full turn instead of consuming a resource wallet
   immediately. Changing projects preserves their individual progress.
@@ -53,14 +57,43 @@ generated terrain, territory, fog, technology, and production progress.
   advances after everyone finishes; the match ends upon reaching the city
   victory condition or the round limit.
 
-The map stays central, with fixed view/pan controls on the left and a contextual
-city, unit or tile inspector on the right. The technology graph has a separate
+The map stays central with a permanent, scrollable inspector. The left controls
+collapse to icons on compact screens. **PREV/NEXT**, the scrollbar, and mouse
+wheel scrolling keep all inspector actions reachable. **INSPECT** opens a larger
+inspector. Four narrow, clickable map edges pan in their respective directions.
+Drag inside the map to pan on a computer; CraftOS monitor windows also support
+mouse dragging. Vanilla Minecraft monitor taps use the edge strips.
+
+**+ / -** zoom while preserving the camera center. The minimap respects fog of
+war and can be clicked to jump to a region. The default map shows terrain,
+cities, units and borders. **RESOURCES**, **YIELDS**, and **TERRITORY** are
+independent overlay toggles; **TERRAIN** clears them. Yields zoom in to show
+contrasting food/industry/science labels; the tile inspector always shows the
+full numeric breakdown. Terrain detail increases with zoom.
+
+Selecting a unit only inspects it. Click it again, or **DESELECT**, to clear it.
+Use **MOVE / ATTACK** to show legal destinations (green for movement, red for
+attacks), choose a target, then confirm. **CANCEL MOVE** leaves the unit selected.
+**SLEEP UNIT** excludes a unit from unfinished-order reminders across rounds;
+**WAKE UNIT** restores active orders. Other unit actions require their own
+inspector buttons. Escape closes a dialog or cancels the current action first.
+
+**END TURN** asks for confirmation when awake units have moves remaining, a city
+has no production, or an available research project is unassigned. **END ANYWAY**
+skips those orders. Hotseat handoffs clear the outgoing camera, selection and
+action overlays; the next player starts centered on their own city or unit.
+A scrollable **turn report dialog** lists economic changes, completed research
+and buildings, city growth, and recruited/lost/damaged units. **REPORT** reopens
+it. Reports contain only that player's empire information.
+
+**CODEX** contains every unit, building, technology and gameplay mechanic,
+including costs, requirements, abilities and controls. The technology graph has a separate
 detail inspector. A pause menu provides **Resume**, **Save**, **Main Menu**
 and **Exit**.
 
 ## Display and modems
 
-Best experienced on a **5×5 Advanced Monitor** at scale 0.5 (a 4×3 monitor can also work). The program selects the largest monitor on each machine, or falls back to a colour-capable computer terminal. Monitor taps and terminal mouse clicks are supported. The visual presentation intentionally uses standard CC colour text, so no graphics mod, Basalt, Pine3D or extra dependency is required.
+Designed for **3×3 through 5×5 Advanced Monitors** at scale 0.5, including rectangular arrangements. Compact layouts preserve both side panels and page long lists. The program selects the largest monitor on each machine, or falls back to a colour-capable computer terminal. Monitor taps and terminal mouse clicks are supported. The renderer uses native pixel graphics when available and standard CC colour text otherwise. No graphics mod, Basalt, Pine3D or extra dependency is required.
 
 Each machine needs a peripheral modem for networked play; wired modems need to be part of the same wired network. CC:Tweaked does **not** offer unlimited-range normal wireless networking—distance and dimensions matter.
 

@@ -29,6 +29,23 @@ function H.neighbours(x,y,state)
  end
  return out
 end
+-- Clockwise polygon edges: NE, E, SE, SW, W, NW. Includes map edges.
+function H.edgeNeighbours(x,y)
+ local shift=(y-1)%2
+ return {{x=x+shift,y=y-1},{x=x+1,y=y},{x=x+shift,y=y+1},
+  {x=x+shift-1,y=y+1},{x=x-1,y=y},{x=x+shift-1,y=y-1}}
+end
+function H.vertices(x,y,size)
+ return {{x=x+size/2,y=y},{x=x+size,y=y+size/4},
+  {x=x+size,y=y+size*3/4},{x=x+size/2,y=y+size},
+  {x=x,y=y+size*3/4},{x=x,y=y+size/4}}
+end
+function H.contains(px,py,size,x,y)
+ local dx,dy=x-px,y-py
+ if dx<0 or dy<0 or dx>=size or dy>=size then return false end
+ local inset=dy<size/4 and size/2-2*dy or dy>size*3/4 and 2*dy-size*1.5 or 0
+ return dx>=inset and dx<size-inset
+end
 function H.terrain(x,y,state)
  local world=state and state.world
  if world and world.tiles then return world.tiles[x..":"..y] or "plains"end

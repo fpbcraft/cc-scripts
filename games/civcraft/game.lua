@@ -3,7 +3,7 @@ local bootstrap=loadfile("/games/civcraft/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot~="/games/civcraft"then
  return bootstrap().run("/games/civcraft","game.lua",_ENV,...)
 end
--- CIVCRAFT v0.6.0: Railbreak-style 4X with local hotseat or rednet networking
+-- CIVCRAFT v0.6.1: Railbreak-style 4X with local hotseat or rednet networking
 -- Host: /games/civcraft/game.lua host [--new]  Join: /games/civcraft/game.lua join [host ID]
 local args={...}
 local MODE=args[1] or 'local'
@@ -23,21 +23,28 @@ local function modem()
  return false
 end
 local function screen()
- local best,bestArea=nil,0
+ local best,bestArea,bestSide=nil,0,nil
  for _,side in ipairs(peripheral.getNames()) do
   if peripheral.getType(side)=='monitor' then
    local m=peripheral.wrap(side);m.setTextScale(0.5)
    local w,h=m.getSize()
-   if w*h>bestArea then best,bestArea=m,w*h end
+   if w*h>bestArea then best,bestArea,bestSide=m,w*h,side end
   end
  end
- return best or term.current()
+ return best or term.current(),bestSide
 end
-local display=screen()
+local display,displaySide=screen()
+-- CraftOS can provide drag/wheel events for monitor windows; vanilla monitors use edge taps.
+local previousMonitorMouse
+if displaySide and config and config.get and config.set then
+ local ok,value=pcall(config.get,'monitorsUseMouseEvents')
+ if ok then previousMonitorMouse=value;pcall(config.set,'monitorsUseMouseEvents',true)end
+end
 local Hex=dofile('/games/civcraft/hex.lua')
 local Systems=dofile('/games/civcraft/systems.lua')
 local World=dofile('/games/civcraft/world.lua')
 local Saves=dofile('/games/civcraft/saves.lua')
+local Reports=dofile('/games/civcraft/reports.lua')
 local W,H=Hex.width,Hex.height
 local state
 local function terrain(x,y)return Hex.terrain(x,y,state)end
@@ -111,6 +118,9 @@ local function nextTurn()
    (owner and owner.civ=='mariner' and base.naval and 1 or 0)
   u.moved=false
  end
+ for _,p in ipairs(state.players)do
+  p.turnReport=Reports.build(state,p,p.turnBaseline);p.reportRound=state.round
+ end
  winner();log('Round '..state.round);save()
 end
 local function apply(id,req)
@@ -135,7 +145,7 @@ local function apply(id,req)
    if req.action=='workTile' then
     ok,why=Systems.workTile(state,c,tonumber(req.x),tonumber(req.y))
    elseif req.action=='assign' then
-    ok,why=Systems.assign(c,req.from,req.to)
+    ok,why=Systems.assign(c,req.from,req.to,state)
    elseif req.action=='queue' then
     ok,why=Systems.queue(p,c,req.kind,req.id,state,Hex)
    elseif req.action=='build' then
@@ -148,6 +158,7 @@ local function apply(id,req)
   return ok,why
  end
  if req.action=='end' then
+  p.turnBaseline=Reports.capture(state,p)
   p.ready=true;log(p.name..' is ready')
   if localMode then
    for _,q in ipairs(state.players)do
@@ -163,10 +174,13 @@ local function apply(id,req)
  local c,u=cityAt(x,y),unitAt(x,y)
  if req.action=='research' or req.action=='warrior' or req.action=='settler' then
   return false,'Use research and city production projects'
+ elseif req.action=='standby' then
+  if not u or u.owner~=id then return false,'Select an owned unit' end
+  u.standby=req.value==true;save();return true
  elseif req.action=='move' then
   local sx,sy=tonumber(req.sx),tonumber(req.sy)
   local moving=sx and sy and unitAt(sx,sy)
-  if not moving or moving.owner~=id or (moving.movesLeft or (moving.moved and 0 or 1))<=0 then return false,'Unit cannot move' end
+  if not moving or moving.owner~=id or moving.standby or (moving.movesLeft or (moving.moved and 0 or 1))<=0 then return false,'Unit cannot move' end
   local legal
   for _,dest in ipairs(Hex.reachable(state,moving,id,Systems))do
    if dest.x==x and dest.y==y then legal=dest;break end
@@ -278,7 +292,7 @@ local function draw()
  local s=localHost and state or snapshot
  view:message(message)
  view:draw(s,localMode and activeID() or myId,{
-  handoff=handoff,localMode=localMode,hostID=hostId,screen=appScreen,
+  handoff=handoff,localMode=localMode,hostID=hostId,screen=appScreen,report=true,
    paused=gamePaused,hasSave=hasHumanSave,slot=slot,
    slots=localMode and Saves.list() or nil,deleteConfirm=deleteConfirm})
 end
@@ -442,21 +456,30 @@ local function clientListener()
  end
 end
 local function ui()
+ local resizeTimer
+ local displayTimer=os.startTimer and os.startTimer(.25)
  draw()
  while not exitRequested do
-  local e,a,b,c=os.pullEvent()
-  if e=='monitor_touch' and display~=term.current()then
+  local e,a,b,c,d=os.pullEvent()
+  if e=='monitor_touch' and display~=term.current() and a==displaySide then
    view:tap(b,c);draw()
-  elseif e=='mouse_click' and display==term.current()then
-   view:tap(b,c);draw()
-  elseif e=='mouse_drag' and display==term.current() then
+  elseif e=='mouse_click' and (not d or d==displaySide)then
+   view:pointerDown(b,c);draw()
+  elseif e=='mouse_drag' and (not d or d==displaySide) then
    view:drag(b,c);draw()
-  elseif e=='mouse_scroll' and display==term.current() then
+  elseif e=='mouse_scroll' and (not d or d==displaySide) then
    view:scroll(a,b,c);draw()
+  elseif e=='mouse_up' and (not d or d==displaySide)then view:pointerUp();draw()
   elseif e=='term_resize' or e=='monitor_resize' then
-   view:resize();draw()
+   view:resize();draw();resizeTimer=os.startTimer and os.startTimer(.15)
+  elseif e=='timer' and a==displayTimer then
+   local width,height=display.getSize()
+   if view.r and (width~=view.r.cw or height~=view.r.ch)then view:resize();draw()end
+   displayTimer=os.startTimer(.25)
+  elseif e=='timer' and a==resizeTimer then
+   resizeTimer=nil;view:resize();draw()
   elseif e=='key' and keys and (a==keys.q or a==keys.escape)then
-   gamePaused=not gamePaused;draw()
+   if a~=keys.escape or not view:back()then gamePaused=not gamePaused end;draw()
   end
   if localHost and hasModem then publish()end
  end
@@ -467,3 +490,5 @@ elseif localHost then ui()
 else parallel.waitForAny(clientListener,ui)end
 if localHost and hasModem then pcall(rednet.unhost,PROTOCOL)end
 view:close()
+
+if previousMonitorMouse~=nil then pcall(config.set,'monitorsUseMouseEvents',previousMonitorMouse)end

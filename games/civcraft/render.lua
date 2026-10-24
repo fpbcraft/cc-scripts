@@ -165,9 +165,28 @@ function R:resize()
   if ok then self.pw=pw;self.ph=ph;self:fitGraphics() end
  end
 end
+-- Every map primitive shares this viewport clip, including text and icons.
+function R:withClip(rect,draw)
+ local previous=self.clip
+ local x,y=rect.x,rect.y
+ local right,bottom=x+rect.w,y+rect.h
+ if previous then
+  x=math.max(x,previous.x);y=math.max(y,previous.y)
+  right=math.min(right,previous.x+previous.w)
+  bottom=math.min(bottom,previous.y+previous.h)
+ end
+ self.clip={x=x,y=y,w=math.max(0,right-x),h=math.max(0,bottom-y)}
+ local ok,err=pcall(draw)
+ self.clip=previous
+ if not ok then error(err,0)end
+end
 function R:fill(x,y,w,h,color)
  local x0=math.max(0,math.floor(x));local y0=math.max(0,math.floor(y))
  local x1=math.min(self.w,math.ceil(x+w));local y1=math.min(self.h,math.ceil(y+h))
+ if self.clip then
+  x0=math.max(x0,self.clip.x);y0=math.max(y0,self.clip.y)
+  x1=math.min(x1,self.clip.x+self.clip.w);y1=math.min(y1,self.clip.y+self.clip.h)
+ end
  if x1<=x0 or y1<=y0 then return end
  if self.mode=='graphics' then
   local a=math.floor(self.ox+x0*self.sx);local b=math.floor(self.oy+y0*self.sy)
@@ -200,6 +219,13 @@ function R:text(x,y,txt,color,scale,maxWidth)
  local widthPerChar=self.mode=='text' and 2 or (scale>=2 and 6*scale or 4)
  txt=txt:sub(1,math.max(0,math.floor(maxWidth/widthPerChar)))
  if self.mode=='text' then
+  if self.clip then
+   local c=self.clip
+   if y<c.y or y+3>c.y+c.h then return end
+   local skip=math.max(0,math.ceil((c.x-x)/2))
+   txt=txt:sub(skip+1);x=x+skip*2
+   txt=txt:sub(1,math.max(0,math.floor((c.x+c.w-x)/2)))
+  end
   if y<0 or y>=self.h then return end
   local tx=math.floor(x/2)+1;local ty=math.floor(y/3)+1
   if tx>=1 and tx<=self.cw and ty>=1 and ty<=self.ch then
@@ -273,7 +299,8 @@ function R:icon(id,x,y,s)
  end
 end
 function R:button(x,y,w,h,label,fn,opt)
- opt=opt or {};if w<10 or h<10 then return end
+ opt=opt or {};if w<10 or h<8 then return end
+ if self.clip and (x<self.clip.x or y<self.clip.y or x+w>self.clip.x+self.clip.w or y+h>self.clip.y+self.clip.h)then return end
  local bg=opt.selected and 12 or opt.primary and 11 or opt.danger and 10 or 2
  self:fill(x,y,w,h,bg);self:outline(x,y,w,h,opt.primary and 8 or 3)
  if opt.icon and w>=48 then self:icon(opt.icon,x+4,y+math.max(3,math.floor((h-9)/2)),1)end
@@ -293,12 +320,12 @@ function R:touch(x,y)
 end
 function R:hit(x,y)
  for i=#self.buttons,1,-1 do local b=self.buttons[i]
-  if x>=b.x and x<b.x+b.w and y>=b.y and y<b.y+b.h then b.fn();return b.label or true end
+  if x>=b.x and x<b.x+b.w and y>=b.y and y<b.y+b.h then b.fn(x,y);return b.label or true end
  end
  return false
 end
 function R:begin()
- self.buttons={}
+ self.buttons={};self.scrollbars={};self.clip=nil
  if self.mode=='graphics' and self.m.setFrozen then pcall(self.m.setFrozen,true)end
  if self.mode=='graphics' then
   self.m.drawPixels(0,0,0,self.pw,self.ph)

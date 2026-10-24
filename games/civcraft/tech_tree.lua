@@ -14,11 +14,45 @@ local function prerequisites(player,tech)
  end
  return missing
 end
+local Panels=dofile('/games/civcraft/panels.lua')
+local function compact(r,systems,player,rect,model,research,onClose)
+ local x,y,w,h=rect.x,rect.y,rect.w,rect.h
+ r:fill(x,y,w,h,1);r:outline(x,y,w,h,8)
+ r:text(x+3,y+3,'TECHNOLOGY',8,1,w-42)
+ r:button(x+w-37,y+1,35,11,'CLOSE',onClose)
+ local rows={};local tier=clamp(model.tier or 1,1,6)
+ if model.detail then
+  local chosen=systems.techs[model.selected]
+  rows[#rows+1]={buttons={{label='BACK TO TREE',run=function()model.detail=false;model.offset=0 end}}}
+  local paragraphs={chosen.name,'UNLOCK: '..chosen.unlock,
+   'SCIENCE '..((player.researchProgress or {})[model.selected]or 0)..'/'..chosen.cost,
+   'REQUIRES: '..(#chosen.requires>0 and table.concat(chosen.requires,', ') or 'NONE')}
+  for _,paragraph in ipairs(paragraphs)do
+   for _,line in ipairs(Panels.wrap(r,paragraph,w-12))do rows[#rows+1]={text=line}end
+  end
+  local allowed=systems.canResearch(player,model.selected)
+  rows[#rows+1]={buttons={{label=allowed and 'RESEARCH' or (player.techs[model.selected] and 'COMPLETED' or 'LOCKED'),
+   run=function()if allowed then research(model.selected)end end,style={primary=allowed}}}}
+ else
+  rows[#rows+1]={buttons={
+   {label='PREV TIER',run=function()model.tier=clamp(tier-1,1,6);model.offset=0 end},
+   {label='NEXT TIER',run=function()model.tier=clamp(tier+1,1,6);model.offset=0 end}}}
+  for _,id in ipairs(systems.techOrder)do
+   if systems.techs[id].tier==tier then
+    rows[#rows+1]={buttons={{label=id,run=function()model.selected=id;model.detail=true;model.offset=0 end,
+     style={selected=player.techs[id],primary=player.researchTarget==id}}}}
+   end
+  end
+ end
+ Panels.rows(r,{x=x+3,y=y+14,w=w-6,h=h-17},rows,model)
+ return model
+end
 function T.draw(r,systems,player,rect,model,research,onClose)
  model=model or {};model.zoom=model.zoom or 1
  model.panX=model.panX or 0;model.panY=model.panY or 0
  model.selected=model.selected or systems.techOrder[1]
  local x,y,w,h=rect.x,rect.y,rect.w,rect.h
+ if r.mode=='text' or w<300 or h<210 then return compact(r,systems,player,rect,model,research,onClose)end
  r:fill(x,y,w,h,1);r:outline(x,y,w,h,8)
  local header=math.max(15,math.min(21,math.floor(h*.13)))
  r:fill(x+1,y+1,w-2,header,2)

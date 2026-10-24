@@ -1,0 +1,118 @@
+local Systems=dofile('/games/civcraft/systems.lua')
+local Hex=dofile('/games/civcraft/hex.lua')
+local World=dofile('/games/civcraft/world.lua')
+local Panels=dofile('/games/civcraft/panels.lua')
+local I={}
+local function at(list,x,y)
+ for _,item in ipairs(list or {})do if item.x==x and item.y==y then return item end end
+end
+function I.draw(ui,state,player,rect,modal)
+ local r=ui.r;local x,y,w,h=rect.x,rect.y,rect.w,rect.h
+ ui.inspectorBounds=rect
+ r:fill(x,y,w,h,1);r:outline(x,y,w,h,3)
+ r:text(x+3,y+3,'INSPECTOR',8,1,w-(modal and 40 or 6))
+ if modal then r:button(x+w-36,y+1,34,11,'CLOSE',function()ui.panel='context'end)end
+ local city=not ui.selected.empty and at(state.cities,ui.selected.x,ui.selected.y)
+ local unit=not ui.selected.empty and at(state.units,ui.selected.x,ui.selected.y)
+ local rows={};local function text(value,color)
+  for _,line in ipairs(Panels.wrap(r,value,w-17))do rows[#rows+1]={text=line,color=color}end
+ end
+ local bodyY=y+13
+ if ui.selected.empty then
+  text('NO SELECTION',7);text('Click a hex to inspect it.')
+ elseif city and city.owner==ui.playerID then
+  local tabs=w<80 and {'JOBS','HEX','PROD'} or {'JOBS','TILES','PROD'};local values={'jobs','tiles','production'}
+  local width=math.floor((w-8)/3)
+  for i,label in ipairs(tabs)do
+   local mode=values[i]
+   r:button(x+2+(i-1)*(width+2),y+13,width,11,label,function()
+    ui.cityPanel=mode;ui.inspectorOffset=0;ui.source=nil;ui.reachable={};ui.pendingMove=nil
+    ui.workCity=mode=='tiles' and {x=city.x,y=city.y} or nil
+    if mode=='tiles' and modal then ui.panel='context'end
+   end,{selected=(ui.cityPanel or 'jobs')==mode})
+  end
+  bodyY=y+24
+  local yields=Systems.yields(player,city,state,Hex)
+  text('POP '..(city.population or 2)..'  IDLE '..Systems.idle(city),7)
+  text('F'..yields.food..' I'..yields.industry..' S'..yields.science..'/TURN',11)
+  if ui.cityPanel=='production'then
+   local project=city.project
+   text(project and ('MAKING '..project.id:upper()) or 'NO PRODUCTION',8)
+   rows[#rows+1]={buttons={
+    {label='UNITS',run=function()ui.productionCategory='unit';ui.inspectorOffset=0 end,
+     style={selected=ui.productionCategory~='building'}},
+    {label='BUILDS',run=function()ui.productionCategory='building';ui.inspectorOffset=0 end,
+     style={selected=ui.productionCategory=='building'}}}}
+   local kind=ui.productionCategory=='building' and 'building' or 'unit'
+   local source=kind=='building' and Systems.buildings or Systems.units
+   local list={}
+   for id in pairs(source)do
+    local allowed
+    if kind=='unit'then allowed=Systems.canRecruit(player,id,state,Hex)
+    else allowed=Systems.canBuild(player,city,id)end
+    list[#list+1]={id=id,allowed=not not allowed}
+   end
+   table.sort(list,function(a,b)
+    if a.allowed~=b.allowed then return a.allowed end
+    return a.id<b.id
+   end)
+   for _,item in ipairs(list)do
+    local id=item.id;local allowed=item.allowed
+    local active=city.project and city.project.kind==kind and city.project.id==id
+    local progress=active and city.project.progress or (city.projectProgress or {})[kind..':'..id] or 0
+    local turns=math.max(1,math.ceil((Systems.projectCost(kind,id)-progress)/math.max(1,yields.industry)))
+    rows[#rows+1]={buttons={{label=(allowed and '' or '!')..id:upper()..' '..turns..'T',
+     style={selected=active},run=function()
+      if allowed then ui:command('queue',{cityX=city.x,cityY=city.y,kind=kind,id=id})
+      else ui:feedback('Locked or completed. See CODEX for requirements.')end
+     end}}}
+   end
+  elseif ui.cityPanel=='tiles'then
+   local count=0;for _ in pairs(city.worked or {})do count=count+1 end
+   text('WORKED '..count..'/'..(city.population or 2),8)
+   text('TAP LAND HEXES')
+   text('Tap a worked hex to free it.')
+   rows[#rows+1]={buttons={{label='DONE WORK',run=function()ui.workCity=nil;ui.cityPanel='jobs';ui.inspectorOffset=0 end}}}
+  else
+   for _,job in ipairs(Systems.jobs)do
+    rows[#rows+1]={adjust={label=(w<80 and (job=='food' and 'F' or job=='wood' and 'I' or 'S') or job=='wood' and 'IND' or job:upper())..' '..(city.jobs[job]or 0),
+     minus=function()ui:command('assign',{x=city.x,y=city.y,from=job,to='idle'})end,
+     plus=function()
+      if Systems.idle(city)>0 then ui:command('assign',{x=city.x,y=city.y,from='idle',to=job})
+      else ui:feedback('No idle citizens. Use - to free one first.')end
+     end}}
+   end
+   text('- frees a citizen; + uses idle.')
+  end
+ elseif unit and unit.owner==ui.playerID then
+  local stats=Systems.units[unit.kind] or Systems.units.warrior
+  text(unit.kind:upper(),7)
+  text('ATK '..(stats.strength or 0)..' DEF '..(stats.defense or 0))
+  text('MOVE '..(unit.movesLeft or 0)..'/'..stats.move)
+  text('RANGE '..stats.range..' VISION '..stats.vision)
+  for _,line in ipairs(Panels.wrap(r,stats.ability or '',w-10))do text(line)end
+  rows[#rows+1]={buttons={{label='MOVE / ATTACK',run=function()
+   if unit.standby then ui:feedback('Wake this unit before issuing orders.');return end
+   ui.source={x=unit.x,y=unit.y};ui.reachable=Hex.reachable(state,unit,ui.playerID,Systems)
+   ui.pendingMove=nil;ui:feedback('SELECT A GREEN HEX TO MOVE / RED TO ATTACK');if modal then ui.panel='context'end
+  end}}}
+  rows[#rows+1]={buttons={{label=unit.standby and 'WAKE UNIT' or 'SLEEP UNIT',run=function()
+   ui.source=nil;ui.reachable={};ui.pendingMove=nil
+   ui:command('standby',{x=unit.x,y=unit.y,value=not unit.standby})
+  end}}}
+  if ui.source then rows[#rows+1]={buttons={{label='CANCEL MOVE',run=function()ui.source=nil;ui.reachable={};ui.pendingMove=nil end}}}end
+  rows[#rows+1]={buttons={{label='DESELECT',run=function()ui:deselect()end}}}
+  if unit.kind=='settler'then rows[#rows+1]={buttons={{label='FOUND CITY',run=function()ui:command('found',{x=unit.x,y=unit.y})end}}}end
+ else
+  local known=World.known(player,ui.selected.x,ui.selected.y)
+  text('HEX '..ui.selected.x..','..ui.selected.y,7)
+  text(known=='hidden' and 'UNEXPLORED' or Hex.terrain(ui.selected.x,ui.selected.y,state))
+  if known~='hidden'then
+   local yields=World.yields(state.world,ui.selected.x,ui.selected.y)
+   text('FOOD '..yields.food);text('INDUSTRY '..yields.industry);text('SCIENCE '..yields.science)
+   text(World.deposit(state.world,ui.selected.x,ui.selected.y)or 'NO DEPOSIT')
+  end
+ end
+ Panels.rows(r,{x=x+3,y=bodyY,w=w-6,h=y+h-bodyY-2},rows,ui,'inspectorOffset')
+end
+return I

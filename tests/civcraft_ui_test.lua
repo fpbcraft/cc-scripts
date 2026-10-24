@@ -90,14 +90,19 @@ local function tapHex(hx,hy)
   math.floor(ui.r.oy+(hit.y+hit.h/2)*ui.r.sy))
 end
 assert(tapHex(3,2),"Unit can be selected")
-assert(ui.source and ui.source.x==3 and #ui.reachable>0,
- "Selecting owned unit immediately shows reachable hexes")
+assert(not ui.source and #ui.reachable==0,'Selection never activates a unit action')
+ui:draw(state,11,{localMode=true})
+touchLabel('MOVE / ATTACK')
+assert(ui.source and ui.source.x==3 and #ui.reachable>0,'Move button activates the legal overlay')
 ui:draw(state,11,{localMode=true})
 local legal=ui.reachable[1]
 assert(tapHex(legal.x,legal.y),"Highlighted move is clickable")
-assert(calls[#calls].action=="move" and
- calls[#calls].data.sx==3 and calls[#calls].data.sy==2,
- "Hex movement emits the same command accepted by simulation")
+assert(ui.pendingMove,'A destination opens move confirmation')
+ui:draw(state,11,{localMode=true})
+touchLabel('CONFIRM')
+assert(calls[#calls].action=='move' and calls[#calls].data.sx==3 and calls[#calls].data.sy==2,
+ 'Only confirmed movement emits the simulation order')
+ui:draw(state,11,{localMode=true})
 -- Selecting a city exposes its specific actions, not a generic build bar.
 assert(tapHex(2,2),"Select owned city")
 ui:draw(state,11,{localMode=true})
@@ -107,15 +112,21 @@ assert(actions.JOBS and actions.TILES and actions.PROD and actions["TECH TREE"],
  "Staffing, tile management and production controls stay reachable")
 assert(not actions["MOVE UNIT"],"City should not expose unit movement")
 assert(ui.mapViewport and ui.mapViewport.w>0,"Central map viewport")
-touchLabel("+")
-assert(calls[#calls].action=="assign" and calls[#calls].data.to=="food",
- "City workers can be reallocated directly from the inspector")
+touchLabel('-')
+assert(calls[#calls].action=='assign' and calls[#calls].data.to=='idle','Minus frees a citizen')
+state.cities[1].jobs.food=0
+ui:draw(state,11,{localMode=true})
+touchLabel('+')
+assert(calls[#calls].action=='assign' and calls[#calls].data.from=='idle' and calls[#calls].data.to=='food',
+ 'Plus uses an idle citizen')
 
 local oldPan=ui.panX
 ui:pan(45,0)
 assert(ui.panX>=oldPan,"Pan control clamps within world")
 touchLabel("TILES")
 assert(ui.workCity and ui.workCity.x==2,"Worker assignment uses map tiles")
+ui:draw(state,11,{localMode=true})
+touchLabel("NEXT")
 ui:draw(state,11,{localMode=true})
 touchLabel("DONE WORK")
 assert(not ui.workCity,"Exit worker mode")
@@ -129,6 +140,9 @@ assert(techNode,"City tech tab opens connected technology graph canvas")
 touchLabel("CLOSE")
 ui:draw(state,11,{localMode=true})
 touchLabel("END TURN")
+assert(ui.endConfirm,"Unfinished orders require confirmation")
+ui:draw(state,11,{localMode=true})
+touchLabel("END ANYWAY")
 assert(calls[#calls].action=="end","End-turn handler wired")
 ui:draw(state,12,{handoff=true,localMode=true})
 touchLabel("READY TO PLAY")

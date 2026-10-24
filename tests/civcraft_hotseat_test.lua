@@ -63,6 +63,11 @@ dofile=function(path)
     elseif stage==4 then
      assert(s.phase=="game" and s.round==1)
      assert(id==s.players[1].id)
+     local unit=s.units[1]
+     callback('standby',{x=unit.x,y=unit.y,value=true})
+     assert(unit.standby,'Sleep command persists on the authoritative unit')
+     callback('standby',{x=unit.x,y=unit.y,value=false})
+     assert(not unit.standby,'Wake command restores active orders')
      callback("end")
     elseif stage==5 then
      assert(opt.handoff and id==s.players[2].id)
@@ -73,6 +78,7 @@ dofile=function(path)
     elseif stage==7 then
      assert(s.round==2 and opt.handoff and id==s.players[1].id,
       "Turn rotation and handoff across rounds")
+     assert(s.players[1].turnReport and s.players[1].reportRound==2,'Round produces a private turn report')
      callback("reveal")
     elseif stage==8 then
      assert(s.round==2 and not opt.handoff)

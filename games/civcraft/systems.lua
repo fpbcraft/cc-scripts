@@ -30,41 +30,44 @@ function M.workable(state,city)
  end)
  return tiles
 end
+function M.tileJob(tile)
+ local y=tile.yield
+ if y.science>0 and y.science>=y.food and y.science>=y.industry then return 'science' end
+ if y.industry>y.food then return 'wood' end
+ return 'food'
+end
 function M.ensureWorkers(state,city)
  if not state.world or not city then return end
- local tiles=M.workable(state,city)
- local had=city.worked~=nil
- city.worked=city.worked or {}
- local available={}
- for _,t in ipairs(tiles)do available[t.key]=true end
+ local tiles=M.workable(state,city);local had=city.worked~=nil
+ city.worked=city.worked or {};local available={}
+ for _,t in ipairs(tiles)do available[t.key]=t end
+ local keys={};for k in pairs(city.worked)do keys[#keys+1]=k end;table.sort(keys)
  local count=0
- for k in pairs(city.worked)do
-  if not available[k] or count>=(city.population or 2)then
-   city.worked[k]=nil
+ for _,k in ipairs(keys)do
+  if not available[k] or count>=(city.population or 2)then city.worked[k]=nil
   else count=count+1 end
  end
  if not had then
   for _,tile in ipairs(tiles)do
-   if count>=city.population then break end
-   if not city.worked[tile.key]then city.worked[tile.key]=true;count=count+1 end
+   if count>=(city.population or 2)then break end
+   city.worked[tile.key]=true;count=count+1
   end
  end
+ city.jobs={food=0,wood=0,science=0}
+ for _,tile in ipairs(tiles)do if city.worked[tile.key]then
+  local job=M.tileJob(tile);city.jobs[job]=city.jobs[job]+1
+ end end
 end
 function M.workTile(state,city,x,y)
- if not city or not state.world or type(x)~="number" or type(y)~="number"then
-  return false,"Invalid city or hex"
- end
+ if not city or not state.world or type(x)~='number' or type(y)~='number'then return false,'Invalid city or hex'end
  M.ensureWorkers(state,city)
- local k=World.key(x,y)
- local allowed=false
- for _,tile in ipairs(M.workable(state,city))do
-  if tile.key==k then allowed=true;break end
- end
+ local k=World.key(x,y);local allowed=false
+ for _,tile in ipairs(M.workable(state,city))do if tile.key==k then allowed=true;break end end
  if not allowed then return false,"Hex is outside this city's workable land"end
- if city.worked[k]then city.worked[k]=nil;return true end
- local count=0;for _ in pairs(city.worked)do count=count+1 end
- if count>=city.population then return false,"No idle population; unwork a hex first"end
- city.worked[k]=true;return true
+ if city.worked[k]then city.worked[k]=nil
+ elseif M.idle(city)>0 then city.worked[k]=true
+ else return false,'No idle population; unwork a hex first'end
+ M.ensureWorkers(state,city);return true
 end
 function M.civ(id)
  for _,v in ipairs(M.civs)do if v.id==id then return v end end
@@ -131,11 +134,33 @@ function M.queue(p,c,kind,id,state,hex)
  return true
 end
 function M.build(p,c,id,state,hex)return M.queue(p,c,"building",id,state,hex)end
-function M.assign(c,from,to)
- if not c.jobs[from] or c.jobs[from]<=0 or c.jobs[to]==nil or from==to then
-  return false,"Invalid citizen assignment"
+function M.idle(c)
+ local total=0
+ for _,job in ipairs(M.jobs)do total=total+(c.jobs[job]or 0)end
+ return math.max(0,(c.population or 2)-total)
+end
+function M.assign(c,from,to,state)
+ local function valid(job)return job=='idle' or job=='food' or job=='wood' or job=='science'end
+ if not valid(from) or not valid(to) or from==to then return false,'Invalid citizen assignment'end
+ if state and state.world then M.ensureWorkers(state,c)end
+ local count=from=='idle' and M.idle(c) or (c.jobs[from] or 0)
+ if count<=0 then return false,from=='idle' and 'No idle citizens' or 'No citizens assigned to this job'end
+ if state and state.world then
+  local remove,candidates=nil,{}
+  for _,tile in ipairs(M.workable(state,c))do
+   if c.worked[tile.key] and M.tileJob(tile)==from then remove=tile.key end
+   if not c.worked[tile.key] and M.tileJob(tile)==to then candidates[#candidates+1]=tile.key end
+  end
+  if to~='idle' and #candidates==0 then return false,'No free owned tile of this job type'end
+  if remove then c.worked[remove]=nil end
+  if to~='idle'then
+   local index=((state.round or 1)*31+c.x*17+c.y*13+count)%#candidates+1
+   c.worked[candidates[index]]=true
+  end
+  M.ensureWorkers(state,c);return true
  end
- c.jobs[from]=c.jobs[from]-1;c.jobs[to]=c.jobs[to]+1
+ if from~='idle'then c.jobs[from]=c.jobs[from]-1 end
+ if to~='idle'then c.jobs[to]=(c.jobs[to]or 0)+1 end
  return true
 end
 function M.techCost(id)
@@ -191,11 +216,7 @@ function M.yields(p,c,state,hex,owned)
   if civ=="scholar" then science=science+2 end
   if civ=="forge" and c.buildings.workshop then industry=industry+2 end
   if civ=="merchant" and c.buildings.market then food=food+2 end
-  -- Each assigned citizen specializes the worked land's output.
-  -- This makes staffing changes affect the projected turn yields.
-  food=food+(jobs.food or 0)
-  industry=industry+(jobs.wood or 0)
-  science=science+(jobs.science or 0)
+
  end
  return {food=food,industry=industry,science=science}
 end
@@ -242,7 +263,12 @@ function M.production(state,hex)
     if c.foodStore>=threshold then
      c.foodStore=c.foodStore-threshold
      c.population=c.population+1
-     c.jobs.food=c.jobs.food+1
+     if state.world then
+      for _,tile in ipairs(M.workable(state,c))do
+       if not c.worked[tile.key]then c.worked[tile.key]=true;break end
+      end
+      M.ensureWorkers(state,c)
+     else c.jobs.food=c.jobs.food+1 end
     end
     if c.project then
      local pr=c.project
@@ -303,7 +329,7 @@ function M.aiTurn(state,p,hex)
     end
    end
    if city.jobs.food>1 and city.jobs.science<2 then
-    M.assign(city,"food","science")
+    M.assign(city,"food","science",state)
    end
   end
  end
