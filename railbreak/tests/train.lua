@@ -90,8 +90,8 @@ for _,dim in ipairs(sizes)do for _,graphics in ipairs({false,true})do
  eq(#ui.r.buttons>=2,'title buttons')
  local b=ui.r.buttons[1]
  local x=b.x+math.floor(b.w/2);local y=b.y+math.floor(b.h/2)
- local px=graphics and math.floor(x*ui.r.sx) or math.floor(x/2)+1
- local py=graphics and math.floor(y*ui.r.sy) or math.floor(y/3)+1
+ local px=graphics and math.floor(ui.r.ox+x*ui.r.sx) or math.floor(x/2)+1
+ local py=graphics and math.floor(ui.r.oy+y*ui.r.sy) or math.floor(y/3)+1
  eq(ui:touch(px,py)~=false,'touch activates title button')
  eq(ui.scene=='setup','click new expedition')
  -- Force gameplay and check every screen rendering, bounds and touch hitboxes.
@@ -117,8 +117,8 @@ for _,dim in ipairs(sizes)do for _,graphics in ipairs({false,true})do
  eq(depart~=nil,'connected route exposes depart action')
  local dx=depart.x+math.floor(depart.w/2)
  local dy=depart.y+math.floor(depart.h/2)
- local touchX=graphics and math.floor(dx*ui.r.sx) or math.floor(dx/2)+1
- local touchY=graphics and math.floor(dy*ui.r.sy) or math.floor(dy/3)+1
+ local touchX=graphics and math.floor(ui.r.ox+dx*ui.r.sx) or math.floor(dx/2)+1
+ local touchY=graphics and math.floor(ui.r.oy+dy*ui.r.sy) or math.floor(dy/3)+1
  eq(ui:touch(touchX,touchY)=='DETAILS','route preview opens')
  eq(ui.info and ui.info.action=='depart','route preview offers deliberate departure')
  eq(ui.g.pending==nil,'opening preview does not depart')
@@ -126,8 +126,8 @@ for _,dim in ipairs(sizes)do for _,graphics in ipairs({false,true})do
  for _,hit in ipairs(ui.r.buttons)do if hit.label=='DEPART' then confirm=hit end end
  eq(confirm~=nil,'departure confirmation touch target')
  local cx=confirm.x+math.floor(confirm.w/2);local cy=confirm.y+math.floor(confirm.h/2)
- eq(ui:touch(graphics and math.floor(cx*ui.r.sx) or math.floor(cx/2)+1,
-  graphics and math.floor(cy*ui.r.sy) or math.floor(cy/3)+1)=='DEPART','confirm departure')
+ eq(ui:touch(graphics and math.floor(ui.r.ox+cx*ui.r.sx) or math.floor(cx/2)+1,
+  graphics and math.floor(ui.r.oy+cy*ui.r.sy) or math.floor(cy/3)+1)=='DEPART','confirm departure')
  eq(ui.g.pending~=nil and ui.scene=='travel','departure triggers event scene')
  local resolve
  for _,hit in ipairs(ui.r.buttons)do
@@ -141,8 +141,8 @@ for _,dim in ipairs(sizes)do for _,graphics in ipairs({false,true})do
  eq(resolve~=nil,'event choice has a button')
  local ex=resolve.x+math.floor(resolve.w/2)
  local ey=resolve.y+math.floor(resolve.h/2)
- local rtx=graphics and math.floor(ex*ui.r.sx) or math.floor(ex/2)+1
- local rty=graphics and math.floor(ey*ui.r.sy) or math.floor(ey/3)+1
+ local rtx=graphics and math.floor(ui.r.ox+ex*ui.r.sx) or math.floor(ex/2)+1
+ local rty=graphics and math.floor(ui.r.oy+ey*ui.r.sy) or math.floor(ey/3)+1
  eq(ui:touch(rtx,rty)~=false,'travel choice is touchable')
  eq(ui.info and ui.info.action=='resolve','travel choice explained before resolution')
  eq(ui.g.pending~=nil,'information does not automatically resolve event')
@@ -150,18 +150,18 @@ for _,dim in ipairs(sizes)do for _,graphics in ipairs({false,true})do
  for _,hit in ipairs(ui.r.buttons)do if hit.label=='CHOOSE THIS' then choose=hit end end
  eq(choose~=nil,'choice confirmation available')
  local zx=choose.x+math.floor(choose.w/2);local zy=choose.y+math.floor(choose.h/2)
- ui:touch(graphics and math.floor(zx*ui.r.sx) or math.floor(zx/2)+1,
-  graphics and math.floor(zy*ui.r.sy) or math.floor(zy/3)+1)
+ ui:touch(graphics and math.floor(ui.r.ox+zx*ui.r.sx) or math.floor(zx/2)+1,
+  graphics and math.floor(ui.r.oy+zy*ui.r.sy) or math.floor(zy/3)+1)
  eq(ui.g.location==2 and ui.g.pending==nil,'event resolves arrival')
 
  ui.scene='market';ui:draw();eq(#ui.r.buttons>=7,'market buttons present')
  -- Full render modes share monitor scale 0.5. Graphics gets extra logical
  -- pixel density without altering the native text grid or touch targets.
  if graphics then
-  eq(ui.r.sx==2 and ui.r.sy==2.25,'denser graphics uses true 2x2.25 physical pixels')
+  eq(ui.r.sx==ui.r.sy,'denser graphics preserves proportions')
  else eq(ui.r.w==dim[1] and ui.r.h==dim[2],'text fallback unchanged') end
  ui:resize()
- eq(ui.r.sx==(graphics and 2 or .5),'resize retains appropriate coordinate transform')
+ eq(not graphics or ui.r.sx==ui.r.sy,'resize retains uniform graphics transform')
  ui.scene='travel';ui.g.pending={from=1,to=2,event='rocks'};ui:draw();eq(#ui.r.buttons>=5,'event choices tappable')
  ui:close()
 end end
@@ -222,8 +222,8 @@ for _,dim in ipairs(sizes)do for _,graphics in ipairs({false,true})do
  eq(upgradeCard~=nil,'upgrade card can be inspected at '..dim[1])
  local function tap(hit)
   local tx=hit.x+math.floor(hit.w/2);local ty=hit.y+math.floor(hit.h/2)
-  return u:touch(graphics and math.floor(tx*u.r.sx) or math.floor(tx/2)+1,
-                 graphics and math.floor(ty*u.r.sy) or math.floor(ty/3)+1)
+  return u:touch(graphics and math.floor(u.r.ox+tx*u.r.sx) or math.floor(tx/2)+1,
+                 graphics and math.floor(u.r.oy+ty*u.r.sy) or math.floor(ty/3)+1)
  end
  tap(upgradeCard)
  eq(u.info and u.info.action=='upgrade','touch opens upgrade explanation')
@@ -279,7 +279,7 @@ for _,dim in ipairs(sizes)do
  eq(selectable~=nil,'train wagon can be selected directly')
  local px=selectable.x+math.floor(selectable.w/2)
  local py=selectable.y+math.floor(selectable.h/2)
- u:touch(math.floor(px*u.r.sx),math.floor(py*u.r.sy))
+ u:touch(math.floor(u.r.ox+px*u.r.sx),math.floor(u.r.oy+py*u.r.sy))
  eq(u.info==nil,'selecting wagon does not open a modal')
  u:close()
 end

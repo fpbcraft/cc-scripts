@@ -82,3 +82,7 @@ Use a card or the **?** button to read the full explanation. Spending still requ
 ## Play without an external monitor
 
 The game also runs on the computer's **built-in terminal**. Launch normally without connecting a monitor; the game automatically switches to its text-mode computer viewport. The built-in screen is smaller than the game canvas, so **arrow keys pan**, the **mouse wheel scrolls vertically**, and **left-click selects** controls or board cells. A footer shows the visible viewport position. Attaching an Advanced Monitor still uses the usual full-screen UI and touch controls.
+
+## Emulator and unusual monitor aspect ratios
+
+On iPad/CraftOS emulators and unusually wide or tall monitors, CC: Graphics now **preserves pixel aspect ratio** and centers the game in a dark letterboxed viewport instead of stretching its lettering. Touch coordinates account for the margins. On a small computer without an attached monitor, the virtual text-mode terminal fallback still applies.
