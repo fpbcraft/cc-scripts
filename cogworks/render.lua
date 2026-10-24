@@ -42,7 +42,7 @@ local function fillText(m,x,y,w,fg,bg,text)
 end
 function R.new(m)
  local self=setmetatable({m=m,mode="text",frame=0,original={},
-  boardX=5,boardY=16,cell=10},R)
+  boardX=5,boardY=17,cell=15},R)
  self:enable()
  return self
 end
@@ -53,11 +53,11 @@ function R:enable()
   local ok=pcall(m.setGraphicsMode,2)
   if ok then
    local good,w,h=pcall(m.getSize,2)
-   if good and type(w)=="number" and w>=128 and h>=88 then
+   if good and type(w)=="number" and w>=200 and h>=120 then
     self.mode="graphics";self.pw,self.ph=w,h
-    self.scale=math.min(w/128,h/88)
-    self.ox=math.floor((w-128*self.scale)/2)
-    self.oy=math.floor((h-88*self.scale)/2)
+    self.scale=math.min(w/200,h/120)
+    self.ox=math.floor((w-200*self.scale)/2)
+    self.oy=math.floor((h-120*self.scale)/2)
     if m.setPaletteColor then
      for i,c in pairs(palette)do
       if m.getPaletteColor then
@@ -139,7 +139,7 @@ function R:piece(x,y,size,tile,light)
   self:font(x+4,y+3,"X",4)
   return
  end
- local bg=tile.kind=="S" and 10 or (tile.kind=="M" and 12 or 2)
+ local bg=tile.kind=="S" and 10 or (tile.kind=="M" and (tile.sign<0 and 14 or 12) or 2)
  self:rect(x,y,size,size,3)
  self:rect(x+1,y+1,size-2,size-2,bg)
  if running then self:rect(x+1,y+1,size-2,1,6)end
@@ -155,14 +155,31 @@ function R:piece(x,y,size,tile,light)
   self:font(x+4,y+math.floor(size/2)-2,"S",0)
  else
   -- Different mechanisms have different centerpieces, not just letter changes.
-  if tile.kind=="G"then
+  if tile.kind=="G" or tile.kind=="O"then
    for i=0,7 do
     local a=(i*math.pi/4)+(running and self.frame*.25 or 0)
     self:rect(math.floor(cx+3*math.cos(a)),math.floor(cy+3*math.sin(a)),
-     2,2,14)
+     2,2,tile.kind=="O" and 7 or 14)
    end
-   self:rect(cx-2,cy-2,5,5,14)
+   self:rect(cx-2,cy-2,5,5,tile.kind=="O" and 7 or 14)
    self:rect(cx-1,cy-1,3,3,1)
+  elseif tile.kind=="C"then
+   self:rect(cx-3,cy-2,2,5,tile.enabled and 9 or 8)
+   self:rect(cx+1,cy-2,2,5,tile.enabled and 9 or 8)
+   if tile.enabled then self:rect(cx-1,cy,3,1,9)end
+  elseif tile.kind=="Q"then
+   self:rect(cx-3,cy-3,7,7,13)
+   self:rect(cx-1,cy-1,3,3,1)
+   self:rect(cx,cy,1,1,15)
+  elseif tile.kind=="V"then
+   self:rect(cx-3,cy-2,3,5,7)
+   self:rect(cx+1,cy-2,3,5,7)
+   self:rect(cx-2,cy-2,5,1,13)
+   self:rect(cx-2,cy+2,5,1,13)
+  elseif tile.kind=="D"then
+   for j=-3,2,2 do self:rect(cx-3,cy+j,6,1,11)end
+   self:rect(cx-3,cy-3,1,7,4)
+   self:rect(cx+2,cy-3,1,7,4)
   elseif tile.kind=="B"then
    self:rect(cx-3,cy-3,7,7,7)
    self:rect(cx-2,cy-2,5,5,1)
@@ -190,303 +207,382 @@ function R:piece(x,y,size,tile,light)
    end
   end
  end
- -- Redraw terminal labels above shaft outlets so +1 / -2 stays readable.
+ -- Machines state rotation in plain CW / CCW text instead of relying
+ -- on cryptic plus/minus symbols. The lower line is required RPM.
  if tile.kind=="M"then
-  local active=light and light.correct
-  self:rect(x+2,y+2,size-4,size-4,active and 9 or 8)
-  self:rect(x+3,y+3,size-6,size-6,1)
-  self:font(x+1,y+math.floor(size/2)-2,
-   (tile.sign<0 and "-" or "+")..tostring(tile.speed),active and 9 or 15)
+  local ready=light and light.correct
+  local text=tile.sign<0 and "CCW" or "CW"
+  local accent=ready and 9 or (tile.sign<0 and 14 or 11)
+  self:rect(x+1,y+1,size-2,size-2,accent)
+  self:rect(x+2,y+2,size-4,size-4,1)
+  self:font(x+(text=="CW" and 3 or 0),y+1,text,accent)
+  local rpm=tostring(tile.speed)
+  if #rpm<=2 then
+   self:font(x+math.floor((size-#rpm*4)/2),y+7,rpm,15)
+  else
+   self:font(x,y+7,rpm,15)
+  end
  elseif tile.kind=="S"then
-  self:rect(x+3,y+3,size-6,size-6,6)
-  self:font(x+4,y+math.floor(size/2)-2,"S",0)
- elseif tile.kind=="B"then
+  self:rect(x+1,y+1,size-2,size-2,10)
+  self:font(x+3,y+1,"CW",15)
+  self:font(x+3,y+7,"1X",6)
+ elseif tile.kind=="B" or tile.kind=="O"then
   self:rect(cx+DX[tile.r+1]*4,cy+DY[tile.r+1]*4,2,2,9)
  end
 end
-function R:paletteRow(y,kind,count,selected)
- local chosen=selected==kind
- local enabled=kind=="erase" or count>0
- self:rect(81,y,45,8,chosen and 6 or 2)
- self:rect(82,y+1,43,6,chosen and 1 or 3)
- if kind=="erase"then
-  self:font(84,y+2,"X",8);self:font(94,y+2,"REMOVE",15)
- else
-  local label=({T="SPLIT",B="2X RPM"})[kind] or E.parts[kind].name
-  self:rect(84,y+1,8,6,enabled and E.parts[kind].color or 4)
-  self:font(86,y+2,kind=="B" and "2" or kind,0)
-  self:font(94,y+2,label,enabled and 15 or 4)
-  self:font(118,y+2,tostring(count),enabled and 9 or 4)
+-- Dynamic hit targets use the same coordinates as the graphics renderer.
+-- On vanilla text monitors the targets are one-based character rectangles.
+function R:add(x,y,w,h,action,arg,arg2)
+ self.targets[#self.targets+1]={x=x,y=y,w=w,h=h,action=action,arg=arg,arg2=arg2}
+end
+function R:fontFit(x,y,label,color,width)
+ local max=math.max(0,math.floor(width/4))
+ if max<1 then return end
+ self:font(x,y,tostring(label):sub(1,max),color)
+end
+function R:button(x,y,w,h,caption,action,arg,color)
+ local active=action~=nil
+ self:rect(x,y,w,h,active and (color or 3)or 1)
+ self:rect(x+1,y+1,w-2,h-2,active and 2 or 1)
+ local text=tostring(caption)
+ local max=math.max(1,math.floor((w-4)/4))
+ text=text:sub(1,max)
+ local tx=x+math.max(2,math.floor((w-#text*4)/2))
+ self:font(tx,y+math.max(1,math.floor((h-5)/2)),text,active and 15 or 4)
+ if action then self:add(x,y,w,h,action,arg)end
+end
+function R:page(title,subtitle)
+ self:rect(0,0,200,120,0)
+ self:rect(0,0,200,15,1)
+ self:rect(0,14,200,1,7)
+ self:fontFit(7,5,title,6,184)
+ if subtitle and subtitle~=""then
+  self:fontFit(10,19,subtitle,11,180)
  end
 end
-function R:graphics(g,result,unlocked,selected,message,awards)
- local m=self.m
- if m.setFrozen then pcall(m.setFrozen,true)end
- -- Clear the *actual* mode-2 pixel surface, not only the 128x88 inset.
- -- Leftover pixels otherwise keep the monitor's initial (white) background.
- m.drawPixels(0,0,0,self.pw,self.ph)
- self:rect(0,0,128,88,0)
- self:rect(0,0,128,12,1);self:rect(0,11,128,1,7)
- self:font(4,3,"COGWORKS",6)
- self:font(42,3,"L"..g.number.."/"..#E.levels,11)
- local total,done=0,0
- for _,bonus in ipairs(E.challenges(g,result))do
-  total=total+1
-  if awards and awards[bonus.id] then done=done+1 end
- end
- if total>0 then self:font(58,3,"B"..done.."/"..total,done==total and 9 or 6)end
- self:rect(76,1,12,9,2);self:font(78,3,"<",15)
- self:rect(89,1,12,9,2);self:font(92,3,">",15)
- self:rect(103,1,24,9,2);self:font(107,3,"RESET",15)
- self:rect(3,14,76,64,1)
+function R:drawGame(m)
+ local g,result=m.game,m.result
+ self:page("COGWORKS  "..string.format("%02d/30",g.number))
+ self:font(77,5,"MV "..g.moves,4)
+ self:button(120,2,28,11,"SAVE","save")
+ self:button(150,2,36,11,"PAUSE","pause")
+ self:button(188,2,11,11,"?","help")
+ self:rect(3,16,109,94,1)
+ self:rect(4,17,107,92,3)
+ local directions={{0,-1},{1,0},{0,1},{-1,0}}
  for y=1,E.HEIGHT do for x=1,E.WIDTH do
-  local left=self.boardX+(x-1)*self.cell
-  local top=self.boardY+(y-1)*self.cell
-  self:rect(left,top,9,9,2)
-  self:rect(left+4,top+4,1,1,3)
+  local px=self.boardX+(x-1)*self.cell
+  local py=self.boardY+(y-1)*self.cell
+  self:rect(px,py,14,14,2)
+  self:rect(px+6,py+6,2,2,3)
   local tile=E.get(g,x,y)
   if tile then
-   self:piece(left,top,9,tile,result.lights[tile.id])
-   -- Bright red end caps indicate ports without reciprocal connections.
-   -- These are forbidden in the advanced full-network contracts.
-   if g.fullNetwork and tile.kind~="X"then
-    for dir=0,3 do
-     if E.hasPort(tile,dir)then
-      local dx,dy=DX[dir+1],DY[dir+1]
-      local other=E.get(g,x+dx,y+dy)
-      if not other or not E.hasPort(other,(dir+2)%4)then
-       self:rect(left+4+dx*4,top+4+dy*4,1,1,8)
-      end
-     end
-    end
+   self:piece(px+1,py+1,13,tile,result.lights[tile.id])
+   if m.settings.showPorts and tile.kind~="X"then
+    for d=0,3 do if E.hasPort(tile,d) and
+      not E.connection(g,tile,d) and tile.kind~="Q" then
+      self:rect(px+6+directions[d+1][1]*6,
+        py+6+directions[d+1][2]*6,2,2,8)
+    end end
    end
   end
+  self:add(px,py,14,14,"cell",x,y)
  end end
- self:rect(80,13,48,66,1)
- self:font(83,14,"PARTS",11)
- self:font(107,14,result.correct.."/"..result.goals,result.win and 9 or 15)
+ self:rect(114,16,83,97,1)
+ self:font(117,19,"PARTS",11)
+ self:font(163,19,result.correct.."/"..result.goals,
+   result.win and 9 or 15)
+ -- Two columns instead of the oversized five-row list: all ten parts
+ -- remain simultaneously visible, including the new Create mechanics.
  for n,kind in ipairs(E.order)do
-  self:paletteRow(20+(n-1)*9,kind,g.remaining[kind] or 0,selected)
+  local col=(n-1)%2
+  local row=math.floor((n-1)/2)
+  local x=116+col*40
+  local y=26+row*10
+  local count=g.remaining[kind] or 0
+  local active=m.selected==kind
+  self:rect(x,y,38,9,active and 6 or 3)
+  self:rect(x+1,y+1,36,7,active and 2 or 1)
+  self:rect(x+2,y+1,7,7,count>0 and E.parts[kind].color or 4)
+  self:font(x+4,y+2,kind=="B" and "2" or kind,0)
+  local alias=({I="SHAFT",L="ELBOW",T="SPLIT",G="GEAR",
+    B="2X",C="CLTCH",Q="BOX",O="COG",V="BELT",D="CHAIN"})[kind]
+  self:fontFit(x+11,y+2,alias,count>0 and 15 or 4,20)
+  self:font(x+32,y+2,tostring(count),count>0 and 9 or 4)
+  self:add(x,y,38,9,"tool",kind)
  end
- self:paletteRow(65,"erase",0,selected)
- self:rect(81,74,14,5,3);self:font(82,74,"HNT",15)
- self:rect(96,74,13,5,3);self:font(100,74,"?",15)
- self:rect(110,74,17,5,3);self:font(111,74,"BNS",6)
- self:rect(0,80,128,8,1)
- local status=message
- if not status or status==""then
-  if result.win then status="LEVEL CLEARED! BONUS TASKS AVAILABLE"
-  elseif result.jam then status="JAM! CHECK GEARS AND DRIVES"
-  elseif selected=="erase"then status="REMOVE TOOL: TAP A PLACED PART"
-  else status=g.name end
+ self:button(117,77,37,9,
+  m.selected=="erase" and "ERASING" or "REMOVE",
+  "tool","erase",m.selected=="erase" and 8 or 3)
+ self:button(156,77,38,9,
+  m.selected=="switch" and "SWITCH ON" or "SWITCH",
+  "tool","switch",m.selected=="switch" and 9 or 3)
+ -- Persistent bonus objectives are visible while building, not buried in
+ -- a modal screen. Labels are deliberately short enough for this pane.
+ self:font(117,89,"BONUS GOALS",6)
+ local bonuses=E.challenges(g,result)
+ local awarded=(m.progress.awards and m.progress.awards[g.number])or{}
+ for i,bonus in ipairs(bonuses)do
+  local y=96+(i-1)*5
+  local done=awarded[bonus.id] or false
+  local label=bonus.id=="sealed" and "NO OPEN PORTS" or
+   (bonus.id=="master" and "ALL STOCK USED" or
+    (bonus.description:match("%d+") or "?").." MOVE PAR")
+  self:rect(117,y,4,4,done and 9 or (bonus.earned and 6 or 3))
+  self:fontFit(124,y,label,done and 9 or (bonus.earned and 6 or 5),70)
  end
- self:font(3,82,status:sub(1,31),result.win and 9 or (result.jam and 8 or 5))
- self.frame=self.frame+1
- if m.setFrozen then pcall(m.setFrozen,false)end
-end
-function R:helpGraphics()
- local m=self.m
- if m.setFrozen then pcall(m.setFrozen,true)end
- m.drawPixels(0,0,0,self.pw,self.ph)
- self:rect(0,0,128,88,0)
- self:rect(0,0,128,11,1)
- self:font(5,3,"PARTS AND RULES",6)
- local rows={
-  {"S","GENERATOR: +1 RPM SOURCE",9},
-  {"M","MACHINE: MATCH + / - AND RPM",12},
-  {"I","SHAFT: STRAIGHT TRANSMISSION",11},
-  {"L","ELBOW: TURNS 90 DEGREES",11},
-  {"T","SPLITTER: THREE CONNECTIONS",11},
-  {"G","GEAR: REVERSES THE SPIN",14},
-  {"2","2X DRIVE: GREEN PORT IS INPUT",7},
- }
- for i,row in ipairs(rows)do
-  local y=13+(i-1)*9
-  self:rect(4,y,12,8,2);self:rect(6,y+1,8,6,row[3])
-  self:font(8,y+2,row[1],0)
-  self:font(21,y+2,row[2],15)
+ if #bonuses==0 then self:font(124,99,"FROM LEVEL 2",4)end
+ self:rect(0,113,200,7,1)
+ local status=m.message
+ if status==""then
+  if result.win then status="CLEARED! BONUS TASKS ARE OPTIONAL"
+  elseif result.jam then status="GEARS JAMMED"
+  elseif m.hasLeftInput then status="LEFT: PLACE/TURN   RIGHT: REMOVE"
+  else status="CW = CLOCKWISE  /  CCW = COUNTERCLOCKWISE"end
  end
- self:rect(0,77,128,11,1)
- self:font(5,79,"GOALS UNLOCK NEXT / BONUS IS OPTIONAL",6)
- self:font(104,79,"BACK",9)
- if m.setFrozen then pcall(m.setFrozen,false)end
-end
-function R:text(g,result,unlocked,selected,message)
- local m=self.m;local w,h=m.getSize()
- m.setBackgroundColor(colors.black);m.setTextColor(colors.white);m.clear()
- fillText(m,1,1,w,colors.orange,colors.gray,
-  " COGWORKS / "..g.number.."/"..#E.levels.." - "..g.name)
- fillText(m,1,2,w,result.win and colors.lime or colors.white,colors.black,
-  result.win and " COMPLETE: press NEXT " or
-   (" GOALS "..result.correct.."/"..result.goals.."  LEFT "..result.remaining.."  OPEN "..result.openPorts))
- if w<44 or h<26 then
-  fillText(m,1,4,w,colors.red,colors.black,"Use a larger Advanced Monitor")
-  return
- end
- self.tx=math.max(1,math.floor((w-E.WIDTH*6)/2)+1);self.ty=3
- for y=1,E.HEIGHT do for x=1,E.WIDTH do
-  local px=self.tx+(x-1)*6;local py=self.ty+(y-1)*3
-  local tile=E.get(g,x,y)
-  local light=tile and result.lights[tile.id]
-  local bg=tile and (tile.kind=="S" and colors.green or
-    (tile.kind=="M" and colors.blue or (tile.kind=="X" and colors.brown or colors.gray)))
-    or colors.lightGray
-  local fg=light and light.powered and colors.yellow or colors.white
-  local p={false,false,false,false}
-  if tile then for d=0,3 do p[d+1]=E.hasPort(tile,d)end end
-  local icon=tile and (tile.kind=="B" and "2" or tile.kind) or "."
-  local center=tile and tile.kind=="M" and
-   ((tile.sign<0 and "-" or "+")..tostring(tile.speed)) or (" "..icon)
-  fillText(m,px,py,5,fg,bg,p[1] and "  ^  " or "     ")
-  fillText(m,px,py+1,5,fg,bg,
-   (p[4] and "<" or " ").." "..center..(p[2] and ">" or " "))
-  fillText(m,px,py+2,5,fg,bg,p[3] and "  v  " or "     ")
- end end
- self.toolWidth=math.floor(w/5)
- for n,kind in ipairs(E.order)do
-  fillText(m,1+(n-1)*self.toolWidth,h-5,self.toolWidth,
-   selected==kind and colors.orange or colors.lightBlue,colors.black,
-   n..":"..kind.." "..(g.remaining[kind] or 0))
- end
- fillText(m,1,h-4,w,colors.white,colors.black,
-  " Main: targets. Bonuses: C / click BONUS.")
- fillText(m,1,h-3,w,colors.orange,colors.black,
-  (selected=="erase" and "REMOVE" or (E.parts[selected] and E.parts[selected].name or ""))..
-  ": "..(message or g.tip))
- local labels={"PREV","RESET","NEXT","HELP"}
- self.footerWidth=math.floor(w/4)
- for i,label in ipairs(labels)do
-  local active=i~=1 or g.number>1
-  if i==3 then active=g.number<unlocked end
-  fillText(m,1+(i-1)*self.footerWidth,h-1,self.footerWidth,
-   active and colors.black or colors.gray,active and colors.orange or colors.lightGray,label)
+ self:fontFit(3,114,status,result.win and 9 or 5,160)
+ if result.win then
+  self:button(166,113,32,7,"NEXT","next")
  end
 end
-function R:helpText()
- local m=self.m;local w,h=m.getSize()
- m.setBackgroundColor(colors.black);m.clear()
- fillText(m,1,1,w,colors.orange,colors.gray," COGWORKS - HELP")
- local info={
-  "S: generator, clockwise 1X",
-  "M: goal, requires shown +/- RPM",
-  "I: straight shaft",
-  "L: right-angle elbow",
-  "T: splitter, three output sides",
-  "G: gear, reverses spin direction",
-  "2: two-times speed controller",
-  "X: stone, cannot build here",
-  "",
-  "MAIN GOAL: POWER ALL TARGETS",
-  "BONUS: SEALED PORTS / NO IDLE PARTS",
-  "BONUS: USE ALL STOCK AND POWER IT",
-  "BONUS: HINT-FREE / MOVE BUDGET",
-  "RED ENDS SHOW LOOSE CONNECTIONS",
-  "Tap empty cell to place chosen part",
-  "Tap placed part to rotate it",
-  "Remove reclaims the part",
-  "1-5: select parts; 6: remove",
-  "H: hint  C: bonuses  Q: quit",
- }
- for i,str in ipairs(info)do if i+2<h then
-  fillText(m,1,i+2,w,colors.white,colors.black,str)
- end end
- fillText(m,1,h-1,w,colors.orange,colors.black," TAP TO RETURN")
+function R:drawTitle(m)
+ self:page("COGWORKS","KINETIC WORKSHOP  /  30 PUZZLES")
+ self:rect(27,32,146,79,1)
+ self:rect(33,38,134,67,2)
+ self:font(59,43,"BUILD THE NETWORK",6)
+ local hasSave=false
+ for _,s in ipairs(m.slots)do if not s.empty then hasSave=true end end
+ self:button(54,55,92,10,"CONTINUE",hasSave and "continue" or nil)
+ self:button(54,67,92,10,"SAVE SLOTS","slots")
+ self:button(54,79,92,10,"SETTINGS","settings")
+ self:button(54,91,92,10,"EXIT","exit")
 end
--- Optional mastery challenges never block ordinary level progression.
-function R:bonusGraphics(g,result,awards)
- local m=self.m
- if m.setFrozen then pcall(m.setFrozen,true)end
- m.drawPixels(0,0,0,self.pw,self.ph)
- self:rect(0,0,128,88,0)
- self:rect(0,0,128,12,1)
- self:font(4,3,"BONUS CONTRACTS",6)
- self:font(106,3,"BACK",9)
- self:font(4,15,"L"..g.number.." "..g.name,11)
- self:font(4,23,"MAIN: POWER ALL PRESSES",result.win and 9 or 15)
- local items=E.challenges(g,result)
- if #items==0 then
-  self:font(4,37,"BONUSES START ON LEVEL 2",4)
- else
-  for i,bonus in ipairs(items)do
-   local y=31+(i-1)*15
-   local done=awards and awards[bonus.id]
-   self:rect(3,y,122,13,1)
-   self:rect(6,y+2,9,9,done and 9 or 3)
-   self:font(9,y+4,done and "+" or "-",done and 0 or 15)
-   self:font(19,y+1,bonus.name,done and 9 or 6)
-   self:font(19,y+7,bonus.description,15)
+function R:drawSlots(m)
+ self:page("SELECT SAVE SLOT","SELECT A SLOT TO LOAD OR START")
+ for _,slot in ipairs(m.slots)do
+  local y=30+(slot.number-1)*26
+  self:rect(12,y,176,23,2)
+  self:font(20,y+4,"SLOT "..slot.number,6)
+  if slot.empty then
+   self:font(20,y+12,"EMPTY - NEW GAME",5)
+  else
+   self:font(20,y+12,"LEVEL "..slot.level.."/30   BONUSES "..slot.trophies,9)
   end
+  self:add(12,y,176,23,"slot",slot.number)
  end
- self:rect(0,81,128,7,1)
- self:font(4,82,"EARN BONUSES WHEN A LEVEL IS SOLVED",5)
- if m.setFrozen then pcall(m.setFrozen,false)end
+ self:button(69,110,62,9,"BACK","back")
 end
-function R:bonusText(g,result,awards)
- local m=self.m
- local w,h=m.getSize()
- m.setBackgroundColor(colors.black);m.setTextColor(colors.white);m.clear()
- fillText(m,1,1,w,colors.orange,colors.gray," BONUS CONTRACTS - LEVEL "..g.number)
- fillText(m,1,3,w,colors.white,colors.black," MAIN: POWER ALL TARGET MACHINES")
- for i,bonus in ipairs(E.challenges(g,result))do
-  local done=awards and awards[bonus.id]
-  fillText(m,1,4+i*3,w,done and colors.lime or colors.orange,colors.black,
-   (done and "[X] " or "[ ] ")..bonus.name)
-  fillText(m,3,5+i*3,w,colors.lightGray,colors.black,bonus.description)
+function R:drawPause(m)
+ self:page("GAME PAUSED","SLOT "..m.slot.."  /  LEVEL "..m.game.number)
+ local items={
+  {"RESUME","resume"},{"SAVE GAME","save"},{"SELECT LEVEL","levels"},
+  {"SETTINGS","settings"},{"HELP","help"},{"RESTART LEVEL","restart"},
+  {"NEW CAMPAIGN","newGame"},{"TITLE MENU","title"}
+ }
+ for i,item in ipairs(items)do
+  self:button(41,24+(i-1)*11,118,10,item[1],item[2])
  end
- fillText(m,1,h-1,w,colors.orange,colors.black," TAP TO RETURN / C: CLOSE")
+ if m.message and m.message~=""then self:fontFit(5,114,m.message,9,185)end
 end
-function R:draw(g,result,unlocked,selected,message,screen,awards)
- if screen=="bonuses" then
-  if self.mode=="graphics"then self:bonusGraphics(g,result,awards)
-  else self:bonusText(g,result,awards)end
- elseif screen then
-  if self.mode=="graphics"then self:helpGraphics()else self:helpText()end
- elseif self.mode=="graphics"then self:graphics(g,result,unlocked,selected,message,awards)
- else self:text(g,result,unlocked,selected,message)end
+function R:drawSettings(m)
+ self:page("SETTINGS","SAVED AUTOMATICALLY")
+ self:rect(26,34,148,67,1)
+ self:button(37,43,126,13,
+  "ANIMATION "..(m.settings.animations and "ON" or "OFF"),"toggleAnimations")
+ self:button(37,61,126,13,
+  "OPEN PORTS "..(m.settings.showPorts and "ON" or "OFF"),"togglePorts")
+ self:font(42,84,"DISPLAY: COMPACT PIXELS",11)
+ self:font(42,92,"TEXT SCALE: 0.5",4)
+ self:button(68,108,64,10,"BACK","back")
 end
-function R:hit(x,y,screen)
+function R:drawLevels(m)
+ self:page("CHOOSE LEVEL","UNLOCKED: "..m.progress.unlocked.."/"..#E.levels)
+ for i=1,#E.levels do
+  local x=10+((i-1)%6)*30
+  local y=30+math.floor((i-1)/6)*15
+  local unlocked=i<=m.progress.unlocked
+  self:button(x,y,28,12,string.format("%02d",i),unlocked and "level" or nil,i,
+    i==m.game.number and 6 or 3)
+ end
+ self:button(70,108,60,10,"BACK","back")
+end
+function R:drawConfirm(m)
+ self:page("CONFIRM ACTION")
+ local new=m.pending=="newGame"
+ self:fontFit(16,42,new and "ERASE THIS SAVE SLOT?" or
+  "RESTART CURRENT LEVEL?",6,168)
+ self:font(18,56,new and "PROGRESS WILL BE LOST" or
+  "CURRENT BOARD WILL RESET",8)
+ self:button(28,77,68,16,"CANCEL","cancel")
+ self:button(104,77,68,16,"CONFIRM","confirm")
+end
+function R:drawHelp(m)
+ self:page("MACHINE LEGEND","INPUT PORTS ARE NOT SPIN DIRECTION")
+ local left={
+  "S: ENGINE CW 1X","M: PRESS NEEDS CW/CCW",
+  "I: STRAIGHT SHAFT","L: 90 DEG ELBOW",
+  "T: THREE WAY SPLIT","G: FLIPS CW / CCW",
+  "B: DOUBLES SPEED","C: CLUTCH ON / OFF",
+  "Q: FOUR WAY BOX","O: 2X + SPIN REVERSE",
+  "V: SHORT SPAN BELT","D: LONG SPAN CHAIN"
+ }
+ local right={
+  "CW = CLOCKWISE","CCW = COUNTERCW",
+  "GOAL: MATCH SPIN + RPM","TAP EMPTY TO BUILD",
+  "TAP A PART TO ROTATE","REMOVE TO RECLAIM",
+  "SWITCH TO TOGGLE C","PAIR BELT ENDS",
+  "CHAIN BRIDGES 2 CELLS","GEAR FLIPS ROTATION",
+  "BONUSES ARE OPTIONAL","AUTO SAVES PER SLOT"
+ }
+ for i=1,#left do
+  local y=23+(i-1)*7
+  self:fontFit(8,y,left[i],i<3 and 6 or 15,91)
+  self:fontFit(105,y,right[i],11,90)
+ end
+ self:button(68,109,64,10,"BACK","back")
+end
+function R:drawText(m)
+ local t=self.m;local w,h=t.getSize()
+ t.setBackgroundColor(colors.black);t.setTextColor(colors.white);t.clear()
+ local function label(x,y,s,fg,bg,width)
+  if y<1 or y>h or x<1 or x>w then return end
+  t.setCursorPos(x,y);t.setTextColor(fg or colors.white)
+  t.setBackgroundColor(bg or colors.black)
+  t.write((tostring(s)..(" "):rep(width or 0)):sub(1,math.min(width or #tostring(s),w-x+1)))
+ end
+ local function btn(x,y,width,caption,action,arg)
+  label(x,y,caption,colors.black,colors.orange,width)
+  if action then self:add(x,y,width,1,action,arg)end
+ end
+ label(2,1,"COGWORKS / "..m.scene:upper(),colors.orange)
+ if m.scene=="game"then
+  local g=m.game;local result=m.result
+  local x0,y0=2,3
+  for y=1,E.HEIGHT do for x=1,E.WIDTH do
+   local p=E.get(g,x,y)
+   local px=x0+(x-1)*6;local py=y0+(y-1)*3
+   local color=p and (p.kind=="M" and colors.blue or
+    (p.kind=="S" and colors.green or (p.kind=="X" and colors.brown or colors.gray))) or colors.lightGray
+   local fg=p and result.lights[p.id].powered and colors.yellow or colors.white
+   local slots={}
+   for d=0,3 do slots[d+1]=p and E.hasPort(p,d)end
+   local labelText=p and (p.kind=="M" and (p.sign<0 and "-" or "+")..p.speed or p.kind) or "."
+   label(px,py,slots[1] and "  ^  " or "     ",fg,color,5)
+   label(px,py+1,(slots[4] and "<" or " ").." "..labelText..
+    (slots[2] and ">" or " "),fg,color,5)
+   label(px,py+2,slots[3] and "  v  " or "     ",fg,color,5)
+   self:add(px,py,5,3,"cell",x,y)
+  end end
+  label(2,22,"GOALS "..result.correct.."/"..result.goals.."  CW=+ CCW=-  MV "..g.moves,colors.lightBlue)
+  local bonuses=E.challenges(g,result)
+  local awards=m.progress.awards[g.number]or{}
+  for i,bonus in ipairs(bonuses)do
+   local name=bonus.id=="sealed" and "SEAL ALL PORTS" or
+    (bonus.id=="master" and "USE ALL STOCK" or "PRECISION MOVES")
+   label(2,22+i,(awards[bonus.id] and "[X] " or "[ ] ")..name,
+    awards[bonus.id] and colors.lime or colors.white)
+  end
+  local size=math.floor(w/5)
+  for i,kind in ipairs(E.order)do
+   local row=h-8+math.floor((i-1)/5)
+   local col=(i-1)%5
+   btn(1+col*size,row,size,
+    (m.selected==kind and ">" or " ")..kind.." "..(g.remaining[kind]or 0),"tool",kind)
+  end
+  btn(1,h-5,12,"REMOVE","tool","erase")
+  btn(15,h-5,12,"SWITCH","tool","switch")
+  btn(1,h-4,12,"SAVE","save")
+  btn(15,h-4,12,"PAUSE","pause")
+  if result.win then btn(29,h-4,12,"NEXT","next")end
+  label(1,h-2,m.message~=""and m.message or g.name,colors.orange)
+ elseif m.scene=="title"then
+  label(3,4,"KINETIC WORKSHOP  /  30 PUZZLES",colors.lightBlue)
+  local choices={{"CONTINUE","continue"},{"SAVE SLOTS","slots"},
+   {"SETTINGS","settings"},{"EXIT","exit"}}
+  local hasSave=false
+  for _,slot in ipairs(m.slots)do if not slot.empty then hasSave=true end end
+  for i,item in ipairs(choices)do
+   btn(5,7+i*3,math.min(w-8,34),item[1],
+    i==1 and not hasSave and nil or item[2])
+  end
+ elseif m.scene=="slots"then
+  for i,slot in ipairs(m.slots)do
+   local labelText=slot.empty and "EMPTY - NEW" or ("LV "..slot.level.."/30 BONUS "..slot.trophies)
+   btn(4,5+(i-1)*4,math.min(w-8,42),"SLOT "..i.."  "..labelText,"slot",i)
+  end
+  btn(4,h-2,16,"BACK","back")
+ elseif m.scene=="levels"then
+  for i=1,#E.levels do
+   local col=(i-1)%6;local row=math.floor((i-1)/6)
+   local x=2+col*7;local y=4+row*3
+   btn(x,y,6,string.format("%02d",i),i<=m.progress.unlocked and "level" or nil,i)
+  end
+  btn(3,h-2,16,"BACK","back")
+ else
+  local choices={}
+  if m.scene=="pause"then
+   choices={{"RESUME","resume"},{"SAVE GAME","save"},{"SELECT LEVEL","levels"},
+    {"SETTINGS","settings"},{"HELP","help"},{"RESTART LEVEL","restart"},
+    {"NEW CAMPAIGN","newGame"},{"TITLE MENU","title"}}
+  elseif m.scene=="settings"then
+   choices={{"ANIMATION "..(m.settings.animations and "ON" or "OFF"),"toggleAnimations"},
+    {"OPEN PORTS "..(m.settings.showPorts and "ON" or "OFF"),"togglePorts"},
+    {"BACK","back"}}
+  elseif m.scene=="confirm"then
+   label(3,5,m.pending=="newGame" and "DELETE SLOT PROGRESS?" or "RESTART LEVEL?")
+   choices={{"CANCEL","cancel"},{"CONFIRM","confirm"}}
+  else
+   label(2,4,"S: SOURCE  M: TARGET   I: SHAFT")
+   label(2,6,"L: ELBOW   T: SPLITTER   G: GEAR")
+   label(2,8,"2: DOUBLE RPM; C: CLUTCH ON/OFF")
+   label(2,9,"Q: BOX   O: LARGE COG  V: BELT  D: CHAIN")
+   choices={{"BACK","back"}}
+  end
+  for i,item in ipairs(choices)do btn(5,10+(i-1)*2,math.min(w-8,38),item[1],item[2])end
+ end
+end
+function R:draw(m)
+ self.targets={}
+ if self.mode=="text"then self:drawText(m);return end
+ local mon=self.m
+ if mon.setFrozen then pcall(mon.setFrozen,true)end
+ mon.drawPixels(0,0,0,self.pw,self.ph)
+ if m.scene=="game"then self:drawGame(m)
+ elseif m.scene=="title"then self:drawTitle(m)
+ elseif m.scene=="slots"then self:drawSlots(m)
+ elseif m.scene=="pause"then self:drawPause(m)
+ elseif m.scene=="settings"then self:drawSettings(m)
+ elseif m.scene=="levels"then self:drawLevels(m)
+ elseif m.scene=="confirm"then self:drawConfirm(m)
+ else self:drawHelp(m)end
+ if mon.setFrozen then pcall(mon.setFrozen,false)end
+ self.frame=self.frame+1
+end
+-- Optional FPB Monitor Input addon exposes normalized left-click positions.
+-- Translate those into the renderer's own pixel or character coordinates.
+function R:hitNormalized(nx,ny)
+ if type(nx)~="number" or type(ny)~="number" or
+  nx<0 or nx>=1 or ny<0 or ny>=1 then return nil end
+ local x,y
+ if self.mode=="graphics"then
+  x=math.floor(nx*self.pw)
+  y=math.floor(ny*self.ph)
+ else
+  local w,h=self.m.getSize()
+  x=math.floor(nx*w)+1
+  y=math.floor(ny*h)+1
+ end
+ return self:hit(x,y)
+end
+function R:hit(x,y)
+ if type(x)~="number" or type(y)~="number"then return nil end
  if self.mode=="graphics"then
   x=(x-self.ox)/self.scale;y=(y-self.oy)/self.scale
-  if screen then return "back"end
-  if x>=self.boardX and x<self.boardX+E.WIDTH*self.cell and
-   y>=self.boardY and y<self.boardY+E.HEIGHT*self.cell then
-   local col=math.floor((x-self.boardX)/self.cell)+1
-   local row=math.floor((y-self.boardY)/self.cell)+1
-   if (x-self.boardX)%self.cell<9 and (y-self.boardY)%self.cell<9 then
-    return "cell",col,row
-   end
-  end
-  if x>=81 and x<126 then
-   if y>=20 and y<65 then
-    local n=math.floor((y-20)/9)+1
-    return "tool",E.order[n]
-   elseif y>=65 and y<73 then return "tool","erase"
-   elseif y>=74 and y<80 then
-    if x<96 then return "hint"
-    elseif x<110 then return "help"
-    else return "bonuses"end
-   end
-  end
-  if y>=1 and y<10 then
-   if x>=76 and x<88 then return "prev"
-   elseif x>=89 and x<101 then return "next"
-   elseif x>=103 and x<127 then return "reset"end
-  end
- else
-  if screen then return "back"end
-  if self.tx and self.ty and x>=self.tx and x<self.tx+E.WIDTH*6 and
-   y>=self.ty and y<self.ty+E.HEIGHT*3 then
-   local col=math.floor((x-self.tx)/6)+1
-   local row=math.floor((y-self.ty)/3)+1
-   if (x-self.tx)%6<5 then return "cell",col,row end
-  end
-  local w,h=self.m.getSize()
-  if y==h-1 and self.footerWidth and self.footerWidth>0 then
-   return ({"prev","reset","next","help"})[math.floor((x-1)/self.footerWidth)+1]
-  end
-  if y==h-5 then
-   local n=math.floor((x-1)/math.max(1,self.toolWidth or 1))+1
-   return "tool",E.order[n]
+ end
+ for i=#self.targets,1,-1 do
+  local b=self.targets[i]
+  if x>=b.x and x<b.x+b.w and y>=b.y and y<b.y+b.h then
+   return b.action,b.arg,b.arg2
   end
  end
  return nil

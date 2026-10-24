@@ -1,0 +1,42 @@
+package.path="./?.lua;./?/init.lua;"..package.path
+local E=require("cogworks.engine")
+assert(#E.order==10,"Ten distinct construction mechanisms available")
+for _,level in ipairs({6,9,16,23,25,27,30})do
+ local state=E.new(level,true)
+ assert(E.evaluate(state).win,"Expanded reference not solved: "..level)
+end
+local function find(g,kind)
+ for _,part in ipairs(g.tiles)do if part.kind==kind then return part end end
+end
+local clutch=E.new(6,true)
+local lever=assert(find(clutch,"C"),"Stage 6 needs switchable clutch")
+assert(E.toggle(clutch,lever.x,lever.y))
+assert(lever.enabled==false,"Clutch turned off")
+assert(not E.evaluate(clutch).win,"Disengaging clutch stops power")
+local saved=E.snapshot(clutch)
+local restored=E.new(6)
+assert(E.restore(restored,saved),"Disabled clutch restored")
+assert(find(restored,"C").enabled==false,"Clutch switch state persists")
+assert(E.toggle(clutch,lever.x,lever.y))
+assert(E.evaluate(clutch).win,"Clutch re-engaged restores power")
+local gearbox=E.new(9,true)
+local box=assert(find(gearbox,"Q"))
+for d=0,3 do assert(E.hasPort(box,d),"Four-way gearbox has all ports")end
+local belt=E.new(6,true)
+local left=assert(E.get(belt,3,3))
+local right=assert(E.get(belt,5,3))
+assert(left.kind=="V" and right.kind=="V","Belt endpoints in level 6")
+assert(E.get(belt,4,3).kind=="X","Belt spans obstacle")
+assert(E.connection(belt,left,1)==right,"Belt bridges gap")
+local chain=E.new(23,true)
+local top=assert(E.get(chain,6,2))
+local bottom=assert(E.get(chain,6,4))
+assert(top.kind=="D" and bottom.kind=="D","Chain endpoint layout")
+assert(E.get(chain,6,3).kind=="X","Chain route blocked by stone")
+assert(E.connection(chain,top,2)==bottom,"Chain bridges a stone cell")
+local cog=E.new(16,true)
+local large=assert(find(cog,"O"))
+assert(E.evaluate(cog).win,"Large cog reference works")
+large.kind="G"
+assert(not E.evaluate(cog).win,"Large cog speed ratio matters to goal")
+print("COGWORKS: clutch, gearbox, large cog, belt and chain dynamics passed.")

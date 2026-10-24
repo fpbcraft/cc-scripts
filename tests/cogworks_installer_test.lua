@@ -57,10 +57,18 @@ end
 local install=assert(loadfile(root.."/install-cogworks.lua"))
 fs.makeDir("/cogworks")
 files["/cogworks/save.dat"]="PRESERVED PROGRESS"
+fs.makeDir("/cogworks/saves")
+files["/cogworks/saves/slot-1.dat"]="SLOT ONE"
+files["/cogworks/settings.dat"]="CUSTOM SETTINGS"
 install()
 check(files["/cogworks/main.lua"]~=nil,"main installed")
 check(files["/cogworks/render.lua"]~=nil,"renderer installed")
 check(files["/cogworks/levels.lua"]~=nil,"levels installed")
+check(files["/cogworks/app.lua"]~=nil and files["/cogworks/storage.lua"]~=nil,
+ "Menus and storage installed")
+check(files["/cogworks/expansion.lua"]~=nil,"Machine expansion installed")
+check(files["/cogworks/saves/slot-1.dat"]=="SLOT ONE","slot unaffected")
+check(files["/cogworks/settings.dat"]=="CUSTOM SETTINGS","settings unaffected")
 check(files["/cogworks/save.dat"]=="PRESERVED PROGRESS","progress unchanged")
 check(not files["/startup.lua"],"no surprise autostart")
 local original=files["/cogworks/main.lua"]
@@ -81,6 +89,8 @@ files["/startup.lua"]="shell.run('/other/main.lua')\n"
 install("--startup")
 check(files["/startup.lua"]=="shell.run('/other/main.lua')\n","unrelated startup untouched")
 check(files["/cogworks/save.dat"]=="PRESERVED PROGRESS","upgrade preserves progress")
+check(files["/cogworks/saves/slot-1.dat"]=="SLOT ONE","update retains save slots")
+check(files["/cogworks/settings.dat"]=="CUSTOM SETTINGS","update retains settings")
 fs.delete("/startup.lua")
 install("--startup")
 check(files["/startup.lua"]=="shell.run('/cogworks/main.lua')\n","autostart opt-in")

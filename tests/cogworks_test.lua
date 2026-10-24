@@ -70,21 +70,23 @@ for index,data in ipairs(E.levels)do
  assert(E.remove(manual,first.x,first.y),"Placed part can be removed")
  assert(E.place(manual,first.x,first.y,first.kind,first.r),"Refunded stock reused")
  assert(E.evaluate(manual).win,"Salvage/replace retains solution")
- local hint=E.new(index)
- local steps=0
- while E.hint(hint)do
-  steps=steps+1
-  assert(steps<=#data.build*3,"Hint construction should converge")
+ local bad=E.new(index)
+ if #data.build>0 then
+  local firstPiece=data.build[1]
+  assert(E.place(bad,firstPiece.x,firstPiece.y,firstPiece.kind,0),"Place part for rotation")
+  assert(E.rotate(bad,firstPiece.x,firstPiece.y),"Rotate a movable part")
+  assert(E.remove(bad,firstPiece.x,firstPiece.y),"Reclaim part")
  end
- assert(E.evaluate(hint).win,"Hints can solve all levels: "..index)
- eq(hint.hints,steps,"Hint count")
+
 end
--- A misplaced part must be returned to inventory before a useful hint is placed.
+-- Check inventory includes the ten distinct construction tools.
+eq(#E.order,10,"Expanded construction inventory")
+local actual={}
+for _,kind in ipairs(E.order)do actual[kind]=true;assert(E.parts[kind])end
+for _,kind in ipairs({"C","Q","O","V","D"})do
+ assert(actual[kind],"New mechanism is selectable: "..kind)
+end
 local g=E.new(1)
-assert(E.place(g,2,1,"I",0),"Place incorrect part")
-assert(E.hint(g),"Hint removes misplaced part")
-assert(E.get(g,2,1)==nil,"Wrong component reclaimed by hint")
-eq(g.remaining.I,g.stock.I,"Salvaged stock")
 -- A placed component rotates clockwise and cannot be rotated when locked.
 assert(E.place(g,2,3,"I",0),"Place a new shaft")
 assert(E.rotate(g,2,3),"Rotate constructed part")
@@ -106,13 +108,13 @@ assert(bonus.sealed and not bonus.master,
  "Leaving spare stock only blocks master bonus")
 advanced.remaining.I=advanced.remaining.I-1
 advanced.moves=1000
-advanced.hints=1
+advanced.moves=1000
 local precision={}
 for _,challenge in ipairs(E.challenges(advanced,E.evaluate(advanced)))do
  precision[challenge.id]=challenge.earned
 end
 assert(precision.master and not precision.precision,
- "Unoptimized/hinted wins should not earn precision bonus")
+ "Unoptimized wins should not earn precision bonus")
 assert(E.evaluate(advanced).win,"Mastery contracts must never prevent level completion")
 -- Verify requirements derive from reversing gears and speed controllers.
 local hadReverse,hadBoost=false,false

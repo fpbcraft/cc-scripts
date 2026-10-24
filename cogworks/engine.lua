@@ -3,15 +3,21 @@
 local levels=require("cogworks.levels")
 local E={levels=levels,WIDTH=7,HEIGHT=6}
 local vectors={{0,-1},{1,0},{0,1},{-1,0}}
-local ports={S={0},M={0},I={0,2},L={0,1},T={0,1,3},G={0,2},B={0,2}}
+local ports={S={0},M={0},I={0,2},L={0,1},T={0,1,3},
+ G={0,2},B={0,2},C={0,2},Q={0,1,2,3},O={0,2},V={0,2},D={0,2}}
 E.parts={
  I={name="SHAFT",description="STRAIGHT POWER LINE",color=11},
  L={name="ELBOW",description="TURNS POWER 90 DEGREES",color=11},
  T={name="SPLITTER",description="SENDS POWER THREE WAYS",color=11},
  G={name="GEAR",description="REVERSES ROTATION",color=14},
  B={name="2X DRIVE",description="DOUBLES RPM: IN TO OUT",color=6},
+ C={name="CLUTCH",description="TOGGLE SHAFT TRANSMISSION",color=9},
+ Q={name="GEARBOX",description="FOUR WAY POWER DISTRIBUTOR",color=13},
+ O={name="LARGE COG",description="REVERSE SPIN AND DOUBLE RPM",color=14},
+ V={name="BELT",description="SPAN ONE EMPTY CELL",color=7},
+ D={name="CHAIN",description="SPAN ONE OR TWO CELLS",color=11},
 }
-E.order={"I","L","T","G","B"}
+E.order={"I","L","T","G","B","C","Q","O","V","D"}
 local function index(x,y)return (y-1)*E.WIDTH+x end
 function E.inside(x,y)
  return type(x)=="number" and type(y)=="number" and
@@ -32,7 +38,7 @@ local function add(g,v,fixed)
  local id=index(v.x,v.y)
  assert(not g.map[id],"Overlapping level part at "..id)
  local t={id=id,x=v.x,y=v.y,kind=v.kind,r=v.r or 0,
-  fixed=not not fixed,speed=v.speed,sign=v.sign}
+  fixed=not not fixed,speed=v.speed,sign=v.sign,enabled=v.enabled~=false}
  g.map[id]=t;g.tiles[#g.tiles+1]=t
  return t
 end
@@ -42,7 +48,7 @@ end
 function E.new(number,solved)
  local data=assert(levels[number],"Invalid level")
  local g={number=number,name=data.name,tip=data.tip,tiles={},map={},
-  stock=copy(data.stock),remaining=copy(data.stock),moves=0,hints=0,
+  stock=copy(data.stock),remaining=copy(data.stock),moves=0,
   fullNetwork=data.fullNetwork or false}
  add(g,data.source,true)
  for _,goal in ipairs(data.goals)do add(g,goal,true)end
@@ -81,11 +87,41 @@ function E.rotate(g,x,y)
  tile.r=(tile.r+1)%4;g.moves=g.moves+1
  return true
 end
+function E.toggle(g,x,y)
+ local tile=E.get(g,x,y)
+ if not tile or tile.fixed or tile.kind~="C"then return false end
+ tile.enabled=not tile.enabled
+ g.moves=g.moves+1
+ return true
+end
+-- Belt/chain endpoints may connect through clear space or non-conductive
+-- stone without requiring a cable tile in each intermediate cell.
+-- Returning the exact endpoint lets rendering, validation and simulation
+-- share a single mechanical connection rule.
+function E.connection(g,tile,dir)
+ if not E.hasPort(tile,dir)then return nil end
+ local delta=vectors[dir+1]
+ local other=E.get(g,tile.x+delta[1],tile.y+delta[2])
+ if other and E.hasPort(other,(dir+2)%4)then return other end
+ if tile.kind~="V" and tile.kind~="D"then return nil end
+ local limit=tile.kind=="V" and 3 or 4
+ for distance=2,limit do
+  local x,y=tile.x+delta[1]*distance,tile.y+delta[2]*distance
+  if not E.inside(x,y)then return nil end
+  local candidate=E.get(g,x,y)
+  if candidate then
+   if candidate.kind==tile.kind and
+    E.hasPort(candidate,(dir+2)%4)then return candidate end
+   if candidate.kind~="X"then return nil end
+  end
+ end
+ return nil
+end
 function E.snapshot(g)
  local list={}
  for _,tile in ipairs(g.tiles)do
   if not tile.fixed then
-   list[#list+1]={x=tile.x,y=tile.y,kind=tile.kind,r=tile.r}
+   list[#list+1]={x=tile.x,y=tile.y,kind=tile.kind,r=tile.r,enabled=tile.enabled}
   end
  end
  table.sort(list,function(a,b) if a.y==b.y then return a.x<b.x end return a.y<b.y end)
@@ -98,39 +134,23 @@ function E.restore(g,list)
  for _,v in ipairs(list)do
   if type(v)~="table" or not E.inside(v.x,v.y) or
    type(v.r)~="number" or v.r%1~=0 or v.r<0 or v.r>3 or
+   (v.enabled~=nil and type(v.enabled)~="boolean") or
    not E.place(trial,v.x,v.y,v.kind,v.r)then return false end
+  local restored=E.get(trial,v.x,v.y)
+  if restored and v.kind=="C"then restored.enabled=v.enabled~=false end
  end
  g.map,g.tiles,g.remaining=trial.map,trial.tiles,trial.remaining
- g.moves=0;g.hints=0
+ g.moves=0
  return true
-end
--- A hint corrects exactly one wrong placement or one wrong orientation.
--- Extra/wrongly placed components are removed first so parts cannot be trapped.
-function E.hint(g)
- local expected={}
- for _,v in ipairs(levels[g.number].build)do expected[index(v.x,v.y)]=v end
- for _,tile in ipairs(g.tiles)do
-  if not tile.fixed then
-   local correct=expected[tile.id]
-   if not correct or tile.kind~=correct.kind then
-    E.remove(g,tile.x,tile.y)
-    g.hints=g.hints+1;return true
-   end
-  end
- end
- for _,v in ipairs(levels[g.number].build)do
-  local tile=E.get(g,v.x,v.y)
-  if not tile then
-   if not E.place(g,v.x,v.y,v.kind,v.r) then return false end
-   g.hints=g.hints+1;return true
-  elseif tile.r~=v.r then
-   tile.r=v.r;g.moves=g.moves+1;g.hints=g.hints+1;return true
-  end
- end
- return false
 end
 local function transfer(t,from,to,rate,sign)
  if t.kind=="G" then return rate,-sign end
+ if t.kind=="O"then
+  local input=(from-t.r)%4
+  local output=(to-t.r)%4
+  if input==0 and output==2 then return rate*2,-sign end
+  if input==2 and output==0 then return rate/2,-sign end
+ end
  if t.kind=="B" then
   local input=(from-t.r)%4;local output=(to-t.r)%4
   if input==0 and output==2 then return rate*2,sign end
@@ -160,15 +180,14 @@ function E.evaluate(g)
   local event=queue[first];first=first+1
   local tile,port,info=event.tile,event.port,event.info
   for dir=0,3 do
-   if dir~=port and E.hasPort(tile,dir)then
+   if tile.enabled and dir~=port and E.hasPort(tile,dir)then
     local rate,sign=transfer(tile,port,dir,info.rate,info.sign)
     assign(tile,dir,rate,sign)
    end
   end
-  local dv=vectors[port+1]
-  local neighbor=E.get(g,tile.x+dv[1],tile.y+dv[2])
+  local neighbor=E.connection(g,tile,port)
   local opposite=(port+2)%4
-  if neighbor and E.hasPort(neighbor,opposite)then
+  if neighbor then
    assign(neighbor,opposite,info.rate,info.sign)
   end
  end
@@ -183,9 +202,7 @@ function E.evaluate(g)
   if E.parts[tile.kind] and not sample then unpowered=unpowered+1 end
   if tile.kind~="X"then
    for dir=0,3 do if E.hasPort(tile,dir)then
-    local delta=vectors[dir+1]
-    local other=E.get(g,tile.x+delta[1],tile.y+delta[2])
-    if not other or not E.hasPort(other,(dir+2)%4)then
+    if tile.kind~="Q" and not E.connection(g,tile,dir)then
      openPorts=openPorts+1
     end
    end end
@@ -230,8 +247,7 @@ function E.challenges(g,result)
   for _,tile in ipairs(levels[g.number].build)do
    par=par+1+(tile.r or 0)
   end
-  add("precision","PRECISION","NO HINTS / AT MOST "..par.." MOVES",
-    g.hints==0 and g.moves<=par)
+  add("precision","PRECISION","AT MOST "..par.." MOVES",g.moves<=par)
  end
  return list
 end

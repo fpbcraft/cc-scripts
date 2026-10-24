@@ -15,6 +15,10 @@ jobs:
           find . -type f -name '*.lua' -not -path './.git/*' -print0 | xargs -0 -n1 luac5.3 -p
       - name: COGWORKS kinetic puzzle tests
         run: lua5.3 tests/cogworks_test.lua
+      - name: COGWORKS new mechanical block tests
+        run: lua5.3 tests/cogworks_mechanics_test.lua
+      - name: COGWORKS three save slots and settings
+        run: lua5.3 tests/cogworks_storage_test.lua
       - name: COGWORKS graphics and touch regression
         run: lua5.3 tests/cogworks_renderer_test.lua
       - name: COGWORKS monitor scale and event integration

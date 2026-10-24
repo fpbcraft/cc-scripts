@@ -1,102 +1,78 @@
 # COGWORKS: Kinetic Lab
 
-A compact **construction puzzle** for CC:Tweaked, inspired by Create's rotational power transmission. Build mechanical networks with a limited inventory rather than rotating a prebuilt solution.
+A **30-level**, touchscreen-first construction puzzle for **CC:Tweaked**, inspired by Create's mechanical engineering. Place shafts and machinery, join the ports, and meet each machine's required **clockwise/counterclockwise spin and RPM**. This is a standalone game: it does not control any real Create machinery.
 
-There are **30 curated construction puzzles** in a 7 x 6 workshop. The first three levels introduce the mechanics; levels 4–30 require you to create **fully connected** working machines, with increasingly restrictive stock, rock walls, branching transmission lines, reversing gears and 2x speed drives. Late stages have up to **five** press targets and over twenty machine parts.
+## Install / update
 
-### Campaign difficulty
-
-- **1–3 — Fundamentals:** Build, turn and route a single shaft line.
-- **4–10 — Routing contracts:** Two press targets, obstacle detours, exact inventory, and the first reversing/speed stages.
-- **11–15 — Distribution:** Three targets connected to one source; multi-way splitters and mixed output requirements.
-- **16–20 — Kinetic networks:** Long branches, combined gear/drive requirements and up to four presses.
-- **21–25 — Industrial puzzles:** Four output targets, crowded boards, precise placement of specialized equipment.
-- **26–30 — Master challenges:** Four or five presses, multi-stage transformations, tight stock, and dense obstacles.
-
-**Main objective (all 30 levels):** Supply every fixed press with its required rotation direction and RPM. You unlock the next level as soon as all press targets are satisfied and the machinery is not jammed. **You do not need to consume all stock or seal every open port to progress.**
-
-### Optional bonus contracts
-
-Most levels also provide up to three harder, independently earnable bonuses. Tap **BNS** in the graphics sidebar (or press `C` at the computer) to open the challenge list and see saved completions.
-
-| Bonus | Availability | Requirement |
-|---|---|---|
-| **Sealed Lines** | Levels 2–30 | Every placed part powered, with no unconnected ports |
-| **Full Factory** | Levels 3–30 | Every allocated part placed, powered and fully connected |
-| **Precision** | Levels 5–30 | No hints and at most the displayed move budget |
-
-Bonuses do not block the next level. They are awarded only on a successful main-objective completion, persist in `/cogworks/save.dat`, and can be earned in later replays. A level's authored solution satisfies all of its applicable bonuses; the bonus requirements are deliberately more restrictive than the main objective.
-
-## One-command install / update
-
-On an Advanced Computer with HTTP enabled:
+Run on your Advanced Computer, with CC:Tweaked HTTP enabled:
 
 ```lua
 wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-cogworks.lua
-```
-
-Run with:
-
-```lua
 /cogworks/main.lua
 ```
 
-You can add `--startup` to the installer on a dedicated computer (existing unrelated startup scripts are never overwritten). The updater downloads and syntax-validates everything before activating, rolls back on failures, and preserves `/cogworks/save.dat`.
+The installer safely stages code updates and preserves game saves in `/cogworks/saves/`, `/cogworks/settings.dat`, and the legacy `/cogworks/save.dat`. Add `--startup` to the installer to create autostart *only when no unrelated startup script exists*. Test a branch by running its raw installer with its branch name as the final argument.
 
-To test a development branch, install directly from its raw URL and pass the branch name as an argument:
+## Menu & save systems
 
-```lua
-wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/feat/cogworks-30-level-campaign/install-cogworks.lua feat/cogworks-construction-v2
-```
+The new **Title Menu** lets you Continue your last save, choose one of **three slots**, open Settings or Exit. Empty slots start a fresh campaign. Your previous pre-slot save automatically imports into slot 1 when selected, without deleting the original file.
 
-## How to play
+The **Pause Menu** offers Resume, Save Game, Select Level (from your unlocked stages), Settings, Help, Restart Level, New Campaign and Title Menu. Restart and New Campaign require confirmation; New Campaign overwrites the current slot. Settings persist independently from save slots, currently controlling animation and open-port markers. Game boards and achievements autosave on every change; you can also save manually. Press `P` or Escape at the computer to pause and leave safely.
 
-1. Identify the **green engine (S)** and **blue press targets (M)**. Each target displays a required sign and RPM, such as `+1`, `-1`, `+2` or `-2`.
-2. Select a component from the right-hand **PARTS** inventory. Its stock count is shown next to its name.
-3. Tap an empty workshop cell to **place** that part. Tap a part already placed to **rotate** it by 90 degrees.
-4. Select **REMOVE** to salvage a misplaced part (stock is refunded). You cannot change the source, goal presses, or stone walls.
-5. Connect ports so power flows from the source to **every target** at the correct RPM and direction. No full-inventory or sealed-circuit requirement applies to normal completion. Optional bonuses reward those advanced restrictions.
-6. Use **HINT** to fix one misplaced, missing, or misrotated piece at a time. **RESET** empties the board and restores your stock. Next levels unlock upon completion.
+### Gameplay controls
 
-Every puzzle starts empty, except for its fixed terminals and obstacles. Some levels reward thoughtful use of tees/splitters, others force you to reverse spin or double shaft speed using specialized parts.
+- Tap a part in the compact two-column inventory, then tap an empty board cell to **place** it.
+- Tap a placed part to **rotate** it clockwise 90 degrees. Tap a fixed machine to inspect its needed **CW / CCW** and the current spin. Tap **REMOVE** to reclaim parts.
+- Select **SWITCH**, then tap a **clutch** to engage/disengage it. Switch mode is different from rotating a part.
+- **Hint has been removed.** You can solve using as little or as much stock as necessary.
+- Keyboard: `1`–`9`, `0` choose the 10 part types; `X` removes, `T` selects clutch switch, `S` saves, `P` or `Q` pauses, `N` next, `B` back. Ctrl+T exits safely and saves.
 
-### Machinery legend
+**Rotation clarity:** The green engine always generates **CW / 1×** power. Presses display **CW** or **CCW** on their face with their RPM underneath. Tapping a press displays what it **needs** and what it's **currently receiving**. A **gear** reverses CW ↔ CCW; a **large cog** reverses direction **and** doubles RPM. RPM and direction are independent of the physical orientation of the port.
 
-| Part | Display | Function |
+### Ten available parts
+
+| Icon | Part | Mechanical behavior |
 |---|---|---|
-| **Generator** | Green S, fixed | Outputs clockwise `+1` power |
-| **Press** | Blue M with a numeric target, fixed | Must receive exactly the displayed power |
-| **Shaft** | Straight connector | Carries power through two opposite sides |
-| **Elbow** | Right-angle connector | Turns power through 90 degrees |
-| **Splitter** | Three-way connector | Carries power to multiple machines |
-| **Gear** | Purple toothed ring | Reverses rotation direction |
-| **2x Drive** | Amber `2` with a green input marker | Doubles RPM from input to output; reverse flow halves it |
-| **Stone** | Dark blocked square | Cannot hold machinery |
+| I | Shaft | Straight two-port transmission |
+| L | Elbow | Turns a connection through 90° |
+| T | Splitter | Three connected ports |
+| G | Gear | Reverses spin (1:1 RPM) |
+| B / 2 | Speed Drive | Doubles RPM from marked input to output; reverse flow halves |
+| C | Clutch | Straight shaft you can engage or disengage using SWITCH |
+| Q | Gearbox | Distributes power to four directions; unused outlets are capped |
+| O | Large Cog | Reverses spin and doubles RPM across the input/output; reverse flow halves |
+| V | Belt | Two aligned endpoints can transmit across **up to two** empty/stone cells |
+| D | Chain Drive | Two aligned endpoints transmit across **up to three** empty/stone cells |
 
-The ports are always visibly marked on the corresponding edges. Connected, powered machinery animates with amber motion markers. A target turns green when its speed and rotation are correct. **Red end caps** identify open/unconnected ports (important for the optional bonuses). Inconsistent closed loops can cause a red **JAM** warning.
+The game provides actual gap-spanning belt and chain puzzles in later levels (e.g. levels 6 and 23). The later stages also introduce the other parts, while the tutorials stay simple.
 
-### Other controls
+### Optional challenges are always visible
 
-- Top bar: **PREV**, **NEXT**, **RESET**. NEXT unlocks as you complete levels.
-- Sidebar: **HNT** (hint), **?** (illustrated rules), and **BNS** (optional bonus contracts).
-- Keyboard: `1`–`5` select parts; `6` remove; `H` hint; `R` reset; `P` previous; `N` next; `C` bonus contracts; `?` help; `Q` quit. Ctrl+T exits.
-- The game saves each board layout, current level, unlocked levels, best hint-free move counts, and permanent bonus awards. Quitting/reinstalling does not wipe progress.
+The primary win condition is **power every target with the required RPM and CW/CCW rotation without a jam**. It unlocks the next level immediately. Extra objectives appear on the gameplay sidebar, without any separate bonus menu:
 
-## Displays and dependencies
+- **Sealed Lines** (from level 2): no open ports or unpowered parts.
+- **Full Factory** (from level 3): place/use all stock and power/fully connect every piece.
+- **Precision** (from level 5): complete in the listed move budget.
 
-- CC:Tweaked Advanced Computer and a color Advanced Monitor. A **3×3 or larger** monitor is recommended. The program explicitly sets the monitor text scale to **0.5**, and the Graphics renderer clears the entire framebuffer, including letterbox margins, with a dark background.
-- [CC: Graphics](https://modrinth.com/mod/cc-graphics) enables the higher-resolution, animated pixel display.
-- Without CC: Graphics, the game automatically switches to a **fully playable text UI**, on a sufficiently large Advanced Monitor.
-- The game chooses the largest color monitor; optionally provide a monitor peripheral name, e.g. `/cogworks/main.lua monitor_1`.
-- Minecraft's standard `monitor_touch` event is **right-click only** and does not report mouse button. Left-click/right-click separation on the physical monitor requires a separate input-capable mod. The regular right-click tap builds/rotates, while the **REMOVE** tool salvages any removable part. For compatible addons that append an explicit mouse-button field to `monitor_touch`, right-button taps remove directly.
-- No actual Create machinery is controlled. This is a standalone game inspired by Create's engineering.
+Earned bonuses remain unlocked when you revisit a stage. They never block normal progression.
 
-## Testing
+## Visual requirements and input options
+
+- A color Advanced Computer and a color Advanced Monitor (a 3×3+ display recommended).
+- **CC: Graphics** is recommended for animated pixel graphics, compact menus, and machine sprites; without it the game remains playable using a sufficiently large Advanced Monitor in text mode.
+- The program explicitly sets the monitor text scale to `0.5` and restores the previous setting upon exit. The mode-2 renderer now uses a denser **200×120** virtual layout (rather than 128×88), and completely clears the framebuffer to avoid white margins.
+- Standard CC:Tweaked monitor events support right-click only, without button information: right-click builds/rotates, and the REMOVE tool takes parts back.
+- **Optional companion addon:** The experimental [FPB Monitor Input](../monitor-input-neoforge/README.md) NeoForge mod (tracked in PR #13) emits normalized `monitor_left_click` events. Once COGWORKS sees a left-click, it uses **left-click to place/rotate and right-click to remove directly**, while retaining the standard fallback. The addon must be installed on *client and server* and has not yet been validated for general deployment.
+
+## Tests
 
 ```bash
 lua5.3 tests/cogworks_test.lua
+lua5.3 tests/cogworks_mechanics_test.lua
+lua5.3 tests/cogworks_storage_test.lua
 lua5.3 tests/cogworks_renderer_test.lua
+lua5.3 tests/cogworks_main_test.lua
 lua5.3 tests/cogworks_installer_test.lua
 ```
 
-The pure Lua engine includes validated reference network solutions for all 30 levels. Regression tests verify inventory depletion/refunds, building, rotation, hint recovery, standard versus bonus completion, target RPM and direction, full framebuffer clearing, pixel and text input, and installer rollback.
+The automated suite validates all 30 reference solutions, bonus achievements, real mechanical interactions, saves and settings, menus and hitboxes, monitor scaling, and safe updates. These tests do not substitute for final in-world UI testing.
