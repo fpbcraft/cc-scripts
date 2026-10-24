@@ -60,7 +60,9 @@ if peripheral then
  if not monitor and peripheral.find then monitor=peripheral.find('monitor')end
 end
 local mode
-monitor,mode=Display.select(monitor,term.current(),require('terminal_view'),80,54)
+local native=nil
+if not monitor then native=term.current()end
+monitor,mode=Display.select(monitor,native,require('terminal_view'),80,54)
 local computerMode=Display.isComputer(mode)
 assert(monitor and monitor.getSize,'Attach an Advanced Monitor or run on an Advanced Computer')
 local oldScale=monitor.getTextScale and monitor.getTextScale() or nil
