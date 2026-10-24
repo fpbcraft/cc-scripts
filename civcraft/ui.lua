@@ -2,6 +2,7 @@
 -- Never mutate simulation here: all commands flow through dispatch().
 local Renderer=dofile("/civcraft/render.lua")
 local Hex=dofile("/civcraft/hex.lua")
+local Systems=dofile("/civcraft/systems.lua")
 local Icons=dofile("/civcraft/icons.lua")
 local UI={};UI.__index=UI
 local P={8,13,11,21}
@@ -19,7 +20,7 @@ local function ownerIndex(state,id)
 end
 function UI.new(m,dispatch)
  local self=setmetatable({r=Renderer.new(m),dispatch=dispatch,
-  selected={x=2,y=2},source=nil,mode="map",frame=0,notice=""},UI)
+  selected={x=2,y=2},source=nil,mode="map",frame=0,notice="",panel="context"},UI)
  return self
 end
 function UI:message(s)self.notice=tostring(s or "")end
@@ -37,7 +38,7 @@ function UI:tile(x,y)
    self.notice="OUT OF RANGE - SELECT HIGHLIGHTED HEX"
   end
  else
-  self.selected={x=x,y=y}
+  self.selected={x=x,y=y};self.panel="context"
   local unit=where(self.state and self.state.units,x,y)
   if unit and unit.owner==self.playerID and not unit.moved then
    self.source={x=x,y=y}
@@ -50,7 +51,9 @@ function UI:draw(state,playerID,opts)
  local r=self.r;local w,h=r.w,r.h;opts=opts or {}
  r:begin()
  self.hexTargets={}
+ self.modalBounds=nil
  r:fill(0,0,w,h,0)
+ self.state=state;self.playerID=playerID
  local header=math.min(27,math.max(16,math.floor(h*.16)))
  local footer=math.max(22,math.floor(h*.20))
  r:fill(0,0,w,header,1);r:fill(0,header-2,w,2,8)
@@ -60,6 +63,27 @@ function UI:draw(state,playerID,opts)
   phase=="game" and ("ROUND "..state.round)or phase,6,1,80)
  if not state then
   r:center(math.floor(h/2),"CONNECTING TO HOST...",6)
+  r:finish();return
+ end
+ if opts.screen=="title" then
+  r:center(math.floor(h*.20),"CIVCRAFT",8,w>=155 and 3 or 2)
+  r:center(math.floor(h*.34),"AN EMPIRE IN YOUR HANDS",7)
+  local bw=math.min(105,w-30)
+  r:button(math.floor((w-bw)/2),math.floor(h*.49),bw,19,
+   "NEW CAMPAIGN",function()self:command("newGame")end,{primary=true})
+  r:button(math.floor((w-bw)/2),math.floor(h*.49)+23,bw,17,
+   "CONTINUE",function()self:command("continue")end,{primary=opts.hasSave})
+  r:button(math.floor((w-bw)/2),math.floor(h*.49)+44,bw,15,
+   "EXIT",function()self:command("exit")end)
+  r:finish();return
+ end
+ if opts.paused then
+  r:center(math.floor(h*.24),"PAUSED",8,2)
+  local bw=math.min(105,w-30);local x=math.floor((w-bw)/2)
+  r:button(x,math.floor(h*.38),bw,18,"RESUME",function()self:command("resume")end,{primary=true})
+  r:button(x,math.floor(h*.38)+22,bw,18,"SAVE",function()self:command("save")end)
+  r:button(x,math.floor(h*.38)+44,bw,18,"MAIN MENU",function()self:command("title")end)
+  r:button(x,math.floor(h*.38)+66,bw,18,"EXIT",function()self:command("exit")end)
   r:finish();return
  end
  if opts.handoff then
@@ -83,7 +107,13 @@ function UI:draw(state,playerID,opts)
    local row=header+35+(i-1)*13
    r:fill(16,row,math.min(w-32,math.max(50,math.floor(w*.55))),11,2)
    r:fill(16,row,3,11,P[i] or 8)
-   r:text(22,row+2,i..". "..clip(p.name,16),7)
+   r:text(22,row+2,i..". "..clip(p.name,9).." "..clip(Systems.civ(p.civ).name,17),7)
+   if opts.localMode then
+    r:button(math.min(w-56,150),row,23,11,p.ai and "AI" or "HUMAN",
+     function()self:command("toggleAI",{player=i})end)
+    r:button(math.min(w-29,179),row,22,11,"CIV",
+     function()self:command("civ",{player=i})end)
+   end
   end
   local y=h-37
   if opts.localMode then
@@ -177,11 +207,30 @@ function UI:draw(state,playerID,opts)
    r:text(sidebarX+17,my+34,"WOOD "..(mine.wood or 0),7,1,sw-21)
    r:icon("bolt",sidebarX+5,my+46,1)
    r:text(sidebarX+17,my+48,"SCI "..(mine.science or 0),7,1,sw-21)
-   r:text(sidebarX+4,my+62,"TECH LV "..(mine.tech or 0),6,1,sw-8)
+   r:text(sidebarX+4,my+62,"TECHS "..(function()
+    local n=0;for _ in pairs(mine.techs or {})do n=n+1 end
+    return n
+   end)(),6,1,sw-8)
+   local selectedCity=where(state.cities,self.selected.x,self.selected.y)
+   if selectedCity and selectedCity.owner==playerID then
+    local cy=my+76
+    r:fill(sidebarX+3,cy,sw-6,math.max(16,boardH-79),2)
+    r:text(sidebarX+5,cy+3,"CITY POP "..(selectedCity.population or 2),7,1,sw-9)
+    local jobs=selectedCity.jobs or {food=1,wood=1,science=0}
+    r:text(sidebarX+5,cy+15,"F"..jobs.food.." W"..jobs.wood.." S"..jobs.science,8,1,sw-9)
+    local y=cy+28
+    for _,id in ipairs({"farm","mine","library","walls","workshop","academy"})do
+     if selectedCity.buildings and selectedCity.buildings[id] and y<my+boardH-12 then
+      r:text(sidebarX+5,y,id:upper(),11,1,sw-9);y=y+10
+     end
+    end
+   end
   end
   for i,p in ipairs(state.players)do
    local iy=my+79+(i-1)*11
-   if iy+10<my+boardH then
+   if iy+10<my+boardH and
+    not (where(state.cities,self.selected.x,self.selected.y) and
+      where(state.cities,self.selected.x,self.selected.y).owner==playerID) then
     r:fill(sidebarX+4,iy,3,9,P[i]or 8)
     r:text(sidebarX+11,iy+2,clip(p.name,math.floor((sw-14)/4))..
       (p.ready and " DONE" or ""),6,1,sw-13)
@@ -203,40 +252,97 @@ function UI:draw(state,playerID,opts)
  if selectedUnit then description=description.." "..selectedUnit.kind end
  r:text(8,barY,clip(description,math.floor((w-10)/4)),7)
  local actions={}
+ local x,y=self.selected.x,self.selected.y
+ local function act(label,name,args)
+  actions[#actions+1]={label,function()
+   self:command(name,args or {x=x,y=y})
+  end}
+ end
  if selectedUnit and selectedUnit.owner==playerID then
-  if selectedUnit.kind=="settler"then
-   actions[#actions+1]={"FOUND CITY",function()
-    self:command("found",{x=self.selected.x,y=self.selected.y})
-   end}
-  end
-  actions[#actions+1]={"MOVE UNIT",function()
-   if selectedUnit.moved then self.notice="UNIT HAS ALREADY MOVED";return end
-   self.source={x=self.selected.x,y=self.selected.y}
+  if selectedUnit.kind=="settler"then act("FOUND","found")end
+  actions[#actions+1]={"MOVE",function()
+   if selectedUnit.moved then self.notice="ALREADY MOVED";return end
+   self.source={x=x,y=y}
    self.reachable=Hex.reachable(state,selectedUnit,playerID)
   end}
  elseif selectedCity and selectedCity.owner==playerID then
-  actions[#actions+1]={"WARRIOR",function()
-   self:command("warrior",{x=self.selected.x,y=self.selected.y})end}
-  actions[#actions+1]={"SETTLER",function()
-   self:command("settler",{x=self.selected.x,y=self.selected.y})end}
-  actions[#actions+1]={"RESEARCH",function()
-   self:command("research",{x=self.selected.x,y=self.selected.y})end}
+  if self.panel=="context" then
+   actions[#actions+1]={"UNITS",function()self.panel="units"end}
+   actions[#actions+1]={"BUILDINGS",function()self.panel="buildings"end}
+   actions[#actions+1]={"POPULATION",function()self.panel="population"end}
+   actions[#actions+1]={"TECH TREE",function()self.panel="tech"end}
+  elseif self.panel=="units"then
+   for _,id in ipairs({"warrior","settler","scout","spearman","horseman"})do
+    if Systems.canRecruit(mine,id) then
+     act(id:upper(),"recruit",{x=x,y=y,id=id})
+    end
+   end
+  elseif self.panel=="buildings"then
+   for _,id in ipairs({"farm","mine","library","walls","workshop","academy"})do
+    if Systems.canBuild(mine,selectedCity,id)then
+     act(id:upper(),"build",{x=x,y=y,id=id})
+    end
+   end
+  elseif self.panel=="population"then
+   for _,from in ipairs(Systems.jobs)do
+    for _,to in ipairs(Systems.jobs)do
+     if from~=to and selectedCity.jobs and selectedCity.jobs[from]>0 then
+      act(from:sub(1,1):upper()..">"..to:sub(1,1):upper(),"assign",
+       {x=x,y=y,from=from,to=to})
+     end
+    end
+   end
+  elseif self.panel=="tech"then
+   for _,id in ipairs(Systems.techOrder)do
+    if Systems.canResearch(mine,id)then act(id:upper(),"researchTech",{id=id})end
+   end
+  end
  else
-  actions[#actions+1]={"INSPECT",function()
-   self.notice=terrain(self.selected.x,self.selected.y):upper().." HEX"
-  end}
+  actions[#actions+1]={"INSPECT",function()self.notice=terrain(x,y):upper()end}
  end
- actions[#actions+1]={"CANCEL",function()
-  self.source=nil;self.reachable={}
+ actions[#actions+1]={"BACK",function()
+  self.panel="context";self.source=nil;self.reachable={}
  end}
  actions[#actions+1]={"END TURN",function()self:command("end")end}
- local cols=math.min(3,#actions);local gap=3;local buttonW=math.floor((w-18-(cols-1)*gap)/cols)
- local buttonH=math.max(10,math.floor((footer-20)/2))
+ actions[#actions+1]={"PAUSE",function()self:command("pause")end}
+ local cols=math.min(4,#actions);local gap=3;local buttonW=math.floor((w-18-(cols-1)*gap)/cols)
+ local buttonH=math.max(10,math.floor((footer-20)/math.max(2,math.ceil(#actions/cols))))
  for i,action in ipairs(actions)do
   local col=(i-1)%cols;local row=math.floor((i-1)/cols)
   r:button(8+col*(buttonW+gap),barY+11+row*(buttonH+2),
    buttonW,buttonH,action[1],action[2],
    {primary=i==6,selected=(i==1 and self.source~=nil)})
+ end
+ -- Research is presented as a tree, including locked branches and costs.
+ if self.panel=="tech" and selectedCity and selectedCity.owner==playerID then
+  local ox,oy=math.max(6,math.floor(w*.12)),header+6
+  local ow,oh=w-2*ox,math.max(50,barY-oy-5)
+  self.modalBounds={x=ox,y=oy,w=ow,h=oh}
+  r:fill(ox,oy,ow,oh,1);r:outline(ox,oy,ow,oh,8)
+  r:text(ox+5,oy+4,"TECHNOLOGY TREE",8,1,ow-10)
+  local gap=4
+  local tw=math.floor((ow-16-gap)/2)
+  local th=math.max(10,math.floor((oh-25)/4)-2)
+  for i,id in ipairs(Systems.techOrder)do
+   local tech=Systems.techs[id]
+   local px=ox+6+((i-1)%2)*(tw+gap)
+   local py=oy+16+math.floor((i-1)/2)*(th+2)
+   local complete=mine.techs[id]
+   local available=Systems.canResearch(mine,id)
+   local label=tech.name.." "..(complete and "DONE" or tech.cost.." SCI")
+   r:button(px,py,tw,th,label,function()
+    if available then
+     self:command("researchTech",{id=id})
+    else
+     local req=table.concat(tech.requires," + ")
+     self.notice=complete and "ALREADY RESEARCHED" or
+       ((req~="" and "REQUIRES "..req.." / " or "").."NEED "..tech.cost.." SCIENCE")
+    end
+   end,{primary=available})
+  end
+  r:button(ox+ow-33,oy+2,28,12,"CLOSE",function()
+   self.panel="context"
+  end)
  end
  if self.notice~="" and barY>=10 then
   r:text(8,barY-10,clip(self.notice,math.floor((w-12)/4)),8)
@@ -246,6 +352,11 @@ end
 function UI:tap(x,y)
  local rx,ry=self.r:touch(x,y)
  if not rx then return false end
+ local modal=self.modalBounds
+ if modal and rx>=modal.x and ry>=modal.y and
+    rx<modal.x+modal.w and ry<modal.y+modal.h then
+  return self.r:hit(rx,ry)
+ end
  -- Hexes occupy overlapping bounding rectangles. Resolve actual polygon
  -- containment and prefer the closest centre (never the first bounding box).
  local best,distance

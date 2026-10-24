@@ -40,6 +40,7 @@ keys={q=16,escape=1}
 local frames,stage=0,0
 local originalDofile=dofile
 dofile=function(path)
+ if path=="/civcraft/systems.lua"then return originalDofile("civcraft/systems.lua")end
  if path=="/civcraft/hex.lua"then return originalDofile("civcraft/hex.lua")end
  if path~="/civcraft/ui.lua"then return originalDofile(path)end
  return {new=function(_,callback)
@@ -49,6 +50,7 @@ dofile=function(path)
     frames=frames+1
     stage=stage+1
     if stage==1 then
+     callback("continue")
      assert(s.phase=="lobby" and #s.players==2 and opt.localMode)
      callback("addPlayer")
     elseif stage==2 then
@@ -73,6 +75,7 @@ dofile=function(path)
      callback("reveal")
     elseif stage==8 then
      assert(s.round==2 and not opt.handoff)
+     callback("exit")
     end
    end,
    resize=function()end,tap=function()end,close=function()end
@@ -83,7 +86,7 @@ local originalPull=os.pullEvent
 local count=0
 os.pullEvent=function()
  count=count+1
- if count>=8 then return "key",keys.q end
+ if count>=8 then return "timer",0 end
  return "term_resize"
 end
 local ok,err=pcall(function()assert(loadfile("civcraft/game.lua"))("local","--new")end)

@@ -62,3 +62,21 @@ CIVCRAFT now uses a pixel-art map, icon-based units and cities, a dark Railbreak
 The six-direction hex grid is shared between CIVCRAFT's rules and visual interface. Selecting one of your unmoved units highlights its **legal destinations**; blocked water and mountain hexes, friendly occupied hexes, and invalid attacks are excluded. Select a highlighted hex to move or attack. A city selection exposes **WARRIOR**, **SETTLER**, and **RESEARCH** commands; a settler selection exposes **FOUND CITY**, while open terrain can be inspected. The contextual action bar also offers **CANCEL** and **END TURN**. Hex selection resolves the actual six-sided polygon, not overlapping rectangular hitboxes.
 
 Local multiplayer: run `/civcraft/game.lua local` (or simply launch CIVCRAFT from FPB Store) for 2–4 players sharing one screen, with private turn handoffs and separate local saves. To host a network match, explicitly run `/civcraft/game.lua host`.
+
+## Expanded 4X systems (v0.4.0)
+
+The title screen now offers **New Campaign**, **Continue**, and **Exit**. During a game, use **Pause** (or Escape/Q) for **Resume**, **Save**, **Main Menu**, or **Exit**. Local hot-seat and rednet games remain separate, and older local save files are upgraded in memory without deleting them.
+
+### Civilizations and AI
+
+The lobby allows 2–4 participants with each slot assigned to a human or AI, while retaining at least one human. Tap **CIV** beside a player to cycle through the Verdant League (farm food bonus), Iron Dominion (mine output bonus), Astral Academy (research bonus), and Dust Nomads (fast scouts). AI empires research technology, construct improvements, recruit and move units, and found/capture settlements. AI behavior uses lightweight deterministic heuristics suitable for ComputerCraft.
+
+### Technology and army
+
+Eight technologies form a prerequisite-based tree: Agriculture, Mining, Writing, Bronze Working, Masonry, Horseback Riding, Engineering, and Philosophy. A city's **TECH TREE** opens the whole tree, including locked and completed nodes, costs, and available technologies. Units now include Warriors, Settlers, Scouts, Spearmen and Horsemen with differing costs, strength and movement allowances. Spearmen and horsemen require technology; battles account for unit strength and defensive walls.
+
+### City development
+
+Cities contain a population of citizens assigned to **food**, **wood**, and **science** jobs. The **POPULATION** menu reallocates workers between sectors, with their sum constrained to the city's population. Food surplus accumulates and grows the city, adding another worker. Different buildings can be constructed inside each city: Farms, Mines, Libraries, Walls, Workshops and Academies. They cost wood, require technology, and modify production or defense. Select a city to see its population, assignments and completed improvements in the inspector.
+
+The economic system uses per-turn resource yields and does not require continuous redstone input or external peripherals.

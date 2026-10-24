@@ -48,11 +48,11 @@ return {
    saves={"/ironspire/data"},
   },
   {
-   version="0.3.0",id="civcraft",name="CIVCRAFT",subtitle="POCKET CIVILIZATION",
+   version="0.4.0",id="civcraft",name="CIVCRAFT",subtitle="POCKET CIVILIZATION",
    description="Local hotseat or networked 2-4 player civilization-building 4X.",
    icon="V",genre="4X / STRATEGY",root="/civcraft",
    entry="/civcraft/game.lua",installer="install-civcraft.lua",
-   managedFiles={"game.lua","render.lua","ui.lua","hex.lua","icons.lua","README.md"},
+   managedFiles={"game.lua","render.lua","ui.lua","hex.lua","icons.lua","systems.lua","README.md"},
    saves={"/civcraft/data"},
   },
  }

@@ -17,6 +17,8 @@ jobs:
         run: lua5.3 tests/fpbstore_test.lua
       - name: SHATTERED rename and save migration
         run: lua5.3 tests/shattered_migration_test.lua
+      - name: CIVCRAFT expanded systems regression
+        run: lua5.3 tests/civcraft_systems_test.lua
       - name: CIVCRAFT hex geometry and movement rules
         run: lua5.3 tests/civcraft_hex_test.lua
       - name: CIVCRAFT local hotseat multiplayer
