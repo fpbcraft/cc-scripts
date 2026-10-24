@@ -2,6 +2,7 @@
 -- Coordinates in the pixel renderer are 128x88 logical units. Touch events
 -- from Graphics mode 2 are zero-based PIXELS; vanilla monitor touch is 1-based.
 local E=require("cogworks.engine")
+local T=require("cogworks.tutorials")
 local R={};R.__index=R
 local palette={
  [0]=0x0E1A23,[1]=0x172B37,[2]=0x284250,[3]=0x355866,
@@ -118,6 +119,18 @@ function R:font(x,y,str,color)
   end end
  end
 end
+-- Double-sized bitmap lettering for cinematic level cards.
+function R:fontLarge(x,y,str,color)
+ str=tostring(str):upper()
+ for n=1,#str do
+  local glyph=F[str:sub(n,n)] or F["?"]
+  for row=1,5 do for col=1,3 do
+   if glyph[row]:sub(col,col)=="1"then
+    self:rect(x+(n-1)*8+(col-1)*2,y+(row-1)*2,2,2,color)
+   end
+  end end
+ end
+end
 function R:line(x1,y1,x2,y2,color)
  local count=math.ceil(math.max(math.abs(x2-x1),math.abs(y2-y1)))
  for i=0,math.max(1,count)do
@@ -163,23 +176,33 @@ function R:piece(x,y,size,tile,light)
    end
    self:rect(cx-2,cy-2,5,5,tile.kind=="O" and 7 or 14)
    self:rect(cx-1,cy-1,3,3,1)
-  elseif tile.kind=="C"then
-   self:rect(cx-3,cy-2,2,5,tile.enabled and 9 or 8)
-   self:rect(cx+1,cy-2,2,5,tile.enabled and 9 or 8)
-   if tile.enabled then self:rect(cx-1,cy,3,1,9)end
   elseif tile.kind=="Q"then
    self:rect(cx-3,cy-3,7,7,13)
    self:rect(cx-1,cy-1,3,3,1)
    self:rect(cx,cy,1,1,15)
   elseif tile.kind=="V"then
-   self:rect(cx-3,cy-2,3,5,7)
-   self:rect(cx+1,cy-2,3,5,7)
-   self:rect(cx-2,cy-2,5,1,13)
-   self:rect(cx-2,cy+2,5,1,13)
+   -- The paired rollers turn with the transmission axis.
+   if tile.r%2==1 then
+    self:rect(cx-4,cy-3,8,2,7)
+    self:rect(cx-4,cy+2,8,2,7)
+    self:rect(cx-4,cy-2,2,5,13)
+    self:rect(cx+2,cy-2,2,5,13)
+   else
+    self:rect(cx-3,cy-4,2,8,7)
+    self:rect(cx+2,cy-4,2,8,7)
+    self:rect(cx-2,cy-4,5,2,13)
+    self:rect(cx-2,cy+2,5,2,13)
+   end
   elseif tile.kind=="D"then
-   for j=-3,2,2 do self:rect(cx-3,cy+j,6,1,11)end
-   self:rect(cx-3,cy-3,1,7,4)
-   self:rect(cx+2,cy-3,1,7,4)
+   if tile.r%2==1 then
+    for j=-3,3,2 do self:rect(cx+j,cy-3,1,7,11)end
+    self:rect(cx-3,cy-3,7,1,4)
+    self:rect(cx-3,cy+3,7,1,4)
+   else
+    for j=-3,3,2 do self:rect(cx-3,cy+j,7,1,11)end
+    self:rect(cx-3,cy-3,1,7,4)
+    self:rect(cx+3,cy-3,1,7,4)
+   end
   elseif tile.kind=="B"then
    self:rect(cx-3,cy-3,7,7,7)
    self:rect(cx-2,cy-2,5,5,1)
@@ -230,6 +253,47 @@ function R:piece(x,y,size,tile,light)
   self:rect(cx+DX[tile.r+1]*4,cy+DY[tile.r+1]*4,2,2,9)
  end
 end
+-- Draw belts/chains across every intervening cell, including stone. Draw over
+-- the board but stop at endpoint edges so the pulley sprites stay readable.
+function R:drawSpan(x1,y1,x2,y2,kind,powered)
+ local dx=x2>x1 and 1 or (x2<x1 and -1 or 0)
+ local dy=y2>y1 and 1 or (y2<y1 and -1 or 0)
+ local length=math.max(math.abs(x2-x1),math.abs(y2-y1))
+ if length==0 then return end
+ local rail=kind=="V" and 7 or 11
+ self:line(x1-dy*2,y1+dx*2,x2-dy*2,y2+dx*2,rail)
+ self:line(x1+dy*2,y1-dx*2,x2+dy*2,y2-dx*2,rail)
+ for n=0,length,4 do
+  local x=x1+dx*n;local y=y1+dy*n
+  self:line(x-dy*2,y+dx*2,x+dy*2,y-dx*2,
+   kind=="D" and (n%8==0 and 15 or 4) or 13)
+ end
+ if powered then
+  for n=self.frame%4,length,8 do
+   self:rect(x1+dx*n,y1+dy*n,2,2,15)
+  end
+ end
+end
+function R:drawSpans(g,result)
+ for _,tile in ipairs(g.tiles)do
+  if tile.kind=="V" or tile.kind=="D"then
+   for dir=1,2 do
+    local other=E.connection(g,tile,dir)
+    if other and other.kind==tile.kind and
+      math.abs(other.x-tile.x)+math.abs(other.y-tile.y)>1 then
+     local x1=self.boardX+(tile.x-1)*self.cell+7
+     local y1=self.boardY+(tile.y-1)*self.cell+7
+     local x2=self.boardX+(other.x-1)*self.cell+7
+     local y2=self.boardY+(other.y-1)*self.cell+7
+     local dx=DX[dir+1];local dy=DY[dir+1]
+     self:drawSpan(x1+dx*6,y1+dy*6,x2-dx*6,y2-dy*6,
+      tile.kind,result.lights[tile.id].powered and
+      result.lights[other.id].powered)
+    end
+   end
+  end
+ end
+end
 -- Dynamic hit targets use the same coordinates as the graphics renderer.
 -- On vanilla text monitors the targets are one-based character rectangles.
 function R:add(x,y,w,h,action,arg,arg2)
@@ -239,6 +303,22 @@ function R:fontFit(x,y,label,color,width)
  local max=math.max(0,math.floor(width/4))
  if max<1 then return end
  self:font(x,y,tostring(label):sub(1,max),color)
+end
+-- Wrap mission descriptions by whole words. Glyphs in the compact font use
+-- four horizontal pixels, so 42 characters occupy at most 168 pixels.
+function R:wrapBriefingTip(value)
+ local lines={}
+ local line=""
+ for word in tostring(value):gmatch("%S+")do
+  if line~="" and #line+#word+1>42 then
+   lines[#lines+1]=line
+   line=word
+  else
+   line=line=="" and word or (line.." "..word)
+  end
+ end
+ if line~=""then lines[#lines+1]=line end
+ return lines
 end
 function R:button(x,y,w,h,caption,action,arg,color)
  local active=action~=nil
@@ -292,8 +372,7 @@ function R:drawGame(m)
  self:font(117,19,"PARTS",11)
  self:font(163,19,result.correct.."/"..result.goals,
    result.win and 9 or 15)
- -- Two columns instead of the oversized five-row list: all ten parts
- -- remain simultaneously visible, including the new Create mechanics.
+ -- Two columns keep all nine mechanisms visible at once.
  for n,kind in ipairs(E.order)do
   local col=(n-1)%2
   local row=math.floor((n-1)/2)
@@ -306,24 +385,21 @@ function R:drawGame(m)
   self:rect(x+2,y+1,7,7,count>0 and E.parts[kind].color or 4)
   self:font(x+4,y+2,kind=="B" and "2" or kind,0)
   local alias=({I="SHAFT",L="ELBOW",T="SPLIT",G="GEAR",
-    B="2X",C="CLTCH",Q="BOX",O="COG",V="BELT",D="CHAIN"})[kind]
+    B="2X",Q="BOX",O="COG",V="BELT",D="CHAIN"})[kind]
   self:fontFit(x+11,y+2,alias,count>0 and 15 or 4,20)
   self:font(x+32,y+2,tostring(count),count>0 and 9 or 4)
   self:add(x,y,38,9,"tool",kind)
  end
- self:button(117,77,37,9,
+ self:button(117,77,77,9,
   m.selected=="erase" and "ERASING" or "REMOVE",
   "tool","erase",m.selected=="erase" and 8 or 3)
- self:button(156,77,38,9,
-  m.selected=="switch" and "SWITCH ON" or "SWITCH",
-  "tool","switch",m.selected=="switch" and 9 or 3)
  -- Persistent bonus objectives are visible while building, not buried in
  -- a modal screen. Labels are deliberately short enough for this pane.
- self:font(117,89,"BONUS GOALS",6)
+ self:font(117,87,"BONUS GOALS",6)
  local bonuses=E.challenges(g,result)
  local awarded=(m.progress.awards and m.progress.awards[g.number])or{}
  for i,bonus in ipairs(bonuses)do
-  local y=96+(i-1)*5
+  local y=93+(i-1)*5
   local done=awarded[bonus.id] or false
   local label=bonus.id=="sealed" and "NO OPEN PORTS" or
    (bonus.id=="master" and "ALL STOCK USED" or
@@ -331,8 +407,14 @@ function R:drawGame(m)
   self:rect(117,y,4,4,done and 9 or (bonus.earned and 6 or 3))
   self:fontFit(124,y,label,done and 9 or (bonus.earned and 6 or 5),70)
  end
- if #bonuses==0 then self:font(124,99,"FROM LEVEL 2",4)end
- self:rect(0,113,200,7,1)
+ if #bonuses==0 then self:font(124,94,"FROM LEVEL 2",4)end
+ self:drawSpans(g,result)
+ self:rect(0,109,200,11,1)
+ self:rect(0,109,200,1,7)
+ local selected=E.parts[m.selected]
+ local info=selected and (selected.name.." - "..T.descriptions[m.selected]) or
+  (T.descriptions[m.selected] or "SELECT A PART TO PLACE")
+ self:fontFit(3,110,info,11,194)
  local status=m.message
  if status==""then
   if result.win then status="CLEARED! BONUS TASKS ARE OPTIONAL"
@@ -340,10 +422,149 @@ function R:drawGame(m)
   elseif m.hasLeftInput then status="LEFT: PLACE/TURN   RIGHT: REMOVE"
   else status="CW = CLOCKWISE  /  CCW = COUNTERCLOCKWISE"end
  end
- self:fontFit(3,114,status,result.win and 9 or 5,160)
+ self:fontFit(3,115,status,result.win and 9 or 5,160)
  if result.win then
-  self:button(166,113,32,7,"NEXT","next")
+  self:button(166,114,32,6,"NEXT","next")
  end
+end
+-- All briefings use the authored mission targets and inventory, never
+-- independently maintained objective text.  Animation is non-blocking.
+function R:drawBriefing(m)
+ local b=m.briefing
+ if self.lastBriefing~=b then
+  self.lastBriefing=b
+  self.briefingFrame=0
+ end
+ local motion=m.settings.animations~=false
+ local tick=motion and self.briefingFrame or 1000
+ self.briefingFrame=math.min(self.briefingFrame+1,100000)
+ self:rect(0,0,200,120,0)
+ self:rect(0,0,200,15,1)
+ self:font(8,5,"COGWORKS / MISSION BRIEF",6)
+ self:font(168,5,string.format("%02d/30",b.number),15)
+ self:rect(0,14,200,1,7)
+ for x=0,199,9 do
+  local offset=motion and (tick*2)%9 or 0
+  self:rect((x+offset)%200,13,4,1,6)
+ end
+ -- A taller hero card reserves a real two-line description area.
+ self:rect(7,18,186,42,3)
+ self:rect(9,20,182,38,1)
+ self:rect(10,20,2,38,6)
+ self:rect(12,57,178,1,4)
+ self:rect(11+(motion and tick*5%177 or 177),19,7,2,9)
+ local titleX=14-math.max(0,12-tick)*2
+ if tick>=2 then self:fontFit(15,22,"LEVEL "..string.format("%02d",b.number),11,95)end
+ if tick>=5 then
+  self:fontLarge(titleX,29,b.name,15)
+  self:rect(15,41,math.min(172,(tick-5)*10),1,6)
+ end
+ if tick>=9 then
+  local lines=self:wrapBriefingTip(b.tip)
+  local y=#lines==1 and 48 or 45
+  for _,line in ipairs(lines)do
+   self:fontFit(15,y,line,11,172)
+   y=y+6
+  end
+ end
+ -- Coupled cogwheel decoration lives clear of the mission title.
+ for _,gear in ipairs({{177,32,4,1},{187,39,3,-1}})do
+  local gx,gy,r,reverse=gear[1],gear[2],gear[3],gear[4]
+  for tooth=0,7 do
+   local a=(tooth/4)*math.pi+(motion and tick*.16*reverse or 0)
+   self:rect(math.floor(gx+math.cos(a)*r),
+    math.floor(gy+math.sin(a)*r),2,2,7)
+  end
+  self:rect(gx-1,gy-1,3,3,6)
+  self:rect(gx,gy,1,1,1)
+ end
+ -- Reclaim vertical space with compact objective/inventory rows, supporting
+ -- the maximum of five targets and all nine part types without collisions.
+ self:rect(7,63,108,42,3)
+ self:rect(9,65,104,38,1)
+ self:rect(119,63,74,42,3)
+ self:rect(121,65,70,38,1)
+ self:rect(12,71,98,1,11)
+ self:rect(124,71,64,1,11)
+ self:font(13,65,"TARGETS "..#b.targets,6)
+ self:font(124,65,"PARTS "..b.stockTotal,6)
+ for i,goal in ipairs(b.targets)do
+  local y=74+(i-1)*6
+  if tick>=10+i*2 then
+   self:rect(13,y-1,96,6,i%2==0 and 2 or 1)
+   self:rect(15,y,4,4,goal.spin=="CCW" and 14 or 9)
+   local caption=string.format("%d  %s %sX  C%d R%d",
+    goal.number,goal.spin,tostring(goal.rpm),goal.x,goal.y)
+   self:fontFit(22,y,caption,15,86)
+  else
+   self:rect(15,y,math.min(85,math.max(0,tick-5-i)*7),2,3)
+  end
+ end
+ for i,part in ipairs(b.stock)do
+  if tick>=8+i then
+   local col=(i-1)%2
+   local row=math.floor((i-1)/2)
+   local x=124+col*33
+   local y=74+row*6
+   self:rect(x,y-1,31,6,2)
+   self:rect(x+1,y,6,5,E.parts[part.kind].color)
+   self:font(x+2,y,part.kind,0)
+   local labels={I="SHFT",L="ELBW",T="SPLT",G="GEAR",
+    B="2X",Q="BOX",O="COG",V="BELT",D="CHN"}
+   self:fontFit(x+9,y,labels[part.kind],15,16)
+   self:font(x+26,y,tostring(part.count),6)
+  end
+ end
+ self:rect(0,107,200,13,1)
+ self:rect(0,107,200,1,7)
+ local extras={}
+ if b.bonus.sealed then extras[#extras+1]="SEAL"end
+ if b.bonus.fullFactory then extras[#extras+1]="STOCK"end
+ if b.bonus.precision then extras[#extras+1]="PAR"end
+ local bonus=#extras>0 and ("BONUS "..table.concat(extras,"/")) or
+  "BUILD TO BEGIN"
+ self:fontFit(9,111,bonus,11,121)
+ self:rect(131,112,4,4,motion and tick%8<4 and 9 or 6)
+ -- Entire screen is a usable tap target, with a prominent START button.
+ self:add(0,0,200,120,"beginLevel")
+ self:button(141,109,54,10,"START","beginLevel",nil,6)
+end
+function R:drawTutorial(m)
+ self:drawGame(m)
+ -- Ponder is modal: touches must not rotate the underlying machinery.
+ self.targets={}
+ local lesson=m.tutorial.steps[m.tutorial.index]
+ self:rect(11,18,178,90,0)
+ self:rect(14,21,172,84,7)
+ self:rect(16,23,168,80,1)
+ self:fontFit(22,28,"PONDER   "..m.tutorial.index.."/"..#m.tutorial.steps,6,158)
+ self:fontFit(22,38,lesson.title,15,158)
+ self:rect(22,48,156,29,2)
+ local key=lesson.key
+ local powered={powered=true,correct=true}
+ if key=="V" or key=="D"then
+  self:piece(46,55,13,{kind=key,r=1,enabled=true},powered)
+  self:piece(130,55,13,{kind=key,r=1,enabled=true},powered)
+  self:drawSpan(59,61,129,61,key,true)
+  self:font(93,51,key=="V" and "BELT" or "CHAIN",6)
+ else
+  local rpm=(key=="B" or key=="O")and 2 or 1
+  local sign=(key=="G" or key=="O")and -1 or 1
+  self:piece(47,55,13,{kind="S",r=1},powered)
+  self:line(60,61,76,61,6)
+  self:piece(79,55,13,{kind=key,r=1,enabled=true},powered)
+  if key=="L"then
+   self:line(85,69,85,74,6)
+  else
+   self:line(92,61,116,61,6)
+   self:piece(120,55,13,{kind="M",r=3,sign=sign,speed=rpm},powered)
+  end
+ end
+ self:fontFit(23,80,lesson.lines[1],15,155)
+ self:fontFit(23,87,lesson.lines[2],11,155)
+ self:button(24,94,65,9,"SKIP","tutorialSkip")
+ self:button(110,94,65,9,
+  m.tutorial.index==#m.tutorial.steps and "GOT IT" or "NEXT","tutorialNext")
 end
 function R:drawTitle(m)
  self:page("COGWORKS","KINETIC WORKSHOP  /  30 PUZZLES")
@@ -422,15 +643,15 @@ function R:drawHelp(m)
   "S: ENGINE CW 1X","M: PRESS NEEDS CW/CCW",
   "I: STRAIGHT SHAFT","L: 90 DEG ELBOW",
   "T: THREE WAY SPLIT","G: FLIPS CW / CCW",
-  "B: DOUBLES SPEED","C: CLUTCH ON / OFF",
-  "Q: FOUR WAY BOX","O: 2X + SPIN REVERSE",
+  "B: DOUBLES SPEED","Q: FOUR WAY BOX",
+  "O: 2X + SPIN REVERSE",
   "V: SHORT SPAN BELT","D: LONG SPAN CHAIN"
  }
  local right={
   "CW = CLOCKWISE","CCW = COUNTERCW",
   "GOAL: MATCH SPIN + RPM","TAP EMPTY TO BUILD",
   "TAP A PART TO ROTATE","REMOVE TO RECLAIM",
-  "SWITCH TO TOGGLE C","PAIR BELT ENDS",
+  "PAIR BELT ENDS","CHECK SELECTED INFO",
   "CHAIN BRIDGES 2 CELLS","GEAR FLIPS ROTATION",
   "BONUSES ARE OPTIONAL","AUTO SAVES PER SLOT"
  }
@@ -439,7 +660,10 @@ function R:drawHelp(m)
   self:fontFit(8,y,left[i],i<3 and 6 or 15,91)
   self:fontFit(105,y,right[i],11,90)
  end
- self:button(68,109,64,10,"BACK","back")
+ self:button(52,109,58,10,"BACK","back")
+ if m.game and #T.forLevel(m.game.number)>0 then
+  self:button(113,109,83,10,"REPLAY PONDER","replayTutorial")
+ end
 end
 function R:drawText(m)
  local t=self.m;local w,h=t.getSize()
@@ -490,11 +714,38 @@ function R:drawText(m)
     (m.selected==kind and ">" or " ")..kind.." "..(g.remaining[kind]or 0),"tool",kind)
   end
   btn(1,h-5,12,"REMOVE","tool","erase")
-  btn(15,h-5,12,"SWITCH","tool","switch")
   btn(1,h-4,12,"SAVE","save")
   btn(15,h-4,12,"PAUSE","pause")
   if result.win then btn(29,h-4,12,"NEXT","next")end
+  local part=E.parts[m.selected]
+  label(1,h-3,(part and part.name.." - " or "")..
+   (T.descriptions[m.selected]or""),colors.lightBlue)
   label(1,h-2,m.message~=""and m.message or g.name,colors.orange)
+ elseif m.scene=="briefing"then
+  local b=m.briefing
+  label(3,3,string.format("LEVEL %02d / 30",b.number),colors.orange)
+  label(3,5,b.name,colors.yellow)
+  label(3,7,b.tip,colors.lightBlue,nil,w-4)
+  label(3,9,"OBJECTIVES: MATCH SPIN AND RPM",colors.lightBlue)
+  for i,goal in ipairs(b.targets)do
+   label(3,9+i,string.format("%d. %s %sX AT %d,%d",
+    i,goal.spin,tostring(goal.rpm),goal.x,goal.y),colors.white)
+  end
+  local stocks={}
+  for _,part in ipairs(b.stock)do
+   stocks[#stocks+1]=part.kind.."="..part.count
+  end
+  label(3,16,"PARTS: "..table.concat(stocks,"  "),colors.yellow,nil,w-4)
+  label(3,17,"BONUS GOALS ARE OPTIONAL",colors.lightBlue)
+  btn(3,18,18,"START LEVEL","beginLevel")
+ elseif m.scene=="tutorial"then
+  local current=m.tutorial.steps[m.tutorial.index]
+  label(3,4,"PONDER  "..m.tutorial.index.."/"..#m.tutorial.steps,colors.orange)
+  label(3,7,current.title,colors.lightBlue)
+  label(3,11,current.lines[1],colors.white)
+  label(3,13,current.lines[2],colors.white)
+  btn(3,18,18,"SKIP","tutorialSkip")
+  btn(23,18,18,m.tutorial.index==#m.tutorial.steps and "GOT IT"or"NEXT","tutorialNext")
  elseif m.scene=="title"then
   label(3,4,"KINETIC WORKSHOP  /  30 PUZZLES",colors.lightBlue)
   local choices={{"CONTINUE","continue"},{"SAVE SLOTS","slots"},
@@ -534,9 +785,12 @@ function R:drawText(m)
   else
    label(2,4,"S: SOURCE  M: TARGET   I: SHAFT")
    label(2,6,"L: ELBOW   T: SPLITTER   G: GEAR")
-   label(2,8,"2: DOUBLE RPM; C: CLUTCH ON/OFF")
+   label(2,8,"B: DOUBLE RPM; Q: GEARBOX")
    label(2,9,"Q: BOX   O: LARGE COG  V: BELT  D: CHAIN")
    choices={{"BACK","back"}}
+   if m.scene=="help" and m.game and #T.forLevel(m.game.number)>0 then
+    table.insert(choices,1,{"REPLAY PONDER","replayTutorial"})
+   end
   end
   for i,item in ipairs(choices)do btn(5,10+(i-1)*2,math.min(w-8,38),item[1],item[2])end
  end
@@ -548,6 +802,8 @@ function R:draw(m)
  if mon.setFrozen then pcall(mon.setFrozen,true)end
  mon.drawPixels(0,0,0,self.pw,self.ph)
  if m.scene=="game"then self:drawGame(m)
+ elseif m.scene=="briefing"then self:drawBriefing(m)
+ elseif m.scene=="tutorial"then self:drawTutorial(m)
  elseif m.scene=="title"then self:drawTitle(m)
  elseif m.scene=="slots"then self:drawSlots(m)
  elseif m.scene=="pause"then self:drawPause(m)

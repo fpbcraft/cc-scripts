@@ -4,20 +4,19 @@ local levels=require("cogworks.levels")
 local E={levels=levels,WIDTH=7,HEIGHT=6}
 local vectors={{0,-1},{1,0},{0,1},{-1,0}}
 local ports={S={0},M={0},I={0,2},L={0,1},T={0,1,3},
- G={0,2},B={0,2},C={0,2},Q={0,1,2,3},O={0,2},V={0,2},D={0,2}}
+ G={0,2},B={0,2},Q={0,1,2,3},O={0,2},V={0,2},D={0,2}}
 E.parts={
  I={name="SHAFT",description="STRAIGHT POWER LINE",color=11},
  L={name="ELBOW",description="TURNS POWER 90 DEGREES",color=11},
  T={name="SPLITTER",description="SENDS POWER THREE WAYS",color=11},
  G={name="GEAR",description="REVERSES ROTATION",color=14},
  B={name="2X DRIVE",description="DOUBLES RPM: IN TO OUT",color=6},
- C={name="CLUTCH",description="TOGGLE SHAFT TRANSMISSION",color=9},
  Q={name="GEARBOX",description="FOUR WAY POWER DISTRIBUTOR",color=13},
  O={name="LARGE COG",description="REVERSE SPIN AND DOUBLE RPM",color=14},
- V={name="BELT",description="SPAN ONE EMPTY CELL",color=7},
- D={name="CHAIN",description="SPAN ONE OR TWO CELLS",color=11},
+ V={name="BELT",description="PAIR ENDS ACROSS TWO CELLS",color=7},
+ D={name="CHAIN",description="PAIR ENDS ACROSS THREE CELLS",color=11},
 }
-E.order={"I","L","T","G","B","C","Q","O","V","D"}
+E.order={"I","L","T","G","B","Q","O","V","D"}
 local function index(x,y)return (y-1)*E.WIDTH+x end
 function E.inside(x,y)
  return type(x)=="number" and type(y)=="number" and
@@ -87,13 +86,6 @@ function E.rotate(g,x,y)
  tile.r=(tile.r+1)%4;g.moves=g.moves+1
  return true
 end
-function E.toggle(g,x,y)
- local tile=E.get(g,x,y)
- if not tile or tile.fixed or tile.kind~="C"then return false end
- tile.enabled=not tile.enabled
- g.moves=g.moves+1
- return true
-end
 -- Belt/chain endpoints may connect through clear space or non-conductive
 -- stone without requiring a cable tile in each intermediate cell.
 -- Returning the exact endpoint lets rendering, validation and simulation
@@ -135,9 +127,7 @@ function E.restore(g,list)
   if type(v)~="table" or not E.inside(v.x,v.y) or
    type(v.r)~="number" or v.r%1~=0 or v.r<0 or v.r>3 or
    (v.enabled~=nil and type(v.enabled)~="boolean") or
-   not E.place(trial,v.x,v.y,v.kind,v.r)then return false end
-  local restored=E.get(trial,v.x,v.y)
-  if restored and v.kind=="C"then restored.enabled=v.enabled~=false end
+   not E.place(trial,v.x,v.y,v.kind=="C" and "I" or v.kind,v.r)then return false end
  end
  g.map,g.tiles,g.remaining=trial.map,trial.tiles,trial.remaining
  g.moves=0
