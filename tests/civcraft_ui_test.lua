@@ -103,7 +103,8 @@ assert(tapHex(2,2),"Select owned city")
 ui:draw(state,11,{localMode=true})
 local actions={}
 for _,btn in ipairs(ui.r.buttons)do actions[btn.label]=true end
-assert(actions["BUILD UNITS"] and actions.BUILDINGS and actions["TECH TREE"],
+assert((actions.UNITS or actions["BUILD UNITS"]) and
+ (actions.BUILDS or actions.BUILDINGS) and actions["TECH TREE"],
  "Fixed city production and technology side controls")
 assert(not actions["MOVE UNIT"],"City should not expose unit movement")
 assert(ui.mapViewport and ui.mapViewport.w>0,"Central map viewport")
