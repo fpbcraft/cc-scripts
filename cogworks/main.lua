@@ -29,15 +29,21 @@ local function selectMonitor(preferred)
 end
 local function start()
  local monitor,name=selectMonitor(args[1])
- assert(monitor,"Attach a color Advanced Monitor.",0)
- assert(not monitor.isColor or monitor.isColor(),"A color Advanced Monitor is required.",0)
+ local computerMode=not monitor
+ if computerMode then
+  monitor=require("cogworks.terminal_view").new(term.current(),70,40)
+ end
+
  local previous=monitor.getTextScale and monitor.getTextScale() or 1
  if monitor.setTextScale then monitor.setTextScale(0.5)end
  local renderer,app
  local ok,reason=xpcall(function()
   renderer=Renderer.new(monitor)
   app=App.new()
-  local function redraw()renderer:draw(app:model())end
+  local function redraw()
+   renderer:draw(app:model())
+   if computerMode then monitor.present()end
+  end
   local function act(action,x,y)
    if not action then return true end
    local response=app:act(action,x,y)
@@ -68,6 +74,16 @@ local function start()
      app.hasLeftInput=true
      if not act(action,x,y)then break end
     end
+   elseif computerMode and event=="mouse_click" then
+    local x,y=monitor.mouse(b,c)
+    if x then
+     local action,arg1,arg2=renderer:hit(x,y)
+     if not act(action,arg1,arg2)then break end
+    end
+   elseif computerMode and event=="mouse_scroll"then
+    monitor.pan(0,a*3)
+   elseif computerMode and event=="term_resize"then
+    monitor.present()
    elseif event=="monitor_resize" and a==name then
     renderer:resize();redraw()
    elseif event=="timer" and a==timer then
@@ -93,7 +109,12 @@ local function start()
     elseif char=="b"then act("back")
     end
    elseif event=="key" and keys then
-    if a==keys.escape or a==keys.backspace then
+    if computerMode and (a==keys.up or a==keys.down or
+      a==keys.left or a==keys.right)then
+     local dx=a==keys.left and -8 or (a==keys.right and 8 or 0)
+     local dy=a==keys.up and -5 or (a==keys.down and 5 or 0)
+     monitor.pan(dx,dy)
+    elseif a==keys.escape or a==keys.backspace then
      local state=app.scene
      if state=="game"then act("pause")
      elseif state=="pause"then act("resume")
@@ -108,6 +129,7 @@ local function start()
    "\n"..debug.traceback() or "")
  end)
  if renderer then renderer:close()end
+ if computerMode then monitor.close()end
  if monitor.setTextScale then pcall(monitor.setTextScale,previous)end
  if not ok then error(reason,0)end
 end

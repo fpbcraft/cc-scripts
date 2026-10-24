@@ -76,3 +76,7 @@ lua5.3 tests/cogworks_installer_test.lua
 ```
 
 The automated suite validates all 30 reference solutions, bonus achievements, real mechanical interactions, saves and settings, menus and hitboxes, monitor scaling, and safe updates. These tests do not substitute for final in-world UI testing.
+
+## Play without an external monitor
+
+The game also runs on the computer's **built-in terminal**. Launch normally without connecting a monitor; the game automatically switches to its text-mode computer viewport. The built-in screen is smaller than the game canvas, so **arrow keys pan**, the **mouse wheel scrolls vertically**, and **left-click selects** controls or board cells. A footer shows the visible viewport position. Attaching an Advanced Monitor still uses the usual full-screen UI and touch controls.

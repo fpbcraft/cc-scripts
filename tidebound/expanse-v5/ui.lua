@@ -729,15 +729,27 @@ function UI:monitorTouch(x,y)
  if x<1 or y<1 or x>r.w or y>r.h then return false end
  return self:touch(x-1,y-1)
 end
-function UI:loop(name)
- self:draw();local timer=os.startTimer(.8)
+function UI:loop(name,computer)
+ self:draw();if computer then computer.present()end
+ local timer=os.startTimer(.8)
  while true do
   local ev,a,b,c=os.pullEvent()
-  if ev=='monitor_touch' and (not name or a==name)then self:monitorTouch(b,c);self:draw()
-  elseif ev=='monitor_resize' and (not name or a==name) then self.r:resize();self:draw()
-  elseif ev=='timer' and a==timer then self:draw();timer=os.startTimer((self.screen=='title' or self.screen=='galaxy') and .85 or 1.8)
-  elseif ev=='char' and self.screen=='keyboard' then self.names[self.edit]=safeName(self.names[self.edit]..a);self:draw()
-  elseif ev=='key' and self.screen=='keyboard' and keys and a==keys.backspace then self.names[self.edit]=self.names[self.edit]:sub(1,-2);self:draw()
+  if ev=='monitor_touch' and (not name or a==name)then
+   self:monitorTouch(b,c);self:draw()
+   if computer then computer.present()end
+  elseif computer and ev=='mouse_click' then
+   local x,y=computer.mouse(b,c)
+   if x then self:monitorTouch(x,y);self:draw();computer.present()end
+  elseif computer and ev=='mouse_scroll' then computer.pan(0,a*4)
+  elseif computer and ev=='term_resize' then computer.present()
+  elseif computer and ev=='key' and keys and
+   (a==keys.left or a==keys.right or a==keys.up or a==keys.down)then
+   computer.pan(a==keys.left and -8 or (a==keys.right and 8 or 0),
+    a==keys.up and -5 or (a==keys.down and 5 or 0))
+  elseif ev=='monitor_resize' and (not name or a==name) then self.r:resize();self:draw();if computer then computer.present()end
+  elseif ev=='timer' and a==timer then self:draw();if computer then computer.present()end;timer=os.startTimer((self.screen=='title' or self.screen=='galaxy') and .85 or 1.8)
+  elseif ev=='char' and self.screen=='keyboard' then self.names[self.edit]=safeName(self.names[self.edit]..a);self:draw();if computer then computer.present()end
+  elseif ev=='key' and self.screen=='keyboard' and keys and a==keys.backspace then self.names[self.edit]=self.names[self.edit]:sub(1,-2);self:draw();if computer then computer.present()end
   end
  end
 end

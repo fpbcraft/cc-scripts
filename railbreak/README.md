@@ -79,3 +79,6 @@ Common information is now visible **without opening a separate help page**:
 - **Travel events and station services:** costs and consequences shown beside choices.
 
 Use a card or the **?** button to read the full explanation. Spending still requires a separate confirmation; displaying summaries never consumes turns or resources. Small monitors retain the same effects using compact layouts.
+## Play without an external monitor
+
+The game also runs on the computer's **built-in terminal**. Launch normally without connecting a monitor; the game automatically switches to its text-mode computer viewport. The built-in screen is smaller than the game canvas, so **arrow keys pan**, the **mouse wheel scrolls vertically**, and **left-click selects** controls or board cells. A footer shows the visible viewport position. Attaching an Advanced Monitor still uses the usual full-screen UI and touch controls.
