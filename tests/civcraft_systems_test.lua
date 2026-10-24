@@ -1,5 +1,5 @@
 local S=assert(loadfile("civcraft/systems.lua"))()
-local state={version=1,players={{id=1,name="P1",civ="verdant",food=30,wood=60,science=50},{id=2,name="P2",ai=true,food=30,wood=60,science=50}},cities={{id=1,owner=1,x=2,y=2}},units={}}
+local state={version=1,nextId=3,players={{id=1,name="P1",civ="verdant",food=30,wood=60,science=50},{id=2,name="P2",ai=true,food=30,wood=60,science=50}},cities={{id=1,owner=1,x=2,y=2}},units={}}
 S.migrate(state)
 local city=state.cities[1];local p=state.players[1]
 assert(state.version==2 and city.population==2 and city.jobs.food==1)
