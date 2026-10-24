@@ -22,6 +22,6 @@ jobs:
       - name: Check v5 Lua syntax
         run: |
           find shattered/expanse-v5 shattered/tests -name '*.lua' -print0 | xargs -0 -n1 luac5.3 -p
-          luac5.3 -p shattered/shattered.lua install-shattered.lua shattered/shattered-legacy-v4.lua
+          luac5.3 -p shattered/shattered.lua install-shattered.lua
       - name: Test 4X simulation, AI, touchscreen and layout
         run: lua5.3 shattered/tests/v5.lua
