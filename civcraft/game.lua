@@ -224,12 +224,18 @@ local hasModem=not localMode and modem() or false
 local myId=os.getComputerID and os.getComputerID() or 0
 local hostId,localHost=nil,(MODE=='host' or localMode)
 if localHost then
- if fs.exists(SAVE) and args[2]~='--new' then
+ if localMode then
+  local loaded=args[2]~='--new' and Saves.load(slot)
+  if type(loaded)=='table'then state=Systems.migrate(loaded);hasHumanSave=true end
+ elseif fs.exists(SAVE) and args[2]~='--new' then
   local h=fs.open(SAVE,'r')
   if h then local loaded=textutils.unserialize(h.readAll());h.close()
-   if type(loaded)=='table' and (loaded.version==1 or loaded.version==2) then state=Systems.migrate(loaded);hasHumanSave=true end
+   if type(loaded)=='table' and loaded.version then
+    state=Systems.migrate(loaded);hasHumanSave=true
+   end
   end
- elseif args[2]=='--new' and fs.exists(SAVE)then fs.delete(SAVE) end
+ elseif args[2]=='--new' and fs.exists(SAVE)then fs.delete(SAVE)end
+ if state.world then W,H=state.world.width,state.world.height end
  if localMode then
   -- Local players receive distinct persistent IDs on a single computer.
   if #state.players==0 then
@@ -257,11 +263,13 @@ else
  rednet.send(hostId,{action='join',name=os.getComputerLabel() or ('Computer '..myId)},PROTOCOL)
 end
 Systems.migrate(state)
+World.reveal(state,Hex,Systems)
 local snapshot=localHost and state or nil
 local message='Tap a tile, then choose an action'
 local handoff=false
 local exitRequested=false
-local appScreen=hasHumanSave and 'title' or 'title'
+local appScreen='title'
+local deleteConfirm=nil
 local gamePaused=false
 local UI=dofile('/civcraft/ui.lua')
 local view
@@ -276,13 +284,50 @@ local function draw()
  local s=localHost and state or snapshot
  view:message(message)
  view:draw(s,localMode and activeID() or myId,{
-  handoff=handoff,localMode=localMode,hostID=hostId,screen=appScreen,paused=gamePaused,hasSave=hasHumanSave})
+  handoff=handoff,localMode=localMode,hostID=hostId,screen=appScreen,
+   paused=gamePaused,hasSave=hasHumanSave,slot=slot,
+   slots=localMode and Saves.list() or nil,deleteConfirm=deleteConfirm})
 end
 local function dispatch(action,params)
  if action=='exit' then exitRequested=true;return end
+ if action=='selectSlot' and localMode then
+  local choice=tonumber(params and params.slot)
+  if choice and choice>=1 and choice<=Saves.count then
+   slot=choice;deleteConfirm=nil
+   local loaded=Saves.load(slot)
+   hasHumanSave=type(loaded)=='table'
+   if hasHumanSave then
+    state=Systems.migrate(loaded)
+    if state.world then W,H=state.world.width,state.world.height end
+   else state=newGame();Systems.migrate(state)end
+   World.reveal(state,Hex,Systems)
+   message='SLOT '..slot..' SELECTED'
+  end
+  return
+ end
+ if action=='deleteSlot' and localMode then
+  if deleteConfirm==slot then
+   Saves.delete(slot);state=newGame();hasHumanSave=false;deleteConfirm=nil
+   message='SLOT CLEARED'
+  else
+   deleteConfirm=slot;message='TAP DELETE AGAIN TO CONFIRM'
+  end
+  return
+ end
+ if action=='mapSize' and state.phase=='lobby' then
+  local current=1
+  for i,n in ipairs(mapSizes)do if n==state.mapSize then current=i end end
+  state.mapSize=mapSizes[current%#mapSizes+1]
+  return
+ end
+ if action=='mapSeed' and state.phase=='lobby' then
+  state.mapSeed=(tonumber(state.mapSeed) or 12345)+997
+  return
+ end
  if action=='newGame' then
   if localHost then
    state=newGame();Systems.migrate(state);hasHumanSave=false
+    state.mapSeed=((os.epoch and os.epoch('utc') or math.floor(os.clock()*1000))%999999)+1
    if localMode then
     for i=1,2 do table.insert(state.players,{
      id=myId*16+i,name='PLAYER '..i,ready=false,
@@ -293,7 +338,10 @@ local function dispatch(action,params)
   end
   appScreen='game';gamePaused=false;return
  end
- if action=='continue' then appScreen='game';gamePaused=false;return end
+ if action=='continue' then
+  if not hasHumanSave then message='NO CAMPAIGN IN THIS SLOT';return end
+  appScreen='game';gamePaused=false;return
+ end
  if action=='pause' then gamePaused=true;return end
  if action=='resume' then gamePaused=false;return end
  if action=='title' then appScreen='title';gamePaused=false;save();return end
