@@ -755,7 +755,7 @@ function UI:loop(name,computer)
   local ev,a,b,c=os.pullEvent()
   if ev=='monitor_touch' and (not name or a==name)then
    self:monitorTouch(b,c);self:draw()
-   if computer then computer.present()end
+   if computer and computer.present then computer.present()end
   elseif computer and ev=='mouse_click' then
    local x,y=b,c
    if computer.mouse then x,y=computer.mouse(b,c)end
@@ -766,10 +766,10 @@ function UI:loop(name,computer)
    (a==keys.left or a==keys.right or a==keys.up or a==keys.down)then
    computer.pan(a==keys.left and -8 or (a==keys.right and 8 or 0),
     a==keys.up and -5 or (a==keys.down and 5 or 0))
-  elseif ev=='monitor_resize' and (not name or a==name) then self.r:resize();self:draw();if computer then computer.present()end
-  elseif ev=='timer' and a==timer then self:draw();if computer then computer.present()end;timer=os.startTimer((self.screen=='title' or self.screen=='galaxy') and .85 or 1.8)
-  elseif ev=='char' and self.screen=='keyboard' then self.names[self.edit]=safeName(self.names[self.edit]..a);self:draw();if computer then computer.present()end
-  elseif ev=='key' and self.screen=='keyboard' and keys and a==keys.backspace then self.names[self.edit]=self.names[self.edit]:sub(1,-2);self:draw();if computer then computer.present()end
+  elseif ev=='monitor_resize' and (not name or a==name) then self.r:resize();self:draw();if computer and computer.present then computer.present()end
+  elseif ev=='timer' and a==timer then self:draw();if computer and computer.present then computer.present()end;timer=os.startTimer((self.screen=='title' or self.screen=='galaxy') and .85 or 1.8)
+  elseif ev=='char' and self.screen=='keyboard' then self.names[self.edit]=safeName(self.names[self.edit]..a);self:draw();if computer and computer.present then computer.present()end
+  elseif ev=='key' and self.screen=='keyboard' and keys and a==keys.backspace then self.names[self.edit]=self.names[self.edit]:sub(1,-2);self:draw();if computer and computer.present then computer.present()end
   end
  end
 end

@@ -86,3 +86,16 @@ The game also runs on the computer's **built-in terminal**. Launch normally with
 ## Emulator and unusual monitor aspect ratios
 
 On iPad/CraftOS emulators and unusually wide or tall monitors, CC: Graphics now **preserves pixel aspect ratio** and centers the game in a dark letterboxed viewport instead of stretching its lettering. Touch coordinates account for the margins. On a small computer without an attached monitor, the virtual text-mode terminal fallback still applies.
+
+## Native CraftOS-PC / iOS graphics
+
+Without an attached monitor, the game now checks the **real computer terminal**
+for CraftOS-PC mode-2 graphics (`setGraphicsMode`, `drawPixels`) before
+creating any text-only virtual viewport. Native graphics use the emulator's
+pixel dimensions and pixel-coordinate mouse events. Attached monitors retain
+priority; ordinary CC:Tweaked computers without pixel graphics still use the
+scrollable text fallback. The graphics renderer restores text mode on exit.
+
+The existing custom game graphics remain independent of Basalt. Basalt is
+currently optional for FPB Store's terminal UI; a full game-screen migration is
+a separate follow-up rather than a dependency of this native-graphics update.

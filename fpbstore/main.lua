@@ -5,6 +5,32 @@ local Manager=require("fpbstore.manager")
 local catalog=Manager.catalog
 local args={...}
 if args[1]=="--test-api"then return Manager end
+-- Basalt supplies a responsive terminal shell when installed. It never
+-- replaces native pixel gameplay and remains optional for plain CraftOS.
+if args[1]~="--classic" then
+ local available,modern=pcall(require,"fpbstore.basalt_ui")
+ if available and modern and modern.run then
+  local ok,supported,action,app=pcall(modern.run,Manager)
+  if ok and supported then
+   if action=="exit" or action=="none" then return end
+   local operation,err=pcall(function()
+    if action=="install"then Manager.install(app)
+    elseif action=="play"then
+     if Manager.installed(app)then Manager.launch(app)
+     else print("Install "..app.name.." first.")end
+    elseif action=="remove"then
+     term.setBackgroundColor(colors.black);term.clear()
+     print("Remove "..app.name.." application files? Saves are preserved.")
+     write("Type REMOVE to confirm: ")
+     if read()=="REMOVE"then Manager.remove(app,false)end
+    elseif action=="store-update"then Manager.updateStore()
+    end
+   end)
+   if not operation then error(tostring(err),0)end
+   return
+  end
+ end
+end
 local screen=term.current()
 local selected=1
 local confirmation=nil
