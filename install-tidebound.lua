@@ -1,4 +1,4 @@
--- FPBCRAFT TIDEBOUND installer/updater v5.3
+-- FPBCRAFT TIDEBOUND installer/updater v5.4
 -- wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-tidebound.lua
 -- Optional: <branch-or-tag> [--startup]; never changes startup by default.
 local args={...};local ref,autostart='main',false
@@ -14,7 +14,7 @@ local origin='https://raw.githubusercontent.com/fpbcraft/cc-scripts/'..ref..'/ti
 local files={
  'tidebound.lua','display.lua','terminal_view.lua',
  'expanse-v5/content.lua','expanse-v5/events.lua','expanse-v5/sim.lua',
- 'expanse-v5/render.lua','expanse-v5/ui.lua'
+ 'expanse-v5/render.lua','expanse-v5/theme.lua','expanse-v5/ui.lua'
 }
 local function remove(path)if fs.exists(path)then fs.delete(path)end end
 local function write(path,bytes)
@@ -99,7 +99,7 @@ if autostart then
   write('/startup.lua',launcher);print('Autostart enabled')
  end
 else print('Autostart unchanged (--startup to opt in)')end
-print('Installed SHATTERED EXPANSE v5.3. All saves preserved.')
+print('Installed SHATTERED EXPANSE v5.4. All saves preserved.')
 print('PLAY  /tidebound/tidebound.lua')
 
 print('SAVES /tidebound/v5-save.dat (+ .bak)')
