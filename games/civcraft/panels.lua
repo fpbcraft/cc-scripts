@@ -1,4 +1,5 @@
 -- Paged rows keep every control visible and clickable at small terminal sizes.
+local Icons=dofile('/games/civcraft/icons.lua')
 local P={}
 function P.rows(r,rect,rows,model,key)
  key=key or 'offset'
@@ -12,9 +13,17 @@ function P.rows(r,rect,rows,model,key)
   if row then
    local y=rect.y+(i-1)*rowHeight
    if row.adjust then
-    r:text(rect.x+2,y+3,row.adjust.label,7,1,rect.w-34)
+    if row.adjust.icon then
+     Icons.yield(r,row.adjust.icon,rect.x+2,y+3,5)
+     r:text(rect.x+10,y+3,row.adjust.label,7,1,rect.w-42)
+    else r:text(rect.x+2,y+3,row.adjust.label,7,1,rect.w-34)end
     r:button(rect.x+rect.w-30,y,14,11,'-',row.adjust.minus)
     r:button(rect.x+rect.w-14,y,14,11,'+',row.adjust.plus)
+   elseif row.yields then
+    local width=math.floor((rect.w-4)/3)
+    for n,kind in ipairs({'food','wood','science'})do
+     Icons.yieldValue(r,kind,row.yields[kind=='wood' and 'industry' or kind],rect.x+2+(n-1)*width,y+3,width)
+    end
    elseif row.buttons then
     local gap=2;local width=math.floor((rect.w-gap*(#row.buttons-1))/#row.buttons)
     for n,button in ipairs(row.buttons)do

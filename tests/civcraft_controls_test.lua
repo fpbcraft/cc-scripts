@@ -58,9 +58,10 @@ for _,graphics in ipairs({false,true})do
    end
   end
   draw();bounds();assert(ui.inspectorBounds and ui.mapViewport.w>=32,'Usable map and persistent inspector')
+  assert(not click('INSPECT'),'Inspector shortcut is removed')
   assert(not next(ui.overlays),'Default view has no optional overlays')
   assert(click('RESOURCES'));draw();assert(ui.overlays.resources)
-  assert(click('YIELDS'));draw();assert(ui.overlays.yields and ui.overlays.resources and ui.mapViewport.tile==32)
+  assert(click('YIELDS'));draw();assert(ui.overlays.yields and ui.overlays.resources and ui.mapViewport.tile==40)
   assert(click('RESOURCES'));draw();assert(not ui.overlays.resources and ui.overlays.yields)
   assert(click('TERRAIN'));draw();assert(not next(ui.overlays))
   assert(click('MAP RIGHT EDGE'));draw();bounds()
@@ -80,7 +81,7 @@ for _,graphics in ipairs({false,true})do
   ui:zoom(-1);draw()
   local old=ui.mapViewport.tile;assert(click('ZOOM IN'));draw();assert(ui.mapViewport.tile==old+4)
   for _=1,10 do ui:zoom(-1);draw();bounds()end;assert(ui.mapViewport.tile==8)
-  for _=1,10 do ui:zoom(1);draw();bounds()end;assert(ui.mapViewport.tile==32)
+  for _=1,10 do ui:zoom(1);draw();bounds()end;assert(ui.mapViewport.tile==48)
   ui.selected={x=a.x+1,y=a.y};draw();assert(not ui.source)
   ui:tile(a.x+1,a.y);assert(ui.selected.empty,'Clicking selected unit deselects')
   ui:tile(a.x+1,a.y);draw()

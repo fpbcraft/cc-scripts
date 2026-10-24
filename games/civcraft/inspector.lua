@@ -52,7 +52,7 @@ function I.draw(ui,state,player,rect,modal)
   else bodyY=controlsY+11 end
   local yields=Systems.yields(player,city,state,Hex)
   text('POP '..(city.population or 2)..'  IDLE '..Systems.idle(city),7)
-  text('F'..yields.food..' I'..yields.industry..' S'..yields.science..'/TURN',11)
+  rows[#rows+1]={yields=yields}
   if ui.cityPanel=='production'then
    local project=city.project
    text(project and ('MAKING '..project.id:upper()) or 'NO PRODUCTION',8)
@@ -93,7 +93,7 @@ function I.draw(ui,state,player,rect,modal)
    rows[#rows+1]={buttons={{label='DONE WORK',run=function()ui.workCity=nil;ui.cityPanel='jobs';ui.inspectorOffset=0 end}}}
   else
    for _,job in ipairs(Systems.jobs)do
-    rows[#rows+1]={adjust={label=(w<80 and (job=='food' and 'F' or job=='wood' and 'I' or 'S') or job=='wood' and 'IND' or job:upper())..' '..(city.jobs[job]or 0),
+    rows[#rows+1]={adjust={icon=job,label=tostring(city.jobs[job]or 0),
      minus=function()ui:command('assign',{x=city.x,y=city.y,from=job,to='idle'})end,
      plus=function()
       if Systems.idle(city)>0 then ui:command('assign',{x=city.x,y=city.y,from='idle',to=job})
@@ -112,7 +112,7 @@ function I.draw(ui,state,player,rect,modal)
   rows[#rows+1]={buttons={{label='MOVE / ATTACK',run=function()
    if unit.standby then ui:feedback('Wake this unit before issuing orders.');return end
    ui.source={x=unit.x,y=unit.y};ui.reachable=Hex.reachable(state,unit,ui.playerID,Systems)
-   ui.pendingMove=nil;ui:feedback('SELECT A GREEN HEX TO MOVE / RED TO ATTACK');if modal then ui.panel='context'end
+   ui.pendingMove=nil;ui:feedback('CYAN RINGS MOVE / RED CROSSES ATTACK');if modal then ui.panel='context'end
   end}}}
   rows[#rows+1]={buttons={{label=unit.standby and 'WAKE UNIT' or 'SLEEP UNIT',run=function()
    ui.source=nil;ui.reachable={};ui.pendingMove=nil
@@ -127,7 +127,7 @@ function I.draw(ui,state,player,rect,modal)
   text(known=='hidden' and 'UNEXPLORED' or Hex.terrain(ui.selected.x,ui.selected.y,state))
   if known~='hidden'then
    local yields=World.yields(state.world,ui.selected.x,ui.selected.y)
-   text('FOOD '..yields.food);text('INDUSTRY '..yields.industry);text('SCIENCE '..yields.science)
+   rows[#rows+1]={yields=yields}
    text(World.deposit(state.world,ui.selected.x,ui.selected.y)or 'NO DEPOSIT')
   end
  end

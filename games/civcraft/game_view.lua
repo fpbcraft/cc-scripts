@@ -34,7 +34,7 @@ function G.draw(ui,state,player)
   r.buttons[#r.buttons].label=label;r.buttons[#r.buttons].icon=icon
  end
  for i,action in ipairs({
-  {'CODEX','sheet',function()ui.panel='encyclopedia';ui.lastDrag=nil end},
+  {'CODEX','book',function()ui.panel='encyclopedia';ui.lastDrag=nil end},
   {'REPORT','contract',function()ui.panel='report';ui.reportOffset=0 end},
   {'PAUSE','pause',function()ui:command('pause')end}})do
   iconButton(w-47+(i-1)*15,1,14,action[1],action[2],action[3])
@@ -50,7 +50,7 @@ function G.draw(ui,state,player)
    if mode=='terrain'then ui.overlays={}
    else ui.overlays[mode]=not ui.overlays[mode]
     if mode=='yields' and ui.overlays.yields then
-     local steps=(32-ui.mapViewport.tile)/4;ui:zoom(steps)
+     local steps=(math.max(40,ui.mapViewport.tile)-ui.mapViewport.tile)/4;ui:zoom(steps)
     end
    end
   end,{selected=mode=='terrain' and not next(ui.overlays) or ui.overlays[mode]})
@@ -69,15 +69,14 @@ function G.draw(ui,state,player)
  Minimap.draw(ui,state,player,{x=w-right,y=bottom-miniHeight-2,w=right-4,h=miniHeight})
 
  local actions={
-  {'INSPECT','search',function()ui.panel='inspector';ui.inspectorOffset=0;ui.lastDrag=nil end},
   {'TECH TREE','tree',function()ui.panel='tech';ui.source=nil;ui.reachable={};ui.workCity=nil;ui.lastDrag=nil end},
   {'EMPIRE','station',function()ui.panel='empire';ui.lastDrag=nil end},
   {'NEXT IDLE UNIT','nextUnit',function()ui:nextIdle()end},
   {'END TURN','endTurn',function()ui:command('end')end}}
- local width=math.floor((w-12)/5)
+ local width=math.floor((w-10)/4)
  r:fill(0,bottom,w,15,1)
  for i,action in ipairs(actions)do
-  iconButton(2+(i-1)*(width+2),bottom+1,width,action[1],action[2],action[3],{primary=i==5})
+  iconButton(2+(i-1)*(width+2),bottom+1,width,action[1],action[2],action[3],{primary=i==4})
  end
  local rect={x=3,y=3,w=w-6,h=h-6}
  if ui.endConfirm then

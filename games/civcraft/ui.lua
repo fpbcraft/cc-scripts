@@ -346,7 +346,7 @@ end
 function UI:zoom(delta)
  if self.panel~='context' or self.pendingMove or self.endConfirm then return false end
  local v=self.mapViewport;if not v then return false end
- local size=math.max(8,math.min(32,v.tile+delta*4))
+ local size=math.max(8,math.min(48,v.tile+delta*4))
  local ratio=size/v.tile
  self.panX=((self.panX or 0)+v.w/2)*ratio-v.w/2
  self.panY=((self.panY or 0)+v.h/2)*ratio-v.h/2

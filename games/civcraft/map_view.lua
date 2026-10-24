@@ -48,6 +48,11 @@ function V.draw(ui,state,player,rect)
   for y=1,height do for x=1,width do cache.claims[World.key(x,y)]=World.territoryCity(state,Hex,x,y)end end
  end
  local claims=cache.claims
+ local workingCity=ui.workCity and cityIndex[World.key(ui.workCity.x,ui.workCity.y)] or
+  (not ui.selected.empty and ui.selected.kind~='unit' and cityIndex[World.key(ui.selected.x,ui.selected.y)])
+ if workingCity and workingCity.owner~=ui.playerID then workingCity=nil end
+ local destinations={}
+ for _,destination in ipairs(ui.reachable or {})do destinations[World.key(destination.x,destination.y)]=destination end
  local tiles={};ui.hexTargets={}
  r:fill(rect.x-1,rect.y-1,rect.w+2,rect.h+2,1)
  r:withClip(rect,function()
@@ -102,17 +107,6 @@ function V.draw(ui,state,player,rect)
      if size>=16 then Icons.draw(r,t.deposit,px+size/2-4,py+2,9,9)
      else r:fill(px+size/2-1,py+2,3,2,8)end
     end
-    if ui.workCity then
-     local city=at(state.cities,ui.workCity.x,ui.workCity.y)
-     if city and city==t.claim and not (x==city.x and y==city.y)then
-      r:fill(px+size/4,py+size-4,size/2,2,city.worked and city.worked[World.key(x,y)] and 11 or 9)
-     end
-    end
-   end
-   for _,destination in ipairs(ui.reachable or {})do
-    if destination.x==x and destination.y==y then
-     r:fill(px+size/4,py+size-3,size/2,2,destination.attack and 10 or 11)
-    end
    end
    local city=t.visibility~='hidden' and cityIndex[World.key(x,y)]
    if city and (city.owner==ui.playerID or t.visibility=='visible')then
@@ -124,21 +118,41 @@ function V.draw(ui,state,player,rect)
     if size<16 then r:fill(px+size/2,py+size/2,2,2,ownerColor(state,unit.owner))
     else Icons.draw(r,unit.kind,px+size/2-5,py+size/2-5,11,ownerColor(state,unit.owner))end
    end
-   if overlays.yields and t.visibility~='hidden' and size<32 then
-    local values={t.yields.food,t.yields.industry,t.yields.science};local best=1
-    for i=2,3 do if values[i]>values[best]then best=i end end
-    local label=tostring(values[best]);local width=r:textWidth(label)
-    r:fill(px+size/2-width/2-1,py+size/2-3,width+2,7,1)
-    r:text(px+size/2-width/2,py+size/2-2,label,({11,8,13})[best],1,width)
+   if overlays.yields and t.visibility~='hidden' then
+    if size>=40 then
+     local fw=7+r:textWidth(tostring(t.yields.food));local iw=7+r:textWidth(tostring(t.yields.industry))
+     local total=fw+iw+5;local start=px+size/2-total/2
+     Icons.yieldValue(r,'food',t.yields.food,start,py+math.floor(size*.2),fw,true)
+     Icons.yieldValue(r,'wood',t.yields.industry,start+fw+5,py+math.floor(size*.2),iw,true)
+     local sw=7+r:textWidth(tostring(t.yields.science))
+     Icons.yieldValue(r,'science',t.yields.science,px+size/2-sw/2,py+math.floor(size*.7),sw,true)
+    else
+     local kind='food';local value=t.yields.food
+     for _,entry in ipairs({{'wood',t.yields.industry},{'science',t.yields.science}})do
+      if entry[2]>value then kind=entry[1];value=entry[2]end
+     end
+     if size>=16 then
+      local width=7+r:textWidth(tostring(value))
+      Icons.yieldValue(r,kind,value,px+size/2-width/2,py+size*.65,width,true)
+     else Icons.yield(r,kind,px+size/2-2,py+size/2-2,5)end
+    end
    end
-   if overlays.yields and t.visibility~='hidden' and size>=32 then
-    local top='F'..t.yields.food..' I'..t.yields.industry
-    local width=r:textWidth(top)
-    r:fill(px+size/2-width/2-1,py+6,width+2,7,1)
-    r:text(px+size/2-width/2,py+7,top,7,1,width)
-    local bottom='S'..t.yields.science;local bw=r:textWidth(bottom)
-    r:fill(px+size/2-bw/2-1,py+24,bw+2,6,1)
-    r:text(px+size/2-bw/2,py+25,bottom,13,1,bw)
+   if workingCity and t.claim==workingCity and workingCity.worked and workingCity.worked[World.key(x,y)]then
+    if size>=12 then Icons.marker(r,'worked',px+2,py+size/2-3)
+    else r:fill(px+1,py+size/2-1,3,3,0);r:outline(px+1,py+size/2-1,3,3,8)end
+   end
+   local destination=destinations[World.key(x,y)]
+   if destination then
+    local vertices=Hex.vertices(px+1,py+1,size-2)
+    for i,a in ipairs(vertices)do
+     local b=vertices[i%6+1];local count=math.max(1,math.ceil(math.max(math.abs(b.x-a.x),math.abs(b.y-a.y))))
+     for n=0,count do if n%4<2 then
+      local xx,yy=a.x+(b.x-a.x)*n/count,a.y+(b.y-a.y)*n/count
+      r:fill(xx-1,yy-1,3,3,0)
+      r:fill(xx,yy,1,1,destination.attack and 31 or (n%4==0 and 7 or 13))
+     end end
+    end
+    if size>=12 then Icons.marker(r,destination.attack and 'attack' or 'move',px+size/2-3,py+size*.68-3)end
    end
    if not ui.selected.empty and ui.selected.x==x and ui.selected.y==y then
     local vertices=Hex.vertices(px+1,py+1,size-2)
