@@ -18,6 +18,8 @@ public final class ClientInput {
     @SubscribeEvent
     public static void onLeftClick(PlayerInteractEvent.LeftClickBlock event) {
         if (!event.getLevel().isClientSide()) return;
+        // Sneak + attack intentionally preserves normal breaking/mining behavior.
+        if (event.getEntity().isShiftKeyDown()) return;
         var name=BuiltInRegistries.BLOCK.getKey(event.getLevel().getBlockState(event.getPos()).getBlock());
         if (!name.getNamespace().equals("computercraft") || !name.getPath().equals("monitor_advanced"))return;
         // Only hijack the rendered face, not the sides/back (which players can still mine).
