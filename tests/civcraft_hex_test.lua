@@ -22,6 +22,7 @@ end
 unit.moved=true;assert(#H.reachable(state,unit,1)==0)
 unit.moved=false
 assert(#H.reachable(state,unit,2)==0)
+unit.movesLeft=2 -- A warrior can now traverse a two-cost forest hex.
 state.units[2]={owner=1,x=3,y=2}
 for _,p in ipairs(H.reachable(state,unit,1))do
  assert(not(p.x==3 and p.y==2),"Allied units should block destination")
