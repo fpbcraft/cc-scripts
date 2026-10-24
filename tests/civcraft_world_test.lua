@@ -3,7 +3,7 @@ local W=assert(loadfile("civcraft/world.lua"))()
 local H=assert(loadfile("civcraft/hex.lua"))()
 local oldDofile=dofile
 dofile=function(p)
- if p=="/civcraft/content.lua"then return oldDofile("civcraft/content.lua")end
+ if p:sub(1,10)=="/civcraft/"then return oldDofile(p:sub(2))end
  return oldDofile(p)
 end
 local S=assert(loadfile("civcraft/systems.lua"))()
