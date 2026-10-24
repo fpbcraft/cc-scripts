@@ -56,8 +56,18 @@ local function start()
     local action,x,y=renderer:hit(b,c)
     -- Vanilla monitor_touch only reports right-click and carries no button.
     -- Addons that append an explicit mouse button can use button 2 to remove.
-    if action=="cell" and (d==2 or d=="right")then action="remove"end
+    if action=="cell" and (app.hasLeftInput or d==2 or d=="right")then
+     action="remove"
+    end
     if not act(action,x,y)then break end
+   elseif event=="monitor_left_click" and a==name then
+    -- FPB Monitor Input companion sends normalized 0..1 screen positions.
+    -- After it is detected, vanilla right-clicks remove directly.
+    local action,x,y=renderer:hitNormalized(b,c)
+    if action then
+     app.hasLeftInput=true
+     if not act(action,x,y)then break end
+    end
    elseif event=="monitor_resize" and a==name then
     renderer:resize();redraw()
    elseif event=="timer" and a==timer then
