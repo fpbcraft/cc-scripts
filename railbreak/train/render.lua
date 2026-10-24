@@ -68,6 +68,62 @@ local FONT={
  ["'"]={'00100','00100','00000','00000','00000','00000','00000'},
 }
 
+-- Compact 3x5 pixel font for standard labels. 5x7 font is retained for headings.
+local SMALL_FONT={
+ ["A"]={'010','101','111','101','101'},
+ ["B"]={'110','101','110','101','110'},
+ ["C"]={'011','100','100','100','011'},
+ ["D"]={'110','101','101','101','110'},
+ ["E"]={'111','100','110','100','111'},
+ ["F"]={'111','100','110','100','100'},
+ ["G"]={'011','100','101','101','011'},
+ ["H"]={'101','101','111','101','101'},
+ ["I"]={'111','010','010','010','111'},
+ ["J"]={'001','001','001','101','010'},
+ ["K"]={'101','101','110','101','101'},
+ ["L"]={'100','100','100','100','111'},
+ ["M"]={'101','111','111','101','101'},
+ ["N"]={'101','111','111','111','101'},
+ ["O"]={'010','101','101','101','010'},
+ ["P"]={'110','101','110','100','100'},
+ ["Q"]={'010','101','101','010','001'},
+ ["R"]={'110','101','110','110','101'},
+ ["S"]={'011','100','010','001','110'},
+ ["T"]={'111','010','010','010','010'},
+ ["U"]={'101','101','101','101','111'},
+ ["V"]={'101','101','101','101','010'},
+ ["W"]={'101','101','111','111','101'},
+ ["X"]={'101','101','010','101','101'},
+ ["Y"]={'101','101','010','010','010'},
+ ["Z"]={'111','001','010','100','111'},
+ ["0"]={'111','101','101','101','111'},
+ ["1"]={'010','110','010','010','111'},
+ ["2"]={'110','001','010','100','111'},
+ ["3"]={'110','001','011','001','110'},
+ ["4"]={'101','101','111','001','001'},
+ ["5"]={'111','100','110','001','110'},
+ ["6"]={'011','100','110','101','010'},
+ ["7"]={'111','001','010','010','010'},
+ ["8"]={'010','101','010','101','010'},
+ ["9"]={'010','101','011','001','110'},
+ ["-"]={'000','000','111','000','000'},
+ ["+"]={'000','010','111','010','000'},
+ ["/"]={'001','001','010','100','100'},
+ [":"]={'000','010','000','010','000'},
+ ["."]={'000','000','000','000','010'},
+ ["!"]={'010','010','010','000','010'},
+ ["?"]={'110','001','010','000','010'},
+ ["="]={'000','111','000','111','000'},
+ [","]={'000','000','000','010','100'},
+ ["("]={'001','010','010','010','001'},
+ [")"]={'100','010','010','010','100'},
+ ["%"]={'101','001','010','100','101'},
+ [">"]={'100','010','001','010','100'},
+ ["<"]={'001','010','100','010','001'},
+ [" "]={'000','000','000','000','000'},
+ ["'"]={'010','010','000','000','000'},
+}
+
 function R.new(mon)
  local cw,ch=mon.getSize()
  local self=setmetatable({m=mon,cw=cw,ch=ch,w=cw*2,h=ch*3,mode='text',buttons={},sx=.5,sy=1/3},R)
@@ -121,10 +177,16 @@ function R:line(x1,y1,x2,y2,color)
  local dx=x2-x1;local dy=y2-y1;local n=math.max(1,math.ceil(math.max(math.abs(dx),math.abs(dy))))
  for i=0,n do self:fill(x1+dx*i/n,y1+dy*i/n,1,1,color)end
 end
+function R:textWidth(value,scale)
+ scale=scale or 1
+ if self.mode=='text' then return #tostring(value or '')*2 end
+ return #tostring(value or '')*(scale>=2 and 6*scale or 4)
+end
 function R:text(x,y,txt,color,scale,maxWidth)
- txt=tostring(txt or ''):upper();scale=scale or 1;maxWidth=maxWidth or self.w-x
- local len=math.max(0,math.floor(maxWidth/(6*scale)))
- txt=txt:sub(1,len)
+ txt=tostring(txt or ''):upper();scale=scale or 1
+ maxWidth=maxWidth or self.w-x
+ local widthPerChar=self.mode=='text' and 2 or (scale>=2 and 6*scale or 4)
+ txt=txt:sub(1,math.max(0,math.floor(maxWidth/widthPerChar)))
  if self.mode=='text' then
   if y<0 or y>=self.h then return end
   local tx=math.floor(x/2)+1;local ty=math.floor(y/3)+1
@@ -134,21 +196,30 @@ function R:text(x,y,txt,color,scale,maxWidth)
   end
   return
  end
+ local big=scale>=2
+ local glyphs=big and FONT or SMALL_FONT
+ local stride=big and 6*scale or 4
+ local size=big and 5 or 3
+ local rows=big and 7 or 5
+ local pixelScale=big and scale or 1
  for i=1,#txt do
-  local glyph=FONT[txt:sub(i,i)] or FONT['?'];local left=x+(i-1)*6*scale
-  for row=1,7 do
-   local bits=glyph[row];local start=nil
-   for col=1,6 do
-    local lit=col<=5 and bits:sub(col,col)=='1'
-    if lit and not start then start=col end
-    if not lit and start then self:fill(left+(start-1)*scale,y+(row-1)*scale,(col-start)*scale,scale,color);start=nil end
+  local glyph=glyphs[txt:sub(i,i)] or glyphs['?'];local left=x+(i-1)*stride
+  for row=1,rows do
+   local bits=glyph[row];local firstPixel=nil
+   for col=1,size+1 do
+    local lit=col<=size and bits:sub(col,col)=='1'
+    if lit and not firstPixel then firstPixel=col end
+    if not lit and firstPixel then
+     self:fill(left+(firstPixel-1)*pixelScale,y+(row-1)*pixelScale,(col-firstPixel)*pixelScale,pixelScale,color)
+     firstPixel=nil
+    end
    end
   end
  end
 end
 function R:center(y,txt,color,scale,x,w)
  x=x or 0;w=w or self.w;scale=scale or 1
- self:text(x+math.max(0,math.floor((w-#tostring(txt)*6*scale)/2)),y,txt,color,scale,w)
+ self:text(x+math.max(0,math.floor((w-self:textWidth(txt,scale))/2)),y,txt,color,scale,w)
 end
 function R:icon(id,x,y,s)
  s=s or 1
@@ -196,7 +267,7 @@ function R:button(x,y,w,h,label,fn,opt)
  if opt.icon and w>=48 then self:icon(opt.icon,x+4,y+math.max(3,math.floor((h-9)/2)),1)end
  local tx=x+(opt.icon and w>=48 and 17 or 4)
  local max=w-(tx-x)-3
- if not opt.icon and label then tx=x+math.max(3,math.floor((w-#label*6)/2));max=w-(tx-x)-2 end
+ if not opt.icon and label then tx=x+math.max(3,math.floor((w-self:textWidth(label))/2));max=w-(tx-x)-2 end
  if label then self:text(tx,y+math.max(2,math.floor((h-7)/2)),label,opt.primary and 0 or 7,1,max)end
  if fn then self.buttons[#self.buttons+1]={x=x,y=y,w=w,h=h,fn=fn,label=label}end
 end

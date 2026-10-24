@@ -100,6 +100,38 @@ for _,dim in ipairs(sizes)do for _,graphics in ipairs({false,true})do
  end
  ui.scene='hub';ui:draw();local counts=#ui.r.buttons;eq(counts>=8,'wagon touch controls')
  ui.scene='map';ui:draw();eq(#ui.r.buttons>=8,'map nodes selectable')
+ -- Rendering a connected destination used to crash because the UI called
+ -- the fuel cost helper on the graphics renderer instead of the rules module.
+ ui.selected=2;ui:draw()
+ eq(ui.scene=='map','connected station renders without a runtime error')
+ eq(ui.r:textWidth('STATION MARKET')== (graphics and 14*4 or 14*2),
+   'normal font uses compact width in graphics mode')
+ local depart
+ for _,hit in ipairs(ui.r.buttons)do if hit.label=='DEPART' then depart=hit end end
+ eq(depart~=nil,'connected route exposes depart action')
+ local dx=depart.x+math.floor(depart.w/2)
+ local dy=depart.y+math.floor(depart.h/2)
+ local touchX=graphics and dx*3 or math.floor(dx/2)+1
+ local touchY=graphics and dy*3 or math.floor(dy/3)+1
+ eq(ui:touch(touchX,touchY)=='DEPART','touch dispatches departure')
+ eq(ui.g.pending~=nil and ui.scene=='travel','departure triggers event scene')
+ local resolve
+ for _,hit in ipairs(ui.r.buttons)do
+  if hit.label=='TAKE DETOUR' then resolve=hit end
+ end
+ -- Event labels may be different; select the second offered choice directly.
+ local event=C.eventById[ui.g.pending.event]
+ if not resolve then
+  for _,hit in ipairs(ui.r.buttons)do if hit.label==event.choices[2].label then resolve=hit end end
+ end
+ eq(resolve~=nil,'event choice has a button')
+ local ex=resolve.x+math.floor(resolve.w/2)
+ local ey=resolve.y+math.floor(resolve.h/2)
+ local rtx=graphics and ex*3 or math.floor(ex/2)+1
+ local rty=graphics and ey*3 or math.floor(ey/3)+1
+ eq(ui:touch(rtx,rty)~=false,'travel choice is touchable')
+ eq(ui.g.location==2 and ui.g.pending==nil,'event resolves arrival')
+
  ui.scene='market';ui:draw();eq(#ui.r.buttons>=7,'market buttons present')
  ui.scene='travel';ui.g.pending={from=1,to=2,event='rocks'};ui:draw();eq(#ui.r.buttons>=5,'event choices tappable')
  ui:close()

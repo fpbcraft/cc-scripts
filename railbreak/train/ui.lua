@@ -76,7 +76,7 @@ end
 function UI:status()
  if self.toast=='' then return end
  local r=self.r;local h=r.h;local y=h-35
- r:fill(2,y,r.w-4,11,0);r:text(5,y+2,first(self.toast,math.floor((r.w-11)/6)),8)
+ r:fill(2,y,r.w-4,11,0);r:text(5,y+2,first(self.toast,math.floor((r.w-11)/4)),8)
 end
 function UI:resourceStrip()
  local r=self.r;local g=self.g
@@ -182,7 +182,7 @@ function UI:map()
  local edge=S.edge(g.location,self.selected)
  if edge then
   local key=S.edgeKey(g.location,self.selected)
-  local msg=R.fuelCost(g,edge)..' FUEL + '..(g.built[key] and 0 or edge[4])..' PARTS'
+  local msg=Rules.fuelCost(g,edge)..' FUEL + '..(g.built[key] and 0 or edge[4])..' PARTS'
   r:text(7,sy+14,msg,6,1,w-18)
   r:button(w-69,sy+14,65,17,'DEPART',function()self:act('depart',self.selected)end,{primary=true})
   if g.upgrades.brass then
@@ -223,9 +223,9 @@ function UI:modules()
   local level=current[spec.id] or 0
   r:fill(x,yy,bw,bh,2);r:outline(x,yy,bw,bh,4)
   r:icon(spec.icon,x+6,yy+5,1)
-  r:text(x+19,yy+5,first(spec.name,math.floor((bw-23)/6)),7,1,bw-22)
+  r:text(x+19,yy+5,first(spec.name,math.floor((bw-23)/4)),7,1,bw-22)
   r:text(x+19,yy+16,'LV '..level,level>0 and 11 or 5)
-  if bh>=42 then r:text(x+5,yy+29,first(spec.desc,math.floor((bw-10)/6)),5,1,bw-8)end
+  if bh>=42 then r:text(x+5,yy+29,first(spec.desc,math.floor((bw-10)/4)),5,1,bw-8)end
   if self:small() then
    r:text(x+19,yy+16,'LV'..level..' '..(spec.cost+level*25)..'C',level>0 and 11 or 8,1,bw-21)
    r.buttons[#r.buttons+1]={x=x,y=yy,w=bw,h=bh,label=spec.name,fn=function()self:act('module',spec.id)end}
@@ -250,7 +250,7 @@ function UI:market()
    local x=7+((j-1)%cols)*(bw+gap);local yy=gridTop+math.floor((j-1)/cols)*(bh+gap)
    r:fill(x,yy,bw,bh,2);r:outline(x,yy,bw,bh,4)
    r:icon(spec.icon,x+5,yy+5,1)
-   r:text(x+18,yy+5,first(spec.name,math.floor((bw-22)/6)),7,1,bw-20)
+   r:text(x+18,yy+5,first(spec.name,math.floor((bw-22)/4)),7,1,bw-20)
    if not self:small() then r:text(x+18,yy+16,'OWN '..g.cargo[spec.id],11)end
    local buy,sell=Rules.cost(g,spec)
    local price=self.marketSide=='buy' and buy or sell

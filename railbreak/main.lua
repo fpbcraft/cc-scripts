@@ -1,4 +1,4 @@
--- RAILBREAK: KINETIC FRONTIER - Train-first Edition v2.0.2
+-- RAILBREAK: KINETIC FRONTIER - Train-first Edition v2.0.3
 -- Turn-based, 1-4 players, touch-operated monitor (3x3 to 5x5).
 local argv={...}
 -- Program-local imports: CC:Tweaked's require is relative to the running
@@ -9,7 +9,30 @@ package.path='/railbreak/?.lua;/railbreak/?/init.lua;'..package.path
 local UI=require('train.ui')
 local State=require('train.state')
 local Rules=require('train.rules')
-if argv[1]=='--test-api' then return {UI=UI,State=State,Rules=Rules}end
+if argv[1]=='--test-api' then
+ -- Installer health check: exercise actual screen layouts without touching saves
+ -- or requiring a peripheral. Import-only checks missed a crash in map rendering.
+ for _,dim in ipairs({{80,54},{135,92}})do
+  local fake={}
+  function fake.getSize()return dim[1],dim[2]end
+  function fake.setBackgroundColor(_)end
+  function fake.setTextColor(_)end
+  function fake.setCursorPos(_,_)end
+  function fake.write(_)end
+  local g=State.new({count=1,seed=42})
+  local testApp=UI.new(fake,{game=g})
+  local screens={'hub','map','station','modules','market','contracts','train',
+   'wagons','upgrades','help','travel','results'}
+  for _,screen in ipairs(screens)do
+   testApp.scene=screen
+   if screen=='map' then testApp.selected=2 end
+   if screen=='travel' then g.pending={to=2,from=1,event='rocks'}end
+   testApp:draw()
+  end
+  testApp:close()
+ end
+ return {UI=UI,State=State,Rules=Rules}
+end
 local monitor,monitorName
 if peripheral then
  if argv[1] and argv[1]~='--test-api' then
