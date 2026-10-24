@@ -10,24 +10,44 @@ if args[1]=="--test-api"then return Manager end
 if args[1]~="--classic" then
  local available,modern=pcall(require,"fpbstore.basalt_ui")
  if available and modern and modern.run then
-  local ok,supported,action,app=pcall(modern.run,Manager)
-  if ok and supported then
+  local keepRunning=true
+  while keepRunning do
+   local ok,supported,action,app=pcall(modern.run,Manager)
+   if not ok or not supported then break end
    if action=="exit" or action=="none" then return end
-   local operation,err=pcall(function()
-    if action=="install"then Manager.install(app)
-    elseif action=="play"then
-     if Manager.installed(app)then Manager.launch(app)
-     else print("Install "..app.name.." first.")end
-    elseif action=="remove"then
+   if action=="remove" then
+    term.setBackgroundColor(colors.black);term.clear()
+    term.setCursorPos(1,1)
+    print("Remove "..app.name.." application code?")
+    print("Saves and settings will be preserved.")
+    write("Type REMOVE to confirm: ")
+    if read()~="REMOVE" then action="cancel" end
+   end
+   if action~="cancel" then
+    local success,reason=pcall(function()
+     if action=="install" then Manager.install(app)
+     elseif action=="play"then
+      if Manager.installed(app)then Manager.launch(app)
+      else error("Install "..app.name.." first")end
+     elseif action=="remove"then Manager.remove(app,false)
+     elseif action=="store-update"then Manager.updateStore()
+     end
+    end)
+    if not success then
      term.setBackgroundColor(colors.black);term.clear()
-     print("Remove "..app.name.." application files? Saves are preserved.")
-     write("Type REMOVE to confirm: ")
-     if read()=="REMOVE"then Manager.remove(app,false)end
-    elseif action=="store-update"then Manager.updateStore()
+     term.setCursorPos(1,1);print("FPB STORE ERROR")
+     print(tostring(reason))
+     print("Press any key to return to the Store.")
+     os.pullEvent("key")
     end
-   end)
-   if not operation then error(tostring(err),0)end
-   return
+    if success and action=="store-update"then
+     package.loaded["fpbstore.catalog"]=nil
+     package.loaded["fpbstore.manager"]=nil
+     package.loaded["fpbstore.basalt_ui"]=nil
+     assert(shell.run("/fpbstore/main.lua"),"Updated Store failed to relaunch")
+     return
+    end
+   end
   end
  end
 end
@@ -114,18 +134,20 @@ local function draw()
     put(2,detailY+1,note,colors.yellow,nil,w-3)
    end
   end
-  local row=h-5
+  local row=h-6
   if w>=58 then
    button(2,row,17,status.installed and (status.updateAvailable and "UPDATE AVAILABLE" or "REINSTALL") or "INSTALL","install")
    button(20,row,13,"PLAY","play",nil,status.installed)
    button(34,row,16,"REMOVE","remove",nil,status.installed)
    button(51,row,math.min(14,w-51),"STORE UPDATE","store-update")
+   button(math.max(2,w-11),row+2,10,"EXIT","exit")
   else
    local cw=math.floor((w-4)/3)
    button(2,row,cw,status.installed and (status.updateAvailable and "UPDATE" or "REINSTALL") or "INSTALL","install")
    button(3+cw,row,cw,"PLAY","play",nil,status.installed)
    button(4+cw*2,row,cw,"REMOVE","remove",nil,status.installed)
    button(2,row+2,math.min(22,w-3),"UPDATE STORE","store-update")
+   button(math.max(2,w-12),row+2,10,"EXIT","exit")
   end
  end
  put(1,h-1,(" "..banner..(" "):rep(w)):sub(1,w),
@@ -136,6 +158,7 @@ end
 local function perform(action,arg)
  if busy then return end
  if action=="select"then selected=arg;banner="SELECT AN ACTION";return end
+ if action=="exit"then return "exit"end
  if action=="cancel"then confirmation=nil;banner="CANCELLED";return end
  if action=="remove"then
   local app=catalog.apps[selected]
@@ -207,7 +230,7 @@ local function run()
   elseif ev=="mouse_click"then
    for _,hit in ipairs(buttons)do
     if b>=hit.x and b<hit.x+hit.w and c==hit.y then
-     perform(hit.action,hit.arg)
+     if perform(hit.action,hit.arg)=="exit"then return end
      break
     end
    end
