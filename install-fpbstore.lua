@@ -86,15 +86,21 @@ else
  local f=fs.open(launcher,"r")
  local existing=f and f.readAll() or ""
  if f then f.close()end
- if existing=="shell.run('/fpbstore/main.lua')\\n" then
+ if existing=="shell.run('/fpbstore/main.lua')\n" or
+    existing=="shell.run('/fpbstore/main.lua')\\n" then
   write(launcher,wrapper)
   print("Upgraded legacy Store launcher.")
  elseif existing~=wrapper then
   print("Existing /store.lua retained; launch /fpbstore/main.lua")
  end
 end
-for _,name in ipairs({"fpbstore.catalog","fpbstore.manager","fpbstore.basalt_ui"})do
- package.loaded[name]=nil
+-- CraftOS-PC/iOS can execute programs without Lua's optional package API.
+-- Cache invalidation is a best-effort optimization; installed files are already
+-- on disk, and the store relaunch loads its main entrypoint from disk.
+if type(package)=="table" and type(package.loaded)=="table" then
+ for _,name in ipairs({"fpbstore.catalog","fpbstore.manager","fpbstore.basalt_ui"})do
+  package.loaded[name]=nil
+ end
 end
 print("FPB Store installed at revision: "..ref)
 print("FPB Store installed. Run: store")
