@@ -2,7 +2,11 @@
 -- wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-civcraft.lua
 local args={...}
 local ref='main';local startup=false
-for _,v in ipairs(args)do if v=='--startup' then startup=true else ref=v end end
+for _,v in ipairs(args)do
+ if v=='--startup' then startup=true
+ elseif v=='--no-startup' then startup=false
+ else ref=v end
+end
 assert(ref:match('^[%w%._/-]+$') and not ref:find('..',1,true),'Invalid ref')
 assert(http and http.get,'Enable HTTP in CC:Tweaked settings')
 local root='/civcraft'
