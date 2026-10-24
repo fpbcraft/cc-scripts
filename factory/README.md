@@ -10,12 +10,7 @@ Run this command on the CC:Tweaked computer:
 wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install.lua
 ```
 
-Repeat the same command to update. The installer:
-1. Downloads the core, peripheral registry, autocomplete engine, remote-node listener, Basalt UI, and launcher into `/fpb-factory.next`.
-2. Installs Basalt 2.5 (minified) alongside the application.
-3. Preserves `/fpb-factory/data`, retaining configured machines, graphs, settings, and request history.
-4. Backs up the previous installation to `/fpb-factory.backup` before swapping.
-5. **Always installs `/startup.lua`** to launch `/fpb-factory/main.lua` automatically on boot. Existing `/startup.lua` or extensionless `/startup` files are backed up under `/startup.fpb-factory-backup*` and no longer run automatically. This computer is dedicated to the factory manager.
+Repeat the same command to update. The current installer downloads the modules, updates code **in place without creating backups**, preserves `/fpb-factory/data`, installs Basalt only when needed, and configures automatic startup. It refuses to overwrite unrelated startup scripts.
 
 **Reboot to launch the manager automatically.** You can also run `/fpb-factory/main.lua` immediately. CraftOS must have `shell.allow_startup` enabled; bootable programs on attached disks may take precedence over root startup scripts. Disconnect boot disks when using this dedicated controller.
 
@@ -153,7 +148,7 @@ Connect relevant gauges to the wired peripheral network. The script uses these P
 ## Safety and compatibility
 
 - Redstone outputs are **not** safety interlocks. A computer restart, unloaded chunk, network disconnection, or missing relay may cause unexpected actuator states. Use physical emergency stops and fail-safe wiring.
-- This version is **single-computer**, not distributed Rednet; remote relays must be on the same wired modem network. Wireless buildings will need a separate controller node in a later release.
+- Wireless remote nodes can publish telemetry and, once explicitly paired, accept authenticated redstone commands. A local wired network also supports directly attached relays.
 - Auto rules do not act on stale/unavailable Stock Ticker readings.
 - Machine type and side are configurable; no Andesite Farm names or device IDs are hard-coded.
 - The application does not manage chunkloading.
@@ -180,7 +175,7 @@ The estimated production rate is now smoothed using an exponential time-weighted
 
 Rates remain based on net Stock Ticker changes, not exact per-machine production. Consumers and other producers sharing the same item can affect the estimate.
 
-**Wireless-node controls:** Remote nodes are read-only and are therefore not suggested as machine actuators. Machine control currently requires the local computer's redstone outputs or a wired Redstone Relay. Remote nodes may still supply sensor readings and graphs; adding wireless actuation will require a separate trusted control mechanism.
+**Wireless-node controls:** Paired remote nodes can control supported redstone outputs using authenticated commands and acknowledgments. Unpaired nodes expose telemetry only. Secondary display workspaces remain read-only.
 
 ## Graph visibility and quick averaging-range controls
 
@@ -189,3 +184,32 @@ Rates remain based on net Stock Ticker changes, not exact per-machine production
 - This controls the time constant for the existing exponentially smoothed net-stock-gain rate, not the graph's X-axis history range. Changing the rate time constant clears that machine's previous rate graph samples to avoid showing mixed averaging periods; other saved telemetry stays intact.
 - The default rate averaging period under **Settings > Rate Average** applies to newly created machines. Existing machines keep their chosen values.
 
+
+## Unicode support and normal Basalt charts
+
+The **CC: Graphics high-resolution graphics-mode integration has been removed**. Factory Manager now uses only the familiar Basalt 2.5 UI and its ordinary `addPixelGraph()` line charts. There is no CC: Graphics mode switching, no secondary pixel renderer, and no graphics output on the computer terminal. The **CC: Tweaked Unicode Support** mod remains optional; the Factory Manager and Remote Node use UTF-8-aware truncation and input limits to preserve accented labels.
+
+### Multiple displays
+
+Connect any number of **separate Advanced Monitors** to the main Factory Manager through Wired Modems and Networking Cable. The biggest monitor becomes the primary Basalt control screen. All other discovered monitors show independent pages for Overview, Graphs, Machines and Readings. Their data comes from the same central automation engine.
+
+You can also connect **CC: Terminals** workstations. Advanced Terminals offer native click-and-drag tile reordering. Advanced Monitors only emit single `monitor_touch` events: switch on Reorder, tap the source chart and tap its destination instead.
+
+Every secondary display is enumerated on startup **and** on each telemetry refresh. Small Advanced Monitors are automatically set to text scale 0.5. A very small screen shows a compact factory status instead of remaining blank. Any rendering error is shown on the affected screen; **Settings** on the primary screen shows the number of secondary displays and the first error. **Settings → Rescan Displays** retries discovery and drawing.
+
+**Important:** Adjacent Minecraft monitor blocks automatically combine into **one multiblock peripheral**. Leave a one-block gap between separate monitor structures if you want them to behave as independent screens. Each monitor on a wired network also requires the appropriate connected modem.
+
+### Responsive graphs
+
+Graph dashboards and the Overview choose their number of chart columns and rows based on the actual display size. On a larger monitor, more live charts are visible at once; smaller screens paginate without changing the tracked data. Existing time-weighted rate smoothing, stock labels, machine controls, and Power Grid no-data filtering remain unchanged.
+
+The secondary Machines and Readings pages are intentionally read-only. All machine control is still performed on the main Basalt screen.
+
+### Install the test version
+
+```sh
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/feat/unicode-and-graphics-readiness/install.lua feat/unicode-and-graphics-readiness
+reboot
+```
+
+The installer updates in place, preserves machines and sensor data, removes the obsolete graphics-mode source files, and **does not create backups**. Actual in-game monitor enumeration and Basalt interactions should be verified before merging the draft PR.

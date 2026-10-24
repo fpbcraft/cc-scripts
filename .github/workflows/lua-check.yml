@@ -69,3 +69,11 @@ jobs:
         run: lua5.3 tests/node_ui_test.lua
       - name: Power Grid graph visibility
         run: lua5.3 tests/graph_metrics_test.lua
+      - name: Unicode text compatibility
+        run: lua5.3 tests/ui_compat_test.lua
+      - name: Adaptive chart sizing
+        run: lua5.3 tests/responsive_layout_test.lua
+      - name: Independent displays and drag-drop
+        run: lua5.3 tests/multi_screen_test.lua
+      - name: Display discovery and compact fallback
+        run: lua5.3 tests/screen_manager_test.lua

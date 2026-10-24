@@ -15,12 +15,8 @@ local METRICS={
   {"battery","BATTERY CHARGE","%",C.green},
   {"energy","ENERGY METER","J",C.purple}
 }
-local function short(value,n)
-  value=tostring(value or "")
-  n=math.max(1,n or 16)
-  if #value>n then return value:sub(1,n-1).."~" end
-  return value
-end
+local Text=require("ui_text")
+local short=Text.clip
 local function num(n,places)
   if type(n)~="number" then return "-" end
   return string.format("%."..tostring(places or 1).."f",n)
@@ -34,19 +30,37 @@ function UI.run(core)
   local completion=require("completions")
   local layout=require("layout")
   local graphMetrics=require("graph_metrics")
+  local ScreenManager=require("screen_manager")
   basalt.use("charts")
   local terminal=basalt.getMainFrame()
   terminal.background=C.black
   local mons={}
   for _,name in ipairs(peripheral.getNames()) do
-    if peripheral.getType(name)=="monitor" then mons[#mons+1]=name end
+    if peripheral.getType(name)=="monitor" or
+       (peripheral.hasType and peripheral.hasType(name,"monitor")) then
+      local ok,screen=pcall(peripheral.wrap,name)
+      if ok and screen and screen.getSize then
+        -- The largest connected monitor is the primary control surface.
+        -- This avoids selecting a tiny peripheral simply because its
+        -- network name sorts before the main factory control monitor.
+        if screen.setTextScale then
+          pcall(screen.setTextScale,core.config.textScale)
+        end
+        local measured,mw,mh=pcall(screen.getSize)
+        if measured then
+          mons[#mons+1]={name=name,area=mw*mh,w=mw,h=mh}
+        end
+      end
+    end
   end
-  table.sort(mons)
+  table.sort(mons,function(a,b)
+    if a.area==b.area then return a.name<b.name end
+    return a.area>b.area
+  end)
   local root=terminal
-  local monitorName=mons[1]
+  local monitorName=mons[1] and mons[1].name or nil
   if monitorName then
     local monitor=peripheral.wrap(monitorName)
-    monitor.setTextScale(core.config.textScale)
     root=basalt.createFrame(monitor,monitorName)
     root.background=C.black
     terminal:addLabel({x=2,y=2,text="FPBCRAFT FACTORY CONTROL",
@@ -70,6 +84,7 @@ function UI.run(core)
   local genericPage=1
   local graphKey="stress"
   local graphPage=1
+  local screens -- forward reference for Settings diagnostics
   local selected=nil
   local quantity=1
   local selectedMachine=nil
@@ -92,7 +107,7 @@ function UI.run(core)
     if terminalInput and terminalInput.text~=value then terminalInput.text=value end
   end
   local function setKeyboardValue(value)
-    kb.value=tostring(value or ""):sub(1,160)
+    kb.value=Text.limit(value,160)
     synchronizeTerminal(kb.value)
     render()
   end
@@ -396,8 +411,10 @@ function UI.run(core)
       if m.product and m.product~="" then
         candidates[#candidates+1]={
           "rate_"..m.id,m.name.." / RATE","items/min",C.pink}
-        break
       end
+    end
+    for _,r in ipairs(core.devices:charts()) do
+      candidates[#candidates+1]={r.id,r.label,r.unit,C.magenta}
     end
     for _,tile in ipairs(layout.overviewCharts(w,h,#candidates)) do
       local item=candidates[tile.index]
@@ -700,21 +717,12 @@ function UI.run(core)
   local function showGraphs()
     local metrics=availableMetrics()
     label(panel,3,3,("LIVE GRAPHS  /  %d METRICS"):format(#metrics),C.cyan)
-    local cols=(w>=84 and 3) or (w>=53 and 2) or 1
-    local tileW=math.floor((w-4-(cols-1)*2)/cols)
-    local tileH=(h>=29 and 10) or (h>=19 and 8) or 7
-    local rows=math.max(1,math.floor((h-10)/(tileH+1)))
-    local per=cols*rows
-    local pages=math.max(1,math.ceil(#metrics/per))
-    graphPage=math.max(1,math.min(graphPage,pages))
-    for idx=1,per do
-      local metric=metrics[(graphPage-1)*per+idx]
-      if not metric then break end
-      local column=(idx-1)%cols
-      local row=math.floor((idx-1)/cols)
-      local x=2+column*(tileW+2)
-      local y=5+row*(tileH+1)
-      drawChart(panel,metric,x,y,tileW,tileH,true,function()
+    local grid=layout.graphGrid(w,h,#metrics,graphPage)
+    graphPage=grid.page
+    local pages=grid.pages
+    for _,tile in ipairs(grid.tiles) do
+      local metric=metrics[tile.index]
+      drawChart(panel,metric,tile.x,tile.y,tile.width,tile.height,true,function()
         graphKey=metric[1]
         navigateTo("GRAPH DETAIL")
       end)
@@ -1094,6 +1102,23 @@ function UI.run(core)
     label(panel,3,11,"Poll interval: "..core.config.refreshSeconds.."s")
     label(panel,3,14,"Default rate smoothing: "..
       core.config.rateWindowSeconds.."s")
+    if h>=23 then
+      local count,errors=screens:status()
+      label(panel,3,18,("Secondary displays: %d connected"):format(count),
+        count>0 and C.lime or C.orange,w-6)
+      if errors[1] then
+        label(panel,3,19,short("Display error: "..errors[1],w-6),
+          C.orange,w-6)
+      end
+      if h>=25 then
+        button(panel,3,21,18,1,"RESCAN DISPLAYS",function()
+          local found=screens:discover()
+          screens:refresh()
+          notify(("Detected %d secondary display(s)"):format(found))
+          render()
+        end,C.blue)
+      end
+    end
     button(panel,3,6,15,1,"RENAME",function()
       fieldInput("Factory name",core.config.site,false,function(s)
         core:configure({site=s})
@@ -1250,6 +1275,16 @@ function UI.run(core)
     title:destroy();subtitle:destroy()
     render()
   end)
+  -- Independently navigable monitors and CC: Terminals; all read from
+  -- the one factory automation core. Detection/paint errors are visible.
+  screens=ScreenManager.new(core,availableMetrics,monitorName)
+  screens:discover()
+  basalt.schedule(function()
+    while true do
+      local event,a,b,c,d=os.pullEvent()
+      screens:handle(event,a,b,c,d)
+    end
+  end)
   -- Background read-only radio receiver. Nodes broadcast automatically;
   -- no manual hub address or node ID configuration is required.
   basalt.schedule(function()
@@ -1259,6 +1294,7 @@ function UI.run(core)
     while true do
       sleep(core.config.refreshSeconds)
       local scanned,errorMessage=pcall(function()core:scan()end)
+      screens:refresh()
       if not scanned then notify("Scan error: "..tostring(errorMessage)) end
       -- Do not interrupt an edit or an on-screen keyboard.
       if page~="KEYBOARD" and page~="MACHINE EDIT" then
@@ -1266,7 +1302,8 @@ function UI.run(core)
       end
     end
   end)
-  basalt.run()
+  local worked,err=xpcall(function()basalt.run()end,debug.traceback)
   core:shutdown()
+  if not worked then error(err,0) end
 end
 return UI
