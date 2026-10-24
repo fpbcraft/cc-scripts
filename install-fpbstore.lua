@@ -86,7 +86,8 @@ else
  local f=fs.open(launcher,"r")
  local existing=f and f.readAll() or ""
  if f then f.close()end
- if existing=="shell.run('/fpbstore/main.lua')\\n" then
+ if existing=="shell.run('/fpbstore/main.lua')\n" or
+    existing=="shell.run('/fpbstore/main.lua')\\n" then
   write(launcher,wrapper)
   print("Upgraded legacy Store launcher.")
  elseif existing~=wrapper then
