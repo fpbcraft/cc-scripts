@@ -37,6 +37,16 @@ W.reveal(state,H,S)
 assert(W.known(state.players[1],2,2)=="visible")
 assert(W.known(state.players[1],27,17)=="hidden","Hotseat must not reveal opponent territory")
 assert(W.known(state.players[2],27,17)=="visible")
+state.phase="game";state.version=4;state.round=1
+state.players[2].techs={mining=true}
+local view=W.forPlayer(state,1)
+assert(#view.cities==1 and #view.units==1,
+ "Network clients must never receive unseen enemy cities or units")
+assert(not view.world.tiles[W.key(27,17)] and
+ not view.world.resources[W.key(27,17)],
+ "Unexplored terrain and deposits must not be transmitted")
+assert(not view.players[2].techs and not view.players[2].explored,
+ "Opponents\' research and exploration remain private")
 local old=state.players[1].explored[W.key(5,2)]
 state.units[1].x=12;state.units[1].y=5
 W.reveal(state,H,S)
