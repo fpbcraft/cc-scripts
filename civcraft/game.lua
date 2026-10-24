@@ -4,7 +4,9 @@ local args={...}
 local MODE=args[1] or 'local'
 local PROTOCOL='fpbcraft.civcraft.v1'
 local localMode=MODE=='local'
-local SAVE=localMode and '/civcraft/data/local-save.dat' or '/civcraft/data/save.dat'
+local SAVE='/civcraft/data/save.dat'
+local slot=1
+local mapSizes={'compact','standard','large'}
 local function modem()
  for _,side in ipairs(peripheral.getNames()) do
   if peripheral.getType(side)=='modem' then
@@ -28,17 +30,15 @@ end
 local display=screen()
 local Hex=dofile('/civcraft/hex.lua')
 local Systems=dofile('/civcraft/systems.lua')
+local World=dofile('/civcraft/world.lua')
+local Saves=dofile('/civcraft/saves.lua')
 local W,H=Hex.width,Hex.height
-local function key(x,y)return y*W+x end
-local function terrain(x,y)
- local t=Hex.terrain(x,y)
- return ({water='~',mountain='^',forest='f',plains='.'})[t]
-end
-local starts={{2,2},{11,7},{11,2},{2,7}}
+local state
+local function terrain(x,y)return Hex.terrain(x,y,state)end
 local function newGame()
- return {version=1,phase='lobby',round=1,turn=1,players={},cities={},units={},nextId=1,logs={'Welcome to CIVCRAFT'},winner=nil}
+ return {version=3,phase='lobby',round=1,turn=1,players={},cities={},units={},nextId=1,logs={'Welcome to CIVCRAFT'},winner=nil,mapSize='standard',mapSeed=12345,name='NEW EMPIRE'}
 end
-local state=newGame()
+state=newGame()
 local hasHumanSave=false
 local function log(s)
  table.insert(state.logs,1,s)
@@ -58,16 +58,21 @@ local function player(id)
  for i,p in ipairs(state.players)do if p.id==id then return p,i end end
 end
 local function save()
+ World.reveal(state,Hex,Systems)
+ if localMode then Saves.save(slot,state);return end
  local dir=fs.getDir(SAVE);if not fs.exists(dir)then fs.makeDir(dir)end
- local h=fs.open(SAVE..'.tmp','w')
- if not h then return end
+ local h=assert(fs.open(SAVE..'.tmp','w'))
  h.write(textutils.serialize(state));h.close()
  if fs.exists(SAVE)then fs.delete(SAVE)end
  fs.move(SAVE..'.tmp',SAVE)
 end
 local function initMap()
+ state.world=World.generate(state.mapSeed,state.mapSize,#state.players)
+ W,H=state.world.width,state.world.height
+ state.name='EMPIRE '..state.world.seed
  for i,p in ipairs(state.players)do
-  local x,y=starts[i][1],starts[i][2]
+  local pos=state.world.starts[i]
+  local x,y=pos.x,pos.y
   table.insert(state.cities,{id=state.nextId,x=x,y=y,owner=p.id,level=1,population=2,foodStore=0,jobs={food=1,wood=1,science=0},buildings={}})
   state.nextId=state.nextId+1
   addUnit(p.id,x+((x<W/2) and 1 or -1),y,'warrior')
@@ -94,7 +99,8 @@ local function nextTurn()
  for _,u in ipairs(state.units)do
   local owner=player(u.owner)
   local base=Systems.units[u.kind] or Systems.units.warrior
-  u.movesLeft=base.move+(owner and owner.civ=="nomad" and u.kind=="scout" and 1 or 0)
+  u.movesLeft=base.move+(owner and owner.civ=='nomad' and u.kind=='scout' and 1 or 0)+
+   (owner and owner.civ=='mariner' and base.naval and 1 or 0)
   u.moved=false
  end
  winner();log('Round '..state.round);save()
@@ -141,7 +147,7 @@ local function apply(id,req)
   return true
  end
  local x,y=tonumber(req.x),tonumber(req.y)
- if not x or not y or x<1 or x>W or y<1 or y>H then return false,'Select a tile' end
+ if not x or not y or not Hex.inBounds(x,y,state) then return false,'Select a tile' end
  local c,u=cityAt(x,y),unitAt(x,y)
  if req.action=='research' then
   local cost=8+p.tech*6
