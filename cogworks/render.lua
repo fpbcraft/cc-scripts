@@ -42,7 +42,7 @@ local function fillText(m,x,y,w,fg,bg,text)
 end
 function R.new(m)
  local self=setmetatable({m=m,mode="text",frame=0,original={},
-  boardX=5,boardY=16,cell=12},R)
+  boardX=5,boardY=16,cell=10},R)
  self:enable()
  return self
 end
@@ -233,11 +233,11 @@ function R:graphics(g,result,unlocked,selected,message)
  for y=1,E.HEIGHT do for x=1,E.WIDTH do
   local left=self.boardX+(x-1)*self.cell
   local top=self.boardY+(y-1)*self.cell
-  self:rect(left,top,11,11,2)
-  self:rect(left+5,top+5,1,1,3)
+  self:rect(left,top,9,9,2)
+  self:rect(left+4,top+4,1,1,3)
   local tile=E.get(g,x,y)
   if tile then
-   self:piece(left,top,11,tile,result.lights[tile.id])
+   self:piece(left,top,9,tile,result.lights[tile.id])
   end
  end end
  self:rect(80,13,48,66,1)
@@ -254,8 +254,14 @@ function R:graphics(g,result,unlocked,selected,message)
  if not status or status==""then
   if result.win then status="SOLVED! NEXT LEVEL AT TOP"
   elseif result.jam then status="JAM! CHECK GEARS AND DRIVES"
+  elseif g.fullNetwork and result.correct==result.goals then
+   if result.remaining>0 then status="USE "..result.remaining.." REMAINING PARTS"
+   elseif result.openPorts>0 then status="CLOSE "..result.openPorts.." OPEN PORTS"
+   elseif result.unpowered>0 then status="POWER EVERY PLACED PART"end
   elseif selected=="erase"then status="REMOVE: TAP A PLACED PART"
-  else status=E.parts[selected] and E.parts[selected].description or "SELECT A PART"end
+  elseif g.fullNetwork and self.frame%40<20 then
+   status="STOCK "..result.remaining.."  OPEN "..result.openPorts.."  GOALS "..result.correct.."/"..result.goals
+  else status=g.name end
  end
  self:font(3,82,status:sub(1,31),result.win and 9 or (result.jam and 8 or 5))
  self.frame=self.frame+1
@@ -283,7 +289,7 @@ function R:helpGraphics()
   self:font(21,y+2,row[2],15)
  end
  self:rect(0,77,128,11,1)
- self:font(5,79,"TAP SPACE: BUILD. TAP PART: TURN.",6)
+ self:font(5,79,"ALL STOCK USED. NO LOOSE PORTS.",6)
  self:font(104,79,"BACK",9)
  if m.setFrozen then pcall(m.setFrozen,false)end
 end
@@ -294,12 +300,12 @@ function R:text(g,result,unlocked,selected,message)
   " COGWORKS / "..g.number.."/"..#E.levels.." - "..g.name)
  fillText(m,1,2,w,result.win and colors.lime or colors.white,colors.black,
   result.win and " COMPLETE: press NEXT " or
-   (" MACHINES "..result.correct.."/"..result.goals.."  MOVES "..g.moves))
- if w<37 or h<24 then
+   (" GOALS "..result.correct.."/"..result.goals.."  LEFT "..result.remaining.."  OPEN "..result.openPorts))
+ if w<44 or h<26 then
   fillText(m,1,4,w,colors.red,colors.black,"Use a larger Advanced Monitor")
   return
  end
- self.tx=math.max(1,math.floor((w-36)/2)+1);self.ty=4
+ self.tx=math.max(1,math.floor((w-E.WIDTH*6)/2)+1);self.ty=3
  for y=1,E.HEIGHT do for x=1,E.WIDTH do
   local px=self.tx+(x-1)*6;local py=self.ty+(y-1)*3
   local tile=E.get(g,x,y)
@@ -352,6 +358,9 @@ function R:helpText()
   "2: two-times speed controller",
   "X: stone, cannot build here",
   "",
+  "Advanced: use every stock part",
+  "Advanced: connect every open port",
+  "Advanced: all parts must be powered",
   "Tap empty cell to place chosen part",
   "Tap placed part to rotate it",
   "Remove reclaims the part",
@@ -377,7 +386,7 @@ function R:hit(x,y,help)
    y>=self.boardY and y<self.boardY+E.HEIGHT*self.cell then
    local col=math.floor((x-self.boardX)/self.cell)+1
    local row=math.floor((y-self.boardY)/self.cell)+1
-   if (x-self.boardX)%self.cell<11 and (y-self.boardY)%self.cell<11 then
+   if (x-self.boardX)%self.cell<9 and (y-self.boardY)%self.cell<9 then
     return "cell",col,row
    end
   end
