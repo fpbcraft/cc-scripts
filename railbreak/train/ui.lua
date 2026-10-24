@@ -322,7 +322,7 @@ function UI:market()
 end
 function UI:contracts()
  local r=self.r;local w,h=r.w,r.h;local g=self.g;self:header('CONTRACT BOARD','DELIVER CARGO FOR REWARDS')
- local top=24;local compact=self:small();local per=compact and 2 or 4
+ local top=24;local compact=self:small();local per=compact and 2 or (h<330 and 3 or 4)
  local pages=math.ceil(#C.contracts/per);self.page=math.min(pages,math.max(self.page,1))
  local cardH=math.floor((h-75-top)/per)
  for j=1,per do
