@@ -47,7 +47,7 @@ function shell.run(file,...)
 end
 local M=require("fpbstore.manager")
 assert(#M.catalog.apps>=3,"Catalog must contain the original three games")
-assert(M.storeStatus().installedVersion=="1.1.0",
+assert(M.storeStatus().installedVersion=="1.1.1",
  "Store's installed version should be displayed")
 local old={"cogworks","railbreak","tidebound"}
 for i,id in ipairs(old)do
