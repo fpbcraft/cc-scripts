@@ -1,4 +1,4 @@
-local root=(arg and arg[1])or './tidebound/expanse-v5'
+local root=(arg and arg[1])or './shattered/expanse-v5'
 _G.EXPANSE_V5_ROOT=root
 local M=dofile(root..'/sim.lua')
 local UI=dofile(root..'/ui.lua')
@@ -249,4 +249,4 @@ for seed=1,12 do
  end end
 end
 
-print('TIDEBOUND v5: '..checks..' assertions passed')
+print('SHATTERED v5: '..checks..' assertions passed')

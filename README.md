@@ -2,11 +2,11 @@
 
 ComputerCraft/CC:Tweaked programs for the fpbcraft Minecraft server.
 
-- **[FPB Store](fpbstore/README.md)** — browse, install, update, launch and safely remove COGWORKS, RAILBREAK and TIDEBOUND, with more apps supported through the catalog. One-time installer: `install-fpbstore.lua`; then run `store`.
+- **[FPB Store](fpbstore/README.md)** — browse, install, update, launch and safely remove COGWORKS, RAILBREAK and SHATTERED, with more apps supported through the catalog. One-time installer: `install-fpbstore.lua`; then run `store`.
 
 - [Skyways airship autopilot](airship/README.md) — Basalt 2.5 touchscreen flight dashboard, animated airship startup, route/preset management, optional engine control, and a one-command installer (`install-airship.lua`).
 - See [`factory/README.md`](factory/README.md) for the Basalt 2.5 factory controller, installation and machine configuration.
-- [TIDEBOUND: The Shattered Expanse v5](tidebound/README.md) — streamlined 30-system 4X for 1–4 human players plus AI, contextual space RPG events, and legacy editions; install with `install-tidebound.lua`.
+- [SHATTERED: The Shattered Expanse v5](shattered/README.md) — streamlined 30-system 4X for 1–4 human players plus AI, contextual space RPG events, and legacy editions; install with `install-shattered.lua`.
 - [COGWORKS: Kinetic Lab](cogworks/README.md) — 30 increasingly demanding machinery construction puzzles with animated CC: Graphics, a text fallback, hints and a safe one-command installer (`install-cogworks.lua`).
 - [RAILBREAK: Kinetic Frontier](railbreak/README.md) — train-first, solo/1–4 player turn-based railway adventure with animated pixel-art trains, route planning, station markets, cargo contracts and wagon upgrades. Install with `install-railbreak.lua`.
 

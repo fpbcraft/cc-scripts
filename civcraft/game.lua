@@ -26,14 +26,12 @@ local function screen()
  return best or term.current()
 end
 local display=screen()
-local W,H=12,8
+local Hex=dofile('/civcraft/hex.lua')
+local W,H=Hex.width,Hex.height
 local function key(x,y)return y*W+x end
 local function terrain(x,y)
- local n=(x*37+y*61+x*y*13)%19
- if n==0 or n==1 then return '~' end
- if n==2 or n==3 then return '^' end
- if n<9 then return 'f' end
- return '.'
+ local t=Hex.terrain(x,y)
+ return ({water='~',mountain='^',forest='f',plains='.'})[t]
 end
 local starts={{2,2},{11,7},{11,2},{2,7}}
 local function newGame()
@@ -135,7 +133,7 @@ local function apply(id,req)
   local sx,sy=tonumber(req.sx),tonumber(req.sy)
   local moving=sx and sy and unitAt(sx,sy)
   if not moving or moving.owner~=id or moving.moved then return false,'Select an unmoved unit' end
-  if math.abs(sx-x)+math.abs(sy-y)~=1 then return false,'Move only 1 tile' end
+  if Hex.distance(sx,sy,x,y)~=1 then return false,'Move only 1 hex' end
   if terrain(x,y)=='~' or terrain(x,y)=='^' then return false,'Impassable terrain' end
   if u then
    if u.owner==id then return false,'Occupied by ally' end
@@ -151,7 +149,7 @@ local function apply(id,req)
  elseif req.action=='found' then
   if not u or u.owner~=id or u.kind~='settler' then return false,'Choose a settler' end
   if c then return false,'Tile has a city' end
-  for _,v in ipairs(state.cities)do if math.abs(v.x-x)+math.abs(v.y-y)<3 then return false,'Cities need 3 tile spacing' end end
+  for _,v in ipairs(state.cities)do if Hex.distance(v.x,v.y,x,y)<3 then return false,'Cities need 3 hex spacing' end end
   for i,v in ipairs(state.units)do if v==u then table.remove(state.units,i);break end end
   table.insert(state.cities,{id=state.nextId,x=x,y=y,owner=id,level=1})
   state.nextId=state.nextId+1;log(p.name..' founded a city')

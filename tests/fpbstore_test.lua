@@ -24,7 +24,7 @@ function http.get(url)
  downloads[#downloads+1]=url
  local appId=url:match("/install%-(%w+)%.lua")
  local paths={cogworks="/cogworks/main.lua",railbreak="/railbreak/main.lua",
-  tidebound="/tidebound/tidebound.lua"}
+  shattered="/shattered/shattered.lua"}
  local path=paths[appId]
  local body=path and ("local file=fs.open("..string.format("%q",path)..
   ",'w');file.write('-- installed v1.0.0');file.close()") or
@@ -60,7 +60,7 @@ local M=require("fpbstore.manager")
 assert(#M.catalog.apps>=3,"Catalog must contain the original three games")
 assert(M.storeStatus().installedVersion=="1.1.3",
  "Store's installed version should be displayed")
-local old={"cogworks","railbreak","tidebound"}
+local old={"cogworks","railbreak","shattered"}
 for i,id in ipairs(old)do
  local app=assert(M.get(id))
  assert(app.id==id and M.get("nonexistent")==nil)
@@ -95,7 +95,7 @@ local initialStore=M.storeStatus()
 assert(initialStore.installedVersion=="1.1.3")
 local remoteCatalog=[[return {storeVersion="1.2.0",apps={
  {id="cogworks",version="1.2.0"},{id="railbreak",version="2.0.6"},
- {id="tidebound",version="5.1"}}}]]
+ {id="shattered",version="5.1"}}}]]
 local priorHttp=http.get
 http.get=function(url)
  if url:find("/fpbstore/catalog.lua",1,true)then

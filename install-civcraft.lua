@@ -10,7 +10,7 @@ end
 assert(ref:match('^[%w%._/-]+$') and not ref:find('..',1,true),'Invalid ref')
 assert(http and http.get,'Enable HTTP in CC:Tweaked settings')
 local root='/civcraft'
-local files={'game.lua','render.lua','ui.lua','README.md'}
+local files={'game.lua','render.lua','ui.lua','hex.lua','icons.lua','README.md'}
 local url='https://raw.githubusercontent.com/fpbcraft/cc-scripts/'..ref..'/civcraft/'
 local nextDir=root..'/.install-next'
 local backup=root..'/.install-backup'
