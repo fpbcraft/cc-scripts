@@ -100,3 +100,7 @@ City management retains production, workforce assignment and population growth. 
 ### Version and compatibility
 
 This edition is **v0.5.0**. Run the existing `install-civcraft.lua` installer or update through FPB Store. Game code is updated without deleting `/civcraft/data`. Network-host sessions continue using their existing dedicated save, while local hot-seat campaigns use the three-slot manager.
+
+## v0.6: Game systems and UX redesign
+
+The authoritative implementation objectives, touch layout, world generation, turn-based city projects, tech graph, diplomacy-ready civilization abilities, fog of war and QA checklist are tracked in [DESIGN-v0.6.md](DESIGN-v0.6.md). Do not treat a checked task as complete until integration and regression tests pass.

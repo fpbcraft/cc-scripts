@@ -23,6 +23,8 @@ jobs:
         run: lua5.3 tests/civcraft_saves_test.lua
       - name: CIVCRAFT technology graph canvas
         run: lua5.3 tests/civcraft_tech_canvas_test.lua
+      - name: CIVCRAFT v0.6 hex city economy and technology integration
+        run: lua5.3 tests/civcraft_v06_integration_test.lua
       - name: CIVCRAFT expanded systems regression
         run: lua5.3 tests/civcraft_systems_test.lua
       - name: CIVCRAFT differentiated movement, naval and ranged combat
