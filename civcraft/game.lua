@@ -226,7 +226,7 @@ local hostId,localHost=nil,(MODE=='host' or localMode)
 if localHost then
  if localMode then
   local loaded=args[2]~='--new' and Saves.load(slot)
-  if type(loaded)=='table'then state=Systems.migrate(loaded);hasHumanSave=true end
+  if type(loaded)=='table'then state=World.migrate(Systems.migrate(loaded));hasHumanSave=true end
  elseif fs.exists(SAVE) and args[2]~='--new' then
   local h=fs.open(SAVE,'r')
   if h then local loaded=textutils.unserialize(h.readAll());h.close()
@@ -297,7 +297,7 @@ local function dispatch(action,params)
    local loaded=Saves.load(slot)
    hasHumanSave=type(loaded)=='table'
    if hasHumanSave then
-    state=Systems.migrate(loaded)
+    state=World.migrate(Systems.migrate(loaded))
     if state.world then W,H=state.world.width,state.world.height end
    else state=newGame();Systems.migrate(state)end
    World.reveal(state,Hex,Systems)
