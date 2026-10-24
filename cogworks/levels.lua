@@ -111,4 +111,4 @@ local campaign={
 for index,stage in ipairs(campaign)do
  stage.fullNetwork=index>=4
 end
-return campaign
+return require('cogworks.expansion')(campaign)
