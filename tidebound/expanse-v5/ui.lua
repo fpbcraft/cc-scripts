@@ -89,19 +89,38 @@ function UI:headline(text,back)
  if back then self:button(r.w-14,1,12,5,'BACK','back',function()self.screen=back;self.page=1 end)end
 end
 function UI:title()
- local r=self.r;self:space();local cx=math.floor(r.w/2)
- r:disc(cx,math.floor(r.h*.27),math.max(8,math.floor(r.h*.12)),3)
- r:disc(cx-3,math.floor(r.h*.25),math.max(4,math.floor(r.h*.07)),10)
- local scale=r.w>=90 and 2 or 1
- r:bigText(cx-13*scale/2,math.floor(r.h*.38),'SHATTERED',9,scale)
- r:bigText(cx-10*scale/2,math.floor(r.h*.38)+scale*9,'EXPANSE',7,scale)
- r:text(cx-14,math.floor(r.h*.57),'A FOUR EMPIRE SPACE SAGA',6)
- local y=math.min(math.floor(r.h*.67),r.h-20)
- self:button(cx-19,y,38,5,'NEW CAMPAIGN','star',function()self.screen='setup'end)
- self:button(cx-19,y+6,38,5,'CONTINUE','next',function()if not self:load()then self.notice='NO V5 SAVE FOUND' end end)
- self:button(cx-19,y+12,38,5,'HOW TO PLAY','help',function()self.screen='help'end)
- if self.notice~=''then r:text(cx-18,y-3,clip(self.notice,40),15)end
- r:text(cx-17,r.h-2,'V5 | SIMPLE 4X + STORIES',5)
+ local r=self.r
+ self:space()
+ local cx=math.floor(r.w/2)
+ if r.h<45 then
+  -- Text-only computers and shorter tablets need a real compact layout.
+  -- Avoid overlapping the title artwork and offscreen menu items.
+  if r.h<35 then
+   r:text(math.max(2,cx-9),3,'SHATTERED EXPANSE',9)
+   r:text(math.max(2,cx-12),6,'A FOUR EMPIRE SPACE SAGA',6)
+  else
+   r:bigText(cx-23,2,'SHATTERED',9,1)
+   r:bigText(cx-18,10,'EXPANSE',7,1)
+  end
+  local y=math.max(12,r.h-17)
+  self:button(cx-19,y,38,5,'NEW CAMPAIGN','star',function()self.screen='setup'end)
+  self:button(cx-19,y+6,38,5,'CONTINUE','next',function()if not self:load()then self.notice='NO V5 SAVE FOUND'end end)
+  self:button(cx-19,y+12,38,5,'HOW TO PLAY','help',function()self.screen='help'end)
+  if self.notice~=''then r:text(math.max(2,cx-18),y-2,clip(self.notice,36),15)end
+ else
+  r:disc(cx,math.floor(r.h*.27),math.max(8,math.floor(r.h*.12)),3)
+  r:disc(cx-3,math.floor(r.h*.25),math.max(4,math.floor(r.h*.07)),10)
+  local scale=r.w>=90 and 2 or 1
+  r:bigText(cx-13*scale/2,math.floor(r.h*.38),'SHATTERED',9,scale)
+  r:bigText(cx-10*scale/2,math.floor(r.h*.38)+scale*9,'EXPANSE',7,scale)
+  r:text(cx-14,math.floor(r.h*.57),'A FOUR EMPIRE SPACE SAGA',6)
+  local y=math.min(math.floor(r.h*.67),r.h-20)
+  self:button(cx-19,y,38,5,'NEW CAMPAIGN','star',function()self.screen='setup'end)
+  self:button(cx-19,y+6,38,5,'CONTINUE','next',function()if not self:load()then self.notice='NO V5 SAVE FOUND'end end)
+  self:button(cx-19,y+12,38,5,'HOW TO PLAY','help',function()self.screen='help'end)
+  if self.notice~=''then r:text(cx-18,y-3,clip(self.notice,40),15)end
+  r:text(cx-17,r.h-2,'V5 | SIMPLE 4X + STORIES',5)
+ end
 end
 function UI:setup()
  local r=self.r;self:space();self:headline('NEW CAMPAIGN','title')
@@ -730,7 +749,7 @@ function UI:monitorTouch(x,y)
  return self:touch(x-1,y-1)
 end
 function UI:loop(name,computer)
- self:draw();if computer then computer.present()end
+ self:draw();if computer and computer.present then computer.present()end
  local timer=os.startTimer(.8)
  while true do
   local ev,a,b,c=os.pullEvent()
@@ -738,11 +757,12 @@ function UI:loop(name,computer)
    self:monitorTouch(b,c);self:draw()
    if computer then computer.present()end
   elseif computer and ev=='mouse_click' then
-   local x,y=computer.mouse(b,c)
+   local x,y=b,c
+   if computer.mouse then x,y=computer.mouse(b,c)end
    if x then self:monitorTouch(x,y);self:draw();computer.present()end
-  elseif computer and ev=='mouse_scroll' then computer.pan(0,a*4)
-  elseif computer and ev=='term_resize' then computer.present()
-  elseif computer and ev=='key' and keys and
+  elseif computer and computer.pan and ev=='mouse_scroll' then computer.pan(0,a*4)
+  elseif computer and ev=='term_resize' then self.r:resize();self:draw();if computer.present then computer.present()end
+  elseif computer and computer.pan and ev=='key' and keys and
    (a==keys.left or a==keys.right or a==keys.up or a==keys.down)then
    computer.pan(a==keys.left and -8 or (a==keys.right and 8 or 0),
     a==keys.up and -5 or (a==keys.down and 5 or 0))

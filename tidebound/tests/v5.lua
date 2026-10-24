@@ -85,6 +85,27 @@ local function fakeMonitor(w,h,gfx)
  if not gfx then m.drawPixels=nil;m.setGraphicsMode=nil end
  return m
 end
+-- iPad CraftOS native terminal dimensions: full title fits without a
+-- virtual 80x54 canvas, clipped actions, or overlapping menu hit areas.
+for _,size in ipairs({{51,29},{72,35},{95,40}})do
+ local ui=UI.new(fakeMonitor(size[1],size[2],false),true)
+ ui:draw()
+ test(ui.r.w==size[1] and ui.r.h==size[2],"UI uses actual terminal geometry")
+ test(#ui.r.buttons==3,"Three title buttons visible on compact terminal")
+ for i,b in ipairs(ui.r.buttons)do
+  test(b.x>=0 and b.y>=0 and b.x+b.w<=ui.r.w and
+   b.y+b.h<=ui.r.h,"Title action fits "..size[1].."x"..size[2])
+  for j=i+1,#ui.r.buttons do
+   local other=ui.r.buttons[j]
+   local dx=math.min(b.x+b.w,other.x+other.w)-math.max(b.x,other.x)
+   local dy=math.min(b.y+b.h,other.y+other.h)-math.max(b.y,other.y)
+   test(dx<=0 or dy<=0,"Title actions don't overlap")
+  end
+ end
+ local start=ui.r.buttons[1]
+ test(ui:monitorTouch(start.x+2,start.y+2),"Mouse click opens setup")
+ test(ui.screen=="setup","Compact title starts a game")
+end
 local sizes={{72,51},{103,73},{126,89}}
 for _,size in ipairs(sizes)do for _,gfx in ipairs({true,false})do
  local ui=UI.new(fakeMonitor(size[1],size[2],gfx));test(ui.r.kind==(gfx and 'gfx' or 'text'))
