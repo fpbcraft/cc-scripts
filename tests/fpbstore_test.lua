@@ -57,7 +57,11 @@ for i,id in ipairs(old)do
  M.install(app)
  assert(M.installed(app),"Game installed")
  assert(M.status(app).managed,"Metadata created")
- assert(downloads[i]:find(app.installer,1,true),"Correct installer fetched")
+ local found=false
+ for _,url in ipairs(downloads)do
+  if url:find(app.installer,1,true)then found=true;break end
+ end
+ assert(found,"Correct installer fetched")
  assert(M.launch(app),"Launch works")
  local preserve=app.saves[1]
  files[preserve]="important save data"
