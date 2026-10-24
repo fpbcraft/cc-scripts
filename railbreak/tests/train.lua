@@ -90,8 +90,8 @@ for _,dim in ipairs(sizes)do for _,graphics in ipairs({false,true})do
  eq(#ui.r.buttons>=2,'title buttons')
  local b=ui.r.buttons[1]
  local x=b.x+math.floor(b.w/2);local y=b.y+math.floor(b.h/2)
- local px=graphics and math.floor(x*ui.r.sx) or math.floor(x/2)+1
- local py=graphics and math.floor(y*ui.r.sy) or math.floor(y/3)+1
+ local px=graphics and math.floor(ui.r.ox+x*ui.r.sx) or math.floor(x/2)+1
+ local py=graphics and math.floor(ui.r.oy+y*ui.r.sy) or math.floor(y/3)+1
  eq(ui:touch(px,py)~=false,'touch activates title button')
  eq(ui.scene=='setup','click new expedition')
  -- Force gameplay and check every screen rendering, bounds and touch hitboxes.
