@@ -199,7 +199,7 @@ function R:paletteRow(y,kind,count,selected)
  if kind=="erase"then
   self:font(84,y+2,"X",8);self:font(94,y+2,"REMOVE",15)
  else
-  local label=E.parts[kind].name
+  local label=({T="SPLIT",B="2X RPM"})[kind] or E.parts[kind].name
   self:rect(84,y+1,8,6,enabled and E.parts[kind].color or 4)
   self:font(86,y+2,kind=="B" and "2" or kind,0)
   self:font(94,y+2,label,enabled and 15 or 4)
@@ -234,7 +234,8 @@ function R:graphics(g,result,unlocked,selected,message)
   self:paletteRow(20+(n-1)*9,kind,g.remaining[kind] or 0,selected)
  end
  self:paletteRow(65,"erase",0,selected)
- self:rect(81,74,45,5,3);self:font(92,74,"HELP",15)
+ self:rect(81,74,21,5,3);self:font(83,74,"HINT",15)
+ self:rect(104,74,22,5,3);self:font(107,74,"HELP",15)
  self:rect(0,80,128,8,1)
  local status=message
  if not status or status==""then
@@ -302,11 +303,12 @@ function R:text(g,result,unlocked,selected,message)
    (p[4] and "<" or " ").." "..icon.." "..(p[2] and ">" or " "))
   fillText(m,px,py+2,5,fg,bg,p[3] and "  v  " or "     ")
  end end
- local line={}
+ self.toolWidth=math.floor(w/5)
  for n,kind in ipairs(E.order)do
-  line[#line+1]=n..":"..kind.." "..(g.remaining[kind] or 0)
+  fillText(m,1+(n-1)*self.toolWidth,h-5,self.toolWidth,
+   selected==kind and colors.orange or colors.lightBlue,colors.black,
+   n..":"..kind.." "..(g.remaining[kind] or 0))
  end
- fillText(m,1,h-5,w,colors.lightBlue,colors.black,table.concat(line,"  "))
  fillText(m,1,h-4,w,colors.white,colors.black,
   " Tap cell to place/turn; 6 remove.")
  fillText(m,1,h-3,w,colors.orange,colors.black,
@@ -369,7 +371,9 @@ function R:hit(x,y,help)
     local n=math.floor((y-20)/9)+1
     return "tool",E.order[n]
    elseif y>=65 and y<73 then return "tool","erase"
-   elseif y>=74 and y<80 then return "help"end
+   elseif y>=74 and y<80 then
+    if x<103 then return "hint"else return "help"end
+   end
   end
   if y>=1 and y<10 then
    if x>=76 and x<88 then return "prev"
@@ -389,7 +393,7 @@ function R:hit(x,y,help)
    return ({"prev","reset","next","help"})[math.floor((x-1)/self.footerWidth)+1]
   end
   if y==h-5 then
-   local n=math.floor((x-1)/math.max(1,w/5))+1
+   local n=math.floor((x-1)/math.max(1,self.toolWidth or 1))+1
    return "tool",E.order[n]
   end
  end
