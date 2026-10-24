@@ -227,6 +227,47 @@ function R:piece(x,y,size,tile,light)
   self:rect(cx+DX[tile.r+1]*4,cy+DY[tile.r+1]*4,2,2,9)
  end
 end
+-- Draw belts/chains across every intervening cell, including stone. Draw over
+-- the board but stop at endpoint edges so the pulley sprites stay readable.
+function R:drawSpan(x1,y1,x2,y2,kind,powered)
+ local dx=x2>x1 and 1 or (x2<x1 and -1 or 0)
+ local dy=y2>y1 and 1 or (y2<y1 and -1 or 0)
+ local length=math.max(math.abs(x2-x1),math.abs(y2-y1))
+ if length==0 then return end
+ local rail=kind=="V" and 7 or 11
+ self:line(x1-dy*2,y1+dx*2,x2-dy*2,y2+dx*2,rail)
+ self:line(x1+dy*2,y1-dx*2,x2+dy*2,y2-dx*2,rail)
+ for n=0,length,4 do
+  local x=x1+dx*n;local y=y1+dy*n
+  self:line(x-dy*2,y+dx*2,x+dy*2,y-dx*2,
+   kind=="D" and (n%8==0 and 15 or 4) or 13)
+ end
+ if powered then
+  for n=self.frame%4,length,8 do
+   self:rect(x1+dx*n,y1+dy*n,2,2,15)
+  end
+ end
+end
+function R:drawSpans(g,result)
+ for _,tile in ipairs(g.tiles)do
+  if tile.kind=="V" or tile.kind=="D"then
+   for dir=1,2 do
+    local other=E.connection(g,tile,dir)
+    if other and other.kind==tile.kind and
+      math.abs(other.x-tile.x)+math.abs(other.y-tile.y)>1 then
+     local x1=self.boardX+(tile.x-1)*self.cell+7
+     local y1=self.boardY+(tile.y-1)*self.cell+7
+     local x2=self.boardX+(other.x-1)*self.cell+7
+     local y2=self.boardY+(other.y-1)*self.cell+7
+     local dx=DX[dir+1];local dy=DY[dir+1]
+     self:drawSpan(x1+dx*6,y1+dy*6,x2-dx*6,y2-dy*6,
+      tile.kind,result.lights[tile.id].powered and
+      result.lights[other.id].powered)
+    end
+   end
+  end
+ end
+end
 -- Dynamic hit targets use the same coordinates as the graphics renderer.
 -- On vanilla text monitors the targets are one-based character rectangles.
 function R:add(x,y,w,h,action,arg,arg2)
@@ -343,6 +384,43 @@ function R:drawGame(m)
  if result.win then
   self:button(166,114,32,6,"NEXT","next")
  end
+end
+function R:drawTutorial(m)
+ self:drawGame(m)
+ -- Ponder is modal: touches must not rotate the underlying machinery.
+ self.targets={}
+ local lesson=m.tutorial.steps[m.tutorial.index]
+ self:rect(11,18,178,90,0)
+ self:rect(14,21,172,84,7)
+ self:rect(16,23,168,80,1)
+ self:fontFit(22,28,"PONDER   "..m.tutorial.index.."/"..#m.tutorial.steps,6,158)
+ self:fontFit(22,38,lesson.title,15,158)
+ self:rect(22,48,156,29,2)
+ local key=lesson.key
+ local powered={powered=true,correct=true}
+ if key=="V" or key=="D"then
+  self:piece(46,55,13,{kind=key,r=1,enabled=true},powered)
+  self:piece(130,55,13,{kind=key,r=1,enabled=true},powered)
+  self:drawSpan(59,61,129,61,key,true)
+  self:font(93,51,key=="V" and "BELT" or "CHAIN",6)
+ else
+  local rpm=(key=="B" or key=="O")and 2 or 1
+  local sign=(key=="G" or key=="O")and -1 or 1
+  self:piece(47,55,13,{kind="S",r=1},powered)
+  self:line(60,61,76,61,6)
+  self:piece(79,55,13,{kind=key,r=1,enabled=true},powered)
+  if key=="L"then
+   self:line(85,69,85,74,6)
+  else
+   self:line(92,61,116,61,6)
+   self:piece(120,55,13,{kind="M",r=3,sign=sign,speed=rpm},powered)
+  end
+ end
+ self:fontFit(23,80,lesson.lines[1],15,155)
+ self:fontFit(23,87,lesson.lines[2],11,155)
+ self:button(24,94,65,9,"SKIP","tutorialSkip")
+ self:button(110,94,65,9,
+  m.tutorial.index==#m.tutorial.steps and "GOT IT" or "NEXT","tutorialNext")
 end
 function R:drawTitle(m)
  self:page("COGWORKS","KINETIC WORKSHOP  /  30 PUZZLES")
