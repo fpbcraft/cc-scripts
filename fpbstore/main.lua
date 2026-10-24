@@ -310,8 +310,11 @@ if not ok then error(err,0)end
 if restartAfterUpdate then
  -- This call runs the updated code from disk. Clear stale required modules
  -- before loading so the new catalog and manager take effect immediately.
- package.loaded["fpbstore.catalog"]=nil
- package.loaded["fpbstore.manager"]=nil
+ if type(package)=="table" and type(package.loaded)=="table"then
+  package.loaded["fpbstore.catalog"]=nil
+  package.loaded["fpbstore.manager"]=nil
+  package.loaded["fpbstore.basalt_ui"]=nil
+ end
  local updated,loadError=loadfile("/fpbstore/main.lua")
  assert(updated,loadError or "Updated store unavailable")
  updated()
