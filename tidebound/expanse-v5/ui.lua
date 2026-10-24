@@ -281,26 +281,41 @@ function UI:noticeBar()
  local r=self.r;local y=r.h-15
  r:rect(1,y,r.w-2,4,3);r:text(3,y+1,clip(self.notice,r.w-6),7)
 end
+-- Persistent split-view workspace. On tablet/wide monitors the sidebar
+-- is always reserved, so selecting a star never moves the star itself.
+function UI:galaxyLayout()
+ local r=self.r
+ local wide=r.w>=92 and r.h>=39
+ local sidebar=wide and math.max(25,math.floor(r.w*.29)) or 0
+ local map={x=2,y=11,w=r.w-4-sidebar,h=r.h-24}
+ local inspector=wide and {x=map.x+map.w+1,y=11,
+  w=sidebar-1,h=map.h} or nil
+ return map,inspector
+end
 -- Map coordinates never move when a context menu opens. This means ships and
 -- planets remain in the same place throughout an interaction.
 function UI:starPos(s)
  local r=self.r
- return math.floor(5+s.x*(r.w-10)),math.floor(10+s.y*(r.h-25))
+ local map=self:galaxyLayout()
+ return math.floor(map.x+4+s.x*math.max(1,map.w-8)),
+  math.floor(map.y+3+s.y*math.max(1,map.h-6))
 end
 local function overlaps(a,b)
  return a.x<b.x+b.w and a.x+a.w>b.x and a.y<b.y+b.h and a.y+a.h>b.y
 end
-local function insideMap(r,t)
- return t.x>=2 and t.y>=11 and t.x+t.w<=r.w-2 and t.y+t.h<=r.h-10
+local function insideMap(r,t,map)
+ return t.x>=map.x+1 and t.y>=map.y+1 and
+  t.x+t.w<=map.x+map.w-1 and t.y+t.h<=map.y+map.h-1
 end
 -- Layout is based on entity IDs and the galaxy seed, not the selected panel.
 -- There is a distinct, non-overlapping clickable marker for each visible ship.
 function UI:mapTargets()
  local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
+ local map=self:galaxyLayout()
  local targets={};local systems={};local ships={}
  local cellW=(r.w>=100 and 6 or 4);local cellH=(r.h>=65 and 5 or 3)
  local function available(rect)
-  if not insideMap(r,rect) then return false end
+  if not insideMap(r,rect,map) then return false end
   for _,old in ipairs(targets)do if overlaps(old,rect)then return false end end
   return true
  end
@@ -408,6 +423,11 @@ function UI:contextGeometry(systems,ships,targets)
  local entries=sh and self:shipCommands(sh) or self:systemCommands(sys)
  local r=self.r;local w=math.min(r.w-6,r.w>=100 and 29 or 25)
  local header=5;local row=3;local h=header+#entries*row+1
+ local map,inspector=self:galaxyLayout()
+ if inspector then
+  return {x=inspector.x,y=inspector.y,w=inspector.w,
+   h=inspector.h,entries=entries,ship=sh,system=sys,sidebar=true}
+ end
  local anchorX=target.x+target.w+2;local anchorY=target.y-1
  local candidates={{anchorX,anchorY},{target.x-w-2,anchorY},
   {target.x,target.y+target.h+2},{target.x,target.y-h-2}}
@@ -433,12 +453,18 @@ function UI:starMap()
  local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
  -- Keep the galaxy in a calm, framed tactical plotting area, rather than
  -- mixing clickable map markers with a full-screen animated starfield.
- r:rect(2,10,r.w-4,r.h-22,1)
- r:rect(2,10,r.w-4,1,3)
- r:rect(2,r.h-13,r.w-4,1,3)
+ local map,inspector=self:galaxyLayout()
+ r:rect(map.x,map.y,map.w,map.h,1)
+ r:rect(map.x,map.y,map.w,1,3)
+ r:rect(map.x,map.y+map.h-1,map.w,1,3)
+ if inspector then
+  self:box(inspector.x,inspector.y,inspector.w,inspector.h,1)
+  r:rect(inspector.x+1,inspector.y+1,inspector.w-2,3,2)
+  r:text(inspector.x+3,inspector.y+2,'SYSTEM INSPECTOR',9,inspector.w-5)
+ end
  if r.w>=90 then
-  for x=12,r.w-7,16 do
-   for y=17,r.h-16,10 do
+  for x=map.x+10,map.x+map.w-4,16 do
+   for y=map.y+6,map.y+map.h-4,10 do
     r:rect(x,y,1,1,3)
    end
   end
@@ -448,7 +474,7 @@ function UI:starMap()
  self.mapMarkers={systems=systems,ships=ships}
  local menu=self:contextGeometry(systems,ships,targets)
  self.contextBounds=menu
- r:text(3,8,moving and 'SELECT LINKED DESTINATION' or 'TAP A STAR OR A SHIP',5,r.w-5)
+ r:text(3,9,moving and 'SELECT LINKED DESTINATION' or 'EXPLORE / SELECT A SYSTEM OR SHIP',5,r.w-6)
  for _,edge in ipairs(g.links)do
   local a,b=g.systems[edge[1]],g.systems[edge[2]]
   if f.charted[a.id] or f.charted[b.id] or f.seen[a.id] or f.seen[b.id] then
@@ -496,7 +522,7 @@ function UI:contextMenu()
  local m=self.contextBounds
  if not m then return end
  local r=self.r;local x,y,w=m.x,m.y,m.w
- self:box(x,y,w,m.h,1)
+ if not m.sidebar then self:box(x,y,w,m.h,1)end
  r:rect(x+1,y+1,w-2,3,2)
  local title=m.ship and m.ship.name or m.system.name
  local subtitle=m.ship and ('ORDERS '..m.ship.orders..'/2 | '..self.g.systems[m.ship.location].name)
@@ -507,12 +533,20 @@ function UI:contextMenu()
  r:text(x+2,y+3,clip(subtitle,w-4),5,w-4)
  self:button(x+w-6,y+1,5,3,'X',nil,function()self.selected=nil;self.selectedShip=nil end)
  for i,entry in ipairs(m.entries)do
-  self:button(x+1,y+5+(i-1)*3,w-2,3,entry[1],entry[2],entry[3])
+  self:button(x+1,y+5+(i-1)*(m.sidebar and 6 or 3),
+    w-2,m.sidebar and 5 or 3,entry[1],entry[2],entry[3])
  end
 end
 function UI:galaxy()
  self:starMap()
  self:contextMenu()
+ local _,inspector=self:galaxyLayout()
+ if inspector and not self.contextBounds then
+  local r=self.r
+  r:text(inspector.x+3,inspector.y+9,'NO SYSTEM SELECTED',7,inspector.w-5)
+  self:lines(inspector.x+3,inspector.y+15,inspector.w-6,
+   'Tap any charted star or ship to inspect its resources, orders and possible actions.',5,13)
+ end
  if self.shipID then self:button(3,self.r.h-16,20,5,'CANCEL MOVE','close',function()
   self.shipID=nil;self.notice='MOVE CANCELLED'
  end)end
