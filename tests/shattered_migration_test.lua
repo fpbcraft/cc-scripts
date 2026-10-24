@@ -40,7 +40,7 @@ http={get=function(url)
  local expected=false
  for _,p in ipairs(names)do if p==name then expected=true end end
  assert(expected,"Installer requested unknown file: "..tostring(name))
- local body="-- "..name.." generated installer fixture\nreturn true\n"
+ local body="-- "..name.." generated installer fixture - "..string.rep("x",80).."\nreturn true\n"
  return {getResponseCode=function()return 200 end,
  readAll=function()return body end,close=function()end}
 end}
