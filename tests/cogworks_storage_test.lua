@@ -28,7 +28,7 @@ textutils={
  end,
  unserialize=function(s)return stored[tonumber(s)]and copy(stored[tonumber(s)]) end,
 }
-local S=require("cogworks.storage")
+local S=require("games.cogworks.storage")
 assert(not S.has(2),"Fresh slot 2 empty")
 local old={campaignVersion=2,unlocked=14,level=7,best={[7]=12},
  sessions={[7]={parts={{kind="I",x=2,y=3,r=1}}}},awards={[7]={sealed=true}}}

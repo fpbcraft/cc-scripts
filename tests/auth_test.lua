@@ -1,4 +1,4 @@
-package.path="./factory/?.lua;"..package.path
+package.path="./apps/factory/?.lua;"..package.path
 if not bit32 then
   bit32={
     band=function(a,b) return a&b end,

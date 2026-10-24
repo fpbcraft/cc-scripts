@@ -1,5 +1,5 @@
 -- Device onboarding regression tests: run lua5.3 tests/devices_test.lua
-package.path="./factory/?.lua;"..package.path
+package.path="./apps/factory/?.lua;"..package.path
 local disk={}
 local function serialize(v)
   if type(v)=="table" then
@@ -60,7 +60,7 @@ peripheral={
   end
 }
 local Devices=require("devices")
-local manager=Devices.new("factory/data")
+local manager=Devices.new("apps/factory/data")
 local discovered=manager:discover()
 assert(#discovered==3)
 assert(manager:rename("gauge_0","Boiler A"))
@@ -88,7 +88,7 @@ assert(manager:readAll()["sensor_"..reading.id]==100)
 assert(manager:update(reading.id,{warnAbove=false,graph=false}))
 manager:readAll()
 assert(manager.values[reading.id].warning==nil and #manager:charts()==0)
-local reloaded=Devices.new("factory/data")
+local reloaded=Devices.new("apps/factory/data")
 reloaded:discover()
 local persisted=reloaded:getReading(reading.id)
 assert(persisted.label=="Heat" and persisted.device=="gauge_1")

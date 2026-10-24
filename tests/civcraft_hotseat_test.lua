@@ -40,10 +40,10 @@ keys={q=16,escape=1}
 local frames,stage=0,0
 local originalDofile=dofile
 dofile=function(path)
- if path:sub(1,10)=="/civcraft/" and path~="/civcraft/ui.lua"then
+ if path:sub(1,16)=="/games/civcraft/" and path~="/games/civcraft/ui.lua"then
   return originalDofile(path:sub(2))
  end
- if path~="/civcraft/ui.lua"then return originalDofile(path)end
+ if path~="/games/civcraft/ui.lua"then return originalDofile(path)end
  return {new=function(_,callback)
   return {
    message=function()end,
@@ -90,13 +90,13 @@ os.pullEvent=function()
  if count>=8 then return "timer",0 end
  return "term_resize"
 end
-local ok,err=pcall(function()assert(loadfile("civcraft/game.lua"))("local","--new")end)
+local ok,err=pcall(function()assert(loadfile("games/civcraft/game.lua"))("local","--new")end)
 os.pullEvent=originalPull
 dofile=originalDofile
 assert(ok,err)
 assert(frames==8,"Should render through complete hotseat sequence")
 assert(last.round==2 and #last.players==2,"Round persists with correct player count")
 assert(last.activeIndex==1,"Current player persisted")
-assert(files["/civcraft/data/slot-1.dat"],"Separate local save exists")
-assert(not files["/civcraft/data/save.dat"],"Network save untouched")
+assert(files["/games/civcraft/data/slot-1.dat"],"Separate local save exists")
+assert(not files["/games/civcraft/data/save.dat"],"Network save untouched")
 print("CIVCRAFT: hotseat lobby, turn ownership, privacy handoff, 2nd round and save passed.")

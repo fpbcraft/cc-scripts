@@ -13,73 +13,9 @@ jobs:
       - name: Syntax check all Lua files
         run: |
           find . -type f -name '*.lua' -not -path './.git/*' -print0 | xargs -0 -n1 luac5.3 -p
-      - name: FPB Store catalog and safe lifecycle
-        run: lua5.3 tests/fpbstore_test.lua
-      - name: SHATTERED rename and save migration
-        run: lua5.3 tests/shattered_migration_test.lua
-      - name: CIVCRAFT generated worlds and private discovery
-        run: lua5.3 tests/civcraft_world_test.lua
-      - name: CIVCRAFT independent campaign save slots
-        run: lua5.3 tests/civcraft_saves_test.lua
-      - name: CIVCRAFT technology graph canvas
-        run: lua5.3 tests/civcraft_tech_canvas_test.lua
-      - name: CIVCRAFT expanded systems regression
-        run: lua5.3 tests/civcraft_systems_test.lua
-      - name: CIVCRAFT differentiated movement, naval and ranged combat
-        run: lua5.3 tests/civcraft_movement_range_test.lua
-      - name: CIVCRAFT hex geometry and movement rules
-        run: lua5.3 tests/civcraft_hex_test.lua
-      - name: CIVCRAFT local hotseat multiplayer
-        run: lua5.3 tests/civcraft_hotseat_test.lua
-      - name: CIVCRAFT responsive graphics and touch
-        run: lua5.3 tests/civcraft_ui_test.lua
-      - name: Store launch without package and require
-        run: lua5.3 tests/fpbstore_package_free_boot_test.lua
-      - name: Store self-update button without shell or package
-        run: lua5.3 tests/fpbstore_ui_self_update_test.lua
-      - name: Store full self-update without Lua package API
-        run: lua5.3 tests/fpbstore_self_update_test.lua
-      - name: Native graphics and responsive backend regression
-        run: lua5.3 tests/native_graphics_backends_test.lua
-      - name: Computer-only terminal fallback
-        run: lua5.3 tests/computer_terminal_test.lua
-      - name: COGWORKS kinetic puzzle tests
-        run: lua5.3 tests/cogworks_test.lua
-      - name: COGWORKS new mechanical block tests
-        run: lua5.3 tests/cogworks_mechanics_test.lua
-      - name: COGWORKS three save slots and settings
-        run: lua5.3 tests/cogworks_storage_test.lua
-      - name: COGWORKS graphics and touch regression
-        run: lua5.3 tests/cogworks_renderer_test.lua
-      - name: COGWORKS monitor scale and event integration
-        run: lua5.3 tests/cogworks_main_test.lua
-      - name: COGWORKS installer rollback and saves
-        run: lua5.3 tests/cogworks_installer_test.lua
-      - name: Factory core mock tests
-        run: lua5.3 tests/core_test.lua
-      - name: Airship Basalt mock UI
-        run: lua5.3 tests/airship_ui_test.lua
-      - name: Airship controller/timer integration
-        run: lua5.3 tests/airship_core_integration_test.lua
-      - name: Airship installer migration/rollback
-        run: lua5.3 tests/airship_installer_test.lua
-      - name: Airship keyboard/paste mock UI
-        run: lua5.3 tests/airship_keyboard_test.lua
-      - name: CraftOS module loader regression
-        run: lua5.3 tests/loader_test.lua
-      - name: Peripheral discovery and telemetry tests
-        run: lua5.3 tests/devices_test.lua
-      - name: Context-sensitive editor suggestions
-        run: lua5.3 tests/completions_test.lua
-      - name: Remote node discovery and expiry
-        run: lua5.3 tests/remote_test.lua
-      - name: Responsive Overview chart layout
-        run: lua5.3 tests/layout_test.lua
-      - name: HMAC-SHA256 authentication vectors
-        run: lua5.3 tests/auth_test.lua
-      - name: Paired authenticated remote switching
-        run: lua5.3 tests/paired_remote_test.lua
-      - name: Remote node disk-export GUI
-        run: lua5.3 tests/node_ui_test.lua
-      - name: Power Grid graph visibility
-        run: lua5.3 tests/graph_metrics_test.lua
+      - name: Run all application, library and installer regressions
+        run: |
+          for test in tests/*_test.lua; do
+            echo "Running $test"
+            lua5.3 "$test"
+          done

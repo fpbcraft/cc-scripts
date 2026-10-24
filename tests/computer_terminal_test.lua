@@ -1,5 +1,5 @@
 -- Verify windowed computer fallback independently of Minecraft/CC: Graphics.
-local script=assert(loadfile("cogworks/terminal_view.lua"))
+local script=assert(loadfile("games/cogworks/terminal_view.lua"))
 local V=script()
 colors={white=1,black=32768,gray=128}
 local device={w=51,h=19,calls=0,output={}}

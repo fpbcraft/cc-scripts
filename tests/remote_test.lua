@@ -1,4 +1,4 @@
-package.path="./factory/?.lua;"..package.path
+package.path="./apps/factory/?.lua;"..package.path
 local Remote=require("remote")
 local current=100000
 os.epoch=function()return current end

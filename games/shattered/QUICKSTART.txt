@@ -1,0 +1,25 @@
+SHATTERED V5: THE SHATTERED EXPANSE
+
+INSTALL:
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/installers/shattered.lua
+
+PLAY:
+/games/shattered/shattered.lua
+
+HARDWARE:
+Advanced Computer + Advanced Monitor (5x5 recommended); CC: Graphics optional.
+
+THE TURN:
+Select a star to inspect. Ships -> ORDER -> linked star -> Confirm.
+Scouts reveal a system. Ark -> found an adjacent surveyed neutral system.
+Worlds sets Industry / Science / Commerce for each colony.
+Tech spends Knowledge, with no empire action cap. Fleet gets 2 moves/year.
+Diplomacy creates pacts, alliance and war. Council events change your story.
+END advances to the next player and runs AI turns automatically.
+
+VICTORY:
+Discovery (explore + ancient clues), Unity (alliances), Dominion (15 systems)
+or highest Legacy score at the end of the campaign.
+
+SAVES: /games/shattered/v5-save.dat (v4 and v3 saves retained separately)
+OLD V4: /games/shattered/shattered-shattered-v4.lua

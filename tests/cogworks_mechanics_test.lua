@@ -1,5 +1,5 @@
 package.path="./?.lua;./?/init.lua;"..package.path
-local E=require("cogworks.engine")
+local E=require("games.cogworks.engine")
 assert(#E.order==10,"Ten distinct construction mechanisms available")
 for _,level in ipairs({6,9,16,23,25,27,30})do
  local state=E.new(level,true)

@@ -1,6 +1,6 @@
 package.path="./?.lua;./?/init.lua;"..package.path
-local E=require("cogworks.engine")
-local R=require("cogworks.render")
+local E=require("games.cogworks.engine")
+local R=require("games.cogworks.render")
 colors={black=32768,white=1,gray=128,lightGray=256,orange=2,
  lightBlue=8,yellow=16,green=8192,blue=2048,lime=32,red=16384,brown=4096}
 local game=E.new(30,true)

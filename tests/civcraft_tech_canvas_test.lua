@@ -1,10 +1,10 @@
 local nativeDofile=dofile
 dofile=function(path)
- if path=="/civcraft/content.lua"then return nativeDofile("civcraft/content.lua")end
+ if path=="/games/civcraft/content.lua"then return nativeDofile("games/civcraft/content.lua")end
  return nativeDofile(path)
 end
-local S=assert(loadfile("civcraft/systems.lua"))()
-local Tree=assert(loadfile("civcraft/tech_tree.lua"))()
+local S=assert(loadfile("games/civcraft/systems.lua"))()
+local Tree=assert(loadfile("games/civcraft/tech_tree.lua"))()
 local player={techs={},science=100}
 local buttons,strokes={},0
 local r={buttons=buttons}

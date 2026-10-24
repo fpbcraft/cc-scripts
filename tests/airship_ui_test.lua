@@ -77,7 +77,7 @@ function basalt.run()
  assert(not routeLoop,'loop route was not disabled')
 end
 package.preload.basalt=function()return basalt end
-local ui=assert(loadfile('airship/ui.lua'))()
+local ui=assert(loadfile('apps/airship/ui.lua'))()
 ui.run(core)
 assert(actions[1]=='fly:7,8','numeric keypad failed: '..tostring(actions[1]))
 assert(actions[2]=='capture','save current position button failed')

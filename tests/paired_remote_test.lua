@@ -1,4 +1,4 @@
-package.path="./factory/?.lua;"..package.path
+package.path="./apps/factory/?.lua;"..package.path
 -- Reuse the Lua 5.3 bit32 compatibility shim and SHA256 reference vectors.
 dofile("tests/auth_test.lua")
 local Remote=require("remote")

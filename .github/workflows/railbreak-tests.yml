@@ -3,13 +3,15 @@ name: Railbreak Lua tests
 on:
   push:
     paths:
-      - 'railbreak/**'
-      - 'install-railbreak.lua'
+      - 'lib/**'
+      - 'games/railbreak/**'
+      - 'installers/railbreak.lua'
       - '.github/workflows/railbreak-tests.yml'
   pull_request:
     paths:
-      - 'railbreak/**'
-      - 'install-railbreak.lua'
+      - 'lib/**'
+      - 'games/railbreak/**'
+      - 'installers/railbreak.lua'
       - '.github/workflows/railbreak-tests.yml'
 
 jobs:
@@ -20,14 +22,14 @@ jobs:
       - name: Install Lua
         run: sudo apt-get update && sudo apt-get install -y lua5.3
       - name: Simulate CC:Tweaked module resolution and game boot
-        run: lua5.3 railbreak/tests/boot.lua
+        run: lua5.3 games/railbreak/tests/boot.lua
       - name: Emulator aspect ratios and touch alignment
-        run: lua5.3 railbreak/tests/aspect.lua
+        run: lua5.3 games/railbreak/tests/aspect.lua
       - name: Monitor text scale 0.5 and restoration
-        run: lua5.3 railbreak/tests/scale.lua
+        run: lua5.3 games/railbreak/tests/scale.lua
       - name: Train-first campaign and responsive UI
-        run: lua5.3 railbreak/tests/train.lua
+        run: lua5.3 games/railbreak/tests/train.lua
       - name: Original factory edition regressions
-        run: lua5.3 railbreak/tests/run.lua
+        run: lua5.3 games/railbreak/tests/run.lua
       - name: Installer rollback and save preservation
-        run: lua5.3 railbreak/tests/installer.lua
+        run: lua5.3 games/railbreak/tests/installer.lua

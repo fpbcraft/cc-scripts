@@ -2,13 +2,15 @@ name: IRONSPIRE checks
 on:
   pull_request:
     paths:
-      - 'ironspire/**'
-      - 'install-ironspire.lua'
+      - 'lib/**'
+      - 'games/ironspire/**'
+      - 'installers/ironspire.lua'
       - '.github/workflows/ironspire.yml'
   push:
     paths:
-      - 'ironspire/**'
-      - 'install-ironspire.lua'
+      - 'lib/**'
+      - 'games/ironspire/**'
+      - 'installers/ironspire.lua'
       - '.github/workflows/ironspire.yml'
 jobs:
   lua:
@@ -19,7 +21,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y lua5.4
       - name: Syntax-check
         run: |
-          find ironspire -name '*.lua' -print0 | xargs -0 -n1 luac5.4 -p
-          luac5.4 -p install-ironspire.lua
+          find games/ironspire -name '*.lua' -print0 | xargs -0 -n1 luac5.4 -p
+          luac5.4 -p installers/ironspire.lua
       - name: Gameplay and renderer smoke test
-        run: lua5.4 ironspire/tests/run.lua
+        run: lua5.4 games/ironspire/tests/run.lua

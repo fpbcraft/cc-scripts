@@ -1,4 +1,4 @@
-package.path="./factory/?.lua;"..package.path
+package.path="./apps/factory/?.lua;"..package.path
 local layout=require("layout")
 for _,size in ipairs({{55,38},{55,31},{45,38},{38,28},{64,30}}) do
   local w,h=size[1],size[2]

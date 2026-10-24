@@ -16,9 +16,9 @@ local modules={
   end},
 }
 local env={
-  shell={getRunningProgram=function() return "factory/main.lua" end},
+  shell={getRunningProgram=function() return "apps/factory/main.lua" end},
   fs={getDir=function(path)
-    assert(path=="factory/main.lua")
+    assert(path=="apps/factory/main.lua")
     return "factory"
   end},
   require=function(name)
@@ -28,7 +28,7 @@ local env={
   end,
 }
 setmetatable(env,{__index=_G})
-local chunk=assert(loadfile("factory/main.lua","t",env))
+local chunk=assert(loadfile("apps/factory/main.lua","t",env))
 chunk()
 assert(loaded.core==1 and loaded.ui==1 and loaded.created and loaded.ran and loaded.shutdown)
 print("CraftOS module loader test passed")
