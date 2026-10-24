@@ -90,7 +90,7 @@ function A:model()
  return {scene=self.scene,game=self.game,result=self.result,progress=self.progress,
   settings=self.settings,slot=self.slot,selected=self.selected,message=self.message,
   slots=self:slots(),returnScene=self.returnScene,pending=self.pending,
-  inspected=self.inspected}
+  inspected=self.inspected,hasLeftInput=self.hasLeftInput or false}
 end
 -- Return 'exit' only in direct response to player choosing Exit.
 function A:act(action,x,y)
