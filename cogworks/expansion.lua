@@ -1,24 +1,20 @@
 -- Deterministic modifications of authored reference boards. Still never prebuilt.
 return function(campaign)
  local swaps={
-  [6]={{"I","C",1}},
   [9]={{"T","Q",1}},
-  [11]={{"I","C",1}},
   [13]={{"T","Q",1}},
-  [15]={{"I","C",1}},
   [16]={{"G","O",1}},
   [17]={{"T","Q",1}},
-  [18]={{"I","C",1}},
   [19]={{"G","O",1}},
   [20]={{"T","Q",1}},
-  [22]={{"G","O",1},{"I","C",1}},
+  [22]={{"G","O",1}},
   [24]={{"T","Q",1}},
   [25]={{"I","V",2}},
   [26]={{"G","O",1}},
   [27]={{"T","Q",1},{"I","D",2}},
-  [28]={{"G","O",1},{"I","C",1}},
+  [28]={{"G","O",1}},
   [29]={{"T","Q",1}},
-  [30]={{"T","Q",1},{"G","O",1},{"I","C",1},{"I","V",2}},
+  [30]={{"T","Q",1},{"G","O",1},{"I","V",2}},
  }
  for number,spec in pairs(swaps)do
   local stage=campaign[number]
@@ -46,7 +42,7 @@ return function(campaign)
  bridge(23,"D",{6,2},{6,4},{6,3})
  local dir={{0,-1},{1,0},{0,1},{-1,0}}
  local shapes={S={0},M={0},I={0,2},L={0,1},T={0,1,3},
-  G={0,2},B={0,2},C={0,2},Q={0,1,2,3},O={0,2},V={0,2},D={0,2}}
+  G={0,2},B={0,2},Q={0,1,2,3},O={0,2},V={0,2},D={0,2}}
  local function port(t,d)
   for _,p in ipairs(shapes[t.kind]or{})do if (p+t.r)%4==d then return true end end
   return false
