@@ -1,11 +1,13 @@
--- Compact graphics-mode renderer with playable vanilla text-mode fallback.
--- Graphics uses CC: Graphics / CraftOS-PC mode 2, not a third-party library.
+-- COGWORKS / CC: Graphics pixel renderer with text fallback.
+-- Coordinates in the pixel renderer are 128x88 logical units. Touch events
+-- from Graphics mode 2 are zero-based PIXELS; vanilla monitor touch is 1-based.
+local E=require("cogworks.engine")
 local R={};R.__index=R
 local palette={
- [0]=0x101B25,[1]=0x1A2B36,[2]=0x28414D,[3]=0x375764,
- [4]=0x69858A,[5]=0xE6EDCE,[6]=0xEAB85E,[7]=0xC87A45,
- [8]=0xBD6354,[9]=0x7FC99B,[10]=0x427F68,[11]=0x79AFC2,
- [12]=0x33677C,[13]=0xD9C390,[14]=0x8D679B,[15]=0xFFF5DF,
+ [0]=0x0E1A23,[1]=0x172B37,[2]=0x284250,[3]=0x355866,
+ [4]=0x688993,[5]=0xE6EBD7,[6]=0xF3BC59,[7]=0xC97E4E,
+ [8]=0xD35F51,[9]=0x89D79F,[10]=0x39745B,[11]=0x83C2D7,
+ [12]=0x365E8D,[13]=0xD9C391,[14]=0xBE91E3,[15]=0xFFF6E0,
 }
 local F={
  A={"010","101","111","101","101"},B={"110","101","110","101","110"},
@@ -30,21 +32,24 @@ local F={
  ["+"]={"000","010","111","010","000"},["/"]={"001","001","010","100","100"},
  [":"]={"000","010","000","010","000"},["!"]={"010","010","010","000","010"},
  ["."]={"000","000","000","000","010"},["?"]={"110","001","010","000","010"},
- ["="]={"000","111","000","111","000"},
+ ["="]={"000","111","000","111","000"},["<"]={"001","010","100","010","001"},
+ [">"]={"100","010","001","010","100"},["#"]={"101","111","101","111","101"},
+ ["("]={"001","010","010","010","001"},[")"]={"100","010","010","010","100"},
 }
-local function fillText(m,x,y,w,fg,bg,s)
+local function fillText(m,x,y,w,fg,bg,text)
  m.setCursorPos(x,y);m.setTextColor(fg);m.setBackgroundColor(bg)
- m.write((s..(" "):rep(w)):sub(1,w))
+ m.write((tostring(text)..(" "):rep(w)):sub(1,w))
 end
-function R.new(mon)
- local self=setmetatable({m=mon,mode="text",frame=0,original={}},R)
+function R.new(m)
+ local self=setmetatable({m=m,mode="text",frame=0,original={},
+  boardX=5,boardY=16,cell=12},R)
  self:enable()
  return self
 end
 function R:enable()
  local m=self.m
  self.tw,self.th=m.getSize()
- if m.setGraphicsMode and m.drawPixels and m.getSize then
+ if m.setGraphicsMode and m.drawPixels then
   local ok=pcall(m.setGraphicsMode,2)
   if ok then
    local good,w,h=pcall(m.getSize,2)
@@ -56,8 +61,8 @@ function R:enable()
     if m.setPaletteColor then
      for i,c in pairs(palette)do
       if m.getPaletteColor then
-       local good2,r,g,b=pcall(m.getPaletteColor,i)
-       if good2 then self.original[i]={r,g,b} end
+       local success,r,g,b=pcall(m.getPaletteColor,i)
+       if success then self.original[i]={r,g,b}end
       end
       pcall(m.setPaletteColor,i,c)
      end
@@ -72,8 +77,9 @@ end
 function R:resize()
  if self.mode=="graphics"then
   local ok,w,h=pcall(self.m.getSize,2)
-  if ok and type(w)=="number" then
-   self.pw,self.ph=w,h;self.scale=math.min(w/128,h/88)
+  if ok and type(w)=="number"then
+   self.pw,self.ph=w,h
+   self.scale=math.min(w/128,h/88)
    self.ox=math.floor((w-128*self.scale)/2)
    self.oy=math.floor((h-88*self.scale)/2)
   end
@@ -83,205 +89,308 @@ function R:close()
  if self.mode=="graphics"then
   if self.m.setFrozen then pcall(self.m.setFrozen,false)end
   if self.m.setPaletteColor then
-   for i,rgb in pairs(self.original)do
-    pcall(self.m.setPaletteColor,i,rgb[1],rgb[2],rgb[3])
+   for i,c in pairs(self.original)do
+    pcall(self.m.setPaletteColor,i,c[1],c[2],c[3])
    end
   end
   pcall(self.m.setGraphicsMode,0)
  end
 end
 function R:rect(x,y,w,h,color)
- if w<=0 or h<=0 then return end
+ if self.mode~="graphics" or w<=0 or h<=0 then return end
  local s=self.scale
- local x1=math.floor(self.ox+x*s);local y1=math.floor(self.oy+y*s)
- local x2=math.floor(self.ox+(x+w)*s);local y2=math.floor(self.oy+(y+h)*s)
- x1=math.max(0,x1);y1=math.max(0,y1)
- x2=math.min(self.pw,x2);y2=math.min(self.ph,y2)
- if x2>x1 and y2>y1 then self.m.drawPixels(x1,y1,color,x2-x1,y2-y1) end
+ local x1=math.max(0,math.floor(self.ox+x*s))
+ local y1=math.max(0,math.floor(self.oy+y*s))
+ local x2=math.min(self.pw,math.floor(self.ox+(x+w)*s))
+ local y2=math.min(self.ph,math.floor(self.oy+(y+h)*s))
+ if x2>x1 and y2>y1 then
+  self.m.drawPixels(x1,y1,color,x2-x1,y2-y1)
+ end
 end
 function R:font(x,y,str,color)
  str=tostring(str):upper()
  for n=1,#str do
-  local glyph=F[str:sub(n,n)] or F["?"]
-  for cy=1,5 do for cx=1,3 do
-   if glyph[cy]:sub(cx,cx)=="1" then self:rect(x+(n-1)*4+cx-1,y+cy-1,1,1,color)end
+  local g=F[str:sub(n,n)] or F["?"]
+  for row=1,5 do for col=1,3 do
+   if g[row]:sub(col,col)=="1" then
+    self:rect(x+(n-1)*4+col-1,y+row-1,1,1,color)
+   end
   end end
  end
 end
 function R:line(x1,y1,x2,y2,color)
- local n=math.max(1,math.ceil(math.max(math.abs(x2-x1),math.abs(y2-y1))))
- for j=0,n do
-  local t=j/n;self:rect(math.floor(x1+(x2-x1)*t),math.floor(y1+(y2-y1)*t),1,1,color)
+ local count=math.ceil(math.max(math.abs(x2-x1),math.abs(y2-y1)))
+ for i=0,math.max(1,count)do
+  local t=i/math.max(1,count)
+  self:rect(math.floor(x1+(x2-x1)*t),math.floor(y1+(y2-y1)*t),1,1,color)
  end
 end
-function R:gear(cx,cy,lit,frame)
- local tint=lit and 6 or 4
- for n=0,11 do
-  local a=n*math.pi/6+frame*(lit and 0.20 or 0)
-  local x=math.floor(cx+5*math.cos(a));local y=math.floor(cy+5*math.sin(a))
-  self:rect(x,y,2,2,tint)
+local DX={0,1,0,-1}
+local DY={-1,0,1,0}
+function R:piece(x,y,size,tile,light)
+ local running=light and light.powered
+ local core=running and 6 or 4
+ if tile.kind=="X"then
+  self:rect(x,y,size,size,2)
+  for k=1,size-1,3 do
+   self:line(x+k,y+1,x+1,y+k,3)
+  end
+  self:rect(x+3,y+3,size-6,size-6,1)
+  self:font(x+4,y+3,"X",4)
+  return
  end
- self:rect(cx-3,cy-3,7,7,tint)
- self:rect(cx-2,cy-2,5,5,2)
- self:rect(cx-1,cy-1,3,3,lit and 15 or 4)
-end
-function R:part(tile,light,frame)
- local x=8+(tile.x-1)*16;local y=16+(tile.y-1)*16
- local on=light and light.powered
- local active=on and 6 or 4
- local body=tile.kind=="S" and 10 or (tile.kind=="M" and 12 or 2)
- self:rect(x,y,14,14,3)
- self:rect(x+1,y+1,12,12,body)
- if on then self:rect(x+1,y+1,12,1,6)end
- local cx,cy=x+7,y+7
- local E=require("cogworks.engine")
+ local bg=tile.kind=="S" and 10 or (tile.kind=="M" and 12 or 2)
+ self:rect(x,y,size,size,3)
+ self:rect(x+1,y+1,size-2,size-2,bg)
+ if running then self:rect(x+1,y+1,size-2,1,6)end
+ local cx=x+math.floor(size/2);local cy=y+math.floor(size/2)
+ if tile.kind=="M"then
+  local active=light and light.correct
+  self:rect(x+2,y+2,size-4,size-4,active and 9 or 8)
+  self:rect(x+3,y+3,size-6,size-6,1)
+  local requirement=(tile.sign<0 and "-" or "+")..tostring(tile.speed)
+  self:font(x+2,y+math.floor(size/2)-2,requirement,active and 9 or 15)
+ elseif tile.kind=="S"then
+  self:rect(x+3,y+3,size-6,size-6,6)
+  self:font(x+4,y+math.floor(size/2)-2,"S",0)
+ else
+  -- Different mechanisms have different centerpieces, not just letter changes.
+  if tile.kind=="G"then
+   for i=0,7 do
+    local a=(i*math.pi/4)+(running and self.frame*.25 or 0)
+    self:rect(math.floor(cx+3*math.cos(a)),math.floor(cy+3*math.sin(a)),
+     2,2,14)
+   end
+   self:rect(cx-2,cy-2,5,5,14)
+   self:rect(cx-1,cy-1,3,3,1)
+  elseif tile.kind=="B"then
+   self:rect(cx-3,cy-3,7,7,7)
+   self:rect(cx-2,cy-2,5,5,1)
+   self:font(cx-1,cy-2,"2",15)
+   -- Green tick indicates the speed controller input direction.
+   self:rect(cx+DX[tile.r+1]*4,cy+DY[tile.r+1]*4,2,2,9)
+  else
+   self:rect(cx-2,cy-2,5,5,core)
+   self:rect(cx-1,cy-1,3,3,1)
+   self:rect(cx,cy,1,1,15)
+  end
+ end
+ -- Port markings are consistent on all devices, including fixed terminals.
  for dir=0,3 do
   if E.hasPort(tile,dir)then
-   if dir==0 then self:rect(cx-1,y,3,7,active)
-   elseif dir==1 then self:rect(cx,cy-1,7,3,active)
-   elseif dir==2 then self:rect(cx-1,cy,3,7,active)
-   else self:rect(x,cy-1,7,3,active)end
-   if on and tile.kind~="M"then
-    local step=(frame%4)+2
-    local dx=dir==1 and 1 or (dir==3 and -1 or 0)
-    local dy=dir==2 and 1 or (dir==0 and -1 or 0)
-    self:rect(cx+dx*step,cy+dy*step,2,2,15)
+   local dx,dy=DX[dir+1],DY[dir+1]
+   local sx=cx+dx*(math.floor(size/2)-1)
+   local sy=cy+dy*(math.floor(size/2)-1)
+   if dx~=0 then self:rect(math.min(cx,sx),cy-1,math.abs(sx-cx)+1,3,core)
+   else self:rect(cx-1,math.min(cy,sy),3,math.abs(sy-cy)+1,core)end
+   -- Moving bright dash denotes powered outlets.
+   if running and tile.kind~="M"then
+    local shift=2+(self.frame%3)
+    self:rect(cx+dx*shift,cy+dy*shift,2,2,15)
    end
   end
  end
- if tile.kind=="G" then self:gear(cx-1,cy-1,on,frame)
- elseif tile.kind=="M"then
-  self:rect(x+3,y+3,8,8,light.correct and 9 or 11)
-  self:rect(x+4,y+4,6,6,1)
-  self:font(x+4,y+5,(tile.sign<0 and "-" or "+")..tile.speed,
-   light.correct and 9 or 15)
- elseif tile.kind=="S" then
-  self:rect(x+3,y+3,8,8,7);self:rect(x+4,y+4,6,6,6)
-  self:font(x+5,y+5,"S",0)
+end
+function R:paletteRow(y,kind,count,selected)
+ local chosen=selected==kind
+ local enabled=kind=="erase" or count>0
+ self:rect(81,y,45,8,chosen and 6 or 2)
+ self:rect(82,y+1,43,6,chosen and 1 or 3)
+ if kind=="erase"then
+  self:font(84,y+2,"X",8);self:font(94,y+2,"REMOVE",15)
  else
-  self:rect(x+4,y+4,7,7,active)
-  self:rect(x+5,y+5,5,5,1)
-  self:font(x+6,y+5,tile.kind=="B" and "2" or
-   (tile.kind=="T" and "T" or (tile.kind=="L" and "L" or "+")),15)
-  if tile.kind=="B"then
-   local dx=tile.r==1 and 1 or (tile.r==3 and -1 or 0)
-   local dy=tile.r==2 and 1 or (tile.r==0 and -1 or 0)
-   self:rect(cx+dx*5,cy+dy*5,2,2,9)
-  end
+  local label=E.parts[kind].name
+  self:rect(84,y+1,8,6,enabled and E.parts[kind].color or 4)
+  self:font(86,y+2,kind=="B" and "2" or kind,0)
+  self:font(94,y+2,label,enabled and 15 or 4)
+  self:font(118,y+2,tostring(count),enabled and 9 or 4)
  end
 end
-function R:button(y,title,enabled)
- self:rect(95,y,30,9,enabled and 3 or 1)
- self:rect(95,y,2,9,enabled and 6 or 4)
- self:font(100,y+2,title,enabled and 15 or 4)
-end
-function R:drawGraphics(g,result,unlocked)
+function R:graphics(g,result,unlocked,selected,message)
  local m=self.m
  if m.setFrozen then pcall(m.setFrozen,true)end
  self:rect(0,0,128,88,0)
- self:rect(0,0,128,12,1)
- self:rect(0,11,128,1,7)
- self:font(6,3,"COGWORKS",6)
- self:font(48,3,"KINETIC LAB",11)
- self:font(99,3,string.format("%02d/%02d",g.number,#require("cogworks.levels")),15)
- self:rect(6,14,82,65,1)
- for row=0,3 do for col=0,4 do
-  self:rect(7+col*16,15+row*16,15,15,2)
+ self:rect(0,0,128,12,1);self:rect(0,11,128,1,7)
+ self:font(4,3,"COGWORKS",6)
+ self:font(42,3,"L"..g.number.."/"..#E.levels,11)
+ self:rect(76,1,12,9,2);self:font(78,3,"<",15)
+ self:rect(89,1,12,9,2);self:font(92,3,">",15)
+ self:rect(103,1,24,9,2);self:font(107,3,"RESET",15)
+ self:rect(3,14,76,64,1)
+ for y=1,E.HEIGHT do for x=1,E.WIDTH do
+  local left=self.boardX+(x-1)*self.cell
+  local top=self.boardY+(y-1)*self.cell
+  self:rect(left,top,11,11,2)
+  self:rect(left+5,top+5,1,1,3)
+  local tile=E.get(g,x,y)
+  if tile then
+   self:piece(left,top,11,tile,result.lights[tile.id])
+  end
  end end
- for _,tile in ipairs(g.tiles)do self:part(tile,result.lights[tile.id],self.frame)end
- self:rect(93,14,34,65,1)
- self:font(97,17,"GOALS",11)
- self:font(98,24,result.correct.."/"..result.goals,result.win and 9 or 15)
- self:button(33,"HINT",not result.win)
- self:button(43,"RESET",true)
- self:button(53,"PREV",g.number>1)
- self:button(63,"NEXT",g.number<unlocked)
+ self:rect(80,13,48,66,1)
+ self:font(83,14,"PARTS",11)
+ self:font(107,14,result.correct.."/"..result.goals,result.win and 9 or 15)
+ for n,kind in ipairs(E.order)do
+  self:paletteRow(20+(n-1)*9,kind,g.remaining[kind] or 0,selected)
+ end
+ self:paletteRow(65,"erase",0,selected)
+ self:rect(81,74,45,5,3);self:font(92,74,"HELP",15)
  self:rect(0,80,128,8,1)
- local status
- if result.win then status="COMPLETE! NEXT LEVEL"
- elseif result.jam then status="GEARS JAMMED! RESET"
- else status="MOVE "..g.moves.."  POWER "..result.correct.."/"..result.goals end
- self:font(6,82,status,result.win and 9 or (result.jam and 8 or 5))
+ local status=message
+ if not status or status==""then
+  if result.win then status="SOLVED! NEXT LEVEL AT TOP"
+  elseif result.jam then status="JAM! CHECK GEARS AND DRIVES"
+  elseif selected=="erase"then status="REMOVE: TAP A PLACED PART"
+  else status=E.parts[selected] and E.parts[selected].description or "SELECT A PART"end
+ end
+ self:font(3,82,status:sub(1,31),result.win and 9 or (result.jam and 8 or 5))
  self.frame=self.frame+1
  if m.setFrozen then pcall(m.setFrozen,false)end
 end
-local function partChar(tile)
- return ({S="S",M="M",I="I",L="L",T="T",G="G",B="2"})[tile.kind]
+function R:helpGraphics()
+ local m=self.m
+ if m.setFrozen then pcall(m.setFrozen,true)end
+ self:rect(0,0,128,88,0)
+ self:rect(0,0,128,11,1)
+ self:font(5,3,"PARTS AND RULES",6)
+ local rows={
+  {"S","GENERATOR: +1 RPM SOURCE",9},
+  {"M","MACHINE: MATCH + / - AND RPM",12},
+  {"I","SHAFT: STRAIGHT TRANSMISSION",11},
+  {"L","ELBOW: TURNS 90 DEGREES",11},
+  {"T","SPLITTER: THREE CONNECTIONS",11},
+  {"G","GEAR: REVERSES THE SPIN",14},
+  {"2","2X DRIVE: GREEN PORT IS INPUT",7},
+ }
+ for i,row in ipairs(rows)do
+  local y=13+(i-1)*9
+  self:rect(4,y,12,8,2);self:rect(6,y+1,8,6,row[3])
+  self:font(8,y+2,row[1],0)
+  self:font(21,y+2,row[2],15)
+ end
+ self:rect(0,77,128,11,1)
+ self:font(5,79,"TAP SPACE: BUILD. TAP PART: TURN.",6)
+ self:font(104,79,"BACK",9)
+ if m.setFrozen then pcall(m.setFrozen,false)end
 end
-function R:drawText(g,result,unlocked)
+function R:text(g,result,unlocked,selected,message)
  local m=self.m;local w,h=m.getSize()
  m.setBackgroundColor(colors.black);m.setTextColor(colors.white);m.clear()
  fillText(m,1,1,w,colors.orange,colors.gray,
-  " COGWORKS - KINETIC LAB  "..g.number.."/"..#require("cogworks.levels"))
- fillText(m,1,2,w,result.win and colors.lime or colors.lightGray,colors.black,
-  (result.win and " COMPLETE! " or (result.jam and " JAMMED! " or " ROTATE PARTS "))..
-  "GOALS "..result.correct.."/"..result.goals.."  MOVES "..g.moves)
- if w<32 or h<20 then
-  fillText(m,1,4,w,colors.red,colors.black,"Need a 3x3 Advanced Monitor")
+  " COGWORKS / "..g.number.."/"..#E.levels.." - "..g.name)
+ fillText(m,1,2,w,result.win and colors.lime or colors.white,colors.black,
+  result.win and " COMPLETE: press NEXT " or
+   (" MACHINES "..result.correct.."/"..result.goals.."  MOVES "..g.moves))
+ if w<37 or h<24 then
+  fillText(m,1,4,w,colors.red,colors.black,"Use a larger Advanced Monitor")
   return
  end
- self.bx=math.floor((w-30)/2)+1;self.by=4
- local E=require("cogworks.engine")
- for y=1,4 do for x=1,5 do
-  local px=self.bx+(x-1)*6;local py=self.by+(y-1)*3
-  local tile=g.map[(y-1)*5+x]
+ self.tx=math.max(1,math.floor((w-36)/2)+1);self.ty=4
+ for y=1,E.HEIGHT do for x=1,E.WIDTH do
+  local px=self.tx+(x-1)*6;local py=self.ty+(y-1)*3
+  local tile=E.get(g,x,y)
   local light=tile and result.lights[tile.id]
   local bg=tile and (tile.kind=="S" and colors.green or
-   (tile.kind=="M" and colors.blue or colors.gray)) or colors.lightGray
+    (tile.kind=="M" and colors.blue or (tile.kind=="X" and colors.brown or colors.gray)))
+    or colors.lightGray
   local fg=light and light.powered and colors.yellow or colors.white
-  local n=tile and E.hasPort(tile,0) or false
-  local e=tile and E.hasPort(tile,1) or false
-  local s=tile and E.hasPort(tile,2) or false
-  local west=tile and E.hasPort(tile,3) or false
-  fillText(m,px,py,5,fg,bg,n and "  ^  " or "     ")
+  local p={false,false,false,false}
+  if tile then for d=0,3 do p[d+1]=E.hasPort(tile,d)end end
+  local icon=tile and (tile.kind=="B" and "2" or tile.kind) or "."
+  fillText(m,px,py,5,fg,bg,p[1] and "  ^  " or "     ")
   fillText(m,px,py+1,5,fg,bg,
-   (west and "<" or " ").." "..(tile and partChar(tile) or ".").." "..(e and ">" or " "))
-  fillText(m,px,py+2,5,fg,bg,s and "  v  " or "     ")
+   (p[4] and "<" or " ").." "..icon.." "..(p[2] and ">" or " "))
+  fillText(m,px,py+2,5,fg,bg,p[3] and "  v  " or "     ")
  end end
- if h>=19 then
-  fillText(m,1,h-2,w,colors.lightBlue,colors.black,g.tip)
+ local line={}
+ for n,kind in ipairs(E.order)do
+  line[#line+1]=n..":"..kind.." "..(g.remaining[kind] or 0)
  end
- local labels={"PREV","HINT","RESET","NEXT"}
- local size=math.floor(w/4)
- for n=1,4 do
-  local enabled=(n~=1 or g.number>1) and (n~=4 or g.number<unlocked)
-  fillText(m,1+(n-1)*size,h-1,size,enabled and colors.black or colors.gray,
-   enabled and colors.orange or colors.lightGray,labels[n])
+ fillText(m,1,h-5,w,colors.lightBlue,colors.black,table.concat(line,"  "))
+ fillText(m,1,h-4,w,colors.white,colors.black,
+  " Tap cell to place/turn; 6 remove.")
+ fillText(m,1,h-3,w,colors.orange,colors.black,
+  (selected=="erase" and "REMOVE" or (E.parts[selected] and E.parts[selected].name or ""))..
+  ": "..(message or g.tip))
+ local labels={"PREV","RESET","NEXT","HELP"}
+ self.footerWidth=math.floor(w/4)
+ for i,label in ipairs(labels)do
+  local active=i~=1 or g.number>1
+  if i==3 then active=g.number<unlocked end
+  fillText(m,1+(i-1)*self.footerWidth,h-1,self.footerWidth,
+   active and colors.black or colors.gray,active and colors.orange or colors.lightGray,label)
  end
 end
-function R:draw(g,result,unlocked)
- if self.mode=="graphics"then self:drawGraphics(g,result,unlocked)
- else self:drawText(g,result,unlocked)end
+function R:helpText()
+ local m=self.m;local w,h=m.getSize()
+ m.setBackgroundColor(colors.black);m.clear()
+ fillText(m,1,1,w,colors.orange,colors.gray," COGWORKS - HELP")
+ local info={
+  "S: generator, clockwise 1X",
+  "M: goal, requires shown +/- RPM",
+  "I: straight shaft",
+  "L: right-angle elbow",
+  "T: splitter, three output sides",
+  "G: gear, reverses spin direction",
+  "2: two-times speed controller",
+  "X: stone, cannot build here",
+  "",
+  "Tap empty cell to place chosen part",
+  "Tap placed part to rotate it",
+  "Remove reclaims the part",
+  "1-5: select parts; 6: remove",
+  "H: hint  R: reset  Q: quit",
+ }
+ for i,str in ipairs(info)do if i+2<h then
+  fillText(m,1,i+2,w,colors.white,colors.black,str)
+ end end
+ fillText(m,1,h-1,w,colors.orange,colors.black," TAP TO RETURN")
 end
-function R:hit(x,y)
+function R:draw(g,result,unlocked,selected,message,help)
+ if help then
+  if self.mode=="graphics"then self:helpGraphics()else self:helpText()end
+ elseif self.mode=="graphics"then self:graphics(g,result,unlocked,selected,message)
+ else self:text(g,result,unlocked,selected,message)end
+end
+function R:hit(x,y,help)
  if self.mode=="graphics"then
   x=(x-self.ox)/self.scale;y=(y-self.oy)/self.scale
-  if x>=8 and x<86 and y>=16 and y<78 then
-   local col=math.floor((x-8)/16)+1
-   local row=math.floor((y-16)/16)+1
-   if col>=1 and col<=5 and row>=1 and row<=4 then
-    if ((x-8)%16)<14 and ((y-16)%16)<14 then
-     return "rotate",col,row
-    end
+  if help then return "back"end
+  if x>=self.boardX and x<self.boardX+E.WIDTH*self.cell and
+   y>=self.boardY and y<self.boardY+E.HEIGHT*self.cell then
+   local col=math.floor((x-self.boardX)/self.cell)+1
+   local row=math.floor((y-self.boardY)/self.cell)+1
+   if (x-self.boardX)%self.cell<11 and (y-self.boardY)%self.cell<11 then
+    return "cell",col,row
    end
   end
-  if x>=95 and x<125 then
-   if y>=33 and y<42 then return "hint"
-   elseif y>=43 and y<52 then return "reset"
-   elseif y>=53 and y<62 then return "prev"
-   elseif y>=63 and y<72 then return "next"end
+  if x>=81 and x<126 then
+   if y>=20 and y<65 then
+    local n=math.floor((y-20)/9)+1
+    return "tool",E.order[n]
+   elseif y>=65 and y<73 then return "tool","erase"
+   elseif y>=74 and y<80 then return "help"end
+  end
+  if y>=1 and y<10 then
+   if x>=76 and x<88 then return "prev"
+   elseif x>=89 and x<101 then return "next"
+   elseif x>=103 and x<127 then return "reset"end
   end
  else
-  if self.bx and self.by and x>=self.bx and y>=self.by and
-   x<self.bx+30 and y<self.by+12 then
-   local col=math.floor((x-self.bx)/6)+1
-   local row=math.floor((y-self.by)/3)+1
-   if ((x-self.bx)%6)<5 then return "rotate",col,row end
+  if help then return "back"end
+  if self.tx and self.ty and x>=self.tx and x<self.tx+E.WIDTH*6 and
+   y>=self.ty and y<self.ty+E.HEIGHT*3 then
+   local col=math.floor((x-self.tx)/6)+1
+   local row=math.floor((y-self.ty)/3)+1
+   if (x-self.tx)%6<5 then return "cell",col,row end
   end
   local w,h=self.m.getSize()
-  if y==h-1 then
-   local n=math.floor((x-1)/math.floor(w/4))+1
-   return ({"prev","hint","reset","next"})[n]
+  if y==h-1 and self.footerWidth and self.footerWidth>0 then
+   return ({"prev","reset","next","help"})[math.floor((x-1)/self.footerWidth)+1]
+  end
+  if y==h-5 then
+   local n=math.floor((x-1)/math.max(1,w/5))+1
+   return "tool",E.order[n]
   end
  end
  return nil
