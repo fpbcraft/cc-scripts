@@ -1,26 +1,21 @@
-TIDEBOUND: STELLAR FRONTIER v3.0
+THE SHATTERED EXPANSE v4.0 (TIDEBOUND)
 
-INSTALL (on a ComputerCraft computer):
+INSTALL:
   wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-tidebound.lua
 
-RUN:
+PLAY:
   /tidebound/tidebound.lua
 
-OPTIONAL AUTOSTART ON DEDICATED COMPUTER:
-  wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-tidebound.lua --startup
+1. Choose 1-4 human empires. AI plays every remaining empire.
+2. Pass the monitor to each human on the Begin Turn screen.
+3. Tap a star, then SYSTEM ORDERS. Tap unavailable actions for explanations.
+4. Ships > ORDER > destination (connected star) to move the selected ship.
+5. Science ships reveal systems; builders establish outposts and colonies.
+6. Research and buildings cost accumulated resources, not empire actions.
+7. Each ship has individual orders, refreshed every galactic year.
+8. Pick narrative decisions and diplomatic replies before ending your turn.
+9. Win by military conquest, research, diplomacy, economics or Legacy score.
 
-HOW TO PLAY:
-  New Galaxy -> set two names using touchscreen -> Launch Campaign
-  Tap a star -> tap an order -> read description -> Confirm
-  Survey -> Annex -> Colonize -> Build production -> Build ships
-  Research to unlock bonuses. Use fleets to capture rival systems.
-  Both players have 3 commands each turn; incomes accrue after both turn.
-  Empire name -> empire report; Guide -> rules.
-
-DISPLAY:
-  3x3 / 4x4 / 5x5 advanced monitors, auto-scale 0.5.
-  Pixel graphics preferred with CC: Graphics; terminal fallback included.
-
-SAVES:
-  /tidebound/save.dat. Updater preserves it.
-  Kingdoms 2.1 stays available as tidebound-kingdoms.lua.
+IMPORTANT: v3 old save is preserved at /tidebound/save.dat.
+New v4 save at /tidebound/expanse-save.dat (with fallback .bak).
+Play the old edition: /tidebound/tidebound-stellar-frontier.lua
