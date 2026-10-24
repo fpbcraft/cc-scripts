@@ -1,45 +1,86 @@
 package.path="./?.lua;./?/init.lua;"..package.path
 local E=require("cogworks.engine")
-local function eq(a,b,why)assert(a==b,why..": expected "..tostring(b)..", got "..tostring(a))end
-eq(#E.levels,10,"Puzzle count")
-for index=1,#E.levels do
+local function eq(actual,expected,msg)
+ assert(actual==expected,(msg or "Mismatch")..": expected "..tostring(expected)..", got "..tostring(actual))
+end
+eq(#E.levels,12,"Puzzle campaign size")
+local totalGoals=0
+for index,data in ipairs(E.levels)do
+ local game=E.new(index)
+ local initial=E.evaluate(game)
+ assert(not initial.win,"Puzzle "..index.." must start unsolved")
+ eq(game.moves,0,"Empty board move count")
+ assert(not E.rotate(game,1,1),"Cannot rotate an empty cell")
+ assert(not E.remove(game,data.source.x,data.source.y),"Cannot remove source")
+ assert(not E.place(game,data.source.x,data.source.y,"I"),"Cannot replace source")
+ assert(not E.place(game,0,1,"I"),"Cannot build out of bounds")
+ assert(not E.place(game,7,2,"I"),"Cannot build out of bounds")
+ assert(not E.place(game,2,2,"banana"),"Unknown part rejected")
+ for _,wall in ipairs(data.blocks)do
+  local t=E.get(game,wall[1],wall[2])
+  assert(t and t.kind=="X" and t.fixed,"Permanent wall present")
+  assert(not E.place(game,wall[1],wall[2],"I"),"Cannot build in stone")
+ end
  local solved=E.new(index,true)
- local good=E.evaluate(solved)
- assert(good.win,"Unsolvable author reference for level "..index..
-  " (correct "..good.correct.."/"..good.goals..", jam="..tostring(good.jam)..")")
- local scrambled=E.new(index)
- assert(not E.evaluate(scrambled).win,"Level "..index.." must start unsolved")
- local initialMoves=scrambled.moves
- assert(not E.rotate(scrambled,0,0),"Empty space cannot rotate")
- eq(scrambled.moves,initialMoves,"No move for empty space")
- local count=0
- while E.hint(scrambled)do
-  count=count+1
-  assert(count<=#scrambled.tiles,"Hint loop")
+ local result=E.evaluate(solved)
+ assert(result.win,"Reference solution invalid for level "..index..
+  " (goals "..result.correct.."/"..result.goals..", jam="..tostring(result.jam)..")")
+ totalGoals=totalGoals+result.goals
+ local total=0
+ for kind,stock in pairs(data.stock)do
+  eq(stock,solved.stock[kind],"Reference stock for "..kind)
+  total=total+stock
  end
- assert(E.evaluate(scrambled).win,"Hints must solve level "..index)
- eq(scrambled.hints,count,"Hint count")
- -- End-to-end manual rotation test: rotate every unsolved part to its reference.
+ eq(#E.snapshot(solved),#data.build,"Reference uses all parts")
+ assert(total>=#data.build,"No shortage in level inventory")
  local manual=E.new(index)
- for _,tile in ipairs(manual.tiles)do
-  while tile.r~=tile.solution do
-   assert(E.rotate(manual,tile.x,tile.y),"Rotating movable component")
-  end
+ for _,t in ipairs(data.build)do
+  assert(E.place(manual,t.x,t.y,t.kind,t.r),"Cannot place solution tile "..t.kind.." in "..index)
  end
- assert(E.evaluate(manual).win,"Manual rotations must solve level "..index)
-end
--- Confirm that the gear and controller have meaningful directional effects.
-local gear=E.evaluate(E.new(4,true))
-local target
-for _,p in ipairs(E.new(4,true).tiles)do
- if p.kind=="M"then target=p end
-end
-eq(gear.lights[target.id].ports[target.r].sign,-1,"Gear reverses sign")
-local speedGame=E.new(5,true)
-local speed=E.evaluate(speedGame)
-for _,p in ipairs(speedGame.tiles)do
- if p.kind=="M"then
-  eq(speed.lights[p.id].ports[p.r].rate,2,"Controller doubles speed")
+ assert(E.evaluate(manual).win,"Manual construction failed in "..index)
+ eq(#E.snapshot(manual),#data.build,"Snapshot includes all placements")
+ assert(not E.place(manual,data.build[1].x,data.build[1].y,"I"),
+  "Cannot stack a second part on a tile")
+ local saved=E.snapshot(manual)
+ local restored=E.new(index)
+ assert(E.restore(restored,saved),"Valid session restored")
+ assert(E.evaluate(restored).win,"Restored solution should stay solved")
+ local before=E.snapshot(restored)
+ assert(not E.restore(restored,{{x=0,y=1,kind="I",r=0}}),
+  "Reject invalid stored part")
+ eq(#E.snapshot(restored),#before,"Invalid session cannot change board")
+ local first=data.build[1]
+ assert(E.remove(manual,first.x,first.y),"Placed part can be removed")
+ assert(E.place(manual,first.x,first.y,first.kind,first.r),"Refunded stock reused")
+ assert(E.evaluate(manual).win,"Salvage/replace retains solution")
+ local hint=E.new(index)
+ local steps=0
+ while E.hint(hint)do
+  steps=steps+1
+  assert(steps<=#data.build*3,"Hint construction should converge")
  end
+ assert(E.evaluate(hint).win,"Hints can solve all levels: "..index)
+ eq(hint.hints,steps,"Hint count")
 end
-print("COGWORKS: all "..#E.levels.." authored puzzles, hints, gears and controller tests passed.")
+-- A misplaced part must be returned to inventory before a useful hint is placed.
+local g=E.new(1)
+assert(E.place(g,2,1,"I",0),"Place incorrect part")
+assert(E.hint(g),"Hint removes misplaced part")
+assert(E.get(g,2,1)==nil,"Wrong component reclaimed by hint")
+eq(g.remaining.I,g.stock.I,"Salvaged stock")
+-- A placed component rotates clockwise and cannot be rotated when locked.
+assert(E.place(g,2,3,"I",0),"Place a new shaft")
+assert(E.rotate(g,2,3),"Rotate constructed part")
+eq(E.get(g,2,3).r,1,"Rotation 90 degrees")
+assert(not E.rotate(g,1,3),"Generator orientation locked")
+-- Rotation reversal and RPM multiplication are still operational.
+local reverse=E.new(5,true)
+for _,v in ipairs(reverse.tiles)do if v.kind=="M"then
+ eq(E.evaluate(reverse).lights[v.id].ports[v.r].sign,-1,"Gear reversal")
+end end
+local double=E.new(6,true)
+for _,v in ipairs(double.tiles)do if v.kind=="M"then
+ eq(E.evaluate(double).lights[v.id].ports[v.r].rate,2,"RPM multiplier")
+end end
+print("COGWORKS: "..#E.levels.." construction puzzles and "..totalGoals..
+ " goals passed stock, placement, hint, restore and kinetic tests.")
