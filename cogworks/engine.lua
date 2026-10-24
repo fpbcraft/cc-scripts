@@ -13,8 +13,8 @@ E.parts={
  B={name="2X DRIVE",description="DOUBLES RPM: IN TO OUT",color=6},
  Q={name="GEARBOX",description="FOUR WAY POWER DISTRIBUTOR",color=13},
  O={name="LARGE COG",description="REVERSE SPIN AND DOUBLE RPM",color=14},
- V={name="BELT",description="SPAN ONE EMPTY CELL",color=7},
- D={name="CHAIN",description="SPAN ONE OR TWO CELLS",color=11},
+ V={name="BELT",description="PAIR ENDS ACROSS TWO CELLS",color=7},
+ D={name="CHAIN",description="PAIR ENDS ACROSS THREE CELLS",color=11},
 }
 E.order={"I","L","T","G","B","Q","O","V","D"}
 local function index(x,y)return (y-1)*E.WIDTH+x end
@@ -128,7 +128,6 @@ function E.restore(g,list)
    type(v.r)~="number" or v.r%1~=0 or v.r<0 or v.r>3 or
    (v.enabled~=nil and type(v.enabled)~="boolean") or
    not E.place(trial,v.x,v.y,v.kind=="C" and "I" or v.kind,v.r)then return false end
-  local restored=E.get(trial,v.x,v.y)
  end
  g.map,g.tiles,g.remaining=trial.map,trial.tiles,trial.remaining
  g.moves=0
