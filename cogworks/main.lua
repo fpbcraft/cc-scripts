@@ -26,7 +26,7 @@ local function monitor(preferred)
 end
 local SAVE="/cogworks/save.dat"
 local function loadSave()
- local fallback={unlocked=1,level=1,best={},sessions={}}
+ local fallback={unlocked=1,level=1,best={},sessions={},campaignVersion=2}
  if not fs.exists(SAVE)then return fallback end
  local f=fs.open(SAVE,"r")
  if not f then return fallback end
@@ -36,9 +36,15 @@ local function loadSave()
  local max=#E.levels
  local unlocked=math.max(1,math.min(max,math.floor(tonumber(data.unlocked) or 1)))
  local level=math.max(1,math.min(unlocked,math.floor(tonumber(data.level) or 1)))
- return {unlocked=unlocked,level=level,
-  best=type(data.best)=="table" and data.best or {},
-  sessions=type(data.sessions)=="table" and data.sessions or {}}
+ local best=type(data.best)=="table" and data.best or {}
+ local sessions=type(data.sessions)=="table" and data.sessions or {}
+ if data.campaignVersion~=2 then
+  -- Levels 4-12 have been rebuilt. Old layouts/scores no longer apply.
+  -- Keep completed-level unlocks and early tutorial progress.
+  for n=4,12 do sessions[n]=nil;best[n]=nil end
+ end
+ return {unlocked=unlocked,level=level,best=best,sessions=sessions,
+  campaignVersion=2}
 end
 local function save(data)
  local nextPath=SAVE..".tmp"
