@@ -7,6 +7,19 @@ assert(type(ref)=="string" and ref:match("^[%w%._/-]+$") and
  not ref:find("..",1,true),"Invalid branch or tag")
 assert(http and http.get,"Enable HTTP in CraftOS settings")
 local root="/fpbstore"
+if ref=="main" and textutils.unserializeJSON then
+ local nonce=os.epoch and os.epoch("utc") or math.floor(os.clock()*1000)
+ local ok,sha=pcall(function()
+  local response=assert(http.get(
+   "https://api.github.com/repos/fpbcraft/cc-scripts/commits/main?cb="..nonce,
+   {["Accept"]="application/vnd.github+json",["User-Agent"]="FPBStore"},true))
+  local json=response.readAll();response.close()
+  local data=assert(textutils.unserializeJSON(json))
+  assert(type(data.sha)=="string" and data.sha:match("^[a-f0-9]+$") and #data.sha==40)
+  return data.sha
+ end)
+ if ok then ref=sha;print("Pinned Store revision: "..sha:sub(1,12))end
+end
 local base="https://raw.githubusercontent.com/fpbcraft/cc-scripts/"..ref.."/fpbstore/"
 local paths={"main.lua","basalt_ui.lua","catalog.lua","manager.lua","README.md"}
 local stage=root.."/.install-next"
@@ -65,7 +78,7 @@ end
 remove(stage);remove(backup)
 -- Alias creation is opt-in to the name when no other program owns it.
 local launcher="/store.lua"
-local wrapper="shell.run('/fpbstore/main.lua')\n"
+local wrapper="local f,e=loadfile('/fpbstore/main.lua');assert(f,e);return f()\n"
 if not fs.exists(launcher)then
  write(launcher,wrapper)
  print("Launcher created: /store.lua")
@@ -77,5 +90,9 @@ else
   print("Existing /store.lua retained; launch /fpbstore/main.lua")
  end
 end
+for _,name in ipairs({"fpbstore.catalog","fpbstore.manager","fpbstore.basalt_ui"})do
+ package.loaded[name]=nil
+end
+print("FPB Store installed at revision: "..ref)
 print("FPB Store installed. Run: store")
 print("Game installations and saves are unchanged.")
