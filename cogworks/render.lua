@@ -139,7 +139,7 @@ function R:piece(x,y,size,tile,light)
   self:font(x+4,y+3,"X",4)
   return
  end
- local bg=tile.kind=="S" and 10 or (tile.kind=="M" and 12 or 2)
+ local bg=tile.kind=="S" and 10 or (tile.kind=="M" and (tile.sign<0 and 14 or 12) or 2)
  self:rect(x,y,size,size,3)
  self:rect(x+1,y+1,size-2,size-2,bg)
  if running then self:rect(x+1,y+1,size-2,1,6)end
@@ -155,14 +155,31 @@ function R:piece(x,y,size,tile,light)
   self:font(x+4,y+math.floor(size/2)-2,"S",0)
  else
   -- Different mechanisms have different centerpieces, not just letter changes.
-  if tile.kind=="G"then
+  if tile.kind=="G" or tile.kind=="O"then
    for i=0,7 do
     local a=(i*math.pi/4)+(running and self.frame*.25 or 0)
     self:rect(math.floor(cx+3*math.cos(a)),math.floor(cy+3*math.sin(a)),
-     2,2,14)
+     2,2,tile.kind=="O" and 7 or 14)
    end
-   self:rect(cx-2,cy-2,5,5,14)
+   self:rect(cx-2,cy-2,5,5,tile.kind=="O" and 7 or 14)
    self:rect(cx-1,cy-1,3,3,1)
+  elseif tile.kind=="C"then
+   self:rect(cx-3,cy-2,2,5,tile.enabled and 9 or 8)
+   self:rect(cx+1,cy-2,2,5,tile.enabled and 9 or 8)
+   if tile.enabled then self:rect(cx-1,cy,3,1,9)end
+  elseif tile.kind=="Q"then
+   self:rect(cx-3,cy-3,7,7,13)
+   self:rect(cx-1,cy-1,3,3,1)
+   self:rect(cx,cy,1,1,15)
+  elseif tile.kind=="V"then
+   self:rect(cx-3,cy-2,3,5,7)
+   self:rect(cx+1,cy-2,3,5,7)
+   self:rect(cx-2,cy-2,5,1,13)
+   self:rect(cx-2,cy+2,5,1,13)
+  elseif tile.kind=="D"then
+   for j=-3,2,2 do self:rect(cx-3,cy+j,6,1,11)end
+   self:rect(cx-3,cy-3,1,7,4)
+   self:rect(cx+2,cy-3,1,7,4)
   elseif tile.kind=="B"then
    self:rect(cx-3,cy-3,7,7,7)
    self:rect(cx-2,cy-2,5,5,1)
