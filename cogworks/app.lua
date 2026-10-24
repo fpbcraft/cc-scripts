@@ -2,6 +2,7 @@
 local E=require("cogworks.engine")
 local S=require("cogworks.storage")
 local T=require("cogworks.tutorials")
+local B=require("cogworks.briefing")
 local A={};A.__index=A
 local function countAward(awards)
  local n=0
@@ -11,7 +12,7 @@ end
 function A.new()
  local self=setmetatable({scene="title",settings=S.loadSettings(),store=S,
   game=nil,result=nil,slot=nil,progress=nil,selected="I",message="",
-  returnScene="title",pending=nil,inspected=nil,tutorial=nil},A)
+  returnScene="title",pending=nil,inspected=nil,tutorial=nil,briefing=nil},A)
  return self
 end
 function A:slots()
@@ -57,8 +58,8 @@ function A:openLevel(index)
  self.selected="I"
  self.inspected=nil
  self.message=""
- self.scene="game"
- self:startTutorial(T.unseen(index,self.progress.tutorials),"game")
+ self.briefing=B.forLevel(index)
+ self.scene="briefing"
 end
 function A:enter(slot,newGame)
  assert(slot>=1 and slot<=3)
@@ -112,7 +113,7 @@ function A:model()
  return {scene=self.scene,game=self.game,result=self.result,progress=self.progress,
   settings=self.settings,slot=self.slot,selected=self.selected,message=self.message,
   slots=self:slots(),returnScene=self.returnScene,pending=self.pending,
-  inspected=self.inspected,tutorial=self.tutorial,
+  inspected=self.inspected,tutorial=self.tutorial,briefing=self.briefing,
   hasLeftInput=self.hasLeftInput or false}
 end
 -- Return 'exit' only in direct response to player choosing Exit.
@@ -150,6 +151,11 @@ function A:act(action,x,y)
   elseif action=="togglePorts"then
    self.settings.showPorts=not self.settings.showPorts
    self.store.saveSettings(self.settings)
+  end
+ elseif scene=="briefing"then
+  if action=="beginLevel" or action=="back"then
+   self.scene="game"
+   self:startTutorial(T.unseen(self.game.number,self.progress.tutorials),"game")
   end
  elseif scene=="tutorial"then
   if action=="tutorialNext"then
