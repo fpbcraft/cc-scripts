@@ -27,9 +27,74 @@ end
 function M.installed(app)
  return fs.exists(app.entry)
 end
+local latest={}
+local checked=false
+local function readVersion(app)
+ local marker="/fpbstore/installed/"..app.id..".dat"
+ if fs.exists(marker) then
+  local h=fs.open(marker,"r")
+  if h then
+   local ok,t=pcall(textutils.unserialize,h.readAll());h.close()
+   if ok and type(t)=="table" and type(t.version)=="string" then return t.version end
+  end
+ end
+ -- Legacy/manual installs may not have a store marker. Read actual launcher's
+ -- version comments when available; never assume a version for unknown files.
+ local h=fs.open(app.entry,"r")
+ if h then
+  local header=h.read(400)or"";h.close()
+  local found=header:match("[Vv](%d+%.%d+%.%d+)") or
+   header:match("[Vv](%d+%.%d+)")
+  if found then return found end
+ end
+ return nil
+end
+function M.refreshVersions(ref)
+ ref=ref or M.REF
+ assert(ref:match("^[%w%._/-]+$") and not ref:find("..",1,true),"Invalid ref")
+ local ok,result=pcall(function()
+  local source=fetch(M.BASE..ref.."/fpbstore/catalog.lua")
+  local chunk,err=load(source,"@remote-catalog.lua","t",{})
+  assert(chunk,err)
+  local remote=chunk()
+  assert(type(remote)=="table" and type(remote.apps)=="table",
+   "Invalid remote catalog")
+  local new={}
+  for _,app in ipairs(remote.apps)do
+   if type(app.id)=="string" and type(app.version)=="string" then
+    new[app.id]=app.version
+   end
+  end
+  return new
+ end)
+ if ok then latest=result;checked=true;return true end
+ checked=true;return false,tostring(result)
+end
+local function parts(version)
+ local a,b,c=tostring(version or ""):match("^(%d+)%.(%d+)%.?(%d*)$")
+ if not a then return nil end
+ return {tonumber(a),tonumber(b),tonumber(c) or 0}
+end
+local function newer(a,b)
+ local x,y=parts(a),parts(b)
+ if not x or not y then return false end
+ for i=1,3 do
+  if x[i]~=y[i] then return x[i]>y[i] end
+ end
+ return false
+end
 function M.status(app)
  local marker="/fpbstore/installed/"..app.id..".dat"
- return {installed=M.installed(app),managed=fs.exists(marker)}
+ local installed=M.installed(app)
+ local current=installed and readVersion(app) or nil
+ local available=latest[app.id] or app.version
+ return {
+  installed=installed,managed=fs.exists(marker),
+  installedVersion=current,latestVersion=available,
+  updateAvailable=installed and current~=nil and available~=nil and newer(available,current),
+  versionUnknown=installed and current==nil,
+  checked=checked,
+ }
 end
 function M.install(app,ref)
  assert(app and M.get(app.id)==app,"Unrecognized app")
@@ -51,7 +116,8 @@ function M.install(app,ref)
  assert(M.installed(app),"Installer returned without installing "..app.name)
  ensure("/fpbstore/installed")
  write("/fpbstore/installed/"..app.id..".dat",
-  textutils.serialize({ref=ref,installedAt=os.epoch and os.epoch("utc")or 0}))
+  textutils.serialize({ref=ref,version=latest[app.id] or app.version,
+   installedAt=os.epoch and os.epoch("utc")or 0}))
  return true
 end
 function M.launch(app)
