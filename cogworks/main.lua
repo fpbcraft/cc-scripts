@@ -4,6 +4,7 @@ package.path="/?.lua;/?/init.lua;"..package.path
 local App=require("cogworks.app")
 local Renderer=require("cogworks.render")
 local E=require("cogworks.engine")
+local Display=require("cogworks.display")
 local args={...}
 if args[1]=="--test-api"then
  return {app=App,engine=E,renderer=Renderer}
@@ -29,10 +30,12 @@ local function selectMonitor(preferred)
 end
 local function start()
  local monitor,name=selectMonitor(args[1])
- local computerMode=not monitor
- if computerMode then
-  monitor=require("cogworks.terminal_view").new(term.current(),70,40)
- end
+ local mode
+ local native=nil
+ if not monitor then native=term.current()end
+ monitor,mode=Display.select(monitor,native,
+  require("cogworks.terminal_view"),70,40)
+ local computerMode=Display.isComputer(mode)
 
  local previous=monitor.getTextScale and monitor.getTextScale() or 1
  if monitor.setTextScale then monitor.setTextScale(0.5)end
@@ -42,7 +45,7 @@ local function start()
   app=App.new()
   local function redraw()
    renderer:draw(app:model())
-   if computerMode then monitor.present()end
+   Display.present(monitor,mode)
   end
   local function act(action,x,y)
    if not action then return true end
@@ -75,15 +78,15 @@ local function start()
      if not act(action,x,y)then break end
     end
    elseif computerMode and event=="mouse_click" then
-    local x,y=monitor.mouse(b,c)
+    local x,y=Display.click(monitor,mode,b,c)
     if x then
      local action,arg1,arg2=renderer:hit(x,y)
      if not act(action,arg1,arg2)then break end
     end
-   elseif computerMode and event=="mouse_scroll"then
+   elseif mode=="virtual-text" and event=="mouse_scroll"then
     monitor.pan(0,a*3)
    elseif computerMode and event=="term_resize"then
-    monitor.present()
+    renderer:resize();redraw()
    elseif event=="monitor_resize" and a==name then
     renderer:resize();redraw()
    elseif event=="timer" and a==timer then
@@ -109,7 +112,7 @@ local function start()
     elseif char=="b"then act("back")
     end
    elseif event=="key" and keys then
-    if computerMode and (a==keys.up or a==keys.down or
+    if mode=="virtual-text" and (a==keys.up or a==keys.down or
       a==keys.left or a==keys.right)then
      local dx=a==keys.left and -8 or (a==keys.right and 8 or 0)
      local dy=a==keys.up and -5 or (a==keys.down and 5 or 0)
@@ -129,7 +132,7 @@ local function start()
    "\n"..debug.traceback() or "")
  end)
  if renderer then renderer:close()end
- if computerMode then monitor.close()end
+ Display.close(monitor,mode)
  if monitor.setTextScale then pcall(monitor.setTextScale,previous)end
  if not ok then error(reason,0)end
 end
