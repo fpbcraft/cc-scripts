@@ -236,13 +236,14 @@ function R:page(title,subtitle)
 end
 function R:drawGame(m)
  local g,result=m.game,m.result
- self:page("COGWORKS   "..string.format("%02d/%02d",g.number,#E.levels))
- self:fontFit(76,5,"MOVES "..g.moves,4,44)
- self:button(120,2,27,11,"SAVE","save")
- self:button(149,2,36,11,"PAUSE","pause")
- self:button(187,2,11,11,"?","help")
+ self:page("COGWORKS  "..string.format("%02d/30",g.number))
+ self:font(77,5,"MV "..g.moves,4)
+ self:button(120,2,28,11,"SAVE","save")
+ self:button(150,2,36,11,"PAUSE","pause")
+ self:button(188,2,11,11,"?","help")
  self:rect(3,16,109,94,1)
  self:rect(4,17,107,92,3)
+ local directions={{0,-1},{1,0},{0,1},{-1,0}}
  for y=1,E.HEIGHT do for x=1,E.WIDTH do
   local px=self.boardX+(x-1)*self.cell
   local py=self.boardY+(y-1)*self.cell
@@ -252,57 +253,69 @@ function R:drawGame(m)
   if tile then
    self:piece(px+1,py+1,13,tile,result.lights[tile.id])
    if m.settings.showPorts and tile.kind~="X"then
-    local DX,DY={0,1,0,-1},{-1,0,1,0}
-    for dir=0,3 do if E.hasPort(tile,dir)then
-     local dx,dy=DX[dir+1],DY[dir+1]
-     local other=E.get(g,x+dx,y+dy)
-     if not other or not E.hasPort(other,(dir+2)%4)then
-      self:rect(px+7+dx*6,py+7+dy*6,2,2,8)
-     end
+    for d=0,3 do if E.hasPort(tile,d) and
+      not E.connection(g,tile,d) and tile.kind~="Q" then
+      self:rect(px+6+directions[d+1][1]*6,
+        py+6+directions[d+1][2]*6,2,2,8)
     end end
    end
   end
   self:add(px,py,14,14,"cell",x,y)
  end end
- self:rect(114,16,83,96,1)
- self:font(118,19,"INVENTORY",11)
- self:font(170,19,result.correct.."/"..result.goals, result.win and 9 or 15)
+ self:rect(114,16,83,97,1)
+ self:font(117,19,"PARTS",11)
+ self:font(163,19,result.correct.."/"..result.goals,
+   result.win and 9 or 15)
+ -- Two columns instead of the oversized five-row list: all ten parts
+ -- remain simultaneously visible, including the new Create mechanics.
  for n,kind in ipairs(E.order)do
-  local y=26+(n-1)*9
-  local selected=m.selected==kind
-  local available=g.remaining[kind]or 0
-  self:rect(117,y,77,8,selected and 6 or 3)
-  self:rect(118,y+1,75,6,selected and 2 or 1)
-  self:rect(120,y+1,7,6,E.parts[kind].color)
-  self:font(122,y+2,kind=="B" and "2" or kind,0)
-  local label=({T="SPLIT",B="2X DRIVE"})[kind] or E.parts[kind].name
-  self:fontFit(131,y+2,label,available>0 and 15 or 4,43)
-  self:font(184,y+2,tostring(available),available>0 and 9 or 4)
-  self:add(117,y,77,8,"tool",kind)
+  local col=(n-1)%2
+  local row=math.floor((n-1)/2)
+  local x=116+col*40
+  local y=26+row*10
+  local count=g.remaining[kind] or 0
+  local active=m.selected==kind
+  self:rect(x,y,38,9,active and 6 or 3)
+  self:rect(x+1,y+1,36,7,active and 2 or 1)
+  self:rect(x+2,y+1,7,7,count>0 and E.parts[kind].color or 4)
+  self:font(x+4,y+2,kind=="B" and "2" or kind,0)
+  local alias=({I="SHAFT",L="ELBOW",T="SPLIT",G="GEAR",
+    B="2X",C="CLTCH",Q="BOX",O="COG",V="BELT",D="CHAIN"})[kind]
+  self:fontFit(x+11,y+2,alias,count>0 and 15 or 4,20)
+  self:font(x+32,y+2,tostring(count),count>0 and 9 or 4)
+  self:add(x,y,38,9,"tool",kind)
  end
- self:button(117,72,77,8,m.selected=="erase" and "REMOVE ACTIVE" or "REMOVE","tool","erase",m.selected=="erase" and 8 or 3)
- self:font(118,83,"BONUS OBJECTIVES",6)
+ self:button(117,77,37,9,
+  m.selected=="erase" and "ERASING" or "REMOVE",
+  "tool","erase",m.selected=="erase" and 8 or 3)
+ self:button(156,77,38,9,
+  m.selected=="switch" and "SWITCH ON" or "SWITCH",
+  "tool","switch",m.selected=="switch" and 9 or 3)
+ -- Persistent bonus objectives are visible while building, not buried in
+ -- a modal screen. Labels are deliberately short enough for this pane.
+ self:font(117,89,"BONUS GOALS",6)
  local bonuses=E.challenges(g,result)
- local awarded=m.progress.awards[g.number] or {}
- if #bonuses==0 then
-  self:font(119,99,"FROM LEVEL 2",4)
+ local awarded=(m.progress.awards and m.progress.awards[g.number])or{}
+ for i,bonus in ipairs(bonuses)do
+  local y=96+(i-1)*5
+  local done=awarded[bonus.id] or false
+  local label=bonus.id=="sealed" and "NO OPEN PORTS" or
+   (bonus.id=="master" and "ALL STOCK USED" or
+    (bonus.description:match("%d+") or "?").." MOVE PAR")
+  self:rect(117,y,4,4,done and 9 or (bonus.earned and 6 or 3))
+  self:fontFit(124,y,label,done and 9 or (bonus.earned and 6 or 5),70)
  end
- for n,bonus in ipairs(bonuses)do
-  local y=91+(n-1)*7
-  local done=awarded[bonus.id]
-  local label
-  if bonus.id=="sealed"then label="SEAL + POWER ALL"
-  elseif bonus.id=="master"then label="USE ALL STOCK"
-  else label="PAR "..(bonus.description:match("%d+") or "?").." MOVES"end
-  self:rect(119,y,5,5,done and 9 or (bonus.earned and 6 or 3))
-  self:fontFit(128,y,label,done and 9 or (bonus.earned and 6 or 5),65)
+ if #bonuses==0 then self:font(124,99,"FROM LEVEL 2",4)end
+ self:rect(0,113,200,7,1)
+ local status=m.message
+ if status==""then
+  if result.win then status="CLEARED! BONUS TASKS ARE OPTIONAL"
+  elseif result.jam then status="GEARS JAMMED"
+  else status="CW = CLOCKWISE  /  CCW = COUNTERCLOCKWISE"end
  end
- self:rect(0,114,200,6,1)
+ self:fontFit(3,114,status,result.win and 9 or 5,160)
  if result.win then
-  self:fontFit(5,115,"LEVEL CLEAR - NEXT UNLOCKED",9,160)
-  self:button(163,113,36,7,"NEXT","next")
- else
-  self:fontFit(4,115,m.message~="" and m.message or g.name,5,188)
+  self:button(166,113,32,7,"NEXT","next")
  end
 end
 function R:drawTitle(m)
@@ -377,25 +390,29 @@ function R:drawConfirm(m)
  self:button(104,77,68,16,"CONFIRM","confirm")
 end
 function R:drawHelp(m)
- self:page("PARTS AND CONTROLS","SHORT RULES / COMPACT REFERENCE")
+ self:page("MACHINE LEGEND","INPUT PORTS ARE NOT SPIN DIRECTION")
  local left={
-  "S   GENERATOR +1 RPM","M   PRESS = REQUIRED RPM",
-  "I   STRAIGHT SHAFT","L   90 DEG ELBOW",
-  "T   THREE-WAY SPLITTER","G   REVERSES ROTATION",
-  "2   DOUBLES RPM",
+  "S: ENGINE CW 1X","M: PRESS NEEDS CW/CCW",
+  "I: STRAIGHT SHAFT","L: 90 DEG ELBOW",
+  "T: THREE WAY SPLIT","G: FLIPS CW / CCW",
+  "B: DOUBLES SPEED","C: CLUTCH ON / OFF",
+  "Q: FOUR WAY BOX","O: 2X + SPIN REVERSE",
+  "V: SHORT SPAN BELT","D: LONG SPAN CHAIN"
  }
  local right={
-  "TAP EMPTY = PLACE","TAP PART = ROTATE",
-  "REMOVE = RECLAIM","RED END = OPEN PORT",
-  "GREEN = GOAL POWERED","BONUSES ARE OPTIONAL",
-  "AUTO SAVE IS ENABLED",
+  "CW = CLOCKWISE","CCW = COUNTERCW",
+  "GOAL: MATCH SPIN + RPM","TAP EMPTY TO BUILD",
+  "TAP A PART TO ROTATE","REMOVE TO RECLAIM",
+  "SWITCH TO TOGGLE C","PAIR BELT ENDS",
+  "CHAIN BRIDGES 2 CELLS","GEAR FLIPS ROTATION",
+  "BONUSES ARE OPTIONAL","AUTO SAVES PER SLOT"
  }
  for i=1,#left do
-  local y=29+(i-1)*11
-  self:fontFit(9,y,left[i],i<=2 and 6 or 15,87)
-  self:fontFit(107,y,right[i],11,89)
+  local y=23+(i-1)*7
+  self:fontFit(8,y,left[i],i<3 and 6 or 15,91)
+  self:fontFit(105,y,right[i],11,90)
  end
- self:button(68,108,64,10,"BACK","back")
+ self:button(68,109,64,10,"BACK","back")
 end
 function R:drawText(m)
  local t=self.m;local w,h=t.getSize()
