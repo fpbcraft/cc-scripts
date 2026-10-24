@@ -76,7 +76,7 @@ assert(not ok,"Arbitrary catalog entries rejected")
 -- Remote versions can identify both game and store updates without
 -- overwriting any local installation metadata.
 local initialStore=M.storeStatus()
-assert(initialStore.installedVersion=="1.1.0")
+assert(initialStore.installedVersion=="1.1.1")
 local remoteCatalog=[[return {storeVersion="1.2.0",apps={
  {id="cogworks",version="1.2.0"},{id="railbreak",version="2.0.6"},
  {id="tidebound",version="5.1"}}}]]
