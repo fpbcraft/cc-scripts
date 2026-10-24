@@ -1,4 +1,4 @@
--- CIVCRAFT v0.5.0: Railbreak-style 4X with local hotseat or rednet networking
+-- CIVCRAFT v0.6.0: Railbreak-style 4X with local hotseat or rednet networking
 -- Host: /civcraft/game.lua host [--new]  Join: /civcraft/game.lua join [host ID]
 local args={...}
 local MODE=args[1] or 'local'
@@ -7,6 +7,7 @@ local localMode=MODE=='local'
 local SAVE='/civcraft/data/save.dat'
 local slot=1
 local mapSizes={'compact','standard','large'}
+local mapTypes={'continents','archipelago','pangaea','highlands'}
 local function modem()
  for _,side in ipairs(peripheral.getNames()) do
   if peripheral.getType(side)=='modem' then
@@ -36,7 +37,7 @@ local W,H=Hex.width,Hex.height
 local state
 local function terrain(x,y)return Hex.terrain(x,y,state)end
 local function newGame()
- return {version=3,phase='lobby',round=1,turn=1,players={},cities={},units={},nextId=1,logs={'Welcome to CIVCRAFT'},winner=nil,mapSize='standard',mapSeed=12345,name='NEW EMPIRE'}
+ return {version=3,phase='lobby',round=1,turn=1,players={},cities={},units={},nextId=1,logs={'Welcome to CIVCRAFT'},winner=nil,mapSize='standard',mapType='continents',mapSeed=12345,name='NEW EMPIRE'}
 end
 state=newGame()
 local hasHumanSave=false
@@ -67,7 +68,7 @@ local function save()
  fs.move(SAVE..'.tmp',SAVE)
 end
 local function initMap()
- state.world=World.generate(state.mapSeed,state.mapSize,#state.players)
+ state.world=World.generate(state.mapSeed,state.mapSize,#state.players,state.mapType)
  W,H=state.world.width,state.world.height
  state.name='EMPIRE '..state.world.seed
  for i,p in ipairs(state.players)do
@@ -86,15 +87,16 @@ local function winner()
  local lead,best=nil,-1
  for _,p in ipairs(state.players)do
   local cities=0;for _,c in ipairs(state.cities)do if c.owner==p.id then cities=cities+1 end end
-  local score=cities*10+p.tech*6+p.science+p.wood+p.food
+  local researched=0;for _ in pairs(p.techs or {})do researched=researched+1 end
+  local score=cities*20+researched*8+(p.science or 0)
   if score>best then lead,best=p,score end
-  if cities>=5 then state.winner=p.name;state.phase='over';return end
+  if cities>=8 then state.winner=p.name;state.phase='over';return end
  end
- if state.round>25 then state.winner=lead and lead.name;state.phase='over' end
+ if state.round>90 then state.winner=lead and lead.name;state.phase='over' end
 end
 local function nextTurn()
  state.round=state.round+1
- Systems.production(state)
+ Systems.production(state,Hex)
  for _,p in ipairs(state.players)do p.ready=false end
  for _,u in ipairs(state.units)do
   local owner=player(u.owner)
@@ -116,35 +118,23 @@ local function apply(id,req)
  if state.phase~='game' then return false,'Game not running' end
  if p.ready then return false,'Already ended turn' end
  if req.action=='assign' or req.action=='build' or req.action=='recruit'
-    or req.action=='researchTech' then
-  local x,y=tonumber(req.x),tonumber(req.y)
-  local c=x and y and cityAt(x,y)
-  if req.action=='researchTech' then
-   local ok,why=Systems.research(p,req.id)
-   if ok then save()end
-   return ok,why
-  end
-  if not c or c.owner~=id then return false,'Select your city' end
+    or req.action=='researchTech' or req.action=='queue' then
   local ok,why
-  if req.action=='assign' then ok,why=Systems.assign(c,req.from,req.to)
-  elseif req.action=='build' then ok,why=Systems.build(p,c,req.id)
-  elseif req.action=='recruit' then
-   local template=Systems.units[req.id]
-   if not template or not Systems.canRecruit(p,req.id) then
-    return false,'Unit locked or too expensive'
+  if req.action=='researchTech' then
+   ok,why=Systems.research(p,req.id)
+  else
+   local x,y=tonumber(req.x),tonumber(req.y)
+   local c=x and y and cityAt(x,y)
+   if not c or c.owner~=id then return false,'Select an owned city' end
+   if req.action=='assign' then
+    ok,why=Systems.assign(c,req.from,req.to)
+   elseif req.action=='queue' then
+    ok,why=Systems.queue(p,c,req.kind,req.id,state,Hex)
+   elseif req.action=='build' then
+    ok,why=Systems.build(p,c,req.id,state,Hex)
+   elseif req.action=='recruit' then
+    ok,why=Systems.queue(p,c,'unit',req.id,state,Hex)
    end
-   local spawnX,spawnY=x,y
-   if template.naval then
-    spawnX=nil
-    for _,hex in ipairs(Hex.neighbours(x,y,state))do
-     if terrain(hex.x,hex.y)=='water' and not unitAt(hex.x,hex.y)then
-      spawnX,spawnY=hex.x,hex.y;break
-     end
-    end
-    if not spawnX then return false,'Requires an open coastal hex' end
-   elseif unitAt(x,y)then return false,'City occupied' end
-   p.food=p.food-template.food;p.wood=p.wood-template.wood
-   addUnit(id,spawnX,spawnY,req.id);ok=true
   end
   if ok then save()end
   return ok,why
@@ -158,17 +148,8 @@ local function apply(id,req)
  local x,y=tonumber(req.x),tonumber(req.y)
  if not x or not y or not Hex.inBounds(x,y,state) then return false,'Select a tile' end
  local c,u=cityAt(x,y),unitAt(x,y)
- if req.action=='research' then
-  local cost=8+p.tech*6
-  if p.tech>=3 or p.science<cost then return false,'Need '..cost..' science (max III)' end
-  p.science=p.science-cost;p.tech=p.tech+1;log(p.name..' researched tech '..p.tech)
- elseif req.action=='warrior' or req.action=='settler' then
-  if not c or c.owner~=id then return false,'Choose your city' end
-  if u then return false,'City tile occupied' end
-  local food,wood=0,5
-  if req.action=='settler' then food,wood=8,8 end
-  if p.food<food or p.wood<wood then return false,'Not enough resources' end
-  p.food=p.food-food;p.wood=p.wood-wood;addUnit(id,x,y,req.action)
+ if req.action=='research' or req.action=='warrior' or req.action=='settler' then
+  return false,'Use research and city production projects'
  elseif req.action=='move' then
   local sx,sy=tonumber(req.sx),tonumber(req.sy)
   local moving=sx and sy and unitAt(sx,sy)
@@ -231,7 +212,7 @@ if localHost then
   local h=fs.open(SAVE,'r')
   if h then local loaded=textutils.unserialize(h.readAll());h.close()
    if type(loaded)=='table' and loaded.version then
-    state=Systems.migrate(loaded);hasHumanSave=true
+    state=World.migrate(Systems.migrate(loaded));hasHumanSave=true
    end
   end
  elseif args[2]=='--new' and fs.exists(SAVE)then fs.delete(SAVE)end
@@ -451,6 +432,10 @@ local function ui()
    view:tap(b,c);draw()
   elseif e=='mouse_click' and display==term.current()then
    view:tap(b,c);draw()
+  elseif e=='mouse_drag' and display==term.current() then
+   view:drag(b,c);draw()
+  elseif e=='mouse_scroll' and display==term.current() then
+   view:scroll(a,b,c);draw()
   elseif e=='term_resize' or e=='monitor_resize' then
    view:resize();draw()
   elseif e=='key' and keys and (a==keys.q or a==keys.escape)then
