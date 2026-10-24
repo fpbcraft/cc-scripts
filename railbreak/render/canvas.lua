@@ -192,6 +192,20 @@ function R:button(x,y,w,h,title,action,opt)
  if opt.note and h>=4 then self:text(x+2,y+2,opt.note,opt.disabled and 4 or 4,w-3) end
  if not opt.disabled and action then self.buttons[#self.buttons+1]={x=x,y=y,w=w,h=h,fn=action,title=title} end
 end
+-- CC: Graphics replaces monitor_touch with ZERO-based PIXEL coordinates.
+-- In mode 0, vanilla CC:Tweaked reports ONE-based CHARACTER coordinates.
+-- Normalize once here, so button/tile hitboxes remain logical cell rectangles.
+function R:touchCoords(x,y)
+ if type(x)~='number' or type(y)~='number' then return nil,nil end
+ local lx,ly
+ if self.mode=='graphics' then
+  lx=math.floor(x/self.sx);ly=math.floor(y/self.sy)
+ else
+  lx=x-1;ly=y-1
+ end
+ if lx<0 or ly<0 or lx>=self.w or ly>=self.h then return nil,nil end
+ return lx,ly
+end
 function R:hit(x,y)
  for i=#self.buttons,1,-1 do local b=self.buttons[i]
   if x>=b.x and x<b.x+b.w and y>=b.y and y<b.y+b.h then b.fn();return true end

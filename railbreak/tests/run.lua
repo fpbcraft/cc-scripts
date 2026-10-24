@@ -119,25 +119,104 @@ local function mock(w,h,graphics)
  function m.write(s)m.draws=m.draws+1 end
  return m
 end
-for _,size in ipairs({{98,68},{118,85},{137,91},{160,105}})do
+-- CC:Graphics actual monitor_touch: zero-based PIXELS in modes 1/2.
+-- Native CC:Tweaked monitor_touch: one-based CHARACTER cells in mode 0.
+local function tap(app,rect)
+ local xx=rect.x+math.floor((rect.w-1)/2)
+ local yy=rect.y+math.floor((rect.h-1)/2)
+ if app.r.mode=='graphics' then
+  return app:touch(math.floor((xx+.5)*app.r.sx),math.floor((yy+.5)*app.r.sy))
+ end
+ return app:touch(xx+1,yy+1)
+end
+local sizes={
+ {name='3x3',w=80,h=54},
+ {name='4x3',w=106,h=54},
+ {name='4x4',w=106,h=73},
+ {name='5x4',w=135,h=73},
+ {name='4x5',w=106,h=92},
+ {name='5x5',w=135,h=92},
+}
+for _,size in ipairs(sizes)do
  for _,gfx in ipairs({true,false})do
-  local m=mock(size[1],size[2],gfx)
-  local app=App.new(m);app:draw()
-  check(#app.r.buttons>=3,'title menu interactions')
-  local bt=app.r.buttons[1];app:touch(bt.x+1,bt.y+1)
-  check(app.scene=='setup','title menu touch opens setup')
-  app:draw();check(#app.r.buttons>20,'setup keyboard')
-  for _,button in ipairs(app.r.buttons)do check(button.x>=0 and button.y>=0 and button.x+button.w<=m.w and button.y+button.h<=m.h,'setup bounds')end
-  app:newGame()
+  local m=mock(size.w,size.h,gfx)
+  local app=App.new(m)
+  app:draw()
+  check(#app.r.buttons>=3,size.name..' title menu')
+  local opening=app.r.buttons[1]
+  check(tap(app,opening),size.name..' clickable title')
+  check(app.scene=='setup',size.name..' opens setup')
+  app:draw()
+  local letter=nil;for _,button in ipairs(app.r.buttons) do
+   if button.title=='Q' then letter=button;break end
+  end
+  check(letter~=nil,size.name..' keyboard visible')
+  check(tap(app,letter),size.name..' keyboard touch')
+  check(app.names[1]=='Q',size.name..' keyboard enters correct character')
+  local person=nil;for _,button in ipairs(app.r.buttons) do
+   if button.title=='4 PLAYERS' then person=button;break end
+  end
+  check(person~=nil and tap(app,person),size.name..' crew count touch')
+  check(app.playerCount==4,size.name..' selects four players')
+  app:draw()
+  local startButton=nil;for _,button in ipairs(app.r.buttons)do
+   if button.title=='START EXPEDITION' or button.title=='BEGIN EXPEDITION' then startButton=button end
+  end
+  check(startButton~=nil and tap(app,startButton),size.name..' start touch')
+  check(app.scene=='factory' and #app.game.players==4,size.name..' enters factory')
   for _,scene in ipairs({'factory','railway','warehouse','blueprints','help','results'})do
-   app.scene=scene;app:draw();check(m.draws>0,'renders '..scene)
+   app.scene=scene;app:draw();check(m.draws>0,size.name..' renders '..scene)
    for _,button in ipairs(app.r.buttons)do
-    check(button.x>=0 and button.y>=0 and button.x+button.w<=m.w and button.y+button.h<=m.h,'in-bounds touch '..scene..' '..tostring(button.title))
+    check(button.x>=0 and button.y>=0 and button.x+button.w<=m.w and button.y+button.h<=m.h,size.name..' bounds '..scene..' '..tostring(button.title))
    end
   end
-  app.scene='factory';app.selected={x=4,y=4};app:draw()
-  check(#app.r.buttons>30,'every tile touch exposed')
-  check(app.r.mode==(gfx and 'graphics' or 'text'),'graphics fallback mode')
+  app.scene='factory';app:draw()
+  local l=app:layout()
+  check(l.step>=3,size.name..' tile tap target')
+  check(l.x+l.gw<l.side,size.name..' factory fits next to inspector')
+  check(l.y+l.gh<l.bottom,size.name..' factory fits above navbar')
+  check(#app.r.buttons>=S.W*S.H+5,size.name..' every tile touch exposed')
+  local prev=app.game.shift
+  local one=nil;for _,button in ipairs(app.r.buttons)do
+   if button.title=='1X' or button.title=='1 SHIFT' then one=button end
+  end
+  check(one and tap(app,one),size.name..' shift button touch')
+  check(app.game.shift==prev+1,size.name..' shift was executed')
+  -- Factory grid: pressing an occupied press selects exactly (4,4).
+  app:draw()
+  local cx=l.x+3*l.step+1;local cy=l.y+3*l.step+1
+  local rx,ry=cx+1,cy+1
+  if gfx then rx=math.floor((cx+.5)*app.r.sx);ry=math.floor((cy+.5)*app.r.sy)end
+  check(app:touch(rx,ry),size.name..' touch factory tile')
+  check(app.selected and app.selected.x==4 and app.selected.y==4,size.name..' selects intended tile')
+  app:draw()
+  local build=nil;for _,button in ipairs(app.r.buttons)do if button.title=='BUILD' or button.title=='BUILD MACHINES' then build=button end end
+  check(build and tap(app,build),size.name..' enter build mode')
+  check(app.mode=='build',size.name..' build panel appears')
+  app:draw()
+  local nextButton=nil;for _,button in ipairs(app.r.buttons)do if button.title=='NEXT' then nextButton=button end end
+  check(nextButton~=nil,size.name..' build pagination available')
+  if nextButton then tap(app,nextButton);check(app.buildPage>=2,size.name..' build pagination touch')end
+  app.modal='scavenge';app:draw()
+  local cancel=nil;for _,button in ipairs(app.r.buttons)do if button.title=='CANCEL' then cancel=button end end
+  check(cancel and tap(app,cancel),size.name..' modal tap')
+  check(app.modal==nil,size.name..' modal dismisses')
+  app.scene='railway';app:draw()
+  local railway=nil;for _,button in ipairs(app.r.buttons)do if button.title=='BUILD + TRAVEL' or button.title=='BUILD AND TRAVEL' then railway=button;break end end
+  check(railway and tap(app,railway),size.name..' route tap')
+  check(app.modal=='travel',size.name..' travel confirm opens')
+  app.r:resize();app:draw()
+  check(app.r.mode==(gfx and 'graphics' or 'text'),size.name..' gfx/text after resize')
+  check(app.r:touchCoords(-1,0)==nil,size.name..' out-of-bounds negative touch')
+  if gfx then
+   local a,b=app.r:touchCoords(0,0);check(a==0 and b==0,size.name..' zero based origin')
+   local xx,yy=app.r:touchCoords(m.w*6-1,m.h*9-1);check(xx==m.w-1 and yy==m.h-1,size.name..' last pixel')
+   check(app.r:touchCoords(m.w*6,1)==nil,size.name..' outside pixel bounds')
+  else
+   local a,b=app.r:touchCoords(1,1);check(a==0 and b==0,size.name..' 1 based origin')
+   local xx,yy=app.r:touchCoords(m.w,m.h);check(xx==m.w-1 and yy==m.h-1,size.name..' last char')
+   check(app.r:touchCoords(m.w+1,1)==nil,size.name..' outside char bounds')
+  end
  end
 end
 -- Bulk randomized independent runs; commands never admit negative warehouse values.

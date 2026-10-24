@@ -1,6 +1,6 @@
 RAILBREAK: KINETIC FRONTIER
 --------------------------
-1. Connect a 5x5 colour Advanced Monitor to a computer.
+1. Connect a 3x3, 4x3, 4x4, 4x5, 5x4 or 5x5 colour Advanced Monitor to a computer.
 2. Run: wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-railbreak.lua
 3. Run: /railbreak/main.lua
 4. New Expedition -> choose 1-4 engineers -> Start.
@@ -14,3 +14,5 @@ RAILBREAK: KINETIC FRONTIER
 Saves: /railbreak/data/save.lua; installer always keeps data/.
 Optional autostart: run installer with --startup on a dedicated computer.
 See README.md for recipes and gameplay instructions.
+
+TOUCH FIX: Graphics mode uses 0-based pixel touch coordinates; text mode uses 1-based characters. Input maps automatically to the UI.

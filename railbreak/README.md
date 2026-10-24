@@ -1,10 +1,10 @@
 # RAILBREAK: Kinetic Frontier
 
-**Turn-based cooperative factory and railway roguelite for 1–4 players on a 5×5 CC:Tweaked Advanced Monitor.** Inspired by the visible mechanical automation of Minecraft's Create mod. The game runs entirely inside ComputerCraft: it **does not modify or control** real Create machines, Minecraft tracks, or inventories.
+**Turn-based cooperative factory and railway roguelite for 1–4 players on CC:Tweaked Advanced Monitors from 3×3 to 5×5.** Inspired by the visible mechanical automation of Minecraft's Create mod. The game runs entirely inside ComputerCraft: it **does not modify or control** real Create machines, Minecraft tracks, or inventories.
 
 ## Install
 
-On a ComputerCraft computer connected to a **5×5 Advanced Monitor**:
+On a ComputerCraft computer connected to an **Advanced Monitor** (3×3 or larger):
 
 ```sh
 wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-railbreak.lua
@@ -19,7 +19,9 @@ The game selects the largest color monitor automatically. Specify a monitor peri
 /railbreak/main.lua monitor_0
 ```
 
-The game sets monitor text scale to **0.5** and restores the original scale when the program exits. It tries to enable CC: Graphics pixel mode 2 if available, otherwise uses the native colored terminal. It operates on **character-cell touch coordinates** in either mode. A 5×5 Advanced Monitor is the design target; smaller displays show an explicit size warning.
+The game sets monitor text scale to **0.5** and restores the original scale when the program exits. It tries to enable CC: Graphics pixel mode 2 if available, otherwise uses the native colored terminal. The renderer uses character-cell **layout** coordinates, but `monitor_touch` events are mode-specific: native CC:Tweaked supplies **1-based character coordinates**, while CC: Graphics supplies **0-based pixel coordinates**. RAILBREAK converts these at its input boundary using the pixel-to-character scaling returned by `getSize(2)`. No manual calibration is needed.
+
+Supported layouts at monitor scale 0.5: **3×3, 4×3, 4×4, 5×4, 4×5 and 5×5** (and compatible monitors with at least 70×49 text cells). Compact displays use a smaller workshop grid, responsive controls, paginated machine catalog and manual, and stacked railway cards. 5×5 remains the roomiest layout. Touchscreen hitboxes are verified in both graphics and text modes.
 
 ## Play
 
@@ -88,6 +90,12 @@ Run unit/integration tests with Lua 5.3 (`texlua` is sufficient in the developme
 texlua railbreak/tests/run.lua
 ```
 
-Tests cover the working starter conveyor line, warehouse conservation, machine construction, rotation and refunds, kinetic overstress, coal exhaustion, mixed-ingredient processing, route progression, multiplayer setup, and graphical/text display hitboxes at multiple monitor sizes.
+Tests cover the working starter conveyor line, warehouse conservation, machine construction, rotation and refunds, kinetic overstress, coal exhaustion, mixed-ingredient processing, route progression, multiplayer setup, and real pixel-mode and character-mode touch events, interactive buttons, panels, and display hitboxes for all six supported monitor sizes.
 
 **Not yet verified inside Minecraft:** This build has been validated offline against fake CC peripherals, not the actual graphics mod and multiplayer touchscreen. Rendering load, monitor scaling and the optional graphics API must be evaluated in-game. The initial release is a complete, playable **first campaign** rather than the full planned feature set: mechanical arms, complex signal automation, freeform rail track routing and animated encounter puzzles remain future enhancements.
+
+## Display compatibility and touch diagnosis
+
+Use the official CC: Graphics NeoForge build with monitor support if you want pixel rendering. If a touch still behaves strangely, confirm you are running the latest `/railbreak/` files and note the monitor size, graphics mod version, and reported touch event positions (`os.pullEvent("monitor_touch")`). The graphics mod intentionally changes `monitor_touch` to pixel coordinates when the monitor is in graphics mode; this is not the same event format as a normal CC:Tweaked monitor.
+
+Layout adaptations preserve the full 12×8 factory simulation and the same game/save state across monitor resizing. The rendering area and touchscreen hitboxes are recalculated when the monitor changes size.

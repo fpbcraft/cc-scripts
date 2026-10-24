@@ -1,4 +1,4 @@
--- RAILBREAK: KINETIC FRONTIER / CC:Tweaked 5x5 Advanced Monitor
+-- RAILBREAK: KINETIC FRONTIER / CC:Tweaked 3x3 through 5x5 Advanced Monitors
 -- Usage: /railbreak/main.lua [monitor_name]
 local argv={...}
 package.path='/?.lua;/?/init.lua;'..package.path
