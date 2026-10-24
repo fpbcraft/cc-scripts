@@ -56,8 +56,11 @@ click("slot",2)
 model.scene="game";r:draw(model)
 assert(#r.targets>=E.WIDTH*E.HEIGHT+12,"Game includes parts and board hitboxes")
 click("cell",1)
-click("pause");click("save");click("tool","C");click("tool","D")
-click("tool","erase");click("tool","switch")
+click("pause");click("save");click("tool","D")
+click("tool","erase")
+for _,target in ipairs(r.targets)do
+ assert(target.arg~="C" and target.arg~="switch","Clutch control removed")
+end
 assert(gfx.pixels>500,"Graphics rendering should draw components")
 model.scene="pause";r:draw(model)
 click("resume");click("levels");click("settings");click("title")
@@ -69,7 +72,26 @@ model.scene="help";r:draw(model)
 click("back")
 model.scene="confirm";model.pending="newGame";r:draw(model)
 click("confirm");click("cancel")
-assert(gfx.clears==8,"Every scene must clear the whole framebuffer")
+-- Draw the level-six belt: its physical span should cross the stone gap.
+local spanCount=0
+local originalSpan=r.drawSpan
+function r:drawSpan(...)
+ spanCount=spanCount+1
+ return originalSpan(self,...)
+end
+model.game=E.new(6,true)
+model.result=E.evaluate(model.game)
+model.scene="game";r:draw(model)
+assert(spanCount>0,"Gap-spanning belts must be rendered")
+model.scene="tutorial"
+model.tutorial={steps={{key="V",title="BELT TRANSMISSION",
+ lines={"PAIR TWO BELTS","POWER TRAVELS ACROSS GAPS"}}},index=1}
+r:draw(model)
+click("tutorialNext");click("tutorialSkip")
+for _,target in ipairs(r.targets)do
+ assert(target.action~="cell","Ponder must block board interaction")
+end
+assert(gfx.clears==10,"Every scene including Ponder clears the framebuffer")
 assert(r:hitNormalized(-0.1,0.5)==nil and r:hitNormalized(1,0.5)==nil,
  "Out-of-range normalized monitor clicks rejected")
 r:resize();r:close()
@@ -85,10 +107,10 @@ end
 function txt.write(str)txt.writes=txt.writes+#str end
 local plain=R.new(txt)
 assert(plain.mode=="text")
-for _,scene in ipairs({"title","slots","game","pause","settings","levels","help","confirm"})do
+for _,scene in ipairs({"title","slots","game","tutorial","pause","settings","levels","help","confirm"})do
  model.scene=scene;plain:draw(model)
  assert(#plain.targets>0,"Text fallback has buttons on "..scene)
 end
 plain:close()
 assert(txt.writes>0,"Vanilla renderer should draw text")
-print("COGWORKS: compact menus, full monitor clearing, ten parts and touch targets passed.")
+print("COGWORKS: belt spans, info and modal Ponder hit targets passed.")
