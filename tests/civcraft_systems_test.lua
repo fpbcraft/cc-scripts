@@ -1,4 +1,5 @@
 local S=assert(loadfile("civcraft/systems.lua"))()
+local H=assert(loadfile("civcraft/hex.lua"))()
 local state={version=1,nextId=3,players={{id=1,name="P1",civ="verdant",food=30,wood=60,science=50},{id=2,name="P2",ai=true,food=30,wood=60,science=50}},cities={{id=1,owner=1,x=2,y=2}},units={}}
 S.migrate(state)
 local city=state.cities[1];local p=state.players[1]
@@ -24,6 +25,6 @@ local ai=state.players[2]
 state.cities[#state.cities+1]={id=2,owner=2,x=9,y=6,
  population=2,foodStore=0,jobs={food=1,wood=1,science=0},buildings={}}
 ai.ready=false
-S.aiTurn(state,ai)
+S.aiTurn(state,ai,H)
 assert(ai.ready and next(ai.techs)~=nil,"AI researches and ends turn")
 print("CIVCRAFT expanded economy, tech, city population, buildings, units, AI: OK")
