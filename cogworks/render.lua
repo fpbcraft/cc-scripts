@@ -695,6 +695,23 @@ function R:drawText(m)
   label(1,h-3,(part and part.name.." - " or "")..
    (T.descriptions[m.selected]or""),colors.lightBlue)
   label(1,h-2,m.message~=""and m.message or g.name,colors.orange)
+ elseif m.scene=="briefing"then
+  local b=m.briefing
+  label(3,3,string.format("LEVEL %02d / 30",b.number),colors.orange)
+  label(3,5,b.name,colors.yellow)
+  label(3,7,b.tip,colors.lightBlue,nil,w-4)
+  label(3,9,"OBJECTIVES: MATCH SPIN AND RPM",colors.lightBlue)
+  for i,goal in ipairs(b.targets)do
+   label(3,9+i,string.format("%d. %s %sX AT %d,%d",
+    i,goal.spin,tostring(goal.rpm),goal.x,goal.y),colors.white)
+  end
+  local stocks={}
+  for _,part in ipairs(b.stock)do
+   stocks[#stocks+1]=part.kind.."="..part.count
+  end
+  label(3,16,"PARTS: "..table.concat(stocks,"  "),colors.yellow,nil,w-4)
+  label(3,17,"BONUS GOALS ARE OPTIONAL",colors.lightBlue)
+  btn(3,18,18,"START LEVEL","beginLevel")
  elseif m.scene=="tutorial"then
   local current=m.tutorial.steps[m.tutorial.index]
   label(3,4,"PONDER  "..m.tutorial.index.."/"..#m.tutorial.steps,colors.orange)
@@ -742,7 +759,7 @@ function R:drawText(m)
   else
    label(2,4,"S: SOURCE  M: TARGET   I: SHAFT")
    label(2,6,"L: ELBOW   T: SPLITTER   G: GEAR")
-   label(2,8,"2: DOUBLE RPM; C: CLUTCH ON/OFF")
+   label(2,8,"B: DOUBLE RPM; Q: GEARBOX")
    label(2,9,"Q: BOX   O: LARGE COG  V: BELT  D: CHAIN")
    choices={{"BACK","back"}}
    if m.scene=="help" and m.game and #T.forLevel(m.game.number)>0 then
@@ -759,6 +776,7 @@ function R:draw(m)
  if mon.setFrozen then pcall(mon.setFrozen,true)end
  mon.drawPixels(0,0,0,self.pw,self.ph)
  if m.scene=="game"then self:drawGame(m)
+ elseif m.scene=="briefing"then self:drawBriefing(m)
  elseif m.scene=="tutorial"then self:drawTutorial(m)
  elseif m.scene=="title"then self:drawTitle(m)
  elseif m.scene=="slots"then self:drawSlots(m)
