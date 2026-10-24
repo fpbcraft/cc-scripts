@@ -6,7 +6,10 @@ local function ensure(path)
 end
 local function fetch(url)
  assert(http and http.get,"HTTP must be enabled")
- local response,err=http.get(url,nil,true)
+ -- Bust intermediary HTTP caches so versions and installers reflect main.
+ local separator=url:find("?",1,true) and "&" or "?"
+ local nonce=os.epoch and os.epoch("utc") or math.floor(os.clock()*1000)
+ local response,err=http.get(url..separator.."fpbstore_cb="..tostring(nonce),nil,true)
  assert(response,"Download failed: "..tostring(err))
  local status=response.getResponseCode and response.getResponseCode()or 200
  local data=response.readAll();response.close()
@@ -103,16 +106,14 @@ function M.install(app,ref)
  local code=fetch(M.BASE..ref.."/"..app.installer)
  local chunk,err=load(code,"@"..app.installer,"t")
  assert(chunk,"Invalid installer: "..tostring(err))
- ensure("/fpbstore")
- local file="/fpbstore/.installer-"..app.id..".lua"
- write(file,code)
- -- shell.run gives the installer the same CraftOS environment as wget run.
- local ok,result=pcall(function()
-  assert(shell and shell.run,"CraftOS shell required")
-  return shell.run(file,ref,"--no-startup")
+ -- Execute the fetched chunk directly so errors retain their Lua stack and
+ -- message. shell.run collapses execution failures to a bare false.
+ local ok,result=xpcall(function()
+  return chunk(ref,"--no-startup")
+ end,function(e)
+  return tostring(e)..(debug and debug.traceback and ("\n"..debug.traceback()) or "")
  end)
- if fs.exists(file)then fs.delete(file)end
- assert(ok and result,"Installation failed: "..tostring(ok and result or result))
+ assert(ok,"Installation of "..app.name.." failed:\n"..tostring(result))
  assert(M.installed(app),"Installer returned without installing "..app.name)
  ensure("/fpbstore/installed")
  write("/fpbstore/installed/"..app.id..".dat",
