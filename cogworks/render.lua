@@ -467,7 +467,7 @@ function R:drawBriefing(m)
   if tick>=10+i*2 then
    self:rect(13,y-1,96,7,i%2==0 and 2 or 1)
    self:rect(15,y,4,4,goal.spin=="CCW" and 14 or 9)
-   local caption=string.format("%d  %s %sX  @%d,%d",
+   local caption=string.format("%d  %s %sX  C%d R%d",
     goal.number,goal.spin,tostring(goal.rpm),goal.x,goal.y)
    self:fontFit(22,y,caption,15,86)
   else
