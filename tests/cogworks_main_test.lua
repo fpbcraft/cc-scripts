@@ -1,75 +1,101 @@
--- Runtime smoke test: monitor scale, standard touch, addon button-aware removal.
+-- Mock game loop, Advanced Monitor, save slots, and right-click extension.
 package.path="./?.lua;./?/init.lua;"..package.path
-local E=require("cogworks.engine")
 colors={black=32768,white=1,gray=128,lightGray=256,orange=2,
  lightBlue=8,yellow=16,green=8192,blue=2048,lime=32,red=16384,brown=4096}
-local m={w=55,h=35,scale=1,writes=0,history={}}
-function m.getSize()return m.w,m.h end
-function m.getTextScale()return m.scale end
-function m.setTextScale(scale)m.scale=scale;m.history[#m.history+1]=scale end
-function m.setBackgroundColor(_)end
-function m.setTextColor(_)end
-function m.clear()end
-function m.setCursorPos(x,y)
- assert(x>=1 and x<=m.w and y>=1 and y<=m.h,"Invalid monitor cursor")
+local monitor={w=70,h=40,scale=1,writes=0,history={}}
+function monitor.getSize()return monitor.w,monitor.h end
+function monitor.getTextScale()return monitor.scale end
+function monitor.setTextScale(v)
+ monitor.scale=v;monitor.history[#monitor.history+1]=v
 end
-function m.write(s)m.writes=m.writes+#s end
-function m.isColor()return true end
+function monitor.setBackgroundColor()end
+function monitor.setTextColor()end
+function monitor.clear()end
+function monitor.isColor()return true end
+function monitor.setCursorPos(x,y)
+ assert(x>=1 and y>=1 and x<=monitor.w and y<=monitor.h,"Text cursor invalid")
+end
+function monitor.write(text)monitor.writes=monitor.writes+#text end
 peripheral={
  getNames=function()return {"monitor_1"}end,
- getType=function(side)if side=="monitor_1"then return "monitor"end end,
- wrap=function(side)if side=="monitor_1"then return m end end,
+ getType=function(side)return side=="monitor_1" and "monitor" or nil end,
+ wrap=function(side)return side=="monitor_1" and monitor or nil end,
 }
-local saved={}
-local store={}
+local files,dirs={},{}
+local history={}
+local values={}
+local sequence=0
+local function copy(t)
+ if type(t)~="table"then return t end
+ local result={}
+ for k,v in pairs(t)do result[k]=copy(v)end
+ return result
+end
 fs={}
-function fs.exists(path)return store[path]~=nil end
+function fs.exists(path)return files[path]~=nil or dirs[path]~=nil end
+function fs.makeDir(path)dirs[path]=true end
+function fs.delete(path)files[path]=nil;dirs[path]=nil end
+function fs.move(a,b)
+ assert(files[a]~=nil,"Missing file for rename "..a)
+ files[b]=files[a];files[a]=nil
+end
 function fs.open(path,mode)
  if mode=="r"then
-  if not store[path]then return nil end
-  return {readAll=function()return store[path]end,close=function()end}
+  if files[path]==nil then return nil end
+  local data=files[path]
+  return {readAll=function()return data end,close=function()end}
  end
- assert(mode=="w","Unexpected mode")
- return {write=function(s)store[path]=s end,close=function()end}
+ assert(mode=="w")
+ local data=""
+ return {write=function(s)data=data..s end,
+  close=function()files[path]=data end}
 end
-function fs.delete(path)store[path]=nil end
-function fs.move(a,b)assert(store[a]);store[b]=store[a];store[a]=nil end
 textutils={
  serialize=function(data)
-  local savedData={unlocked=data.unlocked,level=data.level,bonuses=data.awards}
-  local stage=data.sessions[data.level]
-  savedData.parts=stage and stage.parts or {}
-  saved[#saved+1]=savedData
-  return "MOCK_SAVE"
+  sequence=sequence+1
+  local id="SERIAL:"..sequence
+  values[id]=copy(data)
+  if data.sessions and data.level then
+   history[#history+1]=copy(data)
+  end
+  return id
  end,
- unserialize=function(_)return nil end,
+ unserialize=function(data)return values[data]and copy(values[data]) or nil end,
 }
 local events={
- {"monitor_touch","monitor_1",14,10}, -- standard right-click, place shaft
- {"monitor_touch","monitor_1",14,10,2}, -- addon supplies right button, remove
- {"char","q"},
+ {"monitor_touch","monitor_1",6,13},  -- title: save slots
+ {"monitor_touch","monitor_1",5,5},   -- new game slot 1
+ {"monitor_touch","monitor_1",10,10}, -- vanilla right click places a shaft
+ {"monitor_touch","monitor_1",10,10,2}, -- button-aware addon removes
+ {"char","q"},                        -- pause
+ {"monitor_touch","monitor_1",6,24}, -- title menu
+ {"char","q"},                        -- exit
 }
-local position=0
-local pull=os.pullEventRaw
-local timer=os.startTimer
+local counter=0
+local oldPull,oldTimer=os.pullEventRaw,os.startTimer
 os.startTimer=function()return 1 end
 os.pullEventRaw=function()
- position=position+1
- assert(events[position],"Unexpected event poll")
- return table.unpack(events[position])
+ counter=counter+1
+ assert(events[counter],"No more mock events")
+ return table.unpack(events[counter])
 end
 local ok,err=pcall(function()
- local game=assert(loadfile("cogworks/main.lua"))
- game()
+ assert(loadfile("cogworks/main.lua"))()
 end)
-os.pullEventRaw=pull
-os.startTimer=timer
+os.pullEventRaw,os.startTimer=oldPull,oldTimer
 assert(ok,tostring(err))
-assert(m.writes>0,"Main should render")
-assert(m.history[1]==0.5,"Main must force monitor scale to 0.5")
-assert(m.scale==1,"Main must restore previous monitor scale")
-assert(#saved==2,"Both placement and remove need to save")
-assert(#saved[1].parts==1 and saved[1].parts[1].kind=="I",
- "Vanilla right-click should build/rotate")
-assert(#saved[2].parts==0,"Extended button 2 should remove directly")
-print("COGWORKS: monitor scale and optional button-aware input passed.")
+assert(counter==#events,"All scenes must consume their test events")
+assert(monitor.history[1]==0.5,"Startup sets monitor text scale to 0.5")
+assert(monitor.scale==1,"Exit restores previous monitor scale")
+assert(monitor.writes>50,"Monitor should draw the title and game screens")
+assert(files["/cogworks/saves/slot-1.dat"],"Save slot should exist")
+local placed,removed=false,false
+for _,progress in ipairs(history)do
+ local parts=progress.sessions and progress.sessions[1]and
+  progress.sessions[1].parts or {}
+ if #parts==1 and parts[1].kind=="I"then placed=true end
+ if placed and #parts==0 then removed=true end
+end
+assert(placed and removed,"Regular touch places and explicit button 2 removes")
+assert(files["/cogworks/settings.dat"],"Settings should persist")
+print("COGWORKS: title, save, pause, exit, 0.5 scale and touch controls passed.")
