@@ -1,4 +1,4 @@
--- FPBCRAFT TIDEBOUND installer/updater v5.4
+-- FPBCRAFT TIDEBOUND installer/updater v5.5
 -- wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-tidebound.lua
 -- Optional: <branch-or-tag> [--startup]; never changes startup by default.
 local args={...};local ref,autostart='main',false
@@ -99,7 +99,7 @@ if autostart then
   write('/startup.lua',launcher);print('Autostart enabled')
  end
 else print('Autostart unchanged (--startup to opt in)')end
-print('Installed SHATTERED EXPANSE v5.4. All saves preserved.')
+print('Installed SHATTERED EXPANSE v5.5. All saves preserved.')
 print('PLAY  /tidebound/tidebound.lua')
 
 print('SAVES /tidebound/v5-save.dat (+ .bak)')
