@@ -100,7 +100,6 @@ local function start()
      if not act("tool",E.order[n])then break end
     elseif char=="0"then act("tool",E.order[10])
     elseif char=="x"then act("tool","erase")
-    elseif char=="t"then act("tool","switch")
     elseif char=="s"then act("save")
     elseif char=="n"then act("next")
     elseif char=="p" or char=="q"then
