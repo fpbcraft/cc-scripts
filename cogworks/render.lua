@@ -79,9 +79,9 @@ function R:resize()
   local ok,w,h=pcall(self.m.getSize,2)
   if ok and type(w)=="number"then
    self.pw,self.ph=w,h
-   self.scale=math.min(w/128,h/88)
-   self.ox=math.floor((w-128*self.scale)/2)
-   self.oy=math.floor((h-88*self.scale)/2)
+   self.scale=math.min(w/200,h/120)
+   self.ox=math.floor((w-200*self.scale)/2)
+   self.oy=math.floor((h-120*self.scale)/2)
   end
  else self.tw,self.th=self.m.getSize()end
 end
