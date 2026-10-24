@@ -13,6 +13,12 @@ jobs:
       - name: Syntax check all Lua files
         run: |
           find . -type f -name '*.lua' -not -path './.git/*' -print0 | xargs -0 -n1 luac5.3 -p
+      - name: COGWORKS kinetic puzzle tests
+        run: lua5.3 tests/cogworks_test.lua
+      - name: COGWORKS graphics and touch regression
+        run: lua5.3 tests/cogworks_renderer_test.lua
+      - name: COGWORKS installer rollback and saves
+        run: lua5.3 tests/cogworks_installer_test.lua
       - name: Factory core mock tests
         run: lua5.3 tests/core_test.lua
       - name: Airship Basalt mock UI
