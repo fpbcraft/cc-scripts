@@ -96,3 +96,16 @@ Run offline tests from repository root with `texlua tidebound/tests/v5.lua ./tid
 ## Play without an external monitor
 
 The game also runs on the computer's **built-in terminal**. Launch normally without connecting a monitor; the game automatically switches to its text-mode computer viewport. The built-in screen is smaller than the game canvas, so **arrow keys pan**, the **mouse wheel scrolls vertically**, and **left-click selects** controls or board cells. A footer shows the visible viewport position. Attaching an Advanced Monitor still uses the usual full-screen UI and touch controls.
+
+## Native CraftOS-PC / iOS graphics
+
+Without an attached monitor, the game now checks the **real computer terminal**
+for CraftOS-PC mode-2 graphics (`setGraphicsMode`, `drawPixels`) before
+creating any text-only virtual viewport. Native graphics use the emulator's
+pixel dimensions and pixel-coordinate mouse events. Attached monitors retain
+priority; ordinary CC:Tweaked computers without pixel graphics still use the
+scrollable text fallback. The graphics renderer restores text mode on exit.
+
+The existing custom game graphics remain independent of Basalt. Basalt is
+currently optional for FPB Store's terminal UI; a full game-screen migration is
+a separate follow-up rather than a dependency of this native-graphics update.
