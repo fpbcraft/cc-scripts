@@ -112,7 +112,7 @@ for _,size in ipairs(sizes)do for _,gfx in ipairs({true,false})do
  local function draw(screen)ui.screen=screen;local ok,err=pcall(function()ui:draw()end);test(ok,screen..' '..tostring(err))end
  local function tap(b)
   local x=math.floor(b.x+b.w/2);local y=math.floor(b.y+b.h/2)
-  if gfx then return ui:monitorTouch(x*ui.r.px,y*ui.r.py)end
+  if gfx then return ui:monitorTouch((ui.r.ox or 0)+x*ui.r.px,(ui.r.oy or 0)+y*ui.r.py)end
   return ui:monitorTouch(x+1,y+1)
  end
  draw('title');local btn=ui.r.buttons[1];test(btn.label=='NEW CAMPAIGN');test(tap(btn));test(ui.screen=='setup','setup transition')
