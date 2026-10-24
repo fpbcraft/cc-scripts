@@ -178,6 +178,10 @@ function UI:draw(state,playerID,opts)
    end
   end
   local y=h-37
+  r:text(13,y-27,"MAP "..tostring(state.mapSize or "STANDARD"):upper()..
+   " / SEED "..tostring(state.mapSeed or 12345),8,1,w-25)
+  r:button(12,y-15,52,12,"MAP SIZE",function()self:command("mapSize")end)
+  r:button(68,y-15,58,12,"REROLL SEED",function()self:command("mapSeed")end)
   if opts.localMode then
    r:button(12,y,40,15,"- PLAYER",function()self:command("removePlayer")end)
    r:button(56,y,40,15,"+ PLAYER",function()self:command("addPlayer")end)
