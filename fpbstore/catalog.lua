@@ -41,5 +41,13 @@ return {
     "expanse-v5/render.lua","expanse-v5/ui.lua"},
    saves={"/tidebound/v5-save.dat","/tidebound/v5-save.dat.bak"},
   },
+  {
+   id="civcraft",name="CIVCRAFT",subtitle="POCKET CIVILIZATION",
+   description="Networked 2-4 player civilization-building 4X.",
+   icon="V",genre="4X / STRATEGY",root="/civcraft",
+   entry="/civcraft/game.lua",installer="install-civcraft.lua",
+   managedFiles={"game.lua","README.md"},
+   saves={"/civcraft/data"},
+  },
  }
 }
