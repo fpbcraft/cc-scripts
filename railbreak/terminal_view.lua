@@ -13,7 +13,7 @@ function V.new(native,width,height)
   for x=1,width do row[x]=blank()end
   self.cells[y]=row
  end
- local m={}
+ local m={terminal=true}
  function m.getSize()return self.width,self.height end
  function m.isColor()return native.isColor and native.isColor() or false end
  m.isColour=m.isColor
@@ -134,12 +134,13 @@ function V.new(native,width,height)
  function m.present()refresh()end
  function m.pan(dx,dy)
   local w,h=native.getSize()
-  self.ox=math.max(0,math.min(width-w,self.ox+dx))
-  self.oy=math.max(0,math.min(height-h+1,self.oy+dy))
+  self.ox=math.max(0,math.min(math.max(0,width-w),self.ox+dx))
+  self.oy=math.max(0,math.min(math.max(0,height-h+1),self.oy+dy))
   refresh()
  end
  function m.mouse(x,y)
-  if x<1 or y<1 or y>=native.getSize()then return nil end
+  local w,h=native.getSize()
+  if x<1 or x>w or y<1 or y>=h then return nil end
   return x+self.ox,y+self.oy
  end
  function m.viewport()return self.ox,self.oy end
