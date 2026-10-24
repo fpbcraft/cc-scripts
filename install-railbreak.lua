@@ -14,7 +14,7 @@ assert(fs,'Installer requires CraftOS filesystem')
 local ROOT='/railbreak';local NEXT=ROOT..'/.install-next';local PREVIOUS=ROOT..'/.install-backup'
 local remote='https://raw.githubusercontent.com/fpbcraft/cc-scripts/'..ref..'/railbreak/'
 local files={
- 'main.lua','terminal_view.lua','core/util.lua','content/catalog.lua','game/state.lua','game/kinetics.lua',
+ 'main.lua','display.lua','terminal_view.lua','core/util.lua','content/catalog.lua','game/state.lua','game/kinetics.lua',
  'game/processing.lua','game/commands.lua','render/canvas.lua','ui/app.lua',
  'platform/storage.lua','README.md','QUICKSTART.txt',
  'classic.lua','train/catalog.lua','train/state.lua','train/rules.lua',
