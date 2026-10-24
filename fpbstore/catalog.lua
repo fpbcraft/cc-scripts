@@ -40,11 +40,11 @@ return {
    saves={"/tidebound/v5-save.dat","/tidebound/v5-save.dat.bak"},
   },
   {
-   version="0.1.1",id="civcraft",name="CIVCRAFT",subtitle="POCKET CIVILIZATION",
+   version="0.2.0",id="civcraft",name="CIVCRAFT",subtitle="POCKET CIVILIZATION",
    description="Networked 2-4 player civilization-building 4X.",
    icon="V",genre="4X / STRATEGY",root="/civcraft",
    entry="/civcraft/game.lua",installer="install-civcraft.lua",
-   managedFiles={"game.lua","README.md"},
+   managedFiles={"game.lua","render.lua","ui.lua","README.md"},
    saves={"/civcraft/data"},
   },
  }

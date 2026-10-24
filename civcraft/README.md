@@ -48,3 +48,11 @@ Each machine needs a peripheral modem for networked play; wired modems need to b
 The host maintains the only authoritative world state, checks unit ownership and resource costs, and broadcasts snapshots. Clients display those snapshots and submit commands; they never directly modify the host state. This is a cooperative local network game, not an adversarial or cryptographically secure network protocol. There is no AI in this first edition. For now, a game requires at least 2 connected human computers to start.
 
 The initial release is intentionally small. Natural next steps are procedural maps, diplomacy, tactical combat, city upgrades, fog of war, AI seats, richer graphics, and reconnect/lobby management.
+
+## Local hot-seat mode (2–4 players, one computer)
+
+Run `/civcraft/game.lua local`. From the lobby, add or remove participants (two to four), then start the match. Each player uses the same screen and passes it along after pressing **END TURN**. The handoff screen hides the map and resources until the next player taps **READY TO PLAY**. No modem, rednet, network connection or second computer is required. Hot-seat progress is saved separately at `/civcraft/data/local-save.dat`, so network saves remain untouched. Start a new local match with `/civcraft/game.lua local --new` (which replaces only the local save).
+
+### Updated graphics
+
+CIVCRAFT now uses a pixel-art map, icon-based units and cities, a dark Railbreak-inspired UI, large touch targets, a compact local-player lobby, and a dynamically scaled renderer. The game continues to work in ordinary text terminals without pixel graphics, with fewer visual details.

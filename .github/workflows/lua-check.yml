@@ -15,6 +15,10 @@ jobs:
           find . -type f -name '*.lua' -not -path './.git/*' -print0 | xargs -0 -n1 luac5.3 -p
       - name: FPB Store catalog and safe lifecycle
         run: lua5.3 tests/fpbstore_test.lua
+      - name: CIVCRAFT local hotseat multiplayer
+        run: lua5.3 tests/civcraft_hotseat_test.lua
+      - name: CIVCRAFT responsive graphics and touch
+        run: lua5.3 tests/civcraft_ui_test.lua
       - name: Store launch without package and require
         run: lua5.3 tests/fpbstore_package_free_boot_test.lua
       - name: Store full self-update without Lua package API
