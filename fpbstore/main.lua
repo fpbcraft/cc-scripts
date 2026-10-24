@@ -68,7 +68,6 @@ if args[1]~="--classic" then
      assert(updated,err or "Updated Store missing")
      updated()
      return
-     return
     end
    end
    restoreScreen()
@@ -259,7 +258,6 @@ local function run()
    -- Layout is recomputed from real available columns and rows.
   elseif ev=="mouse_click" or ev=="monitor_touch"then
    local tx,ty=b,c
-   if ev=="monitor_touch"then tx,ty=b,c end
    for _,hit in ipairs(buttons)do
     if tx>=hit.x and tx<hit.x+hit.w and ty==hit.y then
      if perform(hit.action,hit.arg)=="exit"then return end
