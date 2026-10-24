@@ -219,13 +219,22 @@ function R:paletteRow(y,kind,count,selected)
   self:font(118,y+2,tostring(count),enabled and 9 or 4)
  end
 end
-function R:graphics(g,result,unlocked,selected,message)
+function R:graphics(g,result,unlocked,selected,message,awards)
  local m=self.m
  if m.setFrozen then pcall(m.setFrozen,true)end
+ -- Clear the *actual* mode-2 pixel surface, not only the 128x88 inset.
+ -- Leftover pixels otherwise keep the monitor's initial (white) background.
+ m.drawPixels(0,0,0,self.pw,self.ph)
  self:rect(0,0,128,88,0)
  self:rect(0,0,128,12,1);self:rect(0,11,128,1,7)
  self:font(4,3,"COGWORKS",6)
  self:font(42,3,"L"..g.number.."/"..#E.levels,11)
+ local total,done=0,0
+ for _,bonus in ipairs(E.challenges(g,result))do
+  total=total+1
+  if awards and awards[bonus.id] then done=done+1 end
+ end
+ if total>0 then self:font(58,3,"B"..done.."/"..total,done==total and 9 or 6)end
  self:rect(76,1,12,9,2);self:font(78,3,"<",15)
  self:rect(89,1,12,9,2);self:font(92,3,">",15)
  self:rect(103,1,24,9,2);self:font(107,3,"RESET",15)
@@ -260,20 +269,15 @@ function R:graphics(g,result,unlocked,selected,message)
   self:paletteRow(20+(n-1)*9,kind,g.remaining[kind] or 0,selected)
  end
  self:paletteRow(65,"erase",0,selected)
- self:rect(81,74,21,5,3);self:font(83,74,"HINT",15)
- self:rect(104,74,22,5,3);self:font(107,74,"HELP",15)
+ self:rect(81,74,14,5,3);self:font(82,74,"HNT",15)
+ self:rect(96,74,13,5,3);self:font(100,74,"?",15)
+ self:rect(110,74,17,5,3);self:font(111,74,"BNS",6)
  self:rect(0,80,128,8,1)
  local status=message
  if not status or status==""then
-  if result.win then status="SOLVED! NEXT LEVEL AT TOP"
+  if result.win then status="LEVEL CLEARED! BONUS TASKS AVAILABLE"
   elseif result.jam then status="JAM! CHECK GEARS AND DRIVES"
-  elseif g.fullNetwork and result.correct==result.goals then
-   if result.remaining>0 then status="USE "..result.remaining.." REMAINING PARTS"
-   elseif result.openPorts>0 then status="CLOSE "..result.openPorts.." OPEN PORTS"
-   elseif result.unpowered>0 then status="POWER EVERY PLACED PART"end
-  elseif selected=="erase"then status="REMOVE: TAP A PLACED PART"
-  elseif g.fullNetwork and self.frame%40<20 then
-   status="STOCK "..result.remaining.."  OPEN "..result.openPorts.."  GOALS "..result.correct.."/"..result.goals
+  elseif selected=="erase"then status="REMOVE TOOL: TAP A PLACED PART"
   else status=g.name end
  end
  self:font(3,82,status:sub(1,31),result.win and 9 or (result.jam and 8 or 5))
@@ -302,7 +306,7 @@ function R:helpGraphics()
   self:font(21,y+2,row[2],15)
  end
  self:rect(0,77,128,11,1)
- self:font(5,79,"ALL STOCK USED. NO LOOSE PORTS.",6)
+ self:font(5,79,"GOALS UNLOCK NEXT / BONUS IS OPTIONAL",6)
  self:font(104,79,"BACK",9)
  if m.setFrozen then pcall(m.setFrozen,false)end
 end
@@ -344,7 +348,7 @@ function R:text(g,result,unlocked,selected,message)
    n..":"..kind.." "..(g.remaining[kind] or 0))
  end
  fillText(m,1,h-4,w,colors.white,colors.black,
-  " Tap cell to place/turn; 6 remove.")
+  " Main: targets. Bonuses: C / click BONUS.")
  fillText(m,1,h-3,w,colors.orange,colors.black,
   (selected=="erase" and "REMOVE" or (E.parts[selected] and E.parts[selected].name or ""))..
   ": "..(message or g.tip))
@@ -371,31 +375,78 @@ function R:helpText()
   "2: two-times speed controller",
   "X: stone, cannot build here",
   "",
-  "Advanced: use every stock part",
-  "Advanced: connect every open port",
-  "Red end caps show open ports",
-  "Advanced: all parts must be powered",
+  "MAIN GOAL: POWER ALL TARGETS",
+  "BONUS: SEALED PORTS / NO IDLE PARTS",
+  "BONUS: USE ALL STOCK AND POWER IT",
+  "BONUS: HINT-FREE / MOVE BUDGET",
+  "RED ENDS SHOW LOOSE CONNECTIONS",
   "Tap empty cell to place chosen part",
   "Tap placed part to rotate it",
   "Remove reclaims the part",
   "1-5: select parts; 6: remove",
-  "H: hint  R: reset  Q: quit",
+  "H: hint  C: bonuses  Q: quit",
  }
  for i,str in ipairs(info)do if i+2<h then
   fillText(m,1,i+2,w,colors.white,colors.black,str)
  end end
  fillText(m,1,h-1,w,colors.orange,colors.black," TAP TO RETURN")
 end
-function R:draw(g,result,unlocked,selected,message,help)
- if help then
+-- Optional mastery challenges never block ordinary level progression.
+function R:bonusGraphics(g,result,awards)
+ local m=self.m
+ if m.setFrozen then pcall(m.setFrozen,true)end
+ m.drawPixels(0,0,0,self.pw,self.ph)
+ self:rect(0,0,128,88,0)
+ self:rect(0,0,128,12,1)
+ self:font(4,3,"BONUS CONTRACTS",6)
+ self:font(106,3,"BACK",9)
+ self:font(4,15,"L"..g.number.." "..g.name,11)
+ self:font(4,23,"MAIN: POWER ALL PRESSES",result.win and 9 or 15)
+ local items=E.challenges(g,result)
+ if #items==0 then
+  self:font(4,37,"BONUSES START ON LEVEL 2",4)
+ else
+  for i,bonus in ipairs(items)do
+   local y=31+(i-1)*15
+   local done=awards and awards[bonus.id]
+   self:rect(3,y,122,13,1)
+   self:rect(6,y+2,9,9,done and 9 or 3)
+   self:font(9,y+4,done and "+" or "-",done and 0 or 15)
+   self:font(19,y+1,bonus.name,done and 9 or 6)
+   self:font(19,y+7,bonus.description,15)
+  end
+ end
+ self:rect(0,81,128,7,1)
+ self:font(4,82,"EARN BONUSES WHEN A LEVEL IS SOLVED",5)
+ if m.setFrozen then pcall(m.setFrozen,false)end
+end
+function R:bonusText(g,result,awards)
+ local m=self.m
+ local w,h=m.getSize()
+ m.setBackgroundColor(colors.black);m.setTextColor(colors.white);m.clear()
+ fillText(m,1,1,w,colors.orange,colors.gray," BONUS CONTRACTS - LEVEL "..g.number)
+ fillText(m,1,3,w,colors.white,colors.black," MAIN: POWER ALL TARGET MACHINES")
+ for i,bonus in ipairs(E.challenges(g,result))do
+  local done=awards and awards[bonus.id]
+  fillText(m,1,4+i*3,w,done and colors.lime or colors.orange,colors.black,
+   (done and "[X] " or "[ ] ")..bonus.name)
+  fillText(m,3,5+i*3,w,colors.lightGray,colors.black,bonus.description)
+ end
+ fillText(m,1,h-1,w,colors.orange,colors.black," TAP TO RETURN / C: CLOSE")
+end
+function R:draw(g,result,unlocked,selected,message,screen,awards)
+ if screen=="bonuses" then
+  if self.mode=="graphics"then self:bonusGraphics(g,result,awards)
+  else self:bonusText(g,result,awards)end
+ elseif screen then
   if self.mode=="graphics"then self:helpGraphics()else self:helpText()end
- elseif self.mode=="graphics"then self:graphics(g,result,unlocked,selected,message)
+ elseif self.mode=="graphics"then self:graphics(g,result,unlocked,selected,message,awards)
  else self:text(g,result,unlocked,selected,message)end
 end
-function R:hit(x,y,help)
+function R:hit(x,y,screen)
  if self.mode=="graphics"then
   x=(x-self.ox)/self.scale;y=(y-self.oy)/self.scale
-  if help then return "back"end
+  if screen then return "back"end
   if x>=self.boardX and x<self.boardX+E.WIDTH*self.cell and
    y>=self.boardY and y<self.boardY+E.HEIGHT*self.cell then
    local col=math.floor((x-self.boardX)/self.cell)+1
@@ -410,7 +461,9 @@ function R:hit(x,y,help)
     return "tool",E.order[n]
    elseif y>=65 and y<73 then return "tool","erase"
    elseif y>=74 and y<80 then
-    if x<103 then return "hint"else return "help"end
+    if x<96 then return "hint"
+    elseif x<110 then return "help"
+    else return "bonuses"end
    end
   end
   if y>=1 and y<10 then
@@ -419,7 +472,7 @@ function R:hit(x,y,help)
    elseif x>=103 and x<127 then return "reset"end
   end
  else
-  if help then return "back"end
+  if screen then return "back"end
   if self.tx and self.ty and x>=self.tx and x<self.tx+E.WIDTH*6 and
    y>=self.ty and y<self.ty+E.HEIGHT*3 then
    local col=math.floor((x-self.tx)/6)+1
