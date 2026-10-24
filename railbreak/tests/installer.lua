@@ -4,11 +4,21 @@ local root=script:match('^(.*)/railbreak/tests/[^/]+$') or '.'
 local files,dirs={},{}
 local failFile=nil
 local bootFails=false;local bootChecks=0
-shell={}
-function shell.run(path,arg)
- bootChecks=bootChecks+1
- assert(path=='/railbreak/main.lua' and arg=='--test-api','incorrect boot invocation')
- return not bootFails and files['/railbreak/main.lua']~=nil and files['/railbreak/train/ui.lua']~=nil and files['/railbreak/train/info.lua']~=nil
+-- Simulate the CraftOS iOS environment: no shell.run is available.
+shell=nil
+local normalLoadfile=loadfile
+loadfile=function(path,...)
+ if path=='/railbreak/main.lua' then
+  return function(arg)
+   bootChecks=bootChecks+1
+   assert(arg=='--test-api','incorrect boot argument')
+   if bootFails then error('Simulated boot failure')end
+   if not files['/railbreak/main.lua'] or not files['/railbreak/train/ui.lua'] or
+    not files['/railbreak/train/info.lua']then error('Missing installed module')end
+   return {UI={},State={},Rules={}}
+  end
+ end
+ return normalLoadfile(path,...)
 end
 local function combine(a,b)return (a..'/'..b):gsub('//+','/')end
 local function getDir(p)return (p:match('^(.*)/[^/]*$') or '')end

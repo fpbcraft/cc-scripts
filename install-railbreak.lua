@@ -1,4 +1,4 @@
--- FPBCRAFT RAILBREAK / safe one-command installer and updater (v2.0.6)
+-- FPBCRAFT RAILBREAK / safe one-command installer and updater (v2.0.7)
 -- wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-railbreak.lua
 -- Optional: <git ref> --startup. Existing startup scripts are never silently overwritten.
 local args={...}
@@ -64,9 +64,15 @@ local success,reason=pcall(function()
  end
  -- Execute the just-installed entry point with CraftOS's real package loader.
  -- A syntax check alone cannot catch module search-path mistakes.
- assert(shell and shell.run,'Installer needs a CraftOS shell for boot verification')
- assert(shell.run(ROOT..'/main.lua','--test-api'),
-   'Installed train game failed its CraftOS boot check (rolled back)')
+ -- CraftOS iOS may run downloaded installers without a shell object.
+ -- loadfile exercises the actual installed game modules in the same way as
+ -- shell.run, but does not require the caller to be inside a shell.
+ local entry,loadErr=loadfile(ROOT..'/main.lua')
+ assert(entry,'Cannot load installed game: '..tostring(loadErr))
+ local verified,api=pcall(entry,'--test-api')
+ assert(verified,'Train boot verification failed: '..tostring(api))
+ assert(type(api)=='table' and api.UI and api.State and api.Rules,
+   'Boot verification returned no train game API')
  print('Boot check: train modules and screen rendering verified.')
 end)
 if not success then

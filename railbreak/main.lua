@@ -1,4 +1,4 @@
--- RAILBREAK: KINETIC FRONTIER - Train-first Edition v2.0.6
+-- RAILBREAK: KINETIC FRONTIER - Train-first Edition v2.0.7
 -- Turn-based, 1-4 players, touch-operated monitor (3x3 to 5x5).
 local argv={...}
 -- Program-local imports: CC:Tweaked's require is relative to the running

@@ -33,6 +33,7 @@ end
 local latest={}
 local checked=false
 local latestStore=nil
+local latestCommit=nil
 local function readVersion(app)
  local marker="/fpbstore/installed/"..app.id..".dat"
  if fs.exists(marker) then
@@ -53,11 +54,36 @@ local function readVersion(app)
  end
  return nil
 end
+-- Resolve an immutable commit so GitHub raw/CDN caches cannot mix revisions.
+-- If the API is unavailable, continue with a nonce-based main download.
+local function resolveRef(ref)
+ if ref~="main"then return ref end
+ if latestCommit then return latestCommit end
+ if not(http and http.get)then return ref end
+ local ok,sha=pcall(function()
+  local nonce=os.epoch and os.epoch("utc") or math.floor(os.clock()*1000)
+  local response=assert(http.get(
+   "https://api.github.com/repos/fpbcraft/cc-scripts/commits/main?cb="..nonce,
+   {["Accept"]="application/vnd.github+json",
+    ["User-Agent"]="FPBStore-CraftOS"},true))
+  local raw=response.readAll();response.close()
+  local decoded=textutils.unserializeJSON(raw)
+  assert(type(decoded)=="table" and
+   type(decoded.sha)=="string" and decoded.sha:match("^[a-f0-9]+$") and
+   #decoded.sha==40)
+  return decoded.sha
+ end)
+ if ok then latestCommit=sha;return sha end
+ return ref
+end
+function M.remoteRevision()return latestCommit end
+
 function M.refreshVersions(ref)
  ref=ref or M.REF
+ latestCommit=nil -- A manual refresh must resolve the branch again.
  assert(ref:match("^[%w%._/-]+$") and not ref:find("..",1,true),"Invalid ref")
  local ok,result=pcall(function()
-  local source=fetch(M.BASE..ref.."/fpbstore/catalog.lua")
+  local source=fetch(M.BASE..resolveRef(ref).."/fpbstore/catalog.lua")
   local chunk,err=load(source,"@remote-catalog.lua","t",{})
   assert(chunk,err)
   local remote=chunk()
@@ -94,6 +120,17 @@ function M.storeStatus()
   updateAvailable=latestStore~=nil and newer(available,installed),
   checked=checked}
 end
+function M.installedRevision(app)
+ local marker="/fpbstore/installed/"..app.id..".dat"
+ if not fs.exists(marker)then return nil end
+ local h=fs.open(marker,"r")
+ if not h then return nil end
+ local ok,data=pcall(textutils.unserialize,h.readAll());h.close()
+ if ok and type(data)=="table" and type(data.commit)=="string"then
+  return data.commit
+ end
+ return nil
+end
 function M.status(app)
  local marker="/fpbstore/installed/"..app.id..".dat"
  local installed=M.installed(app)
@@ -102,7 +139,8 @@ function M.status(app)
  return {
   installed=installed,managed=fs.exists(marker),
   installedVersion=current,latestVersion=available,
-  updateAvailable=installed and current~=nil and available~=nil and newer(available,current),
+  updateAvailable=installed and ((current~=nil and available~=nil and newer(available,current)) or
+    (latestCommit~=nil and M.installedRevision(app)~=nil and M.installedRevision(app)~=latestCommit)),
   versionUnknown=installed and current==nil,
   checked=checked,
  }
@@ -111,13 +149,14 @@ function M.install(app,ref)
  assert(app and M.get(app.id)==app,"Unrecognized app")
  ref=ref or M.REF
  assert(ref:match("^[%w%._/-]+$")and not ref:find("..",1,true),"Invalid ref")
- local code=fetch(M.BASE..ref.."/"..app.installer)
+ local pinned=resolveRef(ref)
+ local code=fetch(M.BASE..pinned.."/"..app.installer)
  local chunk,err=load(code,"@"..app.installer,"t")
  assert(chunk,"Invalid installer: "..tostring(err))
  -- Execute the fetched chunk directly so errors retain their Lua stack and
  -- message. shell.run collapses execution failures to a bare false.
  local ok,result=xpcall(function()
-  return chunk(ref,"--no-startup")
+  return chunk(pinned,"--no-startup")
  end,function(e)
   return tostring(e)..(debug and debug.traceback and ("\n"..debug.traceback()) or "")
  end)
@@ -125,7 +164,8 @@ function M.install(app,ref)
  assert(M.installed(app),"Installer returned without installing "..app.name)
  ensure("/fpbstore/installed")
  write("/fpbstore/installed/"..app.id..".dat",
-  textutils.serialize({ref=ref,version=latest[app.id] or app.version,
+  textutils.serialize({ref=ref,commit=pinned~="main" and pinned or nil,
+   version=latest[app.id] or app.version,
    installedAt=os.epoch and os.epoch("utc")or 0}))
  return true
 end
@@ -161,14 +201,17 @@ end
 function M.updateStore(ref)
  ref=ref or M.REF
  assert(ref:match("^[%w%._/-]+$") and not ref:find("..",1,true),"Invalid ref")
- local source=fetch(M.BASE..ref.."/install-fpbstore.lua")
+ local pinned=resolveRef(ref)
+ local source=fetch(M.BASE..pinned.."/install-fpbstore.lua")
  local fn,err=load(source,"@install-fpbstore.lua","t")
  assert(fn,err)
- local tmp="/fpbstore/.self-update.lua"
- write(tmp,source)
- local ok,result=pcall(function()return shell.run(tmp,ref)end)
- if fs.exists(tmp)then fs.delete(tmp)end
- assert(ok and result,"Store update failed")
+ -- A downloaded installer is already a Lua chunk. Execute it directly:
+ -- CraftOS-PC/iOS can run store scripts without a shell instance.
+ local ok,result=xpcall(function()return fn(pinned)end,function(e)
+  return tostring(e)..(debug and debug.traceback and
+   "\\n"..debug.traceback() or "")
+ end)
+ assert(ok,"Store update failed: "..tostring(result))
  return true
 end
 return M
