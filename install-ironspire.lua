@@ -1,11 +1,11 @@
--- IRONSPIRE v0.1.0 safe installer / updater
+-- IRONSPIRE v0.2.0 safe installer / updater
 -- wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-ironspire.lua
 local args={...};local ref="main";local startup=false
 for _,a in ipairs(args)do if a=="--startup"then startup=true elseif a=="--no-startup"then startup=false else ref=a end end
 assert(ref:match("^[%w%._/-]+$") and not ref:find("..",1,true),"Invalid git ref")
 assert(fs and http and http.get,"Enable HTTP on your CC:Tweaked computer")
 local root="/ironspire";local stage=root.."/.install-stage";local backup=root.."/.install-backup"
-local files={"main.lua","render.lua","README.md"}
+local files={"main.lua","render.lua","map.lua","README.md"}
 local remote="https://raw.githubusercontent.com/fpbcraft/cc-scripts/"..ref.."/ironspire/"
 local function remove(path)if fs.exists(path)then fs.delete(path)end end
 local function write(path,value)
