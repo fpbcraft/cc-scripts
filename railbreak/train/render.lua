@@ -134,7 +134,7 @@ function R.new(mon)
    local got,pw,ph=pcall(mon.getSize,2)
    if got and type(pw)=='number' and pw>cw then
     self.mode='graphics';self.w=cw*3;self.h=ch*4
-    self.pw=pw;self.ph=ph;self.sx=pw/self.w;self.sy=ph/self.h
+    self.pw=pw;self.ph=ph;self:fitGraphics()
     self.originalPalette={}
     for index,color in pairs(R.palette)do
      if mon.getPaletteColor then
@@ -148,13 +148,21 @@ function R.new(mon)
  end
  return self
 end
+-- Graphics mode 2 may report arbitrary emulator pixel dimensions.
+-- A nonuniform X/Y scale stretched glyphs into tall, narrow columns.
+function R:fitGraphics()
+ local scale=math.min(self.pw/self.w,self.ph/self.h)
+ self.sx,self.sy=scale,scale
+ self.ox=math.floor((self.pw-self.w*scale)/2)
+ self.oy=math.floor((self.ph-self.h*scale)/2)
+end
 function R:resize()
  self.cw,self.ch=self.m.getSize()
  if self.mode=='graphics' then self.w=self.cw*3;self.h=self.ch*4
  else self.w=self.cw*2;self.h=self.ch*3 end
  if self.mode=='graphics' then
   local ok,pw,ph=pcall(self.m.getSize,2)
-  if ok then self.pw=pw;self.ph=ph;self.sx=pw/self.w;self.sy=ph/self.h end
+  if ok then self.pw=pw;self.ph=ph;self:fitGraphics() end
  end
 end
 function R:fill(x,y,w,h,color)
@@ -162,8 +170,8 @@ function R:fill(x,y,w,h,color)
  local x1=math.min(self.w,math.ceil(x+w));local y1=math.min(self.h,math.ceil(y+h))
  if x1<=x0 or y1<=y0 then return end
  if self.mode=='graphics' then
-  local a=math.floor(x0*self.sx);local b=math.floor(y0*self.sy)
-  local rw=math.max(1,math.floor(x1*self.sx)-a);local rh=math.max(1,math.floor(y1*self.sy)-b)
+  local a=math.floor(self.ox+x0*self.sx);local b=math.floor(self.oy+y0*self.sy)
+  local rw=math.max(1,math.floor(self.ox+x1*self.sx)-a);local rh=math.max(1,math.floor(self.oy+y1*self.sy)-b)
   self.m.drawPixels(a,b,color or 0,rw,rh)
  else
   local ax=math.floor(x0/2)+1;local ay=math.floor(y0/3)+1
@@ -278,7 +286,7 @@ end
 function R:touch(x,y)
  if type(x)~='number' or type(y)~='number' then return nil,nil end
  local vx,vy
- if self.mode=='graphics' then vx=math.floor(x/self.sx);vy=math.floor(y/self.sy)
+ if self.mode=='graphics' then vx=math.floor((x-self.ox)/self.sx);vy=math.floor((y-self.oy)/self.sy)
  else vx=(x-1)*2;vy=(y-1)*3 end
  if vx<0 or vy<0 or vx>=self.w or vy>=self.h then return nil,nil end
  return vx,vy
@@ -292,6 +300,9 @@ end
 function R:begin()
  self.buttons={}
  if self.mode=='graphics' and self.m.setFrozen then pcall(self.m.setFrozen,true)end
+ if self.mode=='graphics' then
+  self.m.drawPixels(0,0,0,self.pw,self.ph)
+ end
  self:fill(0,0,self.w,self.h,0)
 end
 function R:finish()if self.mode=='graphics' and self.m.setFrozen then pcall(self.m.setFrozen,false)end end
