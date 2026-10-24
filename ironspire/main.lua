@@ -124,6 +124,7 @@ local function endTurn(s)
  beginTurn(s);save(s)
 end
 local function advance(s,kind,lane)
+ if s.screen~="map" then return false end
  Map.migrate(s)
  local target=s.floor+1
  if not Map.reachable(s,target,lane or 2) then return false end
