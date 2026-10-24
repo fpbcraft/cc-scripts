@@ -1,6 +1,7 @@
 package.path="./?.lua;./?/init.lua;"..package.path
 local E=require("cogworks.engine")
 local R=require("cogworks.render")
+local B=require("cogworks.briefing")
 colors={black=32768,white=1,gray=128,lightGray=256,orange=2,
  lightBlue=8,yellow=16,green=8192,blue=2048,lime=32,red=16384,brown=4096}
 local game=E.new(30,true)
@@ -92,6 +93,29 @@ for _,target in ipairs(r.targets)do
  assert(target.action~="cell","Ponder must block board interaction")
 end
 assert(gfx.clears==10,"Every scene including Ponder clears the framebuffer")
+-- Briefing is modal, has animated reveals, and respects disabled animation.
+local largeTitles=0
+local large=r.fontLarge
+function r:fontLarge(...)
+ largeTitles=largeTitles+1
+ return large(self,...)
+end
+model.scene="briefing";model.briefing=B.forLevel(6)
+model.settings.animations=true
+r:draw(model)
+assert(largeTitles==0,"Briefing title animates into view")
+for i=1,8 do r:draw(model)end
+assert(largeTitles>0,"Briefing title reveals during animation")
+click("beginLevel")
+for _,target in ipairs(r.targets)do
+ assert(target.action~="cell","Intro blocks interaction with the level grid")
+end
+model.briefing=B.forLevel(23)
+model.settings.animations=false
+local count=largeTitles
+r:draw(model)
+assert(largeTitles==count+1,"Disabled animation reveals everything immediately")
+model.settings.animations=true
 assert(r:hitNormalized(-0.1,0.5)==nil and r:hitNormalized(1,0.5)==nil,
  "Out-of-range normalized monitor clicks rejected")
 r:resize();r:close()
@@ -107,10 +131,10 @@ end
 function txt.write(str)txt.writes=txt.writes+#str end
 local plain=R.new(txt)
 assert(plain.mode=="text")
-for _,scene in ipairs({"title","slots","game","tutorial","pause","settings","levels","help","confirm"})do
+for _,scene in ipairs({"title","slots","game","briefing","tutorial","pause","settings","levels","help","confirm"})do
  model.scene=scene;plain:draw(model)
  assert(#plain.targets>0,"Text fallback has buttons on "..scene)
 end
 plain:close()
 assert(txt.writes>0,"Vanilla renderer should draw text")
-print("COGWORKS: belt spans, info and modal Ponder hit targets passed.")
+print("COGWORKS: animated briefing, belt spans, Ponder and touch targets passed.")
