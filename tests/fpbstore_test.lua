@@ -47,7 +47,7 @@ function shell.run(file,...)
 end
 local M=require("fpbstore.manager")
 assert(#M.catalog.apps>=3,"Catalog must contain the original three games")
-assert(M.storeStatus().installedVersion=="1.1.1",
+assert(M.storeStatus().installedVersion=="1.1.2",
  "Store's installed version should be displayed")
 local old={"cogworks","railbreak","tidebound"}
 for i,id in ipairs(old)do
@@ -80,7 +80,7 @@ assert(not ok,"Arbitrary catalog entries rejected")
 -- Remote versions can identify both game and store updates without
 -- overwriting any local installation metadata.
 local initialStore=M.storeStatus()
-assert(initialStore.installedVersion=="1.1.1")
+assert(initialStore.installedVersion=="1.1.2")
 local remoteCatalog=[[return {storeVersion="1.2.0",apps={
  {id="cogworks",version="1.2.0"},{id="railbreak",version="2.0.6"},
  {id="tidebound",version="5.1"}}}]]

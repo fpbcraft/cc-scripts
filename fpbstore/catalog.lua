@@ -3,7 +3,7 @@
 -- Never include save files or data folders in managedFiles.
 return {
  schema=1,
- storeVersion="1.1.1",
+ storeVersion="1.1.2",
  apps={
   {
    version="1.0.0",id="cogworks",name="COGWORKS",subtitle="KINETIC LAB",
