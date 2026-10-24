@@ -39,97 +39,115 @@ function T.draw(r,system,player,rect,model,research,onClose)
   return model
  end
  r:fill(x,y,w,h,1);r:outline(x,y,w,h,8)
- r:fill(x+2,y+2,w-4,18,2)
- r:text(x+7,y+7,"CIVCRAFT  /  TECHNOLOGY",8,1,w-90)
- r:button(x+w-36,y+3,32,14,"CLOSE",onClose)
- local vx,vy=x+5,y+23
- local vw,vh=w-10,math.max(10,h-61)
+ r:fill(x+2,y+2,w-4,17,2)
+ r:text(x+6,y+6,"RESEARCH / TECH TREE",8,1,w-70)
+ r:button(x+w-38,y+3,34,13,"CLOSE",onClose,{icon="back"})
+ local inspectorW=math.max(57,math.floor(w*.30))
+ local vx,vy=x+5,y+22
+ local vw,vh=w-inspectorW-12,math.max(36,h-48)
+ local ix=vx+vw+4
+ local iw=x+w-ix-4
  r:fill(vx,vy,vw,vh,0);r:outline(vx,vy,vw,vh,3)
- local sx=math.max(.6,model.zoom)
- local nodeW,nodeH=math.floor(99*sx),math.floor(25*sx)
- local strideX,strideY=math.floor(115*sx),math.floor(37*sx)
- local contentW=6*strideX+nodeW
- local contentH=5*strideY+nodeH
- local maxX=math.max(0,contentW-vw)
- local maxY=math.max(0,contentH-vh)
- model.panX=clamp(model.panX,0,maxX)
- model.panY=clamp(model.panY,0,maxY)
+ r:fill(ix,vy,iw,vh,2);r:outline(ix,vy,iw,vh,3)
+ local z=math.max(.65,math.min(1.4,model.zoom))
+ local nodeW,nodeH=math.floor(82*z),math.floor(20*z)
+ local strideX,strideY=math.floor(104*z),math.floor(35*z)
+ local contentW=5*strideX+nodeW+8
+ local contentH=4*strideY+nodeH+8
+ local maxX,maxY=math.max(0,contentW-vw),math.max(0,contentH-vh)
+ model.panX=clamp(model.panX,0,maxX);model.panY=clamp(model.panY,0,maxY)
  local function node(id)
   local item=system.techs[id]
   return vx+7+(item.tier-1)*strideX-model.panX,
    vy+7+(item.lane-1)*strideY-model.panY
  end
- -- Edges first, so tech cards visually sit over connecting prerequisite lines.
- for _,id in ipairs(system.techOrder)do
-  local t=system.techs[id]
-  local tx,ty=node(id)
-  for _,prereq in ipairs(t.requires)do
-   local px,py=node(prereq)
-   local edge=(player.techs and player.techs[prereq]) and 11 or 4
-   local x1=px+nodeW;local x2=tx
-   local yy=py+math.floor(nodeH/2);local yy2=ty+math.floor(nodeH/2)
-   -- Clip strokes in view: never paint controls or inspector with graph lines.
-   local mx=math.floor((x1+x2)/2)
-   local function segment(ax,ay,bx,by)
-    local distance=math.max(1,math.ceil(math.max(math.abs(ax-bx),math.abs(ay-by))))
-    for n=0,distance do
-     local dx=ax+(bx-ax)*n/distance
-     local dy=ay+(by-ay)*n/distance
-     if dx>vx+1 and dx<vx+vw-1 and dy>vy+1 and dy<vy+vh-1 then
-      r:fill(dx,dy,1,1,edge)
-     end
-    end
+ local function segment(ax,ay,bx,by,c)
+  local count=math.max(1,math.ceil(math.max(math.abs(ax-bx),math.abs(ay-by))))
+  for i=0,count do
+   local sx=ax+(bx-ax)*i/count;local sy=ay+(by-ay)*i/count
+   if sx>vx+2 and sx<vx+vw-2 and sy>vy+2 and sy<vy+vh-2 then
+    r:fill(sx,sy,1,1,c)
    end
-   segment(x1,yy,mx,yy);segment(mx,yy,mx,yy2);segment(mx,yy2,x2,yy2)
   end
  end
+ -- Directed prerequisite graph. Lines are clipped to its viewport.
  for _,id in ipairs(system.techOrder)do
-  local t=system.techs[id]
-  local tx,ty=node(id)
-  if tx>=vx+2 and ty>=vy+2 and tx+nodeW<vx+vw-2 and ty+nodeH<vy+vh-2 then
+  local t=system.techs[id];local tx,ty=node(id)
+  for _,pre in ipairs(t.requires)do
+   local px,py=node(pre)
+   local color=(player.techs and player.techs[pre]) and 11 or 4
+   local middle=math.floor((px+nodeW+tx)/2)
+   segment(px+nodeW,py+nodeH/2,middle,py+nodeH/2,color)
+   segment(middle,py+nodeH/2,middle,ty+nodeH/2,color)
+   segment(middle,ty+nodeH/2,tx,ty+nodeH/2,color)
+  end
+ end
+ model.selected=model.selected or system.techOrder[1]
+ local iconFor={agriculture="food",mining="ore",sailing="map",
+  bronze="wrench",masonry="station",writing="contract",horseback="train",
+  navigation="map",engineering="foundry",philosophy="star",
+  archery="right",currency="coin",cartography="map",fortification="station",
+  education="contract",tactics="danger",commerce="coin",shipbuilding="train",
+  metallurgy="foundry",astronomy="star",logistics="train",economics="coin",
+  navalwarfare="danger",enlightenment="star"}
+ for _,id in ipairs(system.techOrder)do
+  local t=system.techs[id];local tx,ty=node(id)
+  if tx>=vx+2 and ty>=vy+2 and
+     tx+nodeW<vx+vw-2 and ty+nodeH<vy+vh-2 then
    local learned=player.techs and player.techs[id]
-   local can=system.canResearch(player,id)
-   local prereqs=true
-   for _,pre in ipairs(t.requires)do if not (player.techs and player.techs[pre])then prereqs=false end end
-   local base=learned and 12 or can and 3 or prereqs and 2 or 1
-   r:fill(tx,ty,nodeW,nodeH,base)
-   r:outline(tx,ty,nodeW,nodeH,learned and 11 or can and 8 or 4)
-   r:fill(tx+2,ty+2,3,nodeH-4,learned and 11 or can and 8 or 4)
-   r:text(tx+8,ty+4,t.name,7,1,nodeW-11)
-   local status=learned and "RESEARCHED" or
-    (prereqs and (t.cost.." SCIENCE") or "LOCKED")
-   r:text(tx+8,ty+math.max(11,nodeH-10),status,learned and 6 or can and 8 or 5,1,nodeW-11)
+   local available=system.canResearch(player,id)
+   local current=player.researchTarget==id
+   local color=learned and 12 or current and 13 or available and 3 or 1
+   r:fill(tx,ty,nodeW,nodeH,color)
+   r:outline(tx,ty,nodeW,nodeH,model.selected==id and 8 or
+     learned and 11 or 4)
+   r:icon(iconFor[id] or "star",tx+3,ty+math.max(1,math.floor((nodeH-9)/2)),1)
+   r:text(tx+15,ty+math.max(2,math.floor((nodeH-6)/2)),
+     t.name,7,1,nodeW-19)
    r.buttons[#r.buttons+1]={x=tx,y=ty,w=nodeW,h=nodeH,label=id,
     fn=function()model.selected=id end}
   end
  end
- local selected=model.selected and system.techs[model.selected]
- r:fill(x+2,y+h-35,w-4,33,2)
- local summary=selected and (selected.name.." / "..selected.cost.." SCI / "..selected.unlock) or
-  "SELECT A TECHNOLOGY TO INSPECT IT"
- r:text(x+7,y+h-31,summary,7,1,w-85)
- if selected then
-  local req=#selected.requires>0 and table.concat(selected.requires,",")or"START"
-  r:text(x+7,y+h-21,"NEEDS: "..req,5,1,w-95)
-  if system.canResearch(player,model.selected)then
-   r:button(x+w-80,y+h-31,74,24,"RESEARCH",function()
-    research(model.selected)
-   end,{primary=true})
+ local t=system.techs[model.selected]
+ if t then
+  local yy=vy+5
+  r:text(ix+4,yy,t.name,8,1,iw-7);yy=yy+16
+  r:text(ix+4,yy,"COST "..t.cost.." SCI",7,1,iw-8);yy=yy+13
+  local progress=(player.researchProgress or {})[model.selected] or 0
+  local ratio=math.min(1,progress/math.max(1,t.cost))
+  r:fill(ix+4,yy,iw-9,5,1)
+  r:fill(ix+4,yy,math.floor((iw-9)*ratio),5,11)
+  yy=yy+12
+  r:text(ix+4,yy,math.floor(progress).."/"..t.cost,6,1,iw-8)
+  yy=yy+14
+  local req=#t.requires==0 and "NONE" or table.concat(t.requires,", ")
+  r:text(ix+4,yy,"REQUIRES",8,1,iw-8);yy=yy+9
+  r:text(ix+4,yy,req,6,1,iw-8);yy=yy+17
+  r:text(ix+4,yy,"UNLOCKS",8,1,iw-8);yy=yy+10
+  r:text(ix+4,yy,t.unlock or "-",11,1,iw-8)
+  yy=yy+20
+  local learned=player.techs and player.techs[model.selected]
+  local can=system.canResearch(player,model.selected)
+  local label=learned and "COMPLETED" or
+    player.researchTarget==model.selected and "RESEARCHING" or
+    can and "RESEARCH" or "LOCKED"
+  if yy+16<vy+vh then
+   r:button(ix+4,yy,iw-8,16,label,function()
+    if can then research(model.selected)end
+   end,{icon="bolt",primary=can})
   end
  end
- local cw=math.max(19,math.floor((w-14)/6))
+ local cw=math.max(18,math.floor((vw-6)/6))
  local controls={
-  {"LEFT",function()model.panX=clamp(model.panX-80,0,maxX)end},
-  {"RIGHT",function()model.panX=clamp(model.panX+80,0,maxX)end},
-  {"UP",function()model.panY=clamp(model.panY-70,0,maxY)end},
-  {"DOWN",function()model.panY=clamp(model.panY+70,0,maxY)end},
-  {"ZOOM+",function()model.zoom=clamp(model.zoom+.2,.6,1.4)end},
-  {"ZOOM-",function()model.zoom=clamp(model.zoom-.2,.6,1.4)end},
+  {"LEFT",function()model.panX=clamp(model.panX-70,0,maxX)end},
+  {"RIGHT",function()model.panX=clamp(model.panX+70,0,maxX)end},
+  {"UP",function()model.panY=clamp(model.panY-55,0,maxY)end},
+  {"DOWN",function()model.panY=clamp(model.panY+55,0,maxY)end},
+  {"ZOOM+",function()model.zoom=clamp(model.zoom+.2,.65,1.4)end},
+  {"ZOOM-",function()model.zoom=clamp(model.zoom-.2,.65,1.4)end}
  }
- local cy=y+h-57
- if cy>vy+vh then cy=vy+vh+2 end
  for i,control in ipairs(controls)do
-  r:button(x+5+(i-1)*cw,cy,cw-2,15,control[1],control[2])
+  r:button(vx+(i-1)*cw,vy+vh+3,cw-2,13,control[1],control[2])
  end
  return model
 end
