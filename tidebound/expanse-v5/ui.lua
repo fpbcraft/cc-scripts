@@ -116,7 +116,7 @@ function UI:headline(text,back)
  end
 end
 function UI:title()
- local r=self.r;local w,h=r.w,rh=r.h
+ local r=self.r;local w,h=r.w,r.h
  local cx=math.floor(w/2)
  -- A distinct railway-style illustrated hero, with a stable action footer.
  local compact=h<42 or w<75
