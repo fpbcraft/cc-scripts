@@ -49,6 +49,7 @@ end
 function UI:draw(state,playerID,opts)
  local r=self.r;local w,h=r.w,r.h;opts=opts or {}
  r:begin()
+ self.hexTargets={}
  r:fill(0,0,w,h,0)
  local header=math.min(27,math.max(16,math.floor(h*.16)))
  local footer=math.max(22,math.floor(h*.20))
