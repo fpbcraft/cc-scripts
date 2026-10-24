@@ -8,4 +8,6 @@ ComputerCraft/CC:Tweaked programs for the fpbcraft Minecraft server.
 - [COGWORKS: Kinetic Lab](cogworks/README.md) — 30 increasingly demanding machinery construction puzzles with animated CC: Graphics, a text fallback, hints and a safe one-command installer (`install-cogworks.lua`).
 - [RAILBREAK: Kinetic Frontier](railbreak/README.md) — train-first, solo/1–4 player turn-based railway adventure with animated pixel-art trains, route planning, station markets, cargo contracts and wagon upgrades. Install with `install-railbreak.lua`.
 
+- [CIVCRAFT: Networked Pocket Civilization](civcraft/README.md) — 2–4 player multiplayer territory-building 4X with modems and a one-command installer (`install-civcraft.lua`).
+
 All factory controls must retain a physical manual override. Do not rely on software alone for machinery safety.
