@@ -8,7 +8,7 @@ assert(type(ref)=="string" and ref:match("^[%w%._/-]+$") and
 assert(http and http.get,"Enable HTTP in CraftOS settings")
 local root="/fpbstore"
 local base="https://raw.githubusercontent.com/fpbcraft/cc-scripts/"..ref.."/fpbstore/"
-local paths={"main.lua","catalog.lua","manager.lua","README.md"}
+local paths={"main.lua","basalt_ui.lua","catalog.lua","manager.lua","README.md"}
 local stage=root.."/.install-next"
 local backup=root.."/.install-previous"
 local function remove(path)if fs.exists(path)then fs.delete(path)end end
