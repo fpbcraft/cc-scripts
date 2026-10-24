@@ -5,8 +5,8 @@ A four-civilization, hot-seat space 4X game with **1–4 human commanders and AI
 ## Install or update
 
 ```sh
-wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-tidebound.lua
-/tidebound/tidebound.lua
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-shattered.lua
+/shattered/shattered.lua
 ```
 
 Requires an Advanced Computer and a connected colour Advanced Monitor. The game autodetects a monitor; specify its peripheral name as a CLI argument to override it. **CC: Graphics** mode 2 is used automatically when available, with a text-mode fallback. This version was tested offline against simulated **3×3, 4×4 and 5×5** monitor sizes; 5×5 is the target. Actual modded Minecraft performance and interaction have not yet been verified.
@@ -60,17 +60,17 @@ Research, diplomacy, council decisions, empire overview, handoff, and results ha
 
 ## Saves, legacy editions and rollback
 
-- v5: `/tidebound/v5-save.dat`, with `.bak` fallback.
-- v4: `/tidebound/expanse-save.dat`, **not migrated or overwritten by v5**.
-- v3: `/tidebound/save.dat`, kept unchanged.
+- v5: `/shattered/v5-save.dat`, with `.bak` fallback.
+- v4: `/shattered/expanse-save.dat`, **not migrated or overwritten by v5**.
+- v3: `/shattered/save.dat`, kept unchanged.
 
 Previous games are launchable independently:
 
 ```sh
-/tidebound/tidebound-shattered-v4.lua   # The Shattered Expanse v4
-/tidebound/tidebound-stellar-frontier.lua # Stellar Frontier v3
-/tidebound/tidebound-kingdoms.lua        # Kingdoms v2
-/tidebound/tidebound-classic.lua         # Original naval edition
+/shattered/shattered-shattered-v4.lua   # The Shattered Expanse v4
+/shattered/shattered-stellar-frontier.lua # Stellar Frontier v3
+/shattered/shattered-kingdoms.lua        # Kingdoms v2
+/shattered/shattered-classic.lua         # Original naval edition
 ```
 
 The installer downloads and syntax-checks every Lua module before activation; it rolls back file replacements after a failed activation and leaves all save files outside its code replacement list.
@@ -78,9 +78,9 @@ The installer downloads and syntax-checks every Lua module before activation; it
 ## Architecture
 
 ```text
-install-tidebound.lua       validated installer with code rollback, preserves saves
-/tidebound/tidebound.lua    v5 launcher + monitor discovery
-/tidebound/expanse-v5/
+install-shattered.lua       validated installer with code rollback, preserves saves
+/shattered/shattered.lua    v5 launcher + monitor discovery
+/shattered/expanse-v5/
   content.lua               faction, tech, ship and economy data
   events.lua                branching, delayed narrative events
   sim.lua                   deterministic rules, resources, AI and victory
@@ -88,11 +88,11 @@ install-tidebound.lua       validated installer with code rollback, preserves sa
   ui.lua                    title, setup, keyboard, galaxy, compact context menu,
                             ships, worlds, research, diplomacy, council,
                             victory, confirmation and touch mapping
-/tidebound/tests/v5.lua    seeded simulation and fake-monitor tests
-/tidebound/expanse/         previous v4 modules (unchanged)
+/shattered/tests/v5.lua    seeded simulation and fake-monitor tests
+/shattered/expanse/         previous v4 modules (unchanged)
 ```
 
-Run offline tests from repository root with `texlua tidebound/tests/v5.lua ./tidebound/expanse-v5`. The simulator is independent of the display; tests cover seeded maps, resource invariants, AI progression, ship orders, narrative decisions, keyboard, direct ship and planet hit targets, contextual action geometry, and touch mapping at three monitor sizes.
+Run offline tests from repository root with `texlua shattered/tests/v5.lua ./shattered/expanse-v5`. The simulator is independent of the display; tests cover seeded maps, resource invariants, AI progression, ship orders, narrative decisions, keyboard, direct ship and planet hit targets, contextual action geometry, and touch mapping at three monitor sizes.
 ## Play without an external monitor
 
 The game also runs on the computer's **built-in terminal**. Launch normally without connecting a monitor; the game automatically switches to its text-mode computer viewport. The built-in screen is smaller than the game canvas, so **arrow keys pan**, the **mouse wheel scrolls vertically**, and **left-click selects** controls or board cells. A footer shows the visible viewport position. Attaching an Advanced Monitor still uses the usual full-screen UI and touch controls.

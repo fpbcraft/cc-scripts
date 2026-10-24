@@ -1,5 +1,5 @@
--- TIDEBOUND v5: deterministic, renderer-free four-civilization strategy engine.
-local root=_G.EXPANSE_V5_ROOT or '/tidebound/expanse-v5'
+-- SHATTERED v5: deterministic, renderer-free four-civilization strategy engine.
+local root=_G.EXPANSE_V5_ROOT or '/shattered/expanse-v5'
 local C=dofile(root..'/content.lua')
 local E=dofile(root..'/events.lua')
 local M={VERSION=5,content=C,events=E}

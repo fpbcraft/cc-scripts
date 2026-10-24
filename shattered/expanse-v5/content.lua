@@ -1,4 +1,4 @@
--- TIDEBOUND v5: content is data, never coupled to display or peripherals.
+-- SHATTERED v5: content is data, never coupled to display or peripherals.
 local C={}
 C.factions={
  {name='IMPERIUM',trait='RESOLUTE',desc='Fleets cost one less Alloy. Warships get +1 strength.',color=14},

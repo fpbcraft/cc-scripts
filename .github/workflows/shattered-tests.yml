@@ -1,0 +1,27 @@
+name: Shattered v5 tests
+
+on:
+  push:
+    paths:
+      - 'shattered/**'
+      - 'install-shattered.lua'
+      - '.github/workflows/shattered-tests.yml'
+  pull_request:
+    paths:
+      - 'shattered/**'
+      - 'install-shattered.lua'
+      - '.github/workflows/shattered-tests.yml'
+
+jobs:
+  v5-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua
+        run: sudo apt-get update && sudo apt-get install -y lua5.3
+      - name: Check v5 Lua syntax
+        run: |
+          find shattered/expanse-v5 shattered/tests -name '*.lua' -print0 | xargs -0 -n1 luac5.3 -p
+          luac5.3 -p shattered/shattered.lua install-shattered.lua shattered/shattered-legacy-v4.lua
+      - name: Test 4X simulation, AI, touchscreen and layout
+        run: lua5.3 shattered/tests/v5.lua

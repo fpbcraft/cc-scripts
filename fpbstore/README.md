@@ -14,7 +14,7 @@ Then open it any time with `store` (or `/fpbstore/main.lua`). The installer inst
 
 ## What you can do
 
-- Browse **COGWORKS**, **RAILBREAK**, **TIDEBOUND**, and **CIVCRAFT**. Games already installed through their own installers are detected automatically.
+- Browse **COGWORKS**, **RAILBREAK**, **SHATTERED**, and **CIVCRAFT**. Games already installed through their own installers are detected automatically.
 - Install a missing game with its existing, tested, one-command installer.
 - Show the installed version and latest catalog version, with **UPDATE AVAILABLE** when a newer version is found. Press **R** to refresh the online version catalog. Existing installations with no identifiable version show `v?` until reinstalled through the Store.
 - Update or reinstall any installed game with the existing installer, without changing its save data.
@@ -46,7 +46,7 @@ The Store reads version declarations from the latest remote `fpbstore/catalog.lu
 - `/fpbstore/installed/` — store-managed install metadata.
 - `/store.lua` — permanent shortcut.
 
-Existing /cogworks, /railbreak, /tidebound and /civcraft saves are preserved.
+Existing /cogworks, /railbreak, /shattered and /civcraft saves are preserved.
 
 ## Optional Basalt 2.5 storefront
 

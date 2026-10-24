@@ -1,12 +1,6 @@
--- TIDEBOUND shared 256-color pixel renderer from Stellar Frontier.
-local PALETTE={
-  [0]=0x090E1D,[1]=0x111B30,[2]=0x1A2A40,[3]=0x294058,[4]=0x435A72,[5]=0x819BB5,
-  [6]=0xD5E5F1,[7]=0xF9FBFF,[8]=0x36B9C4,[9]=0x5BEEE3,[10]=0x305EAA,[11]=0x78A9FF,
-  [12]=0x9852BD,[13]=0xDDA9FA,[14]=0xA95B65,[15]=0xFF9A9A,[16]=0xCB9B4C,[17]=0xF4CC79,
-  [18]=0x2D795C,[19]=0x7FE4A4,[20]=0xD36D37,[21]=0xF8AB64,[22]=0x6D729E,[23]=0xD4D0C2,
-  [24]=0x142238,[25]=0x25354D,[26]=0xFFDBAA,[27]=0x4D899A,[28]=0x171429,[29]=0x5D3C73,
-  [30]=0xA1B4C9,[31]=0x2B263F,
-}
+-- SHATTERED shared 256-color pixel renderer from Stellar Frontier.
+local Theme=dofile((_G.EXPANSE_V5_ROOT or "/shattered/expanse-v5").."/theme.lua")
+local PALETTE=Theme.palette
 local TEXT_COLORS={
  [0]=32768,[1]=128,[2]=2048,[3]=1024,[4]=256,[5]=8,[6]=1,[7]=1,[8]=512,[9]=32,
  [10]=2048,[11]=8,[12]=8192,[13]=1024,[14]=16384,[15]=16384,[16]=4096,[17]=16,
@@ -68,29 +62,62 @@ local ICON={
  close={"10001","01010","00100","01010","10001","00000","00000"},
  orbit={"01110","10001","10101","10101","10101","10001","01110"},
 }
+-- v5 adds distinct symbols for the three-resource strategy layer.
+ICON.coin={"01110","10001","10111","10101","11101","10001","01110"}
+ICON.alloy={"00100","01110","11111","10101","11111","01110","00100"}
+ICON.shield={"11111","10001","10001","01010","01110","00100","00100"}
+ICON.book={"11011","10001","10001","10101","10101","10001","11011"}
+ICON.council={"00100","01110","11111","00100","01110","10101","11111"}
+ICON.home={"00100","01110","11111","10001","10101","10001","11111"}
+ICON.ark={"00100","01110","11111","11111","10101","10101","10001"}
+ICON.pause={"11011","11011","11011","11011","11011","11011","11011"}
+ICON.scroll={"11111","10001","11111","10001","11111","10001","11111"}
 local function trunc(s,n) s=tostring(s or ""):upper();if #s>n then return s:sub(1,n-1).."."end;return s end
 local Renderer={};Renderer.__index=Renderer
 function Renderer.new(mon,forceText)
  local self=setmetatable({m=mon,kind="text",buttons={},frame=0},Renderer)
  if mon.setTextScale then pcall(mon.setTextScale,0.5) end
- self.w,self.h=mon.getSize();self.px,self.py=1,1
+ self.textW,self.textH=mon.getSize()
+ self.w,self.h=self.textW,self.textH;self.px,self.py=1,1
  if not forceText and type(mon.setGraphicsMode)=="function" and type(mon.drawPixels)=="function" then
   local ok=pcall(mon.setGraphicsMode,2)
   if ok then
    local success,pw,ph=pcall(mon.getSize,2)
    if success and pw and ph and pw>self.w and ph>self.h then
-    self.kind="gfx";self.px=pw/self.w;self.py=ph/self.h
+    self.kind="gfx";self:fitGraphics(pw,ph)
     if mon.setPaletteColor then for c,rgb in pairs(PALETTE)do pcall(mon.setPaletteColor,c,rgb)end end
    else pcall(mon.setGraphicsMode,0) end
   end
  end
  return self
 end
+-- Fit the game in a proportion-preserving centered viewport.
+function Renderer:fitGraphics(pw,ph)
+ self.gw,self.gh=pw,ph
+ -- Native graphics has its OWN viewport geometry. Text-cell aspect ratios
+ -- differ across emulators; letterboxing a character grid wastes screen
+ -- height on iPad and squeezes controls into the middle third.
+ -- Preserve logical cell density while adding responsive rows/columns to
+ -- cover the available graphics area, with isotropic pixel scaling.
+ local tw,th=self.textW,self.textH
+ if ph*tw>=pw*th then
+  self.w=tw
+  self.h=math.max(th,math.floor(ph*tw/pw+0.5))
+ else
+  self.h=th
+  self.w=math.max(tw,math.floor(pw*th/ph+0.5))
+ end
+ local scale=math.min(pw/self.w,ph/self.h)
+ self.px,self.py=scale,scale
+ self.ox=math.floor((pw-self.w*scale)/2)
+ self.oy=math.floor((ph-self.h*scale)/2)
+end
 function Renderer:resize()
- self.w,self.h=self.m.getSize()
+ self.textW,self.textH=self.m.getSize()
+ self.w,self.h=self.textW,self.textH
  if self.kind=="gfx" then
   local ok,pw,ph=pcall(self.m.getSize,2)
-  if ok and pw and ph then self.px=pw/self.w;self.py=ph/self.h end
+  if ok and pw and ph then self:fitGraphics(pw,ph)end
  end
 end
 function Renderer:rect(x,y,w,h,c)
@@ -99,8 +126,8 @@ function Renderer:rect(x,y,w,h,c)
  local ex=math.min(self.w,x+w);local ey=math.min(self.h,y+h)
  x=math.max(0,x);y=math.max(0,y);if ex<=x or ey<=y then return end
  if self.kind=="gfx" then
-  local px=math.floor(x*self.px);local py=math.floor(y*self.py)
-  self.m.drawPixels(px,py,c,math.max(1,math.floor(ex*self.px)-px),math.max(1,math.floor(ey*self.py)-py))
+  local px=math.floor(self.ox+x*self.px);local py=math.floor(self.oy+y*self.py)
+  self.m.drawPixels(px,py,c,math.max(1,math.floor(self.ox+ex*self.px)-px),math.max(1,math.floor(self.oy+ey*self.py)-py))
  else
   self.m.setBackgroundColor(TEXT_COLORS[c] or 32768)
   for iy=y,ey-1 do self.m.setCursorPos(x+1,iy+1);self.m.write(string.rep(" ",ex-x))end
@@ -118,7 +145,7 @@ function Renderer:pixel(px,py,c,size)
 end
 function Renderer:line(x1,y1,x2,y2,c)
  if self.kind=="gfx" then
-  x1=x1*self.px;y1=y1*self.py;x2=x2*self.px;y2=y2*self.py
+  x1=self.ox+x1*self.px;y1=self.oy+y1*self.py;x2=self.ox+x2*self.px;y2=self.oy+y2*self.py
   local d=math.max(math.abs(x2-x1),math.abs(y2-y1))
   for i=0,d,2 do local t=i/math.max(1,d);self:pixel(x1+(x2-x1)*t,y1+(y2-y1)*t,c,1)end
  else
@@ -132,7 +159,7 @@ function Renderer:line(x1,y1,x2,y2,c)
 end
 function Renderer:disc(cx,cy,r,c)
  if self.kind=="gfx" then
-  local x=cx*self.px;local y=cy*self.py;local rp=r*math.min(self.px,self.py)
+  local x=self.ox+cx*self.px;local y=self.oy+cy*self.py;local rp=r*math.min(self.px,self.py)
   for yy=-math.ceil(rp),math.ceil(rp) do
    local dx=math.sqrt(math.max(0,rp*rp-yy*yy));local ax=math.floor(x-dx)
    local length=math.max(1,math.floor(x+dx)-ax)
@@ -140,7 +167,7 @@ function Renderer:disc(cx,cy,r,c)
   end
  else
   self.m.setBackgroundColor(TEXT_COLORS[0]);self.m.setTextColor(TEXT_COLORS[c] or 1)
-  self.m.setCursorPos(math.floor(cx)+1,math.floor(cy)+1);self.m.write("O")
+  if cx>=0 and cy>=0 and cx<self.w and cy<self.h then self.m.setCursorPos(math.floor(cx)+1,math.floor(cy)+1);self.m.write("O")end
  end
 end
 function Renderer:text(x,y,str,c,maxlen)
@@ -154,14 +181,14 @@ function Renderer:text(x,y,str,c,maxlen)
  end
  for i=1,#str do
   local pattern=FONT[str:sub(i,i)] or FONT["?"]
-  local left=(x+i-1)*self.px;local top=y*self.py
+  local left=self.ox+(x+i-1)*self.px;local top=self.oy+y*self.py
   for ry=1,7 do
    local row=pattern[ry];local col=1
    while col<=5 do
     if row:sub(col,col)=="1" then
      local start=col;while col<=5 and row:sub(col,col)=="1" do col=col+1 end
-     local px=math.floor(left+(start-1)*self.px/6);local xx=math.floor(left+col*self.px/6)
-     local py=math.floor(top+(ry-1)*self.py/9);local yy=math.floor(top+ry*self.py/9)
+     local px=math.floor(left+(start-1)*self.px/5);local xx=math.floor(left+col*self.px/5)
+     local py=math.floor(top+(ry-1)*self.py/7);local yy=math.floor(top+ry*self.py/7)
      self.m.drawPixels(px,py,c,math.max(1,xx-px),math.max(1,yy-py))
     else col=col+1 end
    end
@@ -174,14 +201,14 @@ function Renderer:bigText(x,y,word,c,scale)
  word=tostring(word):upper()
  for i=1,#word do
   local pattern=FONT[word:sub(i,i)] or FONT["?"]
-  local left=(x+(i-1)*scale)*self.px;local top=y*self.py
+  local left=self.ox+(x+(i-1)*scale)*self.px;local top=self.oy+y*self.py
   for ry=1,7 do
    local line=pattern[ry];local k=1
    while k<=5 do
     if line:sub(k,k)=="1" then
      local start=k;while k<=5 and line:sub(k,k)=="1" do k=k+1 end
-     local px=math.floor(left+(start-1)*scale*self.px/6);local xx=math.floor(left+k*scale*self.px/6)
-     local py=math.floor(top+(ry-1)*scale*self.py/9);local yy=math.floor(top+ry*scale*self.py/9)
+     local px=math.floor(left+(start-1)*scale*self.px/5);local xx=math.floor(left+k*scale*self.px/5)
+     local py=math.floor(top+(ry-1)*scale*self.py/7);local yy=math.floor(top+ry*scale*self.py/7)
      self.m.drawPixels(px,py,c,math.max(1,xx-px),math.max(1,yy-py))
     else k=k+1 end
    end
@@ -196,16 +223,16 @@ end
 function Renderer:icon(x,y,name,c)
  local data=ICON[name] or ICON.star
  if self.kind=="text" then
-  local fallback={star="*",planet="@",ship="^",scan="?",flag="F",colony="H",mine="M",forge="A",lab="S",dock="D",fort="#",energy="E",alloy="A",science="S",influence="I",research="R",move=">",war="X",trade="$",next=">",back="<",help="?",trophy="*",check="+",close="X",orbit="O"}
+  local fallback={coin="$",alloy="A",shield="S",book="B",council="C",home="H",ark="K",pause="|",scroll="=",star="*",planet="@",ship="^",scan="?",flag="F",colony="H",mine="M",forge="A",lab="S",dock="D",fort="#",energy="E",alloy="A",science="S",influence="I",research="R",move=">",war="X",trade="$",next=">",back="<",help="?",trophy="*",check="+",close="X",orbit="O"}
   return self:text(x,y,fallback[name] or "*",c)
  end
- local left=x*self.px;local top=y*self.py;local iconScale=2
+ local left=self.ox+x*self.px;local top=self.oy+y*self.py;local iconScale=2
  for ry=1,7 do local row=data[ry];local k=1
   while k<=5 do
    if row:sub(k,k)=="1" then
     local start=k;while k<=5 and row:sub(k,k)=="1" do k=k+1 end
-    local xx=math.floor(left+(start-1)*self.px*iconScale/6);local endx=math.floor(left+k*self.px*iconScale/6)
-    local yy=math.floor(top+(ry-1)*self.py*iconScale/9);local endy=math.floor(top+ry*self.py*iconScale/9)
+    local xx=math.floor(left+(start-1)*self.px*iconScale/5);local endx=math.floor(left+k*self.px*iconScale/5)
+    local yy=math.floor(top+(ry-1)*self.py*iconScale/7);local endy=math.floor(top+ry*self.py*iconScale/7)
     self.m.drawPixels(xx,yy,c,math.max(1,endx-xx),math.max(1,endy-yy))
    else k=k+1 end
   end
@@ -222,6 +249,9 @@ end
 function Renderer:beginFrame()
  self.buttons={};self.frame=self.frame+1
  if self.kind=="gfx" and self.m.setFrozen then pcall(self.m.setFrozen,true) end
+ if self.kind=="gfx"then
+  self.m.drawPixels(0,0,0,self.gw,self.gh)
+ end
  self:rect(0,0,self.w,self.h,0)
 end
 function Renderer:endFrame()

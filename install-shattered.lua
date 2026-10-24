@@ -1,5 +1,5 @@
--- FPBCRAFT TIDEBOUND installer/updater v5.5
--- wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-tidebound.lua
+-- FPBCRAFT SHATTERED installer/updater v5.6
+-- wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-shattered.lua
 -- Optional: <branch-or-tag> [--startup]; never changes startup by default.
 local args={...};local ref,autostart='main',false
 for _,a in ipairs(args)do
@@ -9,10 +9,10 @@ for _,a in ipairs(args)do
 end
 assert(ref:match('^[%w._/-]+$') and not ref:find('..',1,true),'Invalid git ref')
 assert(http and http.get,'Enable HTTP in CC:Tweaked config')
-local root='/tidebound';local nextDir=root..'/.install-next';local backup=root..'/.install-previous'
-local origin='https://raw.githubusercontent.com/fpbcraft/cc-scripts/'..ref..'/tidebound/'
+local root='/shattered';local nextDir=root..'/.install-next';local backup=root..'/.install-previous'
+local origin='https://raw.githubusercontent.com/fpbcraft/cc-scripts/'..ref..'/shattered/'
 local files={
- 'tidebound.lua','display.lua','terminal_view.lua',
+ 'shattered.lua','display.lua','terminal_view.lua',
  'expanse-v5/content.lua','expanse-v5/events.lua','expanse-v5/sim.lua',
  'expanse-v5/render.lua','expanse-v5/theme.lua','expanse-v5/ui.lua'
 }
@@ -39,6 +39,16 @@ end
 print('SHATTERED EXPANSE / V5 INSTALLER')
 print('Source: '..ref)
 if not fs.exists(root)then fs.makeDir(root)end
+-- Non-destructive migration of existing campaigns from the retired directory.
+local oldRoot='/tidebound'
+for _,name in ipairs({'v5-save.dat','v5-save.dat.bak','v5-settings.dat'})do
+ local old=fs.combine(oldRoot,name)
+ local dest=fs.combine(root,name)
+ if fs.exists(old) and not fs.exists(dest)then
+  fs.copy(old,dest)
+  print('Migrated existing save: '..name)
+ end
+end
 -- Recover from a computer shutdown while replacing a previous version.
 if fs.exists(backup)then
  for _,name in ipairs(files)do
@@ -81,25 +91,25 @@ end
 remove(nextDir);remove(backup)
 -- Retire obsolete game executables without deleting any save file.
 for _,legacy in ipairs({
- 'tidebound-shattered-v4.lua','tidebound-stellar-frontier.lua',
- 'tidebound-kingdoms.lua','tidebound-classic.lua',
+ 'shattered-shattered-v4.lua','shattered-stellar-frontier.lua',
+ 'shattered-kingdoms.lua','shattered-classic.lua',
  'expanse/content.lua','expanse/events.lua','expanse/sim.lua',
  'expanse/render.lua','expanse/ui.lua'
 })do remove(fs.combine(root,legacy))end
 if autostart then
- local launcher="shell.run('/tidebound/tidebound.lua')\n"
+ local launcher="shell.run('/shattered/shattered.lua')\n"
  local prior=fs.exists('/startup.lua') and read('/startup.lua') or nil
  local shadow=fs.exists('/startup') and read('/startup') or nil
  if shadow and shadow~=launcher then print('Startup not changed: unrelated /startup exists.')
- elseif prior and prior~=launcher and fs.exists('/startup.tidebound-backup.lua')then
+ elseif prior and prior~=launcher and fs.exists('/startup.shattered-backup.lua')then
   print('Startup not changed: previous backup exists.')
  else
-  if prior and prior~=launcher then fs.copy('/startup.lua','/startup.tidebound-backup.lua')end
+  if prior and prior~=launcher then fs.copy('/startup.lua','/startup.shattered-backup.lua')end
   if shadow then remove('/startup')end
   write('/startup.lua',launcher);print('Autostart enabled')
  end
 else print('Autostart unchanged (--startup to opt in)')end
-print('Installed SHATTERED EXPANSE v5.5. All saves preserved.')
-print('PLAY  /tidebound/tidebound.lua')
+print('Installed SHATTERED EXPANSE v5.6. All saves preserved.')
+print('PLAY  /shattered/shattered.lua')
 
-print('SAVES /tidebound/v5-save.dat (+ .bak)')
+print('SAVES /shattered/v5-save.dat (+ .bak)')
