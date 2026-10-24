@@ -32,11 +32,11 @@ W.reveal(state,H,S)
 assert(W.known(state.players[1],2,2)=="visible")
 assert(W.known(state.players[1],15,9)=="hidden","Hotseat must not reveal opponent territory")
 assert(W.known(state.players[2],15,9)=="visible")
-local old=state.players[1].explored[W.key(3,2)]
+local old=state.players[1].explored[W.key(7,2)]
 state.units[1].x=12;state.units[1].y=5
 W.reveal(state,H,S)
-assert(old and W.known(state.players[1],3,2)=="explored",
+assert(old and W.known(state.players[1],7,2)=="explored",
  "Discovery persists when scouts leave an area")
-local fog=W.known(state.players[3],3,2)
+local fog=W.known(state.players[3],7,2)
 assert(fog=="hidden","Third civilization must have its own map")
 print("CIVCRAFT: seeded worlds, guaranteed starts, explorer sight and private discovery passed.")
