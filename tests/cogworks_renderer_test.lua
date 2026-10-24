@@ -38,6 +38,8 @@ local function click(action,arg)
    local y=r.oy+r.scale*(v.y+v.h/2)
    local a,b,c=r:hit(x,y)
    assert(a==action and (arg==nil or b==arg),"Hitbox mismatch for "..action)
+   local d,e=r:hitNormalized(x/r.pw,y/r.ph)
+   assert(d==action and (arg==nil or e==arg),"Normalized hitbox mismatch for "..action)
    return v
   end
  end
@@ -68,6 +70,8 @@ click("back")
 model.scene="confirm";model.pending="newGame";r:draw(model)
 click("confirm");click("cancel")
 assert(gfx.clears==8,"Every scene must clear the whole framebuffer")
+assert(r:hitNormalized(-0.1,0.5)==nil and r:hitNormalized(1,0.5)==nil,
+ "Out-of-range normalized monitor clicks rejected")
 r:resize();r:close()
 assert(gfx.mode==0,"Graphics mode restored")
 local txt={w=70,h=40,writes=0}
