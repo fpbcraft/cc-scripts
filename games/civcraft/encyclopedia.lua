@@ -20,6 +20,8 @@ local mechanics={
 }
 mechanics[#mechanics+1]={id='standby',name='SLEEP AND TURN CHECKS',text='SLEEP UNIT keeps a unit on standby across rounds. Wake it with WAKE UNIT before issuing orders. Ending a turn asks for confirmation when awake units have movement left, cities lack production, or research is unassigned. END ANYWAY deliberately skips these orders.'}
 mechanics[#mechanics+1]={id='reports',name='TURN REPORTS',text='Each turn begins with a private report of your economy, completed research and buildings, city growth, recruited or lost units, and damaged units. REPORT opens it again. Hotseat camera and selection reset when passing the screen to another player.'}
+mechanics[#mechanics+1]={id='empire',name='EMPIRE AND IDLE UNITS',text='The city icon in the bottom bar opens EMPIRE. Its unit and city lists center the map on your selection. The shield/arrow icon jumps to the next awake unit with movement left. These controls only select; MOVE / ATTACK still activates orders. CITY and UNIT in the inspector switch between a city and its garrison.'}
+mechanics[#mechanics+1]={id='icons',name='ACTION BAR ICONS',text='Bottom icons: magnifier opens INSPECT; connected nodes open TECH TREE; city opens EMPIRE; shield/arrow selects NEXT IDLE UNIT; triangle ends the turn. Top-right icons: book opens CODEX; clipboard opens REPORT; pause opens the pause menu.'}
 local function title(id)return id:gsub('_',' '):upper()end
 function E.entries(category)
  if category=='mechanics'then return mechanics end

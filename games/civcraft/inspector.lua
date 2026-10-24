@@ -18,20 +18,38 @@ function I.draw(ui,state,player,rect,modal)
   for _,line in ipairs(Panels.wrap(r,value,w-17))do rows[#rows+1]={text=line,color=color}end
  end
  local bodyY=y+13
+ local controlsY=y+13
+ local stacked=false
+ if city and unit and city.owner==ui.playerID and unit.owner==ui.playerID then
+  stacked=true
+  local width=math.floor((w-6)/2)
+  for i,kind in ipairs({'city','unit'})do
+   r:button(x+2+(i-1)*(width+2),controlsY,width,11,kind:upper(),function()
+    ui.selected.kind=kind;ui.inspectorOffset=0;ui.source=nil;ui.reachable={};ui.workCity=nil
+   end,{selected=(ui.selected.kind or 'unit')==kind})
+  end
+  controlsY=controlsY+12;bodyY=controlsY
+  if (ui.selected.kind or 'unit')=='unit'then city=nil else unit=nil end
+ end
  if ui.selected.empty then
   text('NO SELECTION',7);text('Click a hex to inspect it.')
  elseif city and city.owner==ui.playerID then
   local tabs=w<80 and {'JOBS','HEX','PROD'} or {'JOBS','TILES','PROD'};local values={'jobs','tiles','production'}
   local width=math.floor((w-8)/3)
+  local tabButtons={}
   for i,label in ipairs(tabs)do
    local mode=values[i]
-   r:button(x+2+(i-1)*(width+2),y+13,width,11,label,function()
+   local function choose()
     ui.cityPanel=mode;ui.inspectorOffset=0;ui.source=nil;ui.reachable={};ui.pendingMove=nil
     ui.workCity=mode=='tiles' and {x=city.x,y=city.y} or nil
     if mode=='tiles' and modal then ui.panel='context'end
-   end,{selected=(ui.cityPanel or 'jobs')==mode})
+   end
+   if stacked and h<64 then
+    tabButtons[#tabButtons+1]={label=label,run=choose,style={selected=(ui.cityPanel or 'jobs')==mode}}
+   else r:button(x+2+(i-1)*(width+2),controlsY,width,11,label,choose,{selected=(ui.cityPanel or 'jobs')==mode})end
   end
-  bodyY=y+24
+  if #tabButtons>0 then rows[#rows+1]={buttons=tabButtons};bodyY=controlsY
+  else bodyY=controlsY+11 end
   local yields=Systems.yields(player,city,state,Hex)
   text('POP '..(city.population or 2)..'  IDLE '..Systems.idle(city),7)
   text('F'..yields.food..' I'..yields.industry..' S'..yields.science..'/TURN',11)
@@ -102,7 +120,7 @@ function I.draw(ui,state,player,rect,modal)
   end}}}
   if ui.source then rows[#rows+1]={buttons={{label='CANCEL MOVE',run=function()ui.source=nil;ui.reachable={};ui.pendingMove=nil end}}}end
   rows[#rows+1]={buttons={{label='DESELECT',run=function()ui:deselect()end}}}
-  if unit.kind=='settler'then rows[#rows+1]={buttons={{label='FOUND CITY',run=function()ui:command('found',{x=unit.x,y=unit.y})end}}}end
+  if unit.kind=='settler' and not at(state.cities,unit.x,unit.y)then rows[#rows+1]={buttons={{label='FOUND CITY',run=function()ui:command('found',{x=unit.x,y=unit.y})end}}}end
  else
   local known=World.known(player,ui.selected.x,ui.selected.y)
   text('HEX '..ui.selected.x..','..ui.selected.y,7)

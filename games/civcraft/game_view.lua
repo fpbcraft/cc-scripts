@@ -6,6 +6,7 @@ local Systems=dofile('/games/civcraft/systems.lua')
 local Panels=dofile('/games/civcraft/panels.lua')
 local Reports=dofile('/games/civcraft/reports.lua')
 local Minimap=dofile('/games/civcraft/minimap.lua')
+local Empire=dofile('/games/civcraft/empire_menu.lua')
 local G={}
 local modes={'terrain','territory','resources','yields'}
 local function modal(ui,rect,preserve)
@@ -16,17 +17,27 @@ end
 function G.draw(ui,state,player)
  local r=ui.r;local w,h=r.w,r.h
  local wide=w>=220 and h>=140
- local header=wide and 20 or 13
- local bottom=h-26
+ local header=24
+ local bottom=h-15
  local left=wide and 48 or 16
  local right=wide and math.max(92,math.floor(w*.32)) or math.max(48,math.min(72,math.floor(w*.42)))
  ui.inputMode='map'
  r:fill(0,0,w,h,0)
  r:fill(0,0,w,header,1)
  r:text(4,3,'CIVCRAFT',8,1,40)
- r:text(48,3,'ROUND '..state.round..'  '..(player and player.name or ''),7,1,w-52)
- if not wide then
-  r:text(4,header-5,(ui.notice~='' and ui.notice or ('VIEW: '..ui.mapMode)):upper(),6,1,w-8)
+ local infoX=12+r:textWidth('CIVCRAFT')
+ r:text(infoX,3,'R'..state.round..' '..(player and player.name or ''),7,1,w-51-infoX)
+ r:text(4,header-7,ui.hoverLabel or (ui.notice~='' and ui.notice or 'SELECT A HEX OR AN ACTION'),6,1,w-8)
+ local function iconButton(x,y,width,label,icon,run,style)
+  r:button(x,y,width,12,nil,run,style)
+  r:icon(icon,x+math.floor((width-9)/2),y+1,1)
+  r.buttons[#r.buttons].label=label;r.buttons[#r.buttons].icon=icon
+ end
+ for i,action in ipairs({
+  {'CODEX','sheet',function()ui.panel='encyclopedia';ui.lastDrag=nil end},
+  {'REPORT','contract',function()ui.panel='report';ui.reportOffset=0 end},
+  {'PAUSE','pause',function()ui:command('pause')end}})do
+  iconButton(w-47+(i-1)*15,1,14,action[1],action[2],action[3])
  end
  Map.draw(ui,state,player,{x=left+4,y=header+2,w=w-left-right-10,h=bottom-header-4})
  local y=header+3
@@ -44,8 +55,7 @@ function G.draw(ui,state,player)
    end
   end,{selected=mode=='terrain' and not next(ui.overlays) or ui.overlays[mode]})
   if not wide then
-   if modeStep<11 then r:text(x+math.floor(width/2)-1,y+2,({'T','B','R','Y'})[i],7)
-   else r:icon(icon,x+math.floor((width-9)/2),y+2,1)end
+   r:icon(icon,x+math.floor((width-9)/2),y+math.max(0,math.floor((modeStep-11)/2)),1)
    r.buttons[#r.buttons].label=mode:upper()
   end
   y=y+modeStep
@@ -59,20 +69,15 @@ function G.draw(ui,state,player)
  Minimap.draw(ui,state,player,{x=w-right,y=bottom-miniHeight-2,w=right-4,h=miniHeight})
 
  local actions={
-  {'INSPECT',function()ui.panel='inspector';ui.inspectorOffset=0;ui.lastDrag=nil end},
-  {'TECH TREE',function()ui.panel='tech';ui.source=nil;ui.reachable={};ui.workCity=nil;ui.lastDrag=nil end},
-  {'CODEX',function()ui.panel='encyclopedia';ui.lastDrag=nil end},
-  {'REPORT',function()ui.panel='report';ui.reportOffset=0 end},
-  {'END TURN',function()ui:command('end')end},
-  {'PAUSE',function()ui:command('pause')end}}
- local width=math.floor((w-8)/3)
- r:fill(0,bottom,w,26,1)
+  {'INSPECT','search',function()ui.panel='inspector';ui.inspectorOffset=0;ui.lastDrag=nil end},
+  {'TECH TREE','tree',function()ui.panel='tech';ui.source=nil;ui.reachable={};ui.workCity=nil;ui.lastDrag=nil end},
+  {'EMPIRE','station',function()ui.panel='empire';ui.lastDrag=nil end},
+  {'NEXT IDLE UNIT','nextUnit',function()ui:nextIdle()end},
+  {'END TURN','endTurn',function()ui:command('end')end}}
+ local width=math.floor((w-12)/5)
+ r:fill(0,bottom,w,15,1)
  for i,action in ipairs(actions)do
-  r:button(2+((i-1)%3)*(width+2),bottom+1+math.floor((i-1)/3)*12,
-   width,11,action[1],action[2],{primary=i==5})
- end
- if wide and ui.notice~=''then
-  r:text(4,header-6,ui.notice,8,1,w-8)
+  iconButton(2+(i-1)*(width+2),bottom+1,width,action[1],action[2],action[3],{primary=i==5})
  end
  local rect={x=3,y=3,w=w-6,h=h-6}
  if ui.endConfirm then
@@ -120,6 +125,9 @@ function G.draw(ui,state,player)
   end)
  elseif ui.panel=='inspector'then
   modal(ui,rect);Inspector.draw(ui,state,player,rect,true)
+ elseif ui.panel=='empire'then
+  local box={x=6,y=6,w=w-12,h=h-12}
+  modal(ui,box,true);Empire.draw(ui,box)
  elseif ui.panel=='encyclopedia'then
   modal(ui,rect);Codex.draw(ui,rect)
  end

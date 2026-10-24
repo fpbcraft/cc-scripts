@@ -77,7 +77,8 @@ function UI:tile(x,y)
  end
  self.source=nil;self.reachable={};self.pendingMove=nil;self.inspectorOffset=0
  if self.selected.x==x and self.selected.y==y and not self.selected.empty then self:deselect();return end
- self.selected={x=x,y=y};self.panel='context';self.cityPanel='jobs';self.workCity=nil
+ local unit=where(self.state.units,x,y)
+ self.selected={x=x,y=y,kind=unit and unit.owner==self.playerID and 'unit' or 'city'};self.panel='context';self.cityPanel='jobs';self.workCity=nil
  self.localNotice=nil;self.notice=''
 end
 function UI:draw(state,playerID,opts)
@@ -294,6 +295,30 @@ function UI:draw(state,playerID,opts)
  GameView.draw(self,state,mine or {techs={},name="OBSERVER"})
 
  r:finish()
+end
+function UI:focus(kind,item)
+ self.source=nil;self.reachable={};self.pendingMove=nil;self.workCity=nil
+ self.panel='context';self.cityPanel='jobs';self.inspectorOffset=0
+ self.selected={x=item.x,y=item.y,kind=kind}
+ local v=self.mapViewport
+ if v then
+  self.panX=math.max(0,math.min(v.maxX,(item.x-.5+((item.y-1)%2)*.5)*v.tile-v.w/2))
+  self.panY=math.max(0,math.min(v.maxY,(item.y-1)*v.tile*.75+v.tile/2-v.h/2))
+ end
+ self:feedback((kind=='unit' and item.kind:upper() or 'CITY')..' AT '..item.x..','..item.y)
+end
+function UI:nextIdle()
+ local candidates={};local current
+ for _,unit in ipairs(self.state.units or {})do
+  if unit.owner==self.playerID and not unit.standby and
+   (unit.movesLeft or (unit.moved and 0 or 1))>0 then
+   candidates[#candidates+1]=unit
+   if not self.selected.empty and self.selected.kind=='unit' and
+    unit.x==self.selected.x and unit.y==self.selected.y then current=#candidates end
+  end
+ end
+ if #candidates==0 then self:feedback('NO AWAKE UNITS WITH MOVEMENT LEFT');return false end
+ self:focus('unit',candidates[(current or 0)%#candidates+1]);return true
 end
 function UI:confirmMove()
  local order=self.pendingMove;self.pendingMove=nil

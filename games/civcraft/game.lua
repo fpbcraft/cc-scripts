@@ -456,7 +456,7 @@ local function clientListener()
  end
 end
 local function ui()
- local resizeTimer
+ local resizeTimer,frameTimer
  local displayTimer=os.startTimer and os.startTimer(.25)
  draw()
  while not exitRequested do
@@ -464,14 +464,17 @@ local function ui()
   if e=='monitor_touch' and display~=term.current() and a==displaySide then
    view:tap(b,c);draw()
   elseif e=='mouse_click' and (not d or d==displaySide)then
-   view:pointerDown(b,c);draw()
+   view:pointerDown(b,c);if not view.pointerStart then draw()end
   elseif e=='mouse_drag' and (not d or d==displaySide) then
-   view:drag(b,c);draw()
+   view:drag(b,c)
+   if not frameTimer then frameTimer=os.startTimer(.03)end
   elseif e=='mouse_scroll' and (not d or d==displaySide) then
    view:scroll(a,b,c);draw()
-  elseif e=='mouse_up' and (not d or d==displaySide)then view:pointerUp();draw()
+  elseif e=='mouse_up' and (not d or d==displaySide)then view:pointerUp();frameTimer=nil;draw()
   elseif e=='term_resize' or e=='monitor_resize' then
    view:resize();draw();resizeTimer=os.startTimer and os.startTimer(.15)
+  elseif e=='timer' and a==frameTimer then
+   frameTimer=nil;draw()
   elseif e=='timer' and a==displayTimer then
    local width,height=display.getSize()
    if view.r and (width~=view.r.cw or height~=view.r.ch)then view:resize();draw()end

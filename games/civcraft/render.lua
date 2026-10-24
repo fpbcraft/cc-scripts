@@ -157,7 +157,9 @@ function R:fitGraphics()
  self.oy=math.floor((self.ph-self.h*scale)/2)
 end
 function R:resize()
- self.cw,self.ch=self.m.getSize()
+ local cw,ch=self.m.getSize()
+ if cw~=self.cw or ch~=self.ch then self.lastTextRows=nil end
+ self.cw,self.ch=cw,ch
  if self.mode=='graphics' then self.w=self.cw*3;self.h=self.ch*4
  else self.w=self.cw*2;self.h=self.ch*3 end
  if self.mode=='graphics' then
@@ -180,6 +182,12 @@ function R:withClip(rect,draw)
  self.clip=previous
  if not ok then error(err,0)end
 end
+local function blitColor(index)
+ local color=terminalColors[index] or 32768;local value=0
+ while color>1 do color=color/2;value=value+1 end
+ return ('0123456789abcdef'):sub(value+1,value+1)
+end
+local function splice(value,x1,x2,replacement)return value:sub(1,x1-1)..replacement..value:sub(x2+1)end
 function R:fill(x,y,w,h,color)
  local x0=math.max(0,math.floor(x));local y0=math.max(0,math.floor(y))
  local x1=math.min(self.w,math.ceil(x+w));local y1=math.min(self.h,math.ceil(y+h))
@@ -189,19 +197,60 @@ function R:fill(x,y,w,h,color)
  end
  if x1<=x0 or y1<=y0 then return end
  if self.mode=='graphics' then
-  local a=math.floor(self.ox+x0*self.sx);local b=math.floor(self.oy+y0*self.sy)
-  local rw=math.max(1,math.floor(self.ox+x1*self.sx)-a);local rh=math.max(1,math.floor(self.oy+y1*self.sy)-b)
-  self.m.drawPixels(a,b,color or 0,rw,rh)
+  if self.buffer then
+   local strip=string.rep(string.char(color or 0),x1-x0)
+   for row=y0+1,y1 do
+    local old=self.buffer[row]
+    self.buffer[row]=old:sub(1,x0)..strip..old:sub(x1+1)
+   end
+  else
+   local a=math.floor(self.ox+x0*self.sx);local b=math.floor(self.oy+y0*self.sy)
+   local rw=math.max(1,math.floor(self.ox+x1*self.sx)-a);local rh=math.max(1,math.floor(self.oy+y1*self.sy)-b)
+   self.m.drawPixels(a,b,color or 0,rw,rh)
+  end
  else
   local ax=math.floor(x0/2)+1;local ay=math.floor(y0/3)+1
   local bx=math.min(self.cw,math.ceil(x1/2));local by=math.min(self.ch,math.ceil(y1/3))
-  self.m.setBackgroundColor(terminalColors[color] or 32768)
-  for row=ay,by do self.m.setCursorPos(ax,row);self.m.write((' '):rep(math.max(0,bx-ax+1)))end
+  local count=math.max(0,bx-ax+1)
+  if self.textBuffer then
+   for row=ay,by do
+    local line=self.textBuffer[row]
+    line[1]=splice(line[1],ax,bx,(' '):rep(count))
+    line[3]=splice(line[3],ax,bx,blitColor(color):rep(count))
+   end
+  else
+   self.m.setBackgroundColor(terminalColors[color] or 32768)
+   for row=ay,by do self.m.setCursorPos(ax,row);self.m.write((' '):rep(count))end
+  end
  end
 end
 function R:outline(x,y,w,h,color)
  self:fill(x,y,w,1,color);self:fill(x,y+h-1,w,1,color)
  self:fill(x,y,1,h,color);self:fill(x+w-1,y,1,h,color)
+end
+function R:blit(rows,x,y)
+ if not self.buffer then return false end
+ x,y=math.floor(x),math.floor(y)
+ local clip=self.clip or {x=0,y=0,w=self.w,h=self.h}
+ local left=math.max(0,clip.x);local right=math.min(self.w,clip.x+clip.w)
+ local top=math.max(0,clip.y);local bottom=math.min(self.h,clip.y+clip.h)
+ local pattern='[^'..string.char(255)..']+'
+ for i,row in ipairs(rows)do
+  local target=y+i-1
+  if target>=top and target<bottom then
+   local start=1
+   while start<=#row do
+    local a,b=row:find(pattern,start);if not a then break end
+    local x0=math.max(left,x+a-1);local x1=math.min(right,x+b)
+    if x1>x0 then
+     local old=self.buffer[target+1]
+     self.buffer[target+1]=old:sub(1,x0)..row:sub(x0-x+1,x1-x)..old:sub(x1+1)
+    end
+    start=b+1
+   end
+  end
+ end
+ return true
 end
 function R:line(x1,y1,x2,y2,color)
  -- Thick sections are fast; diagonal lines are sampled into a 1-pixel stroke.
@@ -229,8 +278,15 @@ function R:text(x,y,txt,color,scale,maxWidth)
   if y<0 or y>=self.h then return end
   local tx=math.floor(x/2)+1;local ty=math.floor(y/3)+1
   if tx>=1 and tx<=self.cw and ty>=1 and ty<=self.ch then
-   self.m.setCursorPos(tx,ty);self.m.setBackgroundColor(terminalColors[0]);self.m.setTextColor(terminalColors[color] or 1)
-   self.m.write(txt:sub(1,self.cw-tx+1))
+   txt=txt:sub(1,self.cw-tx+1)
+   if self.textBuffer then
+    local line=self.textBuffer[ty];local last=tx+#txt-1
+    line[1]=splice(line[1],tx,last,txt)
+    line[2]=splice(line[2],tx,last,blitColor(color):rep(#txt))
+   else
+    self.m.setCursorPos(tx,ty);self.m.setBackgroundColor(terminalColors[0]);self.m.setTextColor(terminalColors[color] or 1)
+    self.m.write(txt)
+   end
   end
   return
  end
@@ -266,6 +322,11 @@ function R:icon(id,x,y,s)
   coal={'000110000','011111000','111111100','111111110','111111111','111111110','111111100','011111000','001110000'},
   parts={'001110000','011111000','111111100','110001110','100001110','110001110','111111100','011111000','001110000'},
   people={'110001100','110001100','000000000','111001110','111001110','111001110','111001110','000000000','000000000'},
+  search={'001110000','010001000','100000100','100000100','100000100','010001000','001110100','000000010','000000001'},
+  tree={'000111000','000101000','000111000','000010000','011111110','010000010','111000111','101000101','111000111'},
+  pause={'011000110','011000110','011000110','011000110','011000110','011000110','011000110','011000110','011000110'},
+  nextUnit={'111100100','100101110','111111111','011101110','011100100','001100000','001100000','000000000','000000000'},
+  endTurn={'001000000','001100000','001110000','001111000','001111100','001111000','001110000','001100000','001000000'},
   box={'111111111','100010001','101010101','100010001','101010101','100010001','101010101','100010001','111111111'},
   wood={'000000000','111111100','111111100','000000000','011111110','011111110','000000000','111111100','111111100'},
   sheet={'000000000','011111110','011111110','000000000','111111100','111111100','000000000','011111110','011111110'},
@@ -328,11 +389,68 @@ function R:begin()
  self.buttons={};self.scrollbars={};self.clip=nil
  if self.mode=='graphics' and self.m.setFrozen then pcall(self.m.setFrozen,true)end
  if self.mode=='graphics' then
-  self.m.drawPixels(0,0,0,self.pw,self.ph)
+  local blank=string.rep(string.char(0),self.w);self.buffer={}
+  for y=1,self.h do self.buffer[y]=blank end
+ else
+  self.textBuffer={}
+  for y=1,self.ch do self.textBuffer[y]={(' '):rep(self.cw),('0'):rep(self.cw),('f'):rep(self.cw)}end
  end
- self:fill(0,0,self.w,self.h,0)
 end
-function R:finish()if self.mode=='graphics' and self.m.setFrozen then pcall(self.m.setFrozen,false)end end
+function R:finish()
+ if self.buffer then
+  local rows={};local blank=string.rep(string.char(0),self.pw)
+  local expanded={};local integer=self.sx==math.floor(self.sx)
+  local lut={}
+  if integer then for c=0,31 do lut[string.char(c)]=string.rep(string.char(c),self.sx)end end
+  for y=0,self.ph-1 do
+   local source=math.ceil((y+1-self.oy)/self.sy)
+   if y<self.oy or source<1 or source>self.h then rows[y+1]=blank
+   else
+    local row=self.buffer[source]
+    if not expanded[row]then
+     local value
+     if integer then value=row:gsub('.',lut)
+     else
+      local parts={}
+      for x=1,self.w do
+       local count=math.floor(self.ox+x*self.sx)-math.floor(self.ox+(x-1)*self.sx)
+       parts[x]=row:sub(x,x):rep(count)
+      end
+      value=table.concat(parts)
+     end
+     value=blank:sub(1,self.ox)..value
+     expanded[row]=(value..blank):sub(1,self.pw)
+    end
+    rows[y+1]=expanded[row]
+   end
+  end
+  self.m.drawPixels(0,0,rows,self.pw,self.ph)
+  self.buffer=nil
+ end
+ if self.textBuffer then
+  local previous=self.lastTextRows or {}
+  for y,line in ipairs(self.textBuffer)do
+   local old=previous[y]
+   if not old or old[1]~=line[1] or old[2]~=line[2] or old[3]~=line[3]then
+    self.m.setCursorPos(1,y)
+    if self.m.blit then self.m.blit(line[1],line[2],line[3])
+    else
+     local at=1
+     while at<=self.cw do
+      local ending=at
+      while ending<self.cw and line[2]:sub(ending+1,ending+1)==line[2]:sub(at,at) and
+       line[3]:sub(ending+1,ending+1)==line[3]:sub(at,at)do ending=ending+1 end
+      self.m.setTextColor(2^tonumber(line[2]:sub(at,at),16))
+      self.m.setBackgroundColor(2^tonumber(line[3]:sub(at,at),16))
+      self.m.write(line[1]:sub(at,ending));at=ending+1
+     end
+    end
+   end
+  end
+  self.lastTextRows=self.textBuffer;self.textBuffer=nil
+ end
+ if self.mode=='graphics' and self.m.setFrozen then pcall(self.m.setFrozen,false)end
+end
 function R:close()
  if self.mode=='graphics' then
   if self.originalPalette and self.m.setPaletteColor then

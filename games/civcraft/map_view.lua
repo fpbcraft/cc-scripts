@@ -28,18 +28,34 @@ function V.draw(ui,state,player,rect)
   for _,c in ipairs(state.cities or {})do focus[#focus+1]=c end
   for _,u in ipairs(state.units or {})do focus[#focus+1]=u end
   for _,c in ipairs(focus)do if c.owner==ui.playerID then
-   ui.selected={x=c.x,y=c.y}
+   ui.selected={x=c.x,y=c.y,kind=c.kind and 'unit' or 'city'}
    ui.panX=(c.x-.5)*size-rect.w/2;ui.panY=(c.y-.5)*step-rect.h/2;break
   end end
  end
  ui.panX=math.max(0,math.min(maxX,ui.panX or 0));ui.panY=math.max(0,math.min(maxY,ui.panY or 0))
  ui.mapViewport={x=rect.x,y=rect.y,w=rect.w,h=rect.h,tile=size,maxX=maxX,maxY=maxY}
- local claims={}
- for y=1,height do for x=1,width do claims[World.key(x,y)]=World.territoryCity(state,Hex,x,y)end end
+ local citySignature={}
+ local cityIndex,unitIndex={},{}
+ for _,city in ipairs(state.cities or {})do
+  citySignature[#citySignature+1]=table.concat({city.id or 0,city.owner,city.x,city.y,city.population or 2},':')
+  cityIndex[World.key(city.x,city.y)]=city
+ end
+ for _,unit in ipairs(state.units or {})do unitIndex[World.key(unit.x,unit.y)]=unit end
+ local signature=table.concat(citySignature,';')
+ local cache=ui.mapCache
+ if not cache or cache.world~=world or cache.cities~=state.cities or cache.signature~=signature then
+  cache={world=world,cities=state.cities,signature=signature,claims={}};ui.mapCache=cache
+  for y=1,height do for x=1,width do cache.claims[World.key(x,y)]=World.territoryCity(state,Hex,x,y)end end
+ end
+ local claims=cache.claims
  local tiles={};ui.hexTargets={}
  r:fill(rect.x-1,rect.y-1,rect.w+2,rect.h+2,1)
  r:withClip(rect,function()
-  for y=1,height do for x=1,width do
+  local y0=math.max(1,math.floor(ui.panY/step)-1)
+  local y1=math.min(height,math.ceil((ui.panY+rect.h)/step)+1)
+  local x0=math.max(1,math.floor(ui.panX/size))
+  local x1=math.min(width,math.ceil((ui.panX+rect.w)/size)+1)
+  for y=y0,y1 do for x=x0,x1 do
    local px=rect.x+(x-1)*size+((y-1)%2)*size/2-ui.panX
    local py=rect.y+(y-1)*step-ui.panY
    if px+size>rect.x and px<rect.x+rect.w and py+size>rect.y and py<rect.y+rect.h then
@@ -53,13 +69,17 @@ function V.draw(ui,state,player,rect)
     if visibility=='visible'then
      if overlays.territory then base=owner and ownerColor(state,owner) or base end
     end
-    for dy=0,size-1 do
-     local inset=dy<size/4 and size/2-2*dy or dy>=size*3/4 and 2*(dy+1)-size*1.5 or 0
-     r:fill(px+inset,py+dy,math.max(1,size-inset*2),1,base)
+    if r.buffer and r.blit then
+     r:blit(Terrain.sprite(land,size,x,y,base,not hidden and visibility=='visible' and not overlays.territory,hidden and 14 or 3),px,py)
+    else
+     for dy=0,size-1 do
+      local inset=dy<size/4 and size/2-2*dy or dy>=size*3/4 and 2*(dy+1)-size*1.5 or 0
+      r:fill(px+inset,py+dy,math.max(1,size-inset*2),1,base)
+     end
+     if not hidden and visibility=='visible' and not overlays.territory then Terrain.draw(r,land,px,py,size,x,y)end
+     local vertices=Hex.vertices(px,py,size)
+     for i,a in ipairs(vertices)do local b=vertices[i%6+1];r:line(a.x,a.y,b.x,b.y,hidden and 14 or 3)end
     end
-    if not hidden and visibility=='visible' and not overlays.territory then Terrain.draw(r,land,px,py,size,x,y)end
-    local vertices=Hex.vertices(px,py,size)
-    for i,a in ipairs(vertices)do local b=vertices[i%6+1];r:line(a.x,a.y,b.x,b.y,hidden and 14 or 3)end
     tiles[#tiles+1]={x=x,y=y,px=px,py=py,owner=owner,claim=claim,visibility=visibility,
      land=land,deposit=deposit,yields=yields}
     ui.hexTargets[#ui.hexTargets+1]={x=px,y=py,w=size,h=size,tx=x,ty=y}
@@ -94,12 +114,12 @@ function V.draw(ui,state,player,rect)
      r:fill(px+size/4,py+size-3,size/2,2,destination.attack and 10 or 11)
     end
    end
-   local city=t.visibility~='hidden' and at(state.cities,x,y)
+   local city=t.visibility~='hidden' and cityIndex[World.key(x,y)]
    if city and (city.owner==ui.playerID or t.visibility=='visible')then
     if size<16 then r:fill(px+size/2-1,py+size/2-1,3,3,ownerColor(state,city.owner))
     else Icons.draw(r,'city',px+size/2-5,py+size/2-5,11,ownerColor(state,city.owner))end
    end
-   local unit=t.visibility=='visible' and at(state.units,x,y)
+   local unit=t.visibility=='visible' and unitIndex[World.key(x,y)]
    if unit then
     if size<16 then r:fill(px+size/2,py+size/2,2,2,ownerColor(state,unit.owner))
     else Icons.draw(r,unit.kind,px+size/2-5,py+size/2-5,11,ownerColor(state,unit.owner))end

@@ -97,6 +97,28 @@ for _,graphics in ipairs({false,true})do
    click('NEXT');draw();bounds()
   end
   assert(queued and calls[#calls][1]=='queue','Production reachable through paged inspector')
+  assert(click('EMPIRE'));draw();bounds();assert(click('CITIES'));draw();bounds()
+  local chosen=false
+  for _,button in ipairs(ui.r.buttons)do if button.label and button.label:match('^CITY ')then button.fn();chosen=true;break end end
+  assert(chosen and ui.panel=='context' and ui.selected.kind=='city','Empire menu focuses owned cities')
+  draw();assert(click('NEXT IDLE UNIT'));draw();assert(ui.selected.kind=='unit' and not ui.source,'Next idle selects without arming orders')
+  state.units[1].standby=true;assert(not ui:nextIdle(),'Sleeping units are skipped');state.units[1].standby=nil
+  state.units[1].movesLeft=0;assert(not ui:nextIdle(),'Spent units are skipped');state.units[1].movesLeft=2
+  local oldX,oldY=state.units[1].x,state.units[1].y
+  state.units[1].x,state.units[1].y=a.x,a.y
+  ui:deselect();ui:tile(a.x,a.y);draw();bounds()
+  assert(ui.selected.kind=='unit' and click('CITY'),'Stacked units and cities have an explicit chooser')
+  draw();bounds();assert(ui.selected.kind=='city' and click('UNIT'))
+  draw();bounds();assert(ui.selected.kind=='unit','Produced units on city tiles remain selectable')
+  state.units[1].x,state.units[1].y=oldX,oldY
+  ui:focus('city',state.cities[1]);draw()
+  for _,button in ipairs(ui.r.buttons)do
+   if button.label=='CODEX' or button.label=='REPORT' or button.label=='PAUSE'then
+    assert(button.icon and button.y<24,'Secondary actions are icons in the top bar')
+   elseif button.label=='END TURN' or button.label=='EMPIRE' or button.label=='NEXT IDLE UNIT'then
+    assert(button.icon and button.y>=ui.r.h-15,'Primary actions use a compact icon footer')
+   end
+  end
   ui.panel='tech';draw();bounds();local px,py=ui.panX,ui.panY
   assert(not ui:pan(10,10));assert(ui.panX==px and ui.panY==py)
   ui.panel='encyclopedia';draw();bounds()

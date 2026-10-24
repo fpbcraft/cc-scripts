@@ -43,4 +43,32 @@ function T.draw(r,land,x,y,size,tx,ty)
   end
  end
 end
+local sprites={}
+function T.sprite(land,size,tx,ty,base,detail,edge)
+ local variant=(tx*37+ty*67)%16
+ local key=table.concat({land,size,variant,base,detail and 1 or 0,edge},':')
+ if sprites[key]then return sprites[key]end
+ local blank=string.rep(string.char(255),size+1);local rows={}
+ for y=1,size+1 do rows[y]=blank end
+ local canvas={}
+ function canvas:fill(x,y,w,h,color)
+  local x0,y0=math.max(0,math.floor(x)),math.max(0,math.floor(y))
+  local x1,y1=math.min(size+1,math.ceil(x+w)),math.min(size+1,math.ceil(y+h))
+  if x1<=x0 or y1<=y0 then return end
+  local strip=string.rep(string.char(color),x1-x0)
+  for row=y0+1,y1 do rows[row]=rows[row]:sub(1,x0)..strip..rows[row]:sub(x1+1)end
+ end
+ for y=0,size-1 do
+  local inset=y<size/4 and size/2-2*y or y>=size*3/4 and 2*(y+1)-size*1.5 or 0
+  canvas:fill(inset,y,math.max(1,size-inset*2),1,base)
+ end
+ if detail then T.draw(canvas,land,0,0,size,variant,0)end
+ local vertices=Hex.vertices(0,0,size)
+ for i,a in ipairs(vertices)do
+  local b=vertices[i%6+1];local dx,dy=b.x-a.x,b.y-a.y
+  local count=math.max(math.abs(dx),math.abs(dy))
+  for step=0,count do canvas:fill(a.x+dx*step/count,a.y+dy*step/count,1,1,edge)end
+ end
+ sprites[key]=rows;return rows
+end
 return T

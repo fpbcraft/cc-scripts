@@ -60,7 +60,11 @@ generated terrain, territory, fog, technology, and production progress.
 The map stays central with a permanent, scrollable inspector. The left controls
 collapse to icons on compact screens. **PREV/NEXT**, the scrollbar, and mouse
 wheel scrolling keep all inspector actions reachable. **INSPECT** opens a larger
-inspector. Four narrow, clickable map edges pan in their respective directions.
+inspector. The compact bottom bar uses icons: magnifier (**INSPECT**), connected
+nodes (**TECH TREE**), city (**EMPIRE**), shield/arrow (**NEXT IDLE UNIT**), and
+triangle (**END TURN**). The top-right book, clipboard, and pause icons open
+**CODEX**, **REPORT**, and **PAUSE**. Four narrow, clickable map edges pan in
+their respective directions.
 Drag inside the map to pan on a computer; CraftOS monitor windows also support
 mouse dragging. Vanilla Minecraft monitor taps use the edge strips.
 
@@ -70,6 +74,13 @@ cities, units and borders. **RESOURCES**, **YIELDS**, and **TERRITORY** are
 independent overlay toggles; **TERRAIN** clears them. Yields zoom in to show
 contrasting food/industry/science labels; the tile inspector always shows the
 full numeric breakdown. Terrain detail increases with zoom.
+
+**EMPIRE** opens a paged list of all owned units and cities; selecting an entry
+centers the map and opens its inspector. **NEXT IDLE UNIT** cycles through awake
+units with movement left, skipping sleeping and spent units. These navigation
+actions never activate movement mode. When a unit occupies a city tile, use the
+inspector's **CITY / UNIT** chooser to inspect either one; map taps select the
+unit first.
 
 Selecting a unit only inspects it. Click it again, or **DESELECT**, to clear it.
 Use **MOVE / ATTACK** to show legal destinations (green for movement, red for
@@ -98,6 +109,11 @@ Designed for **3×3 through 5×5 Advanced Monitors** at scale 0.5, including rec
 Each machine needs a peripheral modem for networked play; wired modems need to be part of the same wired network. CC:Tweaked does **not** offer unlimited-range normal wireless networking—distance and dimensions matter.
 
 ## Implementation notes
+
+Pixel rendering batches the whole frame into a single `drawPixels` call.
+Terrain sprites and territory claims are cached, and only visible map rows and
+columns are traversed while panning. Text terminals batch changed rows with
+`blit`. Drag events are coalesced to avoid building a backlog of redraws.
 
 The host maintains the only authoritative world state, checks unit ownership and resource costs, and broadcasts snapshots. Clients display those snapshots and submit commands; they never directly modify the host state. This is a cooperative local network game, not an adversarial or cryptographically secure network protocol. Local hot-seat supports human and AI seats; networked games currently require at least two registered computers to start.
 
