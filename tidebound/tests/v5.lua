@@ -180,7 +180,7 @@ for _,size in ipairs(sizes) do for _,gfx in ipairs({true,false}) do
  end
  local function tapMarker(marker)
   local x=marker.x+math.floor(marker.w/2);local y=marker.y+math.floor(marker.h/2)
-  return gfx and ui:monitorTouch(x*ui.r.px,y*ui.r.py) or ui:monitorTouch(x+1,y+1)
+  return gfx and ui:monitorTouch((ui.r.ox or 0)+x*ui.r.px,(ui.r.oy or 0)+y*ui.r.py) or ui:monitorTouch(x+1,y+1)
  end
  local targets={}
  for _,rect in pairs(initial.systems)do targets[#targets+1]=rect end
