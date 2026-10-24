@@ -46,3 +46,19 @@ An update is an on-demand reinstall from the latest configured repository revisi
 - `/store.lua` — permanent shortcut.
 
 Existing /cogworks, /railbreak and /tidebound saves are preserved.
+
+## Optional Basalt 2.5 storefront
+
+FPB Store now detects an installed Basalt 2.5 framework and uses a responsive,
+touch-enabled Basalt catalog screen when available. Without Basalt, its built-in
+terminal interface still works. To install Basalt, use the official command:
+
+```lua
+wget run https://basalt.madefor.cc/2.5/install.lua minified
+```
+
+This installs a `basalt.lua` module; make it importable on the CraftOS Lua
+module path (for example at `/basalt.lua`). The Basalt frontend currently
+handles catalog selection and app actions; the games' specialized gameplay
+renderers are retained. Basalt is optional, not a requirement to install games.
+Use `/fpbstore/main.lua --classic` to force the original storefront.
