@@ -13,9 +13,9 @@ local function level(name,tip,source,goals,blocks,build,spares)
  for _,v in ipairs(build)do stock[v.kind]=(stock[v.kind] or 0)+1 end
  for k,v in pairs(spares or {})do stock[k]=(stock[k] or 0)+v end
  return {name=name,tip=tip,source=source,goals=goals,blocks=blocks,
-  build=build,stock=stock,fullNetwork=#goals>1 or #build>=8}
+  build=build,stock=stock}
 end
-return {
+local campaign={
  level("POWER LINE","BUILD SHAFTS FROM THE ENGINE TO THE PRESS.",
   s(1,3,1),{m(5,3,3,1,1)},{{2,2},{3,2},{4,2}},
   {p("I",2,3,1),p("I",3,3,1),p("I",4,3,1)}),
@@ -108,3 +108,7 @@ return {
   s(1,3,1),{m(1,4,1,2,-1),m(6,1,3,1,1),m(5,4,3,1,-1),m(6,6,1,4,-1),m(5,3,1,1,-1)},{{7,1},{3,5},{2,6},{3,6},{2,5},{6,4},{5,6},{1,5}},
   {p("L",2,3,3),p("T",2,2,2),p("L",1,2,0),p("L",3,2,2),p("L",1,1,1),p("I",2,1,1),p("G",3,3,0),p("T",3,4,0),p("B",2,4,1),p("G",3,1,1),p("T",4,4,0),p("I",4,3,0),p("L",4,2,1),p("I",5,2,1),p("T",6,2,2),p("L",7,2,2),p("L",6,3,3),p("B",7,3,0),p("B",7,4,0),p("I",4,1,1),p("G",5,1,1),p("I",7,5,0),p("L",7,6,3)}),
 }
+for index,stage in ipairs(campaign)do
+ stage.fullNetwork=index>=4
+end
+return campaign
