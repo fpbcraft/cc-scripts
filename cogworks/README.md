@@ -2,7 +2,18 @@
 
 A compact **construction puzzle** for CC:Tweaked, inspired by Create's rotational power transmission. Build mechanical networks with a limited inventory rather than rotating a prebuilt solution.
 
-There are **12 handmade stages** on a 6 x 5 workshop grid, with obstacles, branching circuits, clockwise/counterclockwise requirements, and RPM multipliers. The later stages require powering as many as three machines at different speeds and/or directions.
+There are **30 curated construction puzzles** in a 7 x 6 workshop. The first three levels introduce the mechanics; levels 4–30 require you to create **fully connected** working machines, with increasingly restrictive stock, rock walls, branching transmission lines, reversing gears and 2x speed drives. Late stages have up to **five** press targets and over twenty machine parts.
+
+### Campaign difficulty
+
+- **1–3 — Fundamentals:** Build, turn and route a single shaft line.
+- **4–10 — Routing contracts:** Two press targets, obstacle detours, exact inventory, and the first reversing/speed stages.
+- **11–15 — Distribution:** Three targets connected to one source; multi-way splitters and mixed output requirements.
+- **16–20 — Kinetic networks:** Long branches, combined gear/drive requirements and up to four presses.
+- **21–25 — Industrial puzzles:** Four output targets, crowded boards, precise placement of specialized equipment.
+- **26–30 — Master challenges:** Four or five presses, multi-stage transformations, tight stock, and dense obstacles.
+
+**Advanced contract (level 4 onward):** To complete the workshop, *every available part must be placed and powered*, **every port must connect** to a matching adjacent port, and **every target must have the correct speed/direction**. A glowing press does not mean the puzzle is finished if a shaft is dangling or stock is unused.
 
 ## One-command install / update
 
@@ -23,7 +34,7 @@ You can add `--startup` to the installer on a dedicated computer (existing unrel
 To test a development branch, install directly from its raw URL and pass the branch name as an argument:
 
 ```lua
-wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/feat/cogworks-construction-v2/install-cogworks.lua feat/cogworks-construction-v2
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/feat/cogworks-30-level-campaign/install-cogworks.lua feat/cogworks-construction-v2
 ```
 
 ## How to play
@@ -32,7 +43,7 @@ wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/feat/cogworks-con
 2. Select a component from the right-hand **PARTS** inventory. Its stock count is shown next to its name.
 3. Tap an empty workshop cell to **place** that part. Tap a part already placed to **rotate** it by 90 degrees.
 4. Select **REMOVE** to salvage a misplaced part (stock is refunded). You cannot change the source, goal presses, or stone walls.
-5. Connect ports so power flows from the source to **every target** at the correct RPM and direction. All goals must be satisfied simultaneously.
+5. Connect ports so power flows from the source to **every target** at the correct RPM and direction. Starting at level 4, you must also use the whole inventory, close all ports and ensure every part is powered.
 6. Use **HINT** to fix one misplaced, missing, or misrotated piece at a time. **RESET** empties the board and restores your stock. Next levels unlock upon completion.
 
 Every puzzle starts empty, except for its fixed terminals and obstacles. Some levels reward thoughtful use of tees/splitters, others force you to reverse spin or double shaft speed using specialized parts.
@@ -50,7 +61,7 @@ Every puzzle starts empty, except for its fixed terminals and obstacles. Some le
 | **2x Drive** | Amber `2` with a green input marker | Doubles RPM from input to output; reverse flow halves it |
 | **Stone** | Dark blocked square | Cannot hold machinery |
 
-The ports are always visibly marked on the corresponding edges. Connected, powered machinery animates with amber motion markers. A target turns green when its speed and rotation are correct. Inconsistent closed loops can cause a red **JAM** warning.
+The ports are always visibly marked on the corresponding edges. Connected, powered machinery animates with amber motion markers. A target turns green when its speed and rotation are correct. **Red end caps** identify open/unconnected ports on advanced levels, and the status bar reports unused stock and open ports. Inconsistent closed loops can cause a red **JAM** warning.
 
 ### Other controls
 
@@ -75,4 +86,4 @@ lua5.3 tests/cogworks_renderer_test.lua
 lua5.3 tests/cogworks_installer_test.lua
 ```
 
-The pure Lua engine includes canonical network solutions for all 12 levels. Regression tests verify inventory depletion/refunds, building, rotation, hint recovery, save serialization, target RPM and direction, pixel and text input, and installer rollback.
+The pure Lua engine includes validated reference network solutions for all 30 levels. Regression tests verify inventory depletion/refunds, building, rotation, hint recovery, save serialization, target RPM and direction, pixel and text input, and installer rollback.
