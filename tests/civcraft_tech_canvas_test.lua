@@ -10,6 +10,7 @@ local buttons,strokes={},0
 local r={buttons=buttons}
 function r:fill(...)strokes=strokes+1 end
 function r:outline(...)strokes=strokes+1 end
+function r:icon(...)strokes=strokes+1 end
 function r:text(...)end
 function r:button(x,y,w,h,label,fn)
  buttons[#buttons+1]={x=x,y=y,w=w,h=h,label=label,fn=fn}
