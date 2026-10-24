@@ -55,6 +55,33 @@ assert(tile,"A hexagonal tile hitbox is available")
 local tx=math.floor(ui.r.ox+(tile.x+tile.w/2)*ui.r.sx)
 local ty=math.floor(ui.r.oy+(tile.y+tile.h/2)*ui.r.sy)
 assert(ui:tap(tx,ty),"Map accepts touch")
+-- Selecting an owned unit exposes precisely the legal hex destinations.
+local function tapHex(hx,hy)
+ local hit
+ for _,hex in ipairs(ui.hexTargets or {})do
+  if hex.tx==hx and hex.ty==hy then hit=hex;break end
+ end
+ assert(hit,"Hex "..hx..","..hy.." has a hitbox")
+ return ui:tap(math.floor(ui.r.ox+(hit.x+hit.w/2)*ui.r.sx),
+  math.floor(ui.r.oy+(hit.y+hit.h/2)*ui.r.sy))
+end
+assert(tapHex(3,2),"Unit can be selected")
+assert(ui.source and ui.source.x==3 and #ui.reachable>0,
+ "Selecting owned unit immediately shows reachable hexes")
+ui:draw(state,11,{localMode=true})
+local legal=ui.reachable[1]
+assert(tapHex(legal.x,legal.y),"Highlighted move is clickable")
+assert(calls[#calls].action=="move" and
+ calls[#calls].data.sx==3 and calls[#calls].data.sy==2,
+ "Hex movement emits the same command accepted by simulation")
+-- Selecting a city exposes its specific actions, not a generic build bar.
+assert(tapHex(2,2),"Select owned city")
+ui:draw(state,11,{localMode=true})
+local actions={}
+for _,btn in ipairs(ui.r.buttons)do actions[btn.label]=true end
+assert(actions.WARRIOR and actions.SETTLER and actions.RESEARCH,
+ "City contextual action menu")
+assert(not actions["MOVE UNIT"],"City should not expose unit movement")
 touchLabel("END TURN")
 assert(calls[#calls].action=="end","End-turn handler wired")
 ui:draw(state,12,{handoff=true,localMode=true})
