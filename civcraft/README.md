@@ -24,18 +24,39 @@ The join command discovers a hosted game automatically. If discovery fails or mu
 
 For a clean new match, explicitly run `/civcraft/game.lua host --new`. This deletes the existing match save. Simply reinstalling will **not** delete saves. To opt into host autostart for a dedicated computer, add `--startup` to the installer command; it will not overwrite an existing startup script.
 
-## Gameplay
+## Gameplay (v0.6)
 
-The map is a 12×8 **pointy-top hexagonal** continent map: `.` plains, `f` forest, `^` mountain, `~` water; mountains and water block movement. Your settlements and units are coloured by player. Cities are walled-settlement icons, warriors carry a shield and sword, and settlers appear as wagons. Forest, mountain and water also have distinct pixel-art symbols. Touch a tile to select it.
+CIVCRAFT is a turn-based 4X game on a **seeded hexagonal world**. In the lobby,
+choose a map size (**Compact 18×12**, **Standard 28×18**, or **Large 40×26**),
+a map type (**Continents**, **Archipelago**, **Pangaea**, or **Highlands**),
+the seed, and each participant's civilization. Two to four human/AI empires
+compete to explore, settle, develop, research, and conquer. Saves preserve the
+generated terrain, territory, fog, technology, and production progress.
 
-- **Cities:** Each city produces 2 food, 2 wood, and 1 science at the end of a full round. Technology boosts food and science production.
-- **Warriors:** Recruit for 5 wood at an unoccupied city. Select one, tap MOVE, then tap an adjacent passable tile. Warriors can defeat an enemy unit or capture an enemy city.
-- **Settlers:** Recruit for 8 food and 8 wood at an unoccupied city. Move to unoccupied land, then tap FOUND. New cities must be at least 3 hexes from another city.
-- **Research:** Spend science on up to 3 technology levels (8, 14, and 20 science). These boost city production.
-- **Turns:** Each player issues orders independently; actions are applied by the host. Tap END TURN when finished. Only after everyone finishes does production accrue and movement reset.
-- **Victory:** Found or capture 5 cities, or have the highest resource/technology/city score after 25 rounds.
+- **Explore and expand:** Units use movement points, terrain-dependent movement
+  costs, vision and attack ranges. Scouts reveal farther, naval vessels travel
+  on water, and settlers found cities at least three hexes apart. Fog hides
+  unexplored land and enemy units outside current sight.
+- **Manage cities:** Each citizen works a tile and has a Food, Industry or Science
+  assignment. Use the city inspector's **JOBS** tab and direct **+ / -**
+  controls to reallocate workforce; the displayed turn yields update. Use
+  **TILES** to choose which owned hexes are worked.
+- **Production:** Choose **PROD**, then **UNITS** or **BUILDS**. City projects
+  accumulate industry each full turn instead of consuming a resource wallet
+  immediately. Changing projects preserves their individual progress.
+  Technologies and connected horses/iron deposits unlock specialized units.
+- **Research:** The connected **TECH TREE** shows prerequisites, researched
+  and available technologies, progress and expected turns. Select a technology
+  and start research; science accumulates when a full round ends.
+- **Turns and victory:** Each human player issues orders independently and ends
+  their turn. AI players use the same production and research rules. A round
+  advances after everyone finishes; the match ends upon reaching the city
+  victory condition or the round limit.
 
-A full game should be playable in a short session. The host saves game state to `/civcraft/data/save.dat` after actions and at round boundaries. Clients reconnect using their original ComputerCraft IDs. A player's actions and turn ending are rejected when they aren't registered or have ended their turn.
+The map stays central, with fixed view/pan controls on the left and a contextual
+city, unit or tile inspector on the right. The technology graph has a separate
+detail inspector. A pause menu provides **Resume**, **Save**, **Main Menu**
+and **Exit**.
 
 ## Display and modems
 
@@ -45,9 +66,9 @@ Each machine needs a peripheral modem for networked play; wired modems need to b
 
 ## Implementation notes
 
-The host maintains the only authoritative world state, checks unit ownership and resource costs, and broadcasts snapshots. Clients display those snapshots and submit commands; they never directly modify the host state. This is a cooperative local network game, not an adversarial or cryptographically secure network protocol. There is no AI in this first edition. For now, a game requires at least 2 connected human computers to start.
+The host maintains the only authoritative world state, checks unit ownership and resource costs, and broadcasts snapshots. Clients display those snapshots and submit commands; they never directly modify the host state. This is a cooperative local network game, not an adversarial or cryptographically secure network protocol. Local hot-seat supports human and AI seats; networked games currently require at least two registered computers to start.
 
-The initial release is intentionally small. Natural next steps are procedural maps, diplomacy, tactical combat, city upgrades, fog of war, AI seats, richer graphics, and reconnect/lobby management.
+Earlier release notes below document the incremental development of CIVCRAFT. For current gameplay rules, see **Gameplay (v0.6)** above.
 
 ## Local hot-seat mode (2–4 players, one computer)
 
