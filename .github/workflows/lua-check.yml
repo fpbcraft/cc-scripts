@@ -13,6 +13,8 @@ jobs:
       - name: Syntax check all Lua files
         run: |
           find . -type f -name '*.lua' -not -path './.git/*' -print0 | xargs -0 -n1 luac5.3 -p
+      - name: FPB Store catalog and safe lifecycle
+        run: lua5.3 tests/fpbstore_test.lua
       - name: Computer-only terminal fallback
         run: lua5.3 tests/computer_terminal_test.lua
       - name: COGWORKS kinetic puzzle tests
