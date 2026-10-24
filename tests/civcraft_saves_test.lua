@@ -20,7 +20,7 @@ textutils={
  end,
  unserialize=function(str)return values[str]end
 }
-local Save=assert(loadfile("civcraft/saves.lua"))()
+local Save=assert(loadfile("games/civcraft/saves.lua"))()
 assert(#Save.list()==3 and not Save.list()[1].occupied)
 local a={name="RED",round=4,phase="game",world={seed=101,size="compact"}}
 local b={name="BLUE",round=12,phase="game",world={seed=202,size="large"}}
@@ -31,13 +31,13 @@ assert(Save.load(1).name=="GREEN" and Save.load(2).name=="BLUE")
 assert(files[Save.path(1)..".bak"],"Previous slot revision should be backed up")
 Save.delete(2)
 assert(Save.load(2)==nil and Save.load(1).name=="GREEN")
-files["/civcraft/data/local-save.dat"]="sav1"
-files["/civcraft/data/slots-migrated"]=nil
+files["/games/civcraft/data/local-save.dat"]="sav1"
+files["/games/civcraft/data/slots-migrated"]=nil
 Save.delete(1)
 assert(Save.load(1)==nil,"Confirmed deletion must not resurrect legacy save")
-assert(files["/civcraft/data/local-save.dat"]=="sav1",
+assert(files["/games/civcraft/data/local-save.dat"]=="sav1",
  "Legacy backup itself is preserved")
-files["/civcraft/data/slots-migrated"]=nil
+files["/games/civcraft/data/slots-migrated"]=nil
 assert(Save.load(1)==a,"Legacy save can be imported on fresh install")
 assert(not pcall(Save.path,4),"Out of bounds save slot")
 print("CIVCRAFT: three independent saves, backup, deletion and legacy import passed.")

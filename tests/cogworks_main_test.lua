@@ -84,7 +84,7 @@ os.pullEventRaw=function()
  return table.unpack(events[counter])
 end
 local ok,err=pcall(function()
- assert(loadfile("cogworks/main.lua"))()
+ assert(loadfile("games/cogworks/main.lua"))()
 end)
 os.pullEventRaw,os.startTimer=oldPull,oldTimer
 assert(ok,tostring(err))
@@ -92,7 +92,7 @@ assert(counter==#events,"All scenes must consume their test events")
 assert(monitor.history[1]==0.5,"Startup sets monitor text scale to 0.5")
 assert(monitor.scale==1,"Exit restores previous monitor scale")
 assert(monitor.writes>50,"Monitor should draw the title and game screens")
-assert(files["/cogworks/saves/slot-1.dat"],"Save slot should exist")
+assert(files["/games/cogworks/saves/slot-1.dat"],"Save slot should exist")
 local placed,removed=false,false
 for _,progress in ipairs(history)do
  local parts=progress.sessions and progress.sessions[1]and
@@ -102,5 +102,5 @@ for _,progress in ipairs(history)do
 end
 assert(placed and removed,"Regular touch places and explicit button 2 removes")
 assert(#history>=5,"Additional normalized left click and right-remove are persisted")
-assert(files["/cogworks/settings.dat"],"Settings should persist")
+assert(files["/games/cogworks/settings.dat"],"Settings should persist")
 print("COGWORKS: title, save, pause, exit, 0.5 scale and touch controls passed.")

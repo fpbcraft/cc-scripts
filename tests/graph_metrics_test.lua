@@ -1,4 +1,4 @@
-package.path="./factory/?.lua;"..package.path
+package.path="./apps/factory/?.lua;"..package.path
 local metrics=require("graph_metrics")
 local C={pink=1,magenta=2}
 local defaults={

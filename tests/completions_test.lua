@@ -1,5 +1,5 @@
 -- Pure suggestion engine tests; no Minecraft/Basalt runtime needed.
-package.path="./factory/?.lua;"..package.path
+package.path="./apps/factory/?.lua;"..package.path
 local c=require("completions")
 local core={
   devices={list=function()return {

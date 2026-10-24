@@ -7,7 +7,7 @@ local saved={}
 local activeMonitor=nil
 local lastSnapshot
 local ship={x=0,z=0}
-fs={getDir=function()return 'airship' end,
+fs={getDir=function()return 'apps/airship' end,
  combine=function(a,b)return a..'/'..b end,
  exists=function(path)return files[path]~=nil end,
  getSize=function(path)return #(files[path] or '') end,
@@ -27,8 +27,8 @@ textutils={serialize=function(obj)
  end
  return 'stub' end,
  unserialize=function(raw)if raw=='settings' then return {bowOffset=0,autoMap=false} end end}
-files['airship/.airship_avionics_burners_settings']='settings'
-shell={getRunningProgram=function()return 'airship/autopilot.lua'end}
+files['apps/airship/.airship_avionics_burners_settings']='settings'
+shell={getRunningProgram=function()return 'apps/airship/autopilot.lua'end}
 local nav={getHeading=function()return 0 end,
  getTablePosition=function()return{x=ship.x,y=100,z=ship.z,projected=true}end,
  getTargetPosition=function()return nil end}
@@ -113,13 +113,13 @@ package.preload.ui=function()
 end
 local originalPrint=print
 print=function()end
-local chunk=assert(loadfile('airship/autopilot.lua'))
+local chunk=assert(loadfile('apps/airship/autopilot.lua'))
 chunk()
 assert(lastSnapshot and lastSnapshot.tick>=30,'flight tick stalled while UI active')
 assert(type(lastSnapshot.error)=='number' and math.abs(lastSnapshot.error)>0.1,
   'heading error must remain numeric and nonzero while flying')
 assert(lastSnapshot.controlError==nil,'controller should not report error')
 assert(#writes>4,'no controls were sent')
-assert(files['airship/.airship_avionics_route'],'route not saved')
-assert(files['airship/.airship_avionics_presets'],'preset not saved')
+assert(files['apps/airship/.airship_avionics_route'],'route not saved')
+assert(files['apps/airship/.airship_avionics_presets'],'preset not saved')
 originalPrint('Airship core integration: PASS, '..lastSnapshot.tick..' ticks, '..#writes..' outputs')

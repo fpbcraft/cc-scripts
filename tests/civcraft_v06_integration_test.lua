@@ -2,12 +2,12 @@
 -- time-based queues and research. Uses production modules without UI mocks.
 local originalDofile=dofile
 dofile=function(path)
- if path:sub(1,10)=="/civcraft/"then return originalDofile(path:sub(2))end
+ if path:sub(1,16)=="/games/civcraft/"then return originalDofile(path:sub(2))end
  return originalDofile(path)
 end
-local World=originalDofile("civcraft/world.lua")
-local Hex=originalDofile("civcraft/hex.lua")
-local Systems=originalDofile("civcraft/systems.lua")
+local World=originalDofile("games/civcraft/world.lua")
+local Hex=originalDofile("games/civcraft/hex.lua")
+local Systems=originalDofile("games/civcraft/systems.lua")
 dofile=originalDofile
 local world=World.generate(75123,"standard",2,"continents")
 local a,b=world.starts[1],world.starts[2]

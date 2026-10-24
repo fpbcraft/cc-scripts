@@ -1,11 +1,11 @@
 local nativeDofile=dofile
 dofile=function(p)
- if p:sub(1,10)=="/civcraft/"then return nativeDofile(p:sub(2))end
+ if p:sub(1,16)=="/games/civcraft/"then return nativeDofile(p:sub(2))end
  return nativeDofile(p)
 end
-local S=assert(loadfile("civcraft/systems.lua"))()
-local H=assert(loadfile("civcraft/hex.lua"))()
-local W=assert(loadfile("civcraft/world.lua"))()
+local S=assert(loadfile("games/civcraft/systems.lua"))()
+local H=assert(loadfile("games/civcraft/hex.lua"))()
+local W=assert(loadfile("games/civcraft/world.lua"))()
 local state={version=3,nextId=3,phase="game",
  players={{id=1,name="P1",civ="verdant",techs={},food=30,wood=60,science=0},
   {id=2,name="P2",civ="iron",ai=true,food=30,wood=60,science=0}},

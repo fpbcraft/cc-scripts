@@ -1,5 +1,5 @@
 -- Hex movement, offsets and player-visible path eligibility.
-local H=assert(loadfile("civcraft/hex.lua"))()
+local H=assert(loadfile("games/civcraft/hex.lua"))()
 for y=1,H.height do for x=1,H.width do
  local neighbors=H.neighbours(x,y)
  assert(#neighbors>=2 and #neighbors<=6)

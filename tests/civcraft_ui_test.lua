@@ -1,7 +1,7 @@
 -- CIVCRAFT uses the Railbreak pixel renderer and real clickable UI elements.
 local oldDofile=dofile
 dofile=function(path)
- if path:sub(1,10)=="/civcraft/"then return oldDofile(path:sub(2))end
+ if path:sub(1,16)=="/games/civcraft/"then return oldDofile(path:sub(2))end
  return oldDofile(path)
 end
 colors={black=32768,white=1,gray=128,lightGray=256,orange=2,
@@ -19,7 +19,7 @@ function m.drawPixels(x,y,color,w,h)
 end
 function m.getPaletteColor()return 0,0,0 end
 function m.setPaletteColor()end
-local UI=oldDofile("civcraft/ui.lua")
+local UI=oldDofile("games/civcraft/ui.lua")
 dofile=oldDofile
 local calls={}
 local ui=UI.new(m,function(action,data)

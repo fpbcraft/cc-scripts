@@ -1,6 +1,6 @@
 package.path="./?.lua;./?/init.lua;"..package.path
-local T=require("cogworks.tutorials")
-local E=require("cogworks.engine")
+local T=require("games.cogworks.tutorials")
+local E=require("games.cogworks.engine")
 local function copy(value)
  if type(value)~="table"then return value end
  local result={}
@@ -22,8 +22,8 @@ function S.saveSettings()return true end
 function S.load(slot)return saved[slot]and copy(saved[slot])or nil end
 function S.has(slot)return saved[slot]~=nil end
 function S.save(slot,data)saved[slot]=copy(data);return true end
-package.loaded["cogworks.storage"]=S
-local A=require("cogworks.app")
+package.loaded["games.cogworks.storage"]=S
+local A=require("games.cogworks.app")
 assert(#E.order==9 and not E.parts.C,"No redundant clutch")
 assert(#T.forLevel(9)==2,"Speed drive and gearbox are introduced together")
 local app=A.new()

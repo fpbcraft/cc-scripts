@@ -1,4 +1,4 @@
-package.path="./factory/?.lua;"..package.path
+package.path="./apps/factory/?.lua;"..package.path
 -- Run with: lua tests/core_test.lua
 -- This test uses fake Create/CC peripherals without loading Minecraft.
 local function serialize(v)
@@ -81,7 +81,7 @@ peripheral={
   isPresent=function(name) return devices[name]~=nil end,
   wrap=function(name) return devices[name] and devices[name].dev end,
 }
-local core=dofile("factory/core.lua").new("tmp")
+local core=dofile("apps/factory/core.lua").new("tmp")
 assert(core.config.hubAddress=="Hub")
 assert(core:register({
   id="iron",name="Iron Farm",device="redstone_relay_0",side="front",

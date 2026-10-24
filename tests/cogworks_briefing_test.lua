@@ -1,6 +1,6 @@
 package.path="./?.lua;./?/init.lua;"..package.path
-local E=require("cogworks.engine")
-local B=require("cogworks.briefing")
+local E=require("games.cogworks.engine")
+local B=require("games.cogworks.briefing")
 local goalCount=0
 for number,level in ipairs(E.levels)do
  local brief=B.forLevel(number)

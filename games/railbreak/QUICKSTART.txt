@@ -1,0 +1,33 @@
+RAILBREAK: KINETIC FRONTIER v2 - TRAIN-FIRST EDITION
+=====================================================
+
+UPDATE: wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/installers/railbreak.lua
+PLAY:   /games/railbreak/main.lua
+OLD FACTORY EDITION: /games/railbreak/classic.lua
+
+Connect an Advanced Monitor (3x3 through 5x5). If multiple screens
+are attached, the largest will be used by default. Select one with:
+  /games/railbreak/main.lua monitor_0
+
+HOW TO WIN
+1. Use station MARKET to buy planks, ore, parts or fuel.
+2. Take CONTRACTS at their origin stations.
+3. Choose connected destinations on the MAP, pay track and fuel costs.
+4. Choose an event solution if the train is interrupted.
+5. Deliver cargo at the right station to earn cash and reputation.
+6. Complete at least 2 jobs / earn 2 reputation and arrive at EASTPORT.
+
+TRAIN: Tap wagons to inspect, then ADD / LV UP / TECH.
+TOOLTIPS: Tap ? for screen help, icons for resource help, or an item
+  to see its benefits, costs and requirements. Choose BACK (no cost)
+  or CONFIRM. PREV / NEXT pages show longer descriptions.
+STATION: Repair, refuel, upgrade modules and run turn-based shifts.
+CREW: Optional P1/P2/P3/P4 attribution toggle; gameplay is shared.
+HELP: Includes main menu access. The game autosaves after successful actions.
+
+SAVES: /games/railbreak/data/train-save.lua (v2) vs /games/railbreak/data/save.lua (old)
+No timers govern gameplay. Animation is cosmetic only.
+
+V2.0.6: UPGRADE EFFECTS, WAGON BONUSES, MODULE RECIPES, ROUTE COSTS
+AND JOB REQUIREMENTS ARE SHOWN DIRECTLY ON THEIR SCREENS.
+TAP A WAGON TO SELECT; USE ? FOR DETAILS AND LV UP TO CONFIRM.

@@ -1,5 +1,5 @@
 package.path="./?.lua;./?/init.lua;"..package.path
-local E=require("cogworks.engine")
+local E=require("games.cogworks.engine")
 local function eq(actual,expected,msg)
  assert(actual==expected,(msg or "Mismatch")..": expected "..tostring(expected)..", got "..tostring(actual))
 end

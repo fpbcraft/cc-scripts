@@ -1,10 +1,10 @@
-local H=assert(loadfile("civcraft/hex.lua"))()
+local H=assert(loadfile("games/civcraft/hex.lua"))()
 local oldDofile=dofile
 dofile=function(p)
- if p:sub(1,10)=="/civcraft/"then return oldDofile(p:sub(2))end
+ if p:sub(1,16)=="/games/civcraft/"then return oldDofile(p:sub(2))end
  return oldDofile(p)
 end
-local S=assert(loadfile("civcraft/systems.lua"))()
+local S=assert(loadfile("games/civcraft/systems.lua"))()
 dofile=oldDofile
 local tiles={}
 for y=1,8 do for x=1,12 do tiles[x..":"..y]="plains"end end

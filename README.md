@@ -1,16 +1,46 @@
 # FPBCRAFT CC:Tweaked scripts
 
-ComputerCraft/CC:Tweaked programs for the fpbcraft Minecraft server.
+ComputerCraft/CC:Tweaked programs for the FPBCRAFT Minecraft server.
 
-- **[IRONSPIRE](ironspire/README.md)** — touchscreen deckbuilding roguelike with card combat, shops, rests and a boss. Installer: `install-ironspire.lua`.
-- **[FPB Store](fpbstore/README.md)** — browse, install, update, launch and safely remove COGWORKS, RAILBREAK and SHATTERED, with more apps supported through the catalog. One-time installer: `install-fpbstore.lua`; then run `store`.
+## Games
 
-- [Skyways airship autopilot](airship/README.md) — Basalt 2.5 touchscreen flight dashboard, animated airship startup, route/preset management, optional engine control, and a one-command installer (`install-airship.lua`).
-- See [`factory/README.md`](factory/README.md) for the Basalt 2.5 factory controller, installation and machine configuration.
-- [SHATTERED: The Shattered Expanse v5](shattered/README.md) — streamlined 30-system 4X for 1–4 human players plus AI, contextual space RPG events, and legacy editions; install with `install-shattered.lua`.
-- [COGWORKS: Kinetic Lab](cogworks/README.md) — 30 increasingly demanding machinery construction puzzles with animated CC: Graphics, a text fallback, hints and a safe one-command installer (`install-cogworks.lua`).
-- [RAILBREAK: Kinetic Frontier](railbreak/README.md) — train-first, solo/1–4 player turn-based railway adventure with animated pixel-art trains, route planning, station markets, cargo contracts and wagon upgrades. Install with `install-railbreak.lua`.
+- [COGWORKS](games/cogworks/README.md) — machinery construction puzzles.
+- [RAILBREAK](games/railbreak/README.md) — railway adventure, cargo and train upgrades.
+- [SHATTERED](games/shattered/README.md) — space 4X with human and AI empires.
+- [IRONSPIRE](games/ironspire/README.md) — touchscreen deckbuilding roguelike.
+- [CIVCRAFT](games/civcraft/README.md) — local hotseat and networked civilization building.
 
-- [CIVCRAFT: Networked Pocket Civilization](civcraft/README.md) — 2–4 player multiplayer territory-building 4X with modems and a one-command installer (`install-civcraft.lua`).
+## Apps
 
-All factory controls must retain a physical manual override. Do not rely on software alone for machinery safety.
+- [FPB Store](apps/fpbstore/README.md) — search, install, update and launch games.
+- [Airship navigation](apps/airship/README.md) — Basalt touchscreen autopilot and routes.
+- [Factory controller](apps/factory/README.md) — machine controls and telemetry.
+- [Remote node](apps/node/README.md) — paired factory telemetry and remote control.
+
+## Installation
+
+Installers live in `installers/<id>.lua`. For example:
+
+```sh
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/installers/fpbstore.lua
+/apps/fpbstore/main.lua
+```
+
+Use `cogworks`, `railbreak`, `shattered`, `ironspire`, `civcraft`, `airship`,
+`factory` or `node` instead of `fpbstore` for a direct install. An optional first
+argument selects a Git ref; `--startup` and `--no-startup` control autostart.
+Airship, factory and node enable autostart by default; games and Store do not.
+
+**Layout v2 is a clean path change.** Programs now install under `/games/<id>`
+or `/apps/<id>`. Reinstall the Store with the command above; old Store versions
+cannot self-update across the installer URL change. Old installer URLs and
+`/store.lua` are no longer provided. Update any custom launch commands yourself.
+
+Reinstall each program to copy its known saves/configuration from the old root.
+Originals remain intact. Conflicting destination data stops installation; resolve
+the reported files and retry. Migration runs once, so later updates preserve your
+new progress. Remove old installations manually only after checking the new one.
+See [installation and library details](lib/fpb/README.md).
+
+All factory controls must retain a physical manual override. Do not rely on
+software alone for machinery safety.

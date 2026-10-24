@@ -22,9 +22,9 @@ textutils={serialize=function(t)return tostring(t.ref)end}
 http={}
 function http.get(url)
  downloads[#downloads+1]=url
- local appId=url:match("/install%-(%w+)%.lua")
- local paths={cogworks="/cogworks/main.lua",railbreak="/railbreak/main.lua",
-  shattered="/shattered/shattered.lua"}
+ local appId=url:match("/installers/(%w+)%.lua")
+ local paths={cogworks="/games/cogworks/main.lua",railbreak="/games/railbreak/main.lua",
+  shattered="/games/shattered/shattered.lua"}
  local path=paths[appId]
  local body=path and ("local file=fs.open("..string.format("%q",path)..
   ",'w');file.write('-- installed v1.0.0');file.close()") or
@@ -37,6 +37,11 @@ local launched={}
 local nativeLoadfile=loadfile
 loadfile=function(path)
  if path:match("^/")then
+  if path:find('/_lib/fpb/loader.lua',1,true)then
+   return function()return {run=function(root,entry,parent,...)
+    launched[#launched+1]={path=root..'/'..entry,args={...}};return true
+   end}end
+  end
   return function(...)
    launched[#launched+1]={path=path,args={...}}
    return true
@@ -49,16 +54,16 @@ function shell.run(file,...)
  runCount=runCount+1
  local app=file:match("%.installer%-(%w+)%.lua")
  if app then
-  local catalog=require("fpbstore.catalog")
+  local catalog=require("apps.fpbstore.catalog")
   for _,v in ipairs(catalog.apps)do if v.id==app then
    files[v.entry]="game code"
   end end
  end
  return true
 end
-local M=require("fpbstore.manager")
+local M=require("apps.fpbstore.manager")
 assert(#M.catalog.apps>=3,"Catalog must contain the original three games")
-assert(M.storeStatus().installedVersion=="1.1.3",
+assert(M.storeStatus().installedVersion=="2.0.0",
  "Store's installed version should be displayed")
 local old={"cogworks","railbreak","shattered"}
 for i,id in ipairs(old)do
@@ -86,19 +91,19 @@ for i,id in ipairs(old)do
  assert(not M.status(app).managed,"Metadata removed")
 end
 assert(#launched==3,"Three games launched directly without shell")
-assert(launched[1].path=="/cogworks/main.lua" and launched[2].path=="/railbreak/main.lua")
+assert(launched[1].path=="/games/cogworks/main.lua" and launched[2].path=="/games/railbreak/main.lua")
 local ok=pcall(function()M.install({id="unknown"})end)
 assert(not ok,"Arbitrary catalog entries rejected")
 -- Remote versions can identify both game and store updates without
 -- overwriting any local installation metadata.
 local initialStore=M.storeStatus()
-assert(initialStore.installedVersion=="1.1.3")
-local remoteCatalog=[[return {storeVersion="1.2.0",apps={
+assert(initialStore.installedVersion=="2.0.0")
+local remoteCatalog=[[return {storeVersion="2.1.0",apps={
  {id="cogworks",version="1.2.0"},{id="railbreak",version="2.0.6"},
  {id="shattered",version="5.1"}}}]]
 local priorHttp=http.get
 http.get=function(url)
- if url:find("/fpbstore/catalog.lua",1,true)then
+ if url:find("/lib/fpb/packages.lua",1,true)then
   return {getResponseCode=function()return 200 end,
    readAll=function()return remoteCatalog end,close=function()end}
  end

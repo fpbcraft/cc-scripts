@@ -1,53 +1,36 @@
--- Exercise real storefront update UI with no package, require, or shell.
--- A successful update must reload the installed entry point from disk.
-local originalPackage,originalRequire,originalDofile=package,require,dofile
-local originalLoadfile=loadfile
-local updated,relaunched=false,false
-local app={id="cogworks",name="COGWORKS",subtitle="LAB",genre="PUZZLE",
- description="A puzzle",entry="/cogworks/main.lua"}
-local manager={
- catalog={apps={app}},installed=function()return true end,
- status=function()return {installed=true,installedVersion="1.0.0",
- latestVersion="1.0.0",updateAvailable=false}end,
- storeStatus=function()return {installedVersion="1.1.3"}end,
- installedRevision=function()return nil end,
- refreshVersions=function()return true end,
- updateStore=function()updated=true;return true end
-}
-local screen={}
-for _,fn in ipairs({"setBackgroundColor","setTextColor","clear","setCursorPos",
- "write"})do screen[fn]=function()end end
-screen.getSize=function()return 100,35 end
-term={current=function()return screen end,redirect=function()end}
-colors={black=32768,white=1,orange=2,gray=128,lightBlue=8,
- yellow=16,lightGray=256,blue=2048,lime=32}
-keys={q=16,escape=1}
-local events={{"mouse_click",1,53,29},{"key",keys.q}}
-local index=0
-local originalPull=os.pullEvent
-os.pullEvent=function()
- index=index+1
- local event=events[index]
- assert(event,"UI event loop never exited")
- return table.unpack(event)
-end
-dofile=function(path)
- if path=="/fpbstore/manager.lua"then return manager end
- error("Unexpected dependency: "..path)
-end
-loadfile=function(path)
- if path=="/fpbstore/main.lua"then
-  return function()relaunched=true end
+-- Real installed Store + real portable UI, with no shell/package/require.
+local disk=dofile('tests/support/craftos.lua').new()
+disk.install('fpbstore','main','--no-startup')
+local screen=dofile('tests/support/store_screen.lua').new(51,19)
+disk.env.colors=screen.colors;disk.env.keys=screen.keys
+local target=screen
+disk.env.term={current=function()return target end,redirect=function(t)target=t end}
+disk.withoutRuntime()
+local calls=0;local installedMain=disk.files['/apps/fpbstore/main.lua']
+disk.env.os=setmetatable({pullEvent=function()
+ calls=calls+1
+ if calls==1 then
+  assert(screen.text():find('FPB STORE 2.0.0',1,true))
+  return 'char','u'
  end
- return originalLoadfile(path)
+ error('Updated Store should have reloaded the new main')
+end},{__index=os})
+-- Update through the real manager/bootstrap/engine. Only the downloaded main
+-- fixture exits immediately so that the test observes the disk reload.
+local get=disk.env.http.get
+local updated=false
+disk.env.http.get=function(url)
+ if url:find('/apps/fpbstore/main.lua?',1,true)then
+  updated=true
+  local body='_G.storeReloaded=true;return true'
+  return {getResponseCode=function()return 200 end,readAll=function()return body end,close=function()end}
+ end
+ return get(url)
 end
-package=nil;require=nil; shell=nil
-local ok,err=pcall(function()
- return originalLoadfile("fpbstore/main.lua")("--classic")
-end)
-package,require,dofile,loadfile=originalPackage,originalRequire,originalDofile,originalLoadfile
-os.pullEvent=originalPull
-assert(ok,tostring(err))
-assert(updated,"Store update button must execute manager.updateStore")
-assert(relaunched,"Updated store must be loaded and relaunched")
-print("FPB Store: graphical update action and disk reload without package or shell.")
+disk.run('fpbstore')
+assert(updated and disk.files['/apps/fpbstore/main.lua']~=installedMain)
+-- The sentinel is inside the new loader environment, so observe its source on disk
+-- and successful return after exactly one input event rather than global leakage.
+assert(calls==1,'Self-update re-enters the installed main with a fresh module cache')
+assert(target==screen and screen.mode==0,'Store terminal restored')
+print('Store UI self-update downloads, installs and reloads without shell or package')

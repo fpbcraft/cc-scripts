@@ -1,5 +1,5 @@
 package.path="./?.lua;./?/init.lua;"..package.path
-local paths={"cogworks/display.lua","railbreak/display.lua","shattered/display.lua"}
+local paths={"games/cogworks/display.lua","games/railbreak/display.lua","games/shattered/display.lua"}
 local native={getSize=function(mode)if mode==2 then return 612,342 end return 102,38 end,
  setGraphicsMode=function()end,drawPixels=function()end}
 local basic={getSize=function()return 51,19 end}
@@ -27,8 +27,8 @@ for _,path in ipairs(paths)do
  D.present(fallback,typeName);D.close(fallback,typeName)
 end
 -- Exercise COGWORKS renderer with actual CraftOS-PC graphics dimensions.
-local E=require("cogworks.engine")
-local Render=require("cogworks.render")
+local E=require("games.cogworks.engine")
+local Render=require("games.cogworks.render")
 local oldColors=colors
 colors={black=32768,gray=128,white=1,lightGray=256,orange=2,
  lightBlue=8,yellow=16,green=8192,blue=2048,lime=32,red=16384,brown=4096}
@@ -57,8 +57,8 @@ r:close()
 assert(screen.mode==0,"Native graphics mode restored on exit")
 -- SHATTERED: graphics must retain geometric proportions and centered
 -- mouse hitboxes even when the CraftOS text-cell and pixel ratios differ.
-_G.EXPANSE_V5_ROOT="shattered/expanse-v5"
-local TideRender=assert(loadfile("shattered/expanse-v5/render.lua"))()
+_G.EXPANSE_V5_ROOT="games/shattered/expanse-v5"
+local TideRender=assert(loadfile("games/shattered/expanse-v5/render.lua"))()
 local tideScreen={mode=0,draws=0}
 function tideScreen.getSize(which)
  if which==2 then return 612,342 end

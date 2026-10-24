@@ -3,14 +3,18 @@ name: COGWORKS Lua tests
 on:
   push:
     paths:
-      - "cogworks/**"
-      - "install-cogworks.lua"
+      - "lib/**"
+      - "tests/support/**"
+      - "games/cogworks/**"
+      - "installers/cogworks.lua"
       - "tests/cogworks*_test.lua"
       - ".github/workflows/cogworks-tests.yml"
   pull_request:
     paths:
-      - "cogworks/**"
-      - "install-cogworks.lua"
+      - "lib/**"
+      - "tests/support/**"
+      - "games/cogworks/**"
+      - "installers/cogworks.lua"
       - "tests/cogworks*_test.lua"
       - ".github/workflows/cogworks-tests.yml"
 

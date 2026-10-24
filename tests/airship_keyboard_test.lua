@@ -70,7 +70,7 @@ function basalt.run()
  name:paste('Base Camp')
  click('SAVE / FLY') -- monitor touch submits values from physical keyboard
 end
-local ui=assert(loadfile('airship/ui.lua'))()
+local ui=assert(loadfile('apps/airship/ui.lua'))()
 ui.run(core)
 assert(#calls==1,'Expected exactly one destination submitted')
 assert(calls[1].x==120 and calls[1].z==-340 and calls[1].name=='Base Camp',
