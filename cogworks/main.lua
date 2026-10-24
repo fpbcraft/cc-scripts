@@ -31,7 +31,9 @@ end
 local function start()
  local monitor,name=selectMonitor(args[1])
  local mode
- monitor,mode=Display.select(monitor,term.current(),
+ local native=nil
+ if not monitor then native=term.current()end
+ monitor,mode=Display.select(monitor,native,
   require("cogworks.terminal_view"),70,40)
  local computerMode=Display.isComputer(mode)
 
