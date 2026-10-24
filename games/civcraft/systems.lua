@@ -8,14 +8,15 @@ M.units=Content.units
 M.buildings=Content.buildings
 M.jobs={"food","wood","science"}
 local Hex=dofile("/games/civcraft/hex.lua")
+local Combat=dofile("/games/civcraft/combat.lua")
 local World=dofile("/games/civcraft/world.lua")
 function M.workable(state,city)
  local tiles={}
  if not state.world or not city then return tiles end
- for yy=math.max(1,city.y-2),math.min(state.world.height,city.y+2)do
-  for xx=math.max(1,city.x-2),math.min(state.world.width,city.x+2)do
+ for yy=math.max(1,city.y-3),math.min(state.world.height,city.y+3)do
+  for xx=math.max(1,city.x-3),math.min(state.world.width,city.x+3)do
    if not(xx==city.x and yy==city.y) and
-     Hex.distance(xx,yy,city.x,city.y)<=2 and
+     Hex.distance(xx,yy,city.x,city.y)<=3 and
      World.territoryCity(state,Hex,xx,yy)==city then
     local yield=World.yields(state.world,xx,yy)
     tiles[#tiles+1]={x=xx,y=yy,key=World.key(xx,yy),yield=yield}
@@ -74,16 +75,17 @@ function M.civ(id)
  return M.civs[1]
 end
 function M.migrate(state)
+ World.ensureTerritories(state,Hex,(state.version or 0)<5)
  for i,p in ipairs(state.players or {})do
   p.civ=p.civ or M.civs[(i-1)%#M.civs+1].id
   p.techs=p.techs or {}
   p.ai=p.ai or false
   p.explored=p.explored or {}
-  p.food=p.food or 0;p.wood=p.wood or 0;p.science=p.science or 0
-  p.researchProgress=p.researchProgress or {}
+  p.food=p.food or 0;p.wood=p.wood or 0;p.science=p.science or 0;p.gold=p.gold or 20
+  p.researchProgress=p.researchProgress or {};p.stockpile=p.stockpile or {iron=0,horses=0,saltpeter=0}
  end
  for _,c in ipairs(state.cities or {})do
-  c.population=c.population or 2;c.foodStore=c.foodStore or 0
+  c.population=c.population or 2;c.foodStore=c.foodStore or 0;c.growthAge=c.growthAge or 0;c.hungryTurns=c.hungryTurns or 0
   c.jobs=c.jobs or {food=1,wood=1,science=0}
   c.buildings=c.buildings or {}
   c.projectProgress=c.projectProgress or {}
@@ -93,7 +95,8 @@ function M.migrate(state)
   local stats=M.units[u.kind] or M.units.warrior
   if u.movesLeft==nil then u.movesLeft=u.moved and 0 or stats.move end
  end
- state.version=4
+ Combat.migrate(state)
+ state.version=5
  return state
 end
 function M.canResearch(p,id)
@@ -110,26 +113,55 @@ function M.research(p,id)
  p.researchProgress[id]=p.researchProgress[id]or 0
  return true
 end
-function M.canBuild(p,c,id)
- local b=M.buildings[id]
- return b and (not b.tech or p.techs[b.tech]) and not c.buildings[id]
+function M.coastal(state,c)
+ if not state or not state.world then return false end
+ for _,n in ipairs(Hex.neighbours(c.x,c.y,state))do if Hex.terrain(n.x,n.y,state)=='water'then return true end end
+ return false
 end
-function M.canRecruit(p,id,state,hex)
+function M.treasury(p,state)
+ local income,upkeep=0,0
+ for _,city in ipairs(state.cities or {})do if city.owner==p.id then
+  local b=city.buildings or {}
+  income=income+2+(city.population or 2)+(b.market and 3 or 0)+(b.bazaar and 3 or 0)+(b.bank and 5 or 0)
+ end end
+ for _,unit in ipairs(state.units or {})do if unit.owner==p.id then upkeep=upkeep+((M.units[unit.kind]or {}).upkeep or 1)end end
+ return {income=income,upkeep=upkeep,net=income-upkeep}
+end
+function M.economy(p,state)
+ local result=M.treasury(p,state);result.food=0;result.industry=0;result.science=0;result.strategic={iron=0,horses=0,saltpeter=0}
+ for _,city in ipairs(state.cities or {})do if city.owner==p.id then
+  local y=M.yields(p,city,state,Hex)
+  result.food=result.food+y.food-2*(city.population or 2);result.industry=result.industry+y.industry;result.science=result.science+y.science
+ end end
+ local owned=World.territory(state,Hex)
+ for key,res in pairs(state.world and state.world.resources or {})do
+  if owned[key]==p.id and result.strategic[res]then result.strategic[res]=result.strategic[res]+1 end
+ end
+ return result
+end
+function M.canBuild(p,c,id,state)
+ local b=M.buildings[id]
+ return b and (not b.tech or p.techs[b.tech]) and not c.buildings[id] and (not b.coastal or M.coastal(state,c))
+end
+function M.canRecruit(p,id,state,hex,city)
  local u=M.units[id]
  if not u or (u.tech and not p.techs[u.tech])then return false end
  if u.unique and p.civ~=u.unique then return false end
- if u.resource and (not state or not hex or not World.strategic(state,p,hex,u.resource))then return false end
+ if u.building and (not city or not (city.buildings or {})[u.building] or not M.coastal(state,city))then return false end
+ if state and (p.gold or 20)<=0 and M.treasury(p,state).net<(u.upkeep or 1)then return false end
+ if u.resource and ((p.stockpile or {})[u.resource]or 0)<2 and (not state or not hex or not World.strategic(state,p,hex,u.resource))then return false end
  return true
 end
 -- Retain familiar action names as pure queue selection (no purchases).
 function M.queue(p,c,kind,id,state,hex)
  if kind=="building" then
-  if not M.canBuild(p,c,id)then return false,"Building locked or already completed"end
+  if not M.canBuild(p,c,id,state)then return false,"Building locked or already completed"end
  elseif kind=="unit" then
-  if not M.canRecruit(p,id,state,hex)then
+  if not M.canRecruit(p,id,state,hex,c)then
    return false,"Unit locked or missing strategic resource"
   end
  else return false,"Unknown project category"end
+ if c.project then c.projectProgress=c.projectProgress or {};c.projectProgress[c.project.kind..':'..c.project.id]=c.project.progress end
  c.project={kind=kind,id=id,progress=(c.projectProgress or {})[kind..":"..id]or 0}
  return true
 end
@@ -170,7 +202,7 @@ end
 function M.projectCost(kind,id)
  local record=(kind=="unit" and M.units or M.buildings)[id]
  if not record then return nil end
- return record.production or record.wood or 8
+ return record.production or math.ceil((record.wood or 8)*2.5)
 end
 function M.yields(p,c,state,hex,owned)
  local jobs=c.jobs
@@ -242,44 +274,111 @@ local function spawn(state,p,c,id,hex)
   end
  end
  if not x then return false end
+ if stats.resource then
+  p.stockpile=p.stockpile or {}
+  if (p.stockpile[stats.resource]or 0)<2 then return false end
+  p.stockpile[stats.resource]=p.stockpile[stats.resource]-2
+ end
  state.units[#state.units+1]={id=state.nextId,owner=p.id,x=x,y=y,
   kind=id,moved=true,movesLeft=0}
  state.nextId=state.nextId+1
  return true
 end
+function M.growth(p,c,state)
+ local yield=M.yields(p,c,state,Hex)
+ local surplus=yield.food-2*(c.population or 2)
+ local threshold=20+8*(c.population or 2)
+ local result={surplus=surplus,threshold=threshold,stored=c.foodStore or 0}
+ if surplus>0 then
+  result.status='GROWING';result.turns=math.max(1,4-(c.growthAge or 0),math.ceil((threshold-result.stored)/surplus))
+ elseif surplus==0 then result.status='STAGNANT'
+ else
+  result.status='STARVING';result.canShrink=(c.population or 2)>1
+  result.turns=math.max(3-(c.hungryTurns or 0),math.ceil(result.stored/-surplus),1)
+ end
+ return result
+end
+function M.autoExplore(state,unit,hex)
+ if unit.kind~='scout' and unit.kind~='explorer'then return false,'Only scouts and explorers can auto explore'end
+ local player;for _,p in ipairs(state.players)do if p.id==unit.owner then player=p end end
+ if not player or not state.world then return false,'No world to explore'end
+ unit.autoExplore=true;unit.standby=false
+ while (unit.movesLeft or 0)>0 and not unit.moved do
+  World.reveal(state,hex,M)
+  local scout={};for k,v in pairs(unit)do scout[k]=v end
+  scout.movesLeft=state.world.width*state.world.height*3;scout.moved=false
+  local best,bestScore
+  local vision=(M.units[unit.kind]or M.units.scout).vision
+  for _,choice in ipairs(hex.reachable(state,scout,unit.owner,M))do if not choice.attack then
+   local discoveries=0
+   for y=math.max(1,choice.y-vision),math.min(state.world.height,choice.y+vision)do
+    for x=math.max(1,choice.x-vision),math.min(state.world.width,choice.x+vision)do
+     if not (player.explored or {})[World.key(x,y)]and hex.distance(x,y,choice.x,choice.y)<=vision then discoveries=discoveries+1 end
+    end
+   end
+   local score=discoveries/(choice.cost+1)
+   if discoveries>0 and (not bestScore or score>bestScore)then best=choice;bestScore=score end
+   if M.checkpoint then M.checkpoint()end
+  end end
+  if not best then unit.autoExplore=false;return true,'No safe unexplored frontier remains'end
+  local spent=0;local destination
+  for i=2,#best.path do
+   local point=best.path[i];local cost=hex.moveCost(point.x,point.y,state,unit,M)
+   if not cost or spent+cost>unit.movesLeft then break end
+   spent=spent+cost;destination=point
+  end
+  if not destination then unit.movesLeft=0;unit.moved=true;break end
+  unit.x=destination.x;unit.y=destination.y;unit.actedThisRound=true
+  unit.movesLeft=unit.movesLeft-spent;unit.moved=unit.movesLeft<=0
+ end
+ World.reveal(state,hex,M);return true
+end
 function M.production(state,hex)
  local owned=state.world and hex and World.territory(state,hex) or {}
  for _,p in ipairs(state.players)do
+  if M.checkpoint then M.checkpoint()end
   p.researchProgress=p.researchProgress or {}
+  p.stockpile=p.stockpile or {iron=0,horses=0,saltpeter=0}
+  for key,res in pairs(state.world and state.world.resources or {})do
+   if owned[key]==p.id and p.stockpile[res]~=nil then p.stockpile[res]=p.stockpile[res]+1 end
+  end
   local totalScience=0
   for _,c in ipairs(state.cities)do
    if c.owner==p.id then
+    if M.checkpoint then M.checkpoint()end
     local yield=M.yields(p,c,state,hex,owned)
     totalScience=totalScience+yield.science
-    p.food=(p.food or 0)+yield.food
+    p.food=math.max(0,(p.food or 0)+yield.food-2*(c.population or 2))
     p.wood=(p.wood or 0)+yield.industry
-    c.foodStore=(c.foodStore or 0)+math.max(0,yield.food-2)
-    local threshold=5+c.population*3
-    if c.foodStore>=threshold then
-     c.foodStore=c.foodStore-threshold
-     c.population=c.population+1
-     if state.world then
-      for _,tile in ipairs(M.workable(state,c))do
-       if not c.worked[tile.key]then c.worked[tile.key]=true;break end
-      end
-      M.ensureWorkers(state,c)
-     else c.jobs.food=c.jobs.food+1 end
+    local growth=M.growth(p,c,state)
+    c.growthAge=(c.growthAge or 0)+1
+    c.foodStore=math.max(0,(c.foodStore or 0)+growth.surplus)
+    if growth.surplus<0 then
+     c.hungryTurns=(c.hungryTurns or 0)+1
+     if c.foodStore<=0 and c.hungryTurns>=3 and c.population>1 then
+      c.population=c.population-1;c.hungryTurns=0;c.growthAge=0;M.ensureWorkers(state,c)
+     end
+    else
+     c.hungryTurns=0
+     if growth.surplus>0 and c.foodStore>=growth.threshold and c.growthAge>=4 then
+      c.foodStore=c.foodStore-growth.threshold;c.population=c.population+1;c.growthAge=0
+      if state.world then
+       for _,tile in ipairs(M.workable(state,c))do if not c.worked[tile.key]then c.worked[tile.key]=true;break end end
+       M.ensureWorkers(state,c)
+      else c.jobs.food=c.jobs.food+1 end
+     end
     end
+    if state.world then World.expandCity(state,hex,c)end
     if c.project then
      local pr=c.project
-     local valid=pr.kind=="building" and M.canBuild(p,c,pr.id) or
-      pr.kind=="unit" and M.canRecruit(p,pr.id,state,hex)
+     local valid=pr.kind=="building" and M.canBuild(p,c,pr.id,state) or
+      pr.kind=="unit" and M.canRecruit(p,pr.id,state,hex,c)
      if valid then
       pr.progress=pr.progress+yield.industry
       local cost=M.projectCost(pr.kind,pr.id)
       if pr.progress>=cost then
        local completed
-       if pr.kind=="building"then c.buildings[pr.id]=true;completed=true
+       if pr.kind=="building"then c.buildings[pr.id]=true;Combat.city(c);completed=true
        else completed=spawn(state,p,c,pr.id,hex)end
        if completed then
         c.project=nil;c.projectProgress=c.projectProgress or {}
@@ -293,6 +392,17 @@ function M.production(state,hex)
      end
     end
    end
+  end
+  local treasury=M.treasury(p,state)
+  p.gold=(p.gold or 20)+treasury.net
+  if p.gold<0 then
+   for index=#state.units,1,-1 do local unit=state.units[index]
+    if unit.owner==p.id then
+     p.gold=p.gold+((M.units[unit.kind]or {}).upkeep or 1);table.remove(state.units,index)
+     if p.gold>=0 then break end
+    end
+   end
+   p.gold=math.max(0,p.gold)
   end
   p.scienceRate=totalScience
   p.science=(p.science or 0)+totalScience
@@ -316,13 +426,16 @@ function M.aiTurn(state,p,hex)
  end
  for _,city in ipairs(state.cities)do
   if city.owner==p.id then
+   for _,enemy in ipairs(state.units)do
+    if enemy.owner~=p.id and Combat.strike(state,city,enemy.x,enemy.y,M)then break end
+   end
    if not city.project then
     for _,id in ipairs({"farm","mine","library","workshop","walls","market"})do
-     if M.canBuild(p,city,id)then M.build(p,city,id,state,hex);break end
+     if M.canBuild(p,city,id,state)then M.build(p,city,id,state,hex);break end
     end
     if not city.project then
      for _,id in ipairs({"settler","scout","warrior","spearman"})do
-      if M.canRecruit(p,id,state,hex)then
+      if M.canRecruit(p,id,state,hex,city)then
        M.queue(p,city,"unit",id,state,hex);break
       end
      end
@@ -342,7 +455,7 @@ function M.aiTurn(state,p,hex)
     for _,c in ipairs(state.cities)do
      if hex.distance(c.x,c.y,u.x,u.y)<3 then canFound=false end
     end
-    if canFound and hex.passable(u.x,u.y,state,u,M)then
+    if canFound and hex.terrain(u.x,u.y,state)~='water' and hex.passable(u.x,u.y,state,u,M)then
      state.cities[#state.cities+1]={id=state.nextId,owner=p.id,
       x=u.x,y=u.y,level=1,population=2,foodStore=0,
       jobs={food=1,wood=1,science=0},buildings={}}
@@ -372,27 +485,9 @@ function M.aiTurn(state,p,hex)
       hex.distance(b.x,b.y,target.x,target.y)
     end)
     local choice=choices[1]
-    if choice.attack then
-     for j=#state.units,1,-1 do
-      local rival=state.units[j]
-      if rival.owner~=p.id and rival.x==choice.x and rival.y==choice.y then
-       local offensive=M.units[u.kind].strength or 0
-       local defensive=(M.units[rival.kind] or M.units.warrior).defense or 1
-       if u.kind=="spearman" and rival.kind=="horseman"then offensive=offensive+2 end
-       if offensive>=defensive then table.remove(state.units,j)
-       else u.consumed=true end
-       break
-      end
-     end
-    end
-    if not u.consumed then
-     for _,c in ipairs(state.cities)do
-      if c.x==choice.x and c.y==choice.y and c.owner~=p.id and
-         M.units[u.kind].strength>0 and not choice.ranged then c.owner=p.id end
-     end
-     if not choice.ranged then u.x=choice.x;u.y=choice.y end
-     u.moved=true;u.movesLeft=0
-    end
+    if choice.attack then Combat.attack(state,u,choice,M)
+    else u.x=choice.x;u.y=choice.y;u.actedThisRound=true end
+    u.moved=true;u.movesLeft=0
    end
   end
  end

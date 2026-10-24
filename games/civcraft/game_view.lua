@@ -7,6 +7,7 @@ local Panels=dofile('/games/civcraft/panels.lua')
 local Reports=dofile('/games/civcraft/reports.lua')
 local Minimap=dofile('/games/civcraft/minimap.lua')
 local Empire=dofile('/games/civcraft/empire_menu.lua')
+local HUD=dofile('/games/civcraft/hud.lua')
 local G={}
 local modes={'terrain','territory','resources','yields'}
 local function modal(ui,rect,preserve)
@@ -17,16 +18,18 @@ end
 function G.draw(ui,state,player)
  local r=ui.r;local w,h=r.w,r.h
  local wide=w>=220 and h>=140
- local header=24
+ local header=30
  local bottom=h-15
- local left=wide and 48 or 16
+ local left=16
  local right=wide and math.max(92,math.floor(w*.32)) or math.max(48,math.min(72,math.floor(w*.42)))
+ if ui.panel~='context'then ui.pendingMove=nil;ui.cityStrikeSource=nil;ui.source=nil;ui.reachable={}end
  ui.inputMode='map'
  r:fill(0,0,w,h,0)
  r:fill(0,0,w,header,1)
  r:text(4,3,'CIVCRAFT',8,1,40)
  local infoX=12+r:textWidth('CIVCRAFT')
  r:text(infoX,3,'R'..state.round..' '..(player and player.name or ''),7,1,w-51-infoX)
+ HUD.resources(ui,state,player)
  r:text(4,header-7,ui.hoverLabel or (ui.notice~='' and ui.notice or 'SELECT A HEX OR AN ACTION'),6,1,w-8)
  local function iconButton(x,y,width,label,icon,run,style)
   r:button(x,y,width,12,nil,run,style)
@@ -41,12 +44,12 @@ function G.draw(ui,state,player)
  end
  Map.draw(ui,state,player,{x=left+4,y=header+2,w=w-left-right-10,h=bottom-header-4})
  local y=header+3
- local modeStep=math.min(14,math.floor((bottom-y-26)/4))
+ local modeStep=14
  for i,mode in ipairs(modes)do
   local icon=({'map','station','ore','food'})[i]
   local x=2;local width=left-4
   ui.overlays=ui.overlays or {}
-  r:button(x,y,width,modeStep-2,wide and mode:upper() or nil,function()
+  r:button(x,y,12,12,nil,function()
    if mode=='terrain'then ui.overlays={}
    else ui.overlays[mode]=not ui.overlays[mode]
     if mode=='yields' and ui.overlays.yields then
@@ -54,32 +57,40 @@ function G.draw(ui,state,player)
     end
    end
   end,{selected=mode=='terrain' and not next(ui.overlays) or ui.overlays[mode]})
-  if not wide then
+  do
    r:icon(icon,x+math.floor((width-9)/2),y+math.max(0,math.floor((modeStep-11)/2)),1)
    r.buttons[#r.buttons].label=mode:upper()
   end
   y=y+modeStep
  end
- r:button(2,y,left-4,11,'+',function()ui:zoom(1)end)
- r.buttons[#r.buttons].label='ZOOM IN'
- r:button(2,y+13,left-4,11,'-',function()ui:zoom(-1)end)
- r.buttons[#r.buttons].label='ZOOM OUT'
- local miniHeight=math.max(18,math.min(28,bottom-header-83))
+ local miniHeight=12
  Inspector.draw(ui,state,player,{x=w-right-2,y=header+1,w=right,h=bottom-header-miniHeight-5})
- Minimap.draw(ui,state,player,{x=w-right,y=bottom-miniHeight-2,w=right-4,h=miniHeight})
+ r:button(w-50,bottom-14,12,12,nil,function()ui.panel='minimap'end)
+ r:icon('map',w-49,bottom-13,1);r.buttons[#r.buttons].label='MINIMAP OVERVIEW'
+ Minimap.draw(ui,state,player,{x=w-36,y=bottom-miniHeight-2,w=32,h=miniHeight})
 
  local actions={
   {'TECH TREE','tree',function()ui.panel='tech';ui.source=nil;ui.reachable={};ui.workCity=nil;ui.lastDrag=nil end},
   {'EMPIRE','station',function()ui.panel='empire';ui.lastDrag=nil end},
   {'NEXT IDLE UNIT','nextUnit',function()ui:nextIdle()end},
+  {'NEXT IDLE CITY','station',function()ui:nextIdleCity()end},
+  {'ZOOM IN','plus',function()ui:zoom(1)end},
+  {'ZOOM OUT','minus',function()ui:zoom(-1)end},
   {'END TURN','endTurn',function()ui:command('end')end}}
- local width=math.floor((w-10)/4)
+ local width=12
  r:fill(0,bottom,w,15,1)
  for i,action in ipairs(actions)do
-  iconButton(2+(i-1)*(width+2),bottom+1,width,action[1],action[2],action[3],{primary=i==4})
+  iconButton(2+(i-1)*(width+2),bottom+1,width,action[1],action[2],action[3],{primary=i==7})
  end
  local rect={x=3,y=3,w=w-6,h=h-6}
- if ui.endConfirm then
+ if ui.disbandConfirm then
+  modal(ui,rect,true);r:text(8,8,'DISBAND UNIT?',8)
+  local pending=ui.disbandConfirm
+  local rows={{text='This permanently removes the unit.'},{text='Its gold upkeep will stop.'},{buttons={
+   {label='CANCEL',run=function()ui.disbandConfirm=nil end},
+   {label='DISBAND',run=function()ui.disbandConfirm=nil;pending.confirmed=true;ui:command('disband',pending);ui:deselect()end}}}}
+  Panels.rows(r,{x=8,y=22,w=w-16,h=h-30},rows,ui,'disbandOffset')
+ elseif ui.endConfirm then
   modal(ui,rect)
   r:text(8,7,'END TURN?',8,1,w-16)
   r:button(7,19,math.floor((w-18)/2),11,'GO BACK',function()ui.endConfirm=nil end)
@@ -88,22 +99,29 @@ function G.draw(ui,state,player)
   end)
   local rows={}
   for _,entry in ipairs(ui.endConfirm)do
-   for _,line in ipairs(Panels.wrap(r,entry,w-22))do rows[#rows+1]={text=line}end
+   for _,line in ipairs(Panels.wrap(r,entry.text,w-22))do rows[#rows+1]={text=line}end
+   rows[#rows+1]={buttons={{label=entry.kind=='research'and 'CHOOSE RESEARCH'or 'GO TO '..entry.kind:upper(),run=function()
+    ui.endConfirm=nil
+    if entry.kind=='research'then ui.panel='tech'else ui:focus(entry.kind,entry.item);if entry.kind=='city'then ui.cityPanel='production'end end
+   end}}}
   end
   Panels.rows(r,{x=8,y=34,w=w-16,h=h-42},rows,ui,'endOffset')
- elseif ui.pendingMove then
-  modal(ui,rect)
-  local order=ui.pendingMove
-  r:outline(rect.x,rect.y,rect.w,rect.h,8)
-  r:text(8,7,order.attack and 'CONFIRM ATTACK' or 'CONFIRM MOVE',8,1,w-16)
+ elseif ui.productionConfirm then
+  modal(ui,rect,true)
+  local pending=ui.productionConfirm
   local rows={}
-  local description=(order.kind or 'UNIT'):upper()..' FROM '..order.sx..','..order.sy..
-   ' TO '..order.x..','..order.y..'. COST '..order.cost..' MOVEMENT.'
-  for _,line in ipairs(Panels.wrap(r,description,w-16))do rows[#rows+1]={text=line}end
-  rows[#rows+1]={buttons={
-   {label='CANCEL',run=function()ui.pendingMove=nil end},
-   {label='CONFIRM',run=function()ui:confirmMove()end,style={primary=true}}}}
-  Panels.rows(r,{x=7,y=20,w=w-14,h=h-26},rows,ui,'moveOffset')
+  for _,line in ipairs(Panels.wrap(r,'CHANGE '..pending.previous:upper()..' TO '..pending.params.id:upper()..'? Current progress '..pending.progress..' is saved.',w-22))do rows[#rows+1]={text=line}end
+  rows[#rows+1]={buttons={{label='KEEP CURRENT',run=function()ui.productionConfirm=nil end},{label='CHANGE',run=function()
+   ui.productionConfirm=nil;pending.params.confirmed=true;ui:command('queue',pending.params)
+  end}}}
+  r:text(8,8,'CHANGE PRODUCTION?',8)
+  Panels.rows(r,{x=8,y=22,w=w-16,h=h-30},rows,ui,'productionOffset')
+ elseif ui.pendingMove then
+  local v=ui.mapViewport
+  r:button(v.x+2,v.y+2,12,12,nil,function()ui.pendingMove=nil end)
+  r:icon('back',v.x+3,v.y+3,1);r.buttons[#r.buttons].label='CANCEL'
+  r:button(v.x+16,v.y+2,12,12,nil,function()ui:confirmMove()end,{primary=true})
+  r:icon('endTurn',v.x+17,v.y+3,1);r.buttons[#r.buttons].label='CONFIRM'
  elseif ui.panel=='report'then
   local dw,dh=math.min(w-20,280),math.min(math.floor(h*.7),140)
   local box={x=math.floor((w-dw)/2),y=math.floor((h-dh)/2),w=dw,h=dh}
@@ -124,6 +142,12 @@ function G.draw(ui,state,player)
   end)
  elseif ui.panel=='inspector'then
   modal(ui,rect);Inspector.draw(ui,state,player,rect,true)
+ elseif ui.panel=='minimap'then
+  modal(ui,rect,true);r:text(rect.x+4,rect.y+4,'WORLD OVERVIEW',8,1,rect.w-45)
+  r:button(rect.x+rect.w-41,rect.y+1,38,11,'CLOSE',function()ui.panel='context'end)
+  Minimap.draw(ui,state,player,{x=rect.x+4,y=rect.y+15,w=rect.w-8,h=rect.h-20})
+ elseif ui.panel=='resources'then
+  modal(ui,rect,true);HUD.ledger(ui,rect,player)
  elseif ui.panel=='empire'then
   local box={x=6,y=6,w=w-12,h=h-12}
   modal(ui,box,true);Empire.draw(ui,box)

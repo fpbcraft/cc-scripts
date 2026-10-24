@@ -28,10 +28,11 @@ function M.draw(ui,state,player,rect)
  end)
  r:outline(rect.x,rect.y,rect.w,rect.h,3)
  r.buttons[#r.buttons+1]={x=rect.x,y=rect.y,w=rect.w,h=rect.h,label='MINIMAP',fn=function(x,y)
-  if ui.panel~='context' or ui.pendingMove then return end
+  if (ui.panel~='context' and ui.panel~='minimap')or ui.pendingMove then return end
   local v=ui.mapViewport
   ui.panX=math.max(0,math.min(v.maxX,(x-rect.x)/rect.w*fullW*v.tile-v.w/2))
   ui.panY=math.max(0,math.min(v.maxY,(y-rect.y)/rect.h*fullH*v.tile-v.h/2))
+  if ui.panel=='minimap'then ui.panel='context'end
  end}
 end
 return M

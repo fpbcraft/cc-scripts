@@ -24,6 +24,11 @@ function P.rows(r,rect,rows,model,key)
     for n,kind in ipairs({'food','wood','science'})do
      Icons.yieldValue(r,kind,row.yields[kind=='wood' and 'industry' or kind],rect.x+2+(n-1)*width,y+3,width)
     end
+   elseif row.project then
+    r:button(rect.x,y,rect.w-15,11,row.project.label,row.project.run,{selected=row.project.selected})
+    r:button(rect.x+rect.w-13,y,13,11,nil,row.project.info)
+    r:icon('book',rect.x+rect.w-11,y+1,1)
+    r.buttons[#r.buttons].label='CODEX '..row.project.id
    elseif row.buttons then
     local gap=2;local width=math.floor((rect.w-gap*(#row.buttons-1))/#row.buttons)
     for n,button in ipairs(row.buttons)do

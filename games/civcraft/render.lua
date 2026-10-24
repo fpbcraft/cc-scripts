@@ -188,7 +188,33 @@ local function blitColor(index)
  return ('0123456789abcdef'):sub(value+1,value+1)
 end
 local function splice(value,x1,x2,replacement)return value:sub(1,x1-1)..replacement..value:sub(x2+1)end
+function R:cooperate(force)
+ if not (os.epoch and os.queueEvent and os.pullEvent)then return end
+ self.work=(self.work or 0)+1
+ if not force and self.work%128~=0 then return end
+ local now=os.epoch('utc')
+ if not force and now-(self.lastYield or now)<30 then return end
+ self.yieldToken=(self.yieldToken or 0)+1
+ local token=self.yieldToken
+ os.queueEvent('civcraft_render_yield',token)
+ while true do
+  local event=table.pack(os.pullEvent())
+  if event[1]=='civcraft_render_yield' and event[2]==token then break end
+  self.pendingEvents=self.pendingEvents or {}
+  self.pendingEvents[#self.pendingEvents+1]=event
+ end
+ self.lastYield=os.epoch('utc')
+end
+function R:pullEvent()
+ local queue=self.pendingEvents
+ if queue and #queue>0 then
+  local event=table.remove(queue,1)
+  return table.unpack(event,1,event.n)
+ end
+ return os.pullEvent()
+end
 function R:fill(x,y,w,h,color)
+ self:cooperate()
  local x0=math.max(0,math.floor(x));local y0=math.max(0,math.floor(y))
  local x1=math.min(self.w,math.ceil(x+w));local y1=math.min(self.h,math.ceil(y+h))
  if self.clip then
@@ -229,6 +255,7 @@ function R:outline(x,y,w,h,color)
  self:fill(x,y,1,h,color);self:fill(x+w-1,y,1,h,color)
 end
 function R:blit(rows,x,y)
+ self:cooperate()
  if not self.buffer then return false end
  x,y=math.floor(x),math.floor(y)
  local clip=self.clip or {x=0,y=0,w=self.w,h=self.h}
@@ -322,6 +349,8 @@ function R:icon(id,x,y,s)
   coal={'000110000','011111000','111111100','111111110','111111111','111111110','111111100','011111000','001110000'},
   parts={'001110000','011111000','111111100','110001110','100001110','110001110','111111100','011111000','001110000'},
   people={'110001100','110001100','000000000','111001110','111001110','111001110','111001110','000000000','000000000'},
+  plus={'000010000','000010000','000010000','000010000','111111111','000010000','000010000','000010000','000010000'},
+  minus={'000000000','000000000','000000000','000000000','111111111','000000000','000000000','000000000','000000000'},
   book={'111101111','100111001','101101101','100101001','101101101','100101001','100101001','111101111','000010000'},
   search={'001110000','010001000','100000100','100000100','100000100','010001000','001110100','000000010','000000001'},
   tree={'000111000','000101000','000111000','000010000','011111110','010000010','111000111','101000101','111000111'},
@@ -382,11 +411,12 @@ function R:touch(x,y)
 end
 function R:hit(x,y)
  for i=#self.buttons,1,-1 do local b=self.buttons[i]
-  if x>=b.x and x<b.x+b.w and y>=b.y and y<b.y+b.h then b.fn(x,y);return b.label or true end
+  if x>=b.x and x<b.x+b.w and y>=b.y and y<b.y+b.h then if self.onActivate then self.onActivate(b.label)end;b.fn(x,y);return b.label or true end
  end
  return false
 end
 function R:begin()
+ self:cooperate(true)
  self.buttons={};self.scrollbars={};self.clip=nil
  if self.mode=='graphics' and self.m.setFrozen then pcall(self.m.setFrozen,true)end
  if self.mode=='graphics' then
@@ -404,6 +434,7 @@ function R:finish()
   local lut={}
   if integer then for c=0,31 do lut[string.char(c)]=string.rep(string.char(c),self.sx)end end
   for y=0,self.ph-1 do
+   self:cooperate()
    local source=math.ceil((y+1-self.oy)/self.sy)
    if y<self.oy or source<1 or source>self.h then rows[y+1]=blank
    else
@@ -454,6 +485,7 @@ function R:finish()
 end
 function R:close()
  if self.mode=='graphics' then
+  if self.m.setFrozen then pcall(self.m.setFrozen,false)end
   if self.originalPalette and self.m.setPaletteColor then
    for i,c in pairs(self.originalPalette)do pcall(self.m.setPaletteColor,i,c[1],c[2],c[3])end
   end

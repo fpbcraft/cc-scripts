@@ -16,13 +16,13 @@ C.civs={
 C.techs={
  agriculture={name="AGRICULTURE",cost=8,requires={},unlock="farm",tier=1,lane=1},
  mining={name="MINING",cost=8,requires={},unlock="mine",tier=1,lane=3},
- sailing={name="SAILING",cost=10,requires={},unlock="galley",tier=1,lane=5},
+ sailing={name="SAILING",cost=10,requires={},unlock="shipyard / galley",tier=1,lane=5},
  writing={name="WRITING",cost=10,requires={"agriculture"},unlock="library",tier=2,lane=1},
  bronze={name="BRONZE WORKING",cost=12,requires={"mining"},unlock="spearman",tier=2,lane=3},
  masonry={name="MASONRY",cost=12,requires={"mining"},unlock="walls",tier=2,lane=4},
  horseback={name="HORSEBACK RIDING",cost=15,requires={"agriculture"},unlock="horseman",tier=2,lane=2},
- navigation={name="NAVIGATION",cost=15,requires={"sailing"},unlock="navigator",tier=2,lane=5},
- engineering={name="ENGINEERING",cost=18,requires={"bronze","masonry"},unlock="workshop",tier=3,lane=3},
+ navigation={name="NAVIGATION",cost=15,requires={"sailing"},unlock="navigator / embarkation",tier=2,lane=5},
+ engineering={name="ENGINEERING",cost=18,requires={"bronze","masonry"},unlock="workshop / catapult",tier=3,lane=3},
  philosophy={name="PHILOSOPHY",cost=18,requires={"writing"},unlock="academy",tier=3,lane=1},
  archery={name="ARCHERY",cost=17,requires={"bronze"},unlock="archer",tier=3,lane=2},
  currency={name="CURRENCY",cost=17,requires={"writing"},unlock="market",tier=3,lane=4},
@@ -44,21 +44,23 @@ C.techOrder={"agriculture","mining","sailing","writing","bronze","masonry","hors
  "fortification","education","tactics","commerce","shipbuilding","metallurgy",
  "astronomy","logistics","economics","navalwarfare","enlightenment"}
 C.units={
+ catapult={food=4,wood=18,move=2,vision=2,strength=5,defense=2,range=2,tech="engineering",siege=true,ability="Siege damage against city walls"},
  warrior={food=0,wood=5,move=2,vision=2,strength=2,defense=2,range=1,ability="Balanced frontline"},
  settler={food=8,wood=8,move=2,vision=1,strength=0,defense=1,range=0,ability="Found cities"},
  scout={food=2,wood=4,move=4,vision=4,strength=1,defense=1,range=1,ability="Explore; ignores forest cost"},
  spearman={food=2,wood=9,move=2,vision=2,strength=3,defense=4,range=1,tech="bronze",ability="+2 vs mounted"},
- horseman={food=5,wood=12,move=4,vision=3,strength=5,defense=2,range=1,tech="horseback",resource="horses",resource="horses",ability="Fast plains movement / requires horses"},
+ horseman={food=5,wood=12,move=4,vision=3,strength=5,defense=2,range=1,tech="horseback",resource="horses",ability="Fast plains movement / requires horses"},
  archer={food=3,wood=10,move=2,vision=3,strength=3,defense=1,range=2,tech="archery",ability="Attack at 2 hexes"},
  explorer={food=4,wood=9,move=5,vision=5,strength=1,defense=1,range=1,tech="cartography",ability="Long-range reconnaissance"},
  ranger={food=4,wood=14,move=3,vision=4,strength=5,defense=3,range=2,tech="tactics",ability="Forest specialist; ranged"},
- swordsman={food=5,wood=16,move=2,vision=2,strength=7,defense=5,range=1,tech="metallurgy",resource="iron",resource="iron",ability="Heavy infantry / requires iron"},
+ swordsman={food=5,wood=16,move=2,vision=2,strength=7,defense=5,range=1,tech="metallurgy",resource="iron",ability="Heavy infantry / requires iron"},
  galley={food=3,wood=11,move=3,vision=3,strength=2,defense=2,range=1,tech="sailing",naval=true,ability="Cross water"},
  navigator={food=4,wood=13,move=4,vision=5,strength=2,defense=2,range=1,tech="navigation",naval=true,ability="Reveal distant coasts"},
  frigate={food=6,wood=18,move=4,vision=4,strength=6,defense=4,range=2,tech="shipbuilding",naval=true,resource="iron",ability="Naval ranged fire / requires iron"},
  flagship={food=9,wood=25,move=5,vision=5,strength=9,defense=7,range=2,tech="navalwarfare",naval=true,resource="saltpeter",ability="Capital warship / requires saltpeter"},
 }
 C.buildings={
+ shipyard={wood=12,tech="sailing",coastal=true,description="Coastal city only; enables ship production"},
  farm={wood=6,tech="agriculture",description="+2 food"},
  mine={wood=7,tech="mining",description="+2 wood"},
  library={wood=9,tech="writing",description="+2 science"},
@@ -73,4 +75,8 @@ C.buildings={
  bank={wood=25,tech="economics",description="+3 wood"},
  grandacademy={wood=30,tech="enlightenment",description="+6 science"},
 }
+for id,unit in pairs(C.units)do
+ unit.upkeep=math.max(1,math.ceil((unit.wood or 5)/7))
+ if unit.naval then unit.building='shipyard'end
+end
 return C

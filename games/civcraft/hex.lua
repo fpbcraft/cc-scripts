@@ -65,7 +65,11 @@ function H.moveCost(x,y,state,unit,Systems)
  local t=H.terrain(x,y,state)
  local stats=statsFor(unit,Systems)
  if stats.naval then return t=="water" and 1 or nil end
- if t=="water" or t=="mountain"then return nil end
+ if t=='water'then
+  for _,p in ipairs(state and state.players or {})do if p.id==unit.owner and (p.techs or {}).navigation then return 2 end end
+  return nil
+ end
+ if t=='mountain'then return nil end
  if t=="forest" and (unit.kind=="scout" or unit.kind=="ranger") then return 1 end
  if t=="forest" and Systems and state and state.players then
   for _,p in ipairs(state.players)do
@@ -99,8 +103,18 @@ function H.reachable(state,unit,owner,Systems)
  local start=unit.y*w+unit.x
  local distance={[start]=0}
  local fringe={{x=unit.x,y=unit.y,cost=0}}
- local attacks={}
+ local attacks={};local previous={}
+ local function route(x,y,last)
+  local points={{x=x,y=y}};local index=y*w+x
+  if last then points[#points+1]={x=last.x,y=last.y};index=last.y*w+last.x end
+  while previous[index]do
+   local p=previous[index];points[#points+1]={x=p.x,y=p.y};index=p.y*w+p.x
+  end
+  local ordered={};for i=#points,1,-1 do ordered[#ordered+1]=points[i]end
+  return ordered
+ end
  while #fringe>0 do
+  if Systems and Systems.checkpoint then Systems.checkpoint()end
   table.sort(fringe,function(a,b)return a.cost<b.cost end)
   local cur=table.remove(fringe,1)
   if cur.cost==distance[cur.y*w+cur.x] then
@@ -111,16 +125,20 @@ function H.reachable(state,unit,owner,Systems)
     local u=occupant(state,nx,ny)
     local c=settlement(state,nx,ny)
     local enemy=(u and u.owner~=owner) or (c and c.owner~=owner)
+    if stats.naval and c and c.owner~=owner then moveCost=1;total=cur.cost+1 end
     if total and total<=budget then
      if enemy then
-      if (stats.strength or 0)>0 and (stats.range or 1)>=1 and
+      if (stats.strength or 0)>0 and (not unit.attackedRound or unit.attackedRound~=state.round) and (stats.range or 1)>=1 and
+        (stats.naval or (not state.world or H.terrain(unit.x,unit.y,state)~='water' and H.terrain(nx,ny,state)~='water'))and
         (not u or u.owner~=owner) then
-       attacks[ny*w+nx]={x=nx,y=ny,cost=total,attack=true}
+       if not attacks[ny*w+nx]or total<attacks[ny*w+nx].cost then
+        attacks[ny*w+nx]={x=nx,y=ny,cost=total,attack=true,ranged=(stats.range or 1)>1,path=route(nx,ny,cur)}
+       end
       end
      elseif not u and (not c or c.owner==owner) then
       local idx=ny*w+nx
       if not distance[idx] or total<distance[idx]then
-       distance[idx]=total
+       distance[idx]=total;previous[idx]={x=cur.x,y=cur.y}
        fringe[#fringe+1]={x=nx,y=ny,cost=total}
       end
      end
@@ -131,15 +149,17 @@ function H.reachable(state,unit,owner,Systems)
  for y=1,h do for x=1,w do
   local idx=y*w+x
   if idx~=start and distance[idx]then
-   out[#out+1]={x=x,y=y,cost=distance[idx]}
+   out[#out+1]={x=x,y=y,cost=distance[idx],path=route(x,y)}
   end
   if attacks[idx]then out[#out+1]=attacks[idx]end
  end end
  -- Ranged strikes do not teleport the unit into an enemy tile.
- if (stats.range or 1)>1 and (stats.strength or 0)>0 then
-  for _,u in ipairs(state.units or {})do
+ if (stats.range or 1)>1 and (stats.strength or 0)>0 and (not unit.attackedRound or unit.attackedRound~=state.round) and (stats.naval or H.terrain(unit.x,unit.y,state)~='water')then
+  local targets={}
+  for _,list in ipairs({state.units or {},state.cities or {}})do for _,target in ipairs(list)do targets[#targets+1]=target end end
+  for _,u in ipairs(targets)do
    if u.owner~=owner and H.distance(unit.x,unit.y,u.x,u.y)<=stats.range and
-     H.distance(unit.x,unit.y,u.x,u.y)>1 then
+     H.distance(unit.x,unit.y,u.x,u.y)>0 then
     local p=state.players or {}
     local visible=false
     for _,player in ipairs(p)do
@@ -148,7 +168,7 @@ function H.reachable(state,unit,owner,Systems)
     if visible then
      local idx=u.y*w+u.x
      if not attacks[idx]then
-      out[#out+1]={x=u.x,y=u.y,cost=budget,attack=true,ranged=true}
+      out[#out+1]={x=u.x,y=u.y,cost=budget,attack=true,ranged=true,path={{x=unit.x,y=unit.y},{x=u.x,y=u.y}}}
      end
     end
    end

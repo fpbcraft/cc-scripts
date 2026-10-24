@@ -98,6 +98,29 @@ for _,graphics in ipairs({false,true})do
    click('NEXT');draw();bounds()
   end
   assert(queued and calls[#calls][1]=='queue','Production reachable through paged inspector')
+  local projectID=calls[#calls][2].id
+  assert(click('CODEX '..projectID));draw();bounds()
+  assert(ui.codex.entry.id==projectID,'Project book opens its corresponding Codex entry')
+  assert(click('CLOSE'));draw()
+  state.cities[1].project={kind='unit',id='warrior',progress=3}
+  local previousCalls=#calls
+  ui:command('queue',{cityX=a.x,cityY=a.y,kind='unit',id='scout'})
+  assert(ui.productionConfirm and #calls==previousCalls,'Changing production requires confirmation')
+  draw();bounds();assert(click('KEEP CURRENT'));assert(state.cities[1].project.id=='warrior')
+  ui:command('queue',{cityX=a.x,cityY=a.y,kind='unit',id='scout'});draw();assert(click('CHANGE'))
+  assert(calls[#calls][1]=='queue' and calls[#calls][2].confirmed,'Only confirmed switching sends a project order')
+  state.cities[1].project=nil
+  assert(ui:nextIdleCity() and ui.selected.kind=='city' and ui.cityPanel=='production')
+  state.cities[1].project={kind='unit',id='warrior',progress=0};assert(not ui:nextIdleCity());state.cities[1].project=nil
+  ui:focus('unit',state.units[1]);ui.source={x=state.units[1].x,y=state.units[1].y}
+  ui.reachable=Hex.reachable(state,state.units[1],1,Systems)
+  local destination=ui.reachable[1];assert(destination.path and #destination.path>=2)
+  ui:tile(destination.x,destination.y);assert(ui.pendingMove and ui.pendingMove.path)
+  ui:tile(destination.x,destination.y);assert(not ui.pendingMove and calls[#calls][1]=='move','Clicking the preview tile again confirms its route')
+  ui:focus('city',state.cities[1]);draw()
+  for _,button in ipairs(ui.r.buttons)do if button.label=='TERRAIN' or button.label=='YIELDS'or button.label=='END TURN'then
+   assert(button.w==button.h and button.w==12,'Navigation controls stay square at every size')
+  end end
   assert(click('EMPIRE'));draw();bounds();assert(click('CITIES'));draw();bounds()
   local chosen=false
   for _,button in ipairs(ui.r.buttons)do if button.label and button.label:match('^CITY ')then button.fn();chosen=true;break end end
@@ -124,7 +147,8 @@ for _,graphics in ipairs({false,true})do
   assert(not ui:pan(10,10));assert(ui.panX==px and ui.panY==py)
   ui.panel='encyclopedia';draw();bounds()
   ui.panel='context';ui:command('end');assert(ui.endConfirm);draw();bounds()
-  assert(click('GO BACK'));ui:command('end');draw();assert(click('END ANYWAY'));assert(calls[#calls][1]=='end')
+  assert(click('GO TO UNIT'));assert(not ui.endConfirm and ui.selected.kind=='unit','Reminders provide direct navigation')
+  ui:command('end');draw();assert(click('GO BACK'));ui:command('end');draw();assert(click('END ANYWAY'));assert(calls[#calls][1]=='end')
   ui.panel='context';ui.panX=999;ui.panY=999;ui.source={x=a.x+1,y=a.y}
   ui:draw(state,2,{handoff=true});assert(not ui.source and ui.panX==0 and ui.panY==0,'Handoff clears outgoing camera and orders')
   assert(not ui.mapViewport,'Handoff conceals map')

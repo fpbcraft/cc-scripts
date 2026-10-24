@@ -41,7 +41,7 @@ function V.draw(ui,state,player,rect)
   cityIndex[World.key(city.x,city.y)]=city
  end
  for _,unit in ipairs(state.units or {})do unitIndex[World.key(unit.x,unit.y)]=unit end
- local signature=table.concat(citySignature,';')
+ local signature=table.concat(citySignature,';')..':'..(state.territoryRevision or 0)
  local cache=ui.mapCache
  if not cache or cache.world~=world or cache.cities~=state.cities or cache.signature~=signature then
   cache={world=world,cities=state.cities,signature=signature,claims={}};ui.mapCache=cache
@@ -90,6 +90,17 @@ function V.draw(ui,state,player,rect)
     ui.hexTargets[#ui.hexTargets+1]={x=px,y=py,w=size,h=size,tx=x,ty=y}
    end
   end end
+  if ui.pendingMove and ui.pendingMove.path then
+   local function center(point)
+    return rect.x+(point.x-.5+((point.y-1)%2)*.5)*size-ui.panX,
+     rect.y+(point.y-1)*step+size/2-ui.panY
+   end
+   for i=2,#ui.pendingMove.path do
+    local ax,ay=center(ui.pendingMove.path[i-1]);local bx,by=center(ui.pendingMove.path[i])
+    for offset=-1,1 do r:line(ax+offset,ay,bx+offset,by,0);r:line(ax,ay+offset,bx,by+offset,0)end
+    r:line(ax,ay,bx,by,18)
+   end
+  end
   -- Paint borders after all terrain, so neighbouring fills cannot erase them.
   for _,t in ipairs(tiles)do
    local x,y,px,py=t.x,t.y,t.px,t.py
@@ -152,7 +163,21 @@ function V.draw(ui,state,player,rect)
       r:fill(xx,yy,1,1,destination.attack and 31 or (n%4==0 and 7 or 13))
      end end
     end
-    if size>=12 then Icons.marker(r,destination.attack and 'attack' or 'move',px+size/2-3,py+size*.68-3)end
+    if size>=12 then
+     Icons.moveCost(r,destination.cost,px+size/2,py+size*.72)
+     if destination.attack then Icons.marker(r,'attack',px+size*.65,py+size*.25)end
+    end
+   end
+   if not overlays.yields and size>=16 then
+    local actor=unit or city
+    if actor and actor.hp and actor.hp<(unit and 100 or 200)then
+     local max=unit and 100 or 200;local bx,by=px+size/2-4,py+size*.72
+     r:fill(bx-1,by-1,10,4,0);r:fill(bx,by,8*actor.hp/max,2,actor.hp/max<.35 and 31 or 13)
+    end
+   end
+   if unit and unit.owner==ui.playerID and not unit.standby and not unit.moved and (unit.movesLeft or 0)>0 then
+    local ix,iy=px+size*.7,py+size*.4
+    r:fill(ix-1,iy-1,5,5,0);r:fill(ix,iy,3,3,18);r:fill(ix+1,iy+1,1,1,7)
    end
    if not ui.selected.empty and ui.selected.x==x and ui.selected.y==y then
     local vertices=Hex.vertices(px+1,py+1,size-2)

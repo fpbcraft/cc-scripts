@@ -1,7 +1,7 @@
 -- Reports contain only the receiving empire's possessions and economy.
 local R={}
 function R.capture(state,p)
- local s={food=p.food or 0,wood=p.wood or 0,science=p.science or 0,cities={},units={},techs={}}
+ local s={food=p.food or 0,wood=p.wood or 0,science=p.science or 0,gold=p.gold or 0,cities={},units={},techs={}}
  for id,value in pairs(p.techs or {})do if value then s.techs[id]=true end end
  for _,c in ipairs(state.cities or {})do if c.owner==p.id then
   local b={};for id,value in pairs(c.buildings or {})do if value then b[id]=true end end
@@ -16,8 +16,8 @@ function R.build(state,p,before)
  local now=R.capture(state,p);local lines={}
  if not before then return {'Your empire is ready. Inspect cities to assign citizens and choose production.',
   'Select a unit, then use MOVE / ATTACK to issue an order.'}end
- for _,field in ipairs({'food','wood','science'})do
-  local delta=now[field]-before[field]
+ for _,field in ipairs({'food','wood','science','gold'})do
+  local delta=now[field]-(before[field]or 0)
   lines[#lines+1]=(field=='wood' and 'INDUSTRY' or field:upper())..' '..(delta>=0 and '+' or '')..delta..' (TOTAL '..now[field]..')'
  end
  local ids={};for id in pairs(now.techs)do if not before.techs[id]then ids[#ids+1]=id end end

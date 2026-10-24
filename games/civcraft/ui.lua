@@ -26,36 +26,52 @@ end
 function UI:feedback(s)self.notice=tostring(s or '');self.localNotice=true end
 function UI:command(action,params)
  self.localNotice=nil;self.notice=""
+ if action=='disband' and params and not params.confirmed then self.disbandConfirm=params;return end
+ if action=='queue' and params and not params.confirmed then
+  local city=where(self.state.cities,params.cityX,params.cityY)
+  local current=city and city.project
+  if current and (current.kind~=params.kind or current.id~=params.id)then
+   self.productionConfirm={params=params,previous=current.id,progress=current.progress or 0};self.productionOffset=0;return
+  end
+ end
  if action=='end' and not (params and params.confirmed)then
   local warnings=self:endWarnings()
   if #warnings>0 then self.endConfirm=warnings;self.endOffset=0;return end
  end
- if action=='end'then self.source=nil;self.reachable={};self.workCity=nil end
+ if action=='end'then self.cityStrikeSource=nil;self.source=nil;self.reachable={};self.workCity=nil end
  if self.dispatch then self.dispatch(action,params or {})end
 end
 function UI:endWarnings()
  local warnings={};local state=self.state
  if not state then return warnings end
  for _,u in ipairs(state.units or {})do
-  if u.owner==self.playerID and not u.standby and (u.movesLeft or (u.moved and 0 or 1))>0 then
-   warnings[#warnings+1]=u.kind..' at '..u.x..','..u.y..' has moves left.'
+  if u.owner==self.playerID and not u.standby and not u.autoExplore and (u.movesLeft or (u.moved and 0 or 1))>0 then
+   warnings[#warnings+1]={text=u.kind..' at '..u.x..','..u.y..' has moves left.',kind='unit',item=u}
   end
  end
  for _,c in ipairs(state.cities or {})do
-  if c.owner==self.playerID and not c.project then warnings[#warnings+1]='City '..c.x..','..c.y..' has no production.'end
+  if c.owner==self.playerID and not c.project then warnings[#warnings+1]={text='City '..c.x..','..c.y..' has no production.',kind='city',item=c}end
  end
  for _,p in ipairs(state.players or {})do if p.id==self.playerID and not p.researchTarget then
   for id in pairs(Systems.techs)do if Systems.canResearch(p,id)then
-   warnings[#warnings+1]='No research selected.';break
+   warnings[#warnings+1]={text='No research selected.',kind='research'};break
   end end
  end end
  return warnings
 end
 function UI:deselect()
- self.source=nil;self.reachable={};self.pendingMove=nil;self.workCity=nil
+ self.cityStrikeSource=nil;self.source=nil;self.reachable={};self.pendingMove=nil;self.workCity=nil
  self.selected.empty=true;self.localNotice=nil;self.notice=''
 end
 function UI:tile(x,y)
+ if self.cityStrikeSource and not self.pendingMove then
+  for _,target in ipairs(self.reachable or {})do if target.x==x and target.y==y then
+   local city=where(self.state.cities,self.cityStrikeSource.x,self.cityStrikeSource.y)
+   self.pendingMove={city=true,sx=city.x,sy=city.y,x=x,y=y,cost=0,attack=true,kind='CITY STRIKE',player=self.playerID,path={{x=city.x,y=city.y},{x=x,y=y}}}
+   self:feedback('CLICK TARGET AGAIN TO CONFIRM CITY STRIKE');return
+  end end
+ end
+ if self.pendingMove and self.pendingMove.x==x and self.pendingMove.y==y then self:confirmMove();return end
  if self.workCity then
   local city=where(self.state.cities,self.workCity.x,self.workCity.y)
   for _,tile in ipairs(Systems.workable(self.state,city))do
@@ -70,15 +86,15 @@ function UI:tile(x,y)
    if p.x==x and p.y==y then
     local unit=where(self.state.units,self.source.x,self.source.y)
     self.pendingMove={sx=self.source.x,sy=self.source.y,x=x,y=y,cost=p.cost,
-     attack=p.attack,kind=unit and unit.kind,unitID=unit and unit.id,player=self.playerID}
-    self.moveOffset=0;self.lastDrag=nil;return
+     attack=p.attack,path=p.path,kind=unit and unit.kind,unitID=unit and unit.id,player=self.playerID}
+    self.moveOffset=0;self.lastDrag=nil;self:feedback('COST '..p.cost..' - CLICK DESTINATION AGAIN TO CONFIRM');return
    end
   end
  end
  self.source=nil;self.reachable={};self.pendingMove=nil;self.inspectorOffset=0
  if self.selected.x==x and self.selected.y==y and not self.selected.empty then self:deselect();return end
  local unit=where(self.state.units,x,y)
- self.selected={x=x,y=y,kind=unit and unit.owner==self.playerID and 'unit' or 'city'};self.panel='context';self.cityPanel='jobs';self.workCity=nil
+ self.selected={x=x,y=y,kind=unit and unit.owner==self.playerID and 'unit' or 'city',unitID=unit and unit.id};self.panel='context';self.cityPanel='jobs';self.workCity=nil
  self.localNotice=nil;self.notice=''
 end
 function UI:draw(state,playerID,opts)
@@ -90,7 +106,7 @@ function UI:draw(state,playerID,opts)
  -- Never carry a previous hotseat player's selection or movement overlay
  -- into the next player's screen (including the concealed handoff).
  if self.lastPlayer~=nil and self.lastPlayer~=playerID then
-  self.source=nil;self.reachable={};self.pendingMove=nil;self.endConfirm=nil;self.panel="context"
+  self.source=nil;self.reachable={};self.pendingMove=nil;self.cityStrikeSource=nil;self.productionConfirm=nil;self.disbandConfirm=nil;self.endConfirm=nil;self.panel="context"
   self.actionPage=1;self.techModel=nil;self.workCity=nil
   self.worldReady=false;self.panX=0;self.panY=0;self.zoomLevel=nil
   self.localNotice=nil;self.notice="";self.activeScroll=nil
@@ -102,6 +118,9 @@ function UI:draw(state,playerID,opts)
   end
  end
  self.lastPlayer=playerID
+ if self.selected.kind=='unit' and self.selected.unitID then
+  for _,u in ipairs(state.units or {})do if u.id==self.selected.unitID and u.owner==playerID then self.selected.x=u.x;self.selected.y=u.y;break end end
+ end
  if opts.handoff or
     (self.state and self.source and not (function()
       for _,u in ipairs(state.units or {})do
@@ -113,7 +132,7 @@ function UI:draw(state,playerID,opts)
   self.source=nil;self.reachable={};self.pendingMove=nil
  end
  if opts.handoff or opts.paused or opts.screen=='title' or not state or state.phase~='game'then
-  self.pendingMove=nil;self.lastDrag=nil
+  self.pendingMove=nil;self.productionConfirm=nil;self.disbandConfirm=nil;self.endConfirm=nil;self.lastDrag=nil
  end
  r:begin()
  self.hexTargets={}
@@ -183,21 +202,13 @@ function UI:draw(state,playerID,opts)
   r:finish();return
  end
  if opts.paused then
-  if h<180 or w<220 then
-   r:fill(0,0,w,h,0);r:text(5,3,'PAUSED',8)
-   local rows={}
-   for _,action in ipairs({{'RESUME','resume'},{'SAVE','save'},{'MAIN MENU','title'},{'EXIT','exit'}})do
-    rows[#rows+1]={buttons={{label=action[1],run=function()self:command(action[2])end}}}
-   end
-   Panels.rows(r,{x=4,y=14,w=w-8,h=h-18},rows,self,'menuOffset')
-   r:finish();return
+  r:fill(0,0,w,h,0);r:text(5,3,'PAUSED',8)
+  local rows={}
+  for _,action in ipairs({{'RESUME','resume'},{'SAVE','save'},
+   {opts.audio==false and 'AUDIO OFF' or 'AUDIO ON','audio'},{'MAIN MENU','title'},{'EXIT','exit'}})do
+   rows[#rows+1]={buttons={{label=action[1],run=function()self:command(action[2])end}}}
   end
-  r:center(math.floor(h*.24),"PAUSED",8,2)
-  local bw=math.min(105,w-30);local x=math.floor((w-bw)/2)
-  r:button(x,math.floor(h*.38),bw,18,"RESUME",function()self:command("resume")end,{primary=true})
-  r:button(x,math.floor(h*.38)+22,bw,18,"SAVE",function()self:command("save")end)
-  r:button(x,math.floor(h*.38)+44,bw,18,"MAIN MENU",function()self:command("title")end)
-  r:button(x,math.floor(h*.38)+66,bw,18,"EXIT",function()self:command("exit")end)
+  Panels.rows(r,{x=4,y=14,w=w-8,h=h-18},rows,self,'menuOffset')
   r:finish();return
  end
  if opts.handoff then
@@ -297,9 +308,9 @@ function UI:draw(state,playerID,opts)
  r:finish()
 end
 function UI:focus(kind,item)
- self.source=nil;self.reachable={};self.pendingMove=nil;self.workCity=nil
+ self.cityStrikeSource=nil;self.source=nil;self.reachable={};self.pendingMove=nil;self.workCity=nil
  self.panel='context';self.cityPanel='jobs';self.inspectorOffset=0
- self.selected={x=item.x,y=item.y,kind=kind}
+ self.selected={x=item.x,y=item.y,kind=kind,unitID=kind=='unit' and item.id or nil}
  local v=self.mapViewport
  if v then
   self.panX=math.max(0,math.min(v.maxX,(item.x-.5+((item.y-1)%2)*.5)*v.tile-v.w/2))
@@ -320,14 +331,41 @@ function UI:nextIdle()
  if #candidates==0 then self:feedback('NO AWAKE UNITS WITH MOVEMENT LEFT');return false end
  self:focus('unit',candidates[(current or 0)%#candidates+1]);return true
 end
+function UI:nextIdleCity()
+ local candidates={};local current
+ for _,city in ipairs(self.state.cities or {})do if city.owner==self.playerID and not city.project then
+  candidates[#candidates+1]=city
+  if not self.selected.empty and self.selected.kind=='city' and self.selected.x==city.x and self.selected.y==city.y then current=#candidates end
+ end end
+ if #candidates==0 then self:feedback('ALL CITIES HAVE PRODUCTION');return false end
+ self:focus('city',candidates[(current or 0)%#candidates+1]);self.cityPanel='production';return true
+end
+function UI:openCodex(category,id)
+ local entries=dofile('/games/civcraft/encyclopedia.lua').entries(category)
+ for _,entry in ipairs(entries)do if entry.id==id then
+  self.codex={category=category,entry=entry,offset=0};self.panel='encyclopedia';return true
+ end end
+ return false
+end
+function UI:armCityStrike(city)
+ self.source=nil;self.pendingMove=nil;self.workCity=nil;self.reachable={};self.cityStrikeSource={x=city.x,y=city.y}
+ local player;for _,p in ipairs(self.state.players)do if p.id==self.playerID then player=p end end
+ for _,u in ipairs(self.state.units)do if u.owner~=self.playerID and Hex.distance(city.x,city.y,u.x,u.y)<=2 and
+  (player.visible or {})[u.x..':'..u.y]then self.reachable[#self.reachable+1]={x=u.x,y=u.y,cost=0,attack=true}end end
+ self:feedback('CHOOSE A RED CROSS FOR CITY STRIKE')
+end
 function UI:confirmMove()
  local order=self.pendingMove;self.pendingMove=nil
+ if order and order.city then
+  self:command('cityStrike',{x=order.sx,y=order.sy,tx=order.x,ty=order.y});self.cityStrikeSource=nil;self.reachable={};return true
+ end
  if not order or order.player~=self.playerID then return false end
  local unit=where(self.state.units,order.sx,order.sy)
  if unit and unit.owner==self.playerID and unit.id==order.unitID then
   for _,destination in ipairs(Hex.reachable(self.state,unit,self.playerID,Systems))do
    if destination.x==order.x and destination.y==order.y then
     self:command('move',{sx=order.sx,sy=order.sy,x=order.x,y=order.y})
+    self.selected={x=unit.x,y=unit.y,kind='unit',unitID=unit.id}
     self.source=nil;self.reachable={};return true
    end
   end
@@ -336,6 +374,9 @@ function UI:confirmMove()
  self.source=nil;self.reachable={};return false
 end
 function UI:back()
+ if self.cityStrikeSource then self.cityStrikeSource=nil;self.reachable={};self.pendingMove=nil;return true end
+ if self.disbandConfirm then self.disbandConfirm=nil;return true end
+ if self.productionConfirm then self.productionConfirm=nil;return true end
  if self.endConfirm then self.endConfirm=nil;return true end
  if self.pendingMove then self.pendingMove=nil;return true end
  if self.panel~='context'then self.panel='context';return true end
@@ -344,7 +385,7 @@ function UI:back()
  return false
 end
 function UI:zoom(delta)
- if self.panel~='context' or self.pendingMove or self.endConfirm then return false end
+ if self.panel~='context' or self.productionConfirm or self.disbandConfirm or self.endConfirm then return false end
  local v=self.mapViewport;if not v then return false end
  local size=math.max(8,math.min(48,v.tile+delta*4))
  local ratio=size/v.tile
@@ -353,7 +394,7 @@ function UI:zoom(delta)
  self.zoomLevel=size;return true
 end
 function UI:pan(dx,dy)
- if self.panel~='context' or self.pendingMove or self.endConfirm or self.inputMode~='map'then return false end
+ if self.panel~='context' or self.productionConfirm or self.disbandConfirm or self.endConfirm or self.inputMode~='map'then return false end
  local v=self.mapViewport
  if not v then return false end
  self.panX=math.max(0,math.min(v.maxX,(self.panX or 0)+dx))
@@ -363,7 +404,7 @@ end
 function UI:pointerDown(x,y)
  local rx,ry=self.r:touch(x,y);local v=self.mapViewport
  self.pointerStart=nil;self.pointerDragged=false;self.blockDrag=true
- if rx and v and self.panel=='context' and not self.pendingMove and not self.endConfirm and
+ if rx and v and self.panel=='context' and not self.productionConfirm and not self.disbandConfirm and not self.endConfirm and
   rx>=v.x and rx<v.x+v.w and ry>=v.y and ry<v.y+v.h then
   self.pointerStart={x=x,y=y};self.lastDrag={x=rx,y=ry};self.blockDrag=false
   return true
@@ -385,7 +426,7 @@ function UI:drag(x,y)
    end
   end
  end
- if self.blockDrag or self.panel~='context' or self.pendingMove or self.endConfirm then self.lastDrag=nil;return false end
+ if self.blockDrag or self.panel~='context' or self.productionConfirm or self.disbandConfirm or self.endConfirm then self.lastDrag=nil;return false end
  local rx,ry=self.r:touch(x,y);local v=self.mapViewport
  if not rx or not v or rx<v.x or rx>=v.x+v.w or ry<v.y or ry>=v.y+v.h then
   self.lastDrag=nil;return false
@@ -403,7 +444,7 @@ function UI:scroll(delta,x,y)
    bar.model[bar.key]=math.max(0,math.min(bar.max,(bar.model[bar.key]or 0)+delta));return true
   end
  end
- if self.pendingMove or self.endConfirm or self.panel~='context'then return false end
+ if self.productionConfirm or self.disbandConfirm or self.endConfirm or self.panel~='context'then return false end
  local rx,ry=self.r:touch(x,y);local v=self.mapViewport
  local inspector=self.inspectorBounds
  if rx and inspector and rx>=inspector.x and rx<inspector.x+inspector.w and
@@ -418,7 +459,7 @@ function UI:tap(x,y)
  if not rx then return false end
  self.lastDrag=nil;self.activeScroll=nil
  -- Modal screens own all input, even outside their visible panel.
- if self.modalBounds or self.panel~='context' or self.pendingMove or self.endConfirm then return self.r:hit(rx,ry)end
+ if self.modalBounds or self.panel~='context' or self.productionConfirm or self.disbandConfirm or self.endConfirm then return self.r:hit(rx,ry)end
  if self.r:hit(rx,ry)then return true end
  local v=self.mapViewport
  if not v or rx<v.x or rx>=v.x+v.w or ry<v.y or ry>=v.y+v.h then return false end

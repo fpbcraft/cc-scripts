@@ -114,15 +114,59 @@ local function radius(city)
   city.population and city.population>=4 and 2 or 1
 end
 function W.territoryCity(state,hex,x,y)
- local best,bestDist
+ local best,bestDist;local tileKey=key(x,y)
  for _,city in ipairs(state.cities or {})do
-  local dist=hex.distance(x,y,city.x,city.y)
-  if dist<=radius(city) and (not bestDist or dist<bestDist or
-   (dist==bestDist and (city.id or 0)<(best.id or 0)))then
-   best,bestDist=city,dist
+  local dist
+  if city.claimed then
+   if city.claimed[tileKey]then dist=hex.distance(x,y,city.x,city.y)end
+  else
+   local candidate=hex.distance(x,y,city.x,city.y)
+   if candidate<=radius(city)then dist=candidate end
   end
+  if dist and (not bestDist or dist<bestDist or
+   (dist==bestDist and (city.id or 0)<(best.id or 0)))then best,bestDist=city,dist end
  end
  return best
+end
+function W.ensureTerritories(state,hex,legacy)
+ if not state.world then return end
+ for _,city in ipairs(state.cities or {})do if not city.claimed then
+  local range=legacy and radius(city)or 1;city.claimed={};city.borderProgress=city.borderProgress or 0
+  for y=math.max(1,city.y-range),math.min(state.world.height,city.y+range)do
+   for x=math.max(1,city.x-range),math.min(state.world.width,city.x+range)do
+    if hex.distance(city.x,city.y,x,y)<=range then city.claimed[key(x,y)]=true end
+   end
+  end
+ end end
+end
+function W.expandCity(state,hex,city)
+ W.ensureTerritories(state,hex,false)
+ city.borderProgress=(city.borderProgress or 0)+1
+ local count=0;for _ in pairs(city.claimed or {})do count=count+1 end
+ local delay=6+math.floor(count/4)
+ if city.borderProgress<delay then return false end
+ local candidates={}
+ for y=math.max(1,city.y-3),math.min(state.world.height,city.y+3)do
+  for x=math.max(1,city.x-3),math.min(state.world.width,city.x+3)do
+   if hex.distance(city.x,city.y,x,y)<=3 and not W.territoryCity(state,hex,x,y)then
+    local adjacent=false
+    for _,n in ipairs(hex.neighbours(x,y,state))do if city.claimed[key(n.x,n.y)]then adjacent=true;break end end
+    if adjacent then
+     local yield=W.yields(state.world,x,y)
+     candidates[#candidates+1]={x=x,y=y,distance=hex.distance(city.x,city.y,x,y),score=yield.food+yield.industry+yield.science}
+    end
+   end
+  end
+ end
+ table.sort(candidates,function(a,b)
+  if a.distance~=b.distance then return a.distance<b.distance end
+  if a.score~=b.score then return a.score>b.score end
+  return a.y==b.y and a.x<b.x or a.y<b.y
+ end)
+ local tile=candidates[1]
+ if not tile then city.borderProgress=math.min(city.borderProgress,delay);return false end
+ city.claimed[key(tile.x,tile.y)]=true;city.borderProgress=0
+ state.territoryRevision=(state.territoryRevision or 0)+1;return true,tile
 end
 function W.yields(world,x,y)
  local t=W.terrain(world,x,y)

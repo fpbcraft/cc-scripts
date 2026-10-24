@@ -31,3 +31,15 @@ end
 frame();assert(writes==10,'Text mode flushes one blit per row')
 frame();assert(writes==10,'Unchanged text rows never reach the peripheral')
 print('CIVCRAFT: one-call graphics frames, cached sprite clipping, text row batching and unchanged-row reuse passed.')
+local oldEpoch,oldQueue,oldPull=os.epoch,os.queueEvent,os.pullEvent
+local events={{'mouse_click',1,12,15},{'mouse_drag',1,14,16},{'mouse_up',1,14,16},{'rednet_message',7,{action='end'},'protocol'}}
+os.epoch=function()return 100 end
+os.queueEvent=function(...)events[#events+1]={...}end
+os.pullEvent=function()local e=table.remove(events,1);assert(e,'Checkpoint must not wait forever');return table.unpack(e)end
+r:cooperate(true)
+assert(#events==0 and #r.pendingEvents==4,'Yield buffers every event preceding the render sentinel')
+local e,b,x,y=r:pullEvent();assert(e=='mouse_click' and b==1 and x==12 and y==15)
+assert(r:pullEvent()=='mouse_drag');assert(r:pullEvent()=='mouse_up')
+local e,id,data,protocol=r:pullEvent();assert(e=='rednet_message' and id==7 and data.action=='end' and protocol=='protocol')
+os.epoch,os.queueEvent,os.pullEvent=oldEpoch,oldQueue,oldPull
+print('CIVCRAFT: cooperative render yields preserve click, drag, release and network event order.')

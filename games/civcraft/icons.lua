@@ -5,14 +5,17 @@ function I.draw(r,kind,x,y,size,color)
  if kind=='food' or kind=='grain'then I.yield(r,'food',x,y,size);return end
  local a=math.max(1,math.floor(size/9))
  local cx=x+math.floor(size/2)
- if kind=="warrior"then
+ if kind=='catapult'then
+  rect(r,cx-4*a,y+6*a,8*a,2*a,16);rect(r,cx-3*a,y+7*a,2*a,2*a,7);rect(r,cx+2*a,y+7*a,2*a,2*a,7)
+  rect(r,cx-a,y+2*a,2*a,5*a,9);rect(r,cx,y+a,4*a,a,7);rect(r,cx+3*a,y,2*a,2*a,4)
+ elseif kind=="warrior"then
   -- Shield + sword crossing its edge.
   rect(r,cx-2*a,y+2*a,4*a,4*a,color)
   rect(r,cx-1*a,y+3*a,2*a,3*a,7)
   rect(r,cx+2*a,y, a,6*a,6)
   rect(r,cx+a,y+2*a,3*a,a,8)
   rect(r,cx+2*a,y+6*a,a,2*a,8)
- elseif kind=="scout"then
+ elseif kind=="scout" or kind=="explorer"then
   -- Hooded explorer, walking staff and small pack.
   rect(r,cx-2*a,y+a,4*a,3*a,12)
   rect(r,cx-a,y+2*a,2*a,a,7)
@@ -123,11 +126,12 @@ function I.draw(r,kind,x,y,size,color)
  end
 end
 local yieldGlyphs={
+ gold={'01110','11011','10101','11011','01110'},
  food={'00100','01110','10101','00100','00100'},
  wood={'01110','00110','00100','01000','10000'},
  science={'01110','00100','01010','10001','11111'},
 }
-local yieldColors={food=18,wood=7,science=13}
+local yieldColors={food=18,wood=7,science=13,gold=8}
 function I.yield(r,kind,x,y,size)
  if kind=='industry'then kind='wood'end
  local glyph=yieldGlyphs[kind];if not glyph then return end
@@ -142,6 +146,16 @@ function I.yieldValue(r,kind,value,x,y,width,background)
  if background then r:fill(x-1,y-1,total+2,7,0)end
  I.yield(r,kind,x,y,5);r:text(x+7,y,text,7,1,math.max(0,(width or total)-7))
  return total
+end
+function I.resource(r,kind,x,y)
+ local glyph=({iron={'01110','11111','11011','11111','01110'},horses={'00110','01111','11110','01100','01010'},saltpeter={'10100','01010','10101','01110','00100'}})[kind]
+ if not glyph then return end
+ for row,bits in ipairs(glyph)do for col=1,5 do if bits:sub(col,col)=='1'then r:fill(x+col-1,y+row-1,1,1,kind=='horses'and 9 or 7)end end end
+end
+function I.moveCost(r,cost,x,y)
+ local value=tostring(cost);local width=math.max(7,r:textWidth(value)+2)
+ r:fill(x-width/2,y-3,width,7,0);r:outline(x-width/2,y-3,width,7,13)
+ r:text(x-r:textWidth(value)/2,y-2,value,7)
 end
 function I.marker(r,kind,x,y)
  if kind=='worked'then

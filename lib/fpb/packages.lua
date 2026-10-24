@@ -30,7 +30,7 @@ P.packages.ironspire={
 }
 P.packages.civcraft={
  id="civcraft",source="games/civcraft",root="/games/civcraft",legacy="/civcraft",entry="game.lua",
- files={"README.md","content.lua","encyclopedia.lua","empire_menu.lua","game.lua","game_view.lua","hex.lua","icons.lua","inspector.lua","map_view.lua","minimap.lua","panels.lua","render.lua","reports.lua","saves.lua","systems.lua","terrain_view.lua","tech_tree.lua","ui.lua","world.lua"},
+ files={"README.md","audio.lua","combat.lua","content.lua","encyclopedia.lua","empire_menu.lua","game.lua","game_view.lua","hex.lua","hud.lua","icons.lua","inspector.lua","map_view.lua","minimap.lua","panels.lua","render.lua","reports.lua","saves.lua","systems.lua","terrain_view.lua","tech_tree.lua","ui.lua","world.lua"},
  libraries={"loader"},
  data={"data"},
  startup=false,lowDisk=false,basalt=false,
@@ -85,7 +85,7 @@ P.apps={
    icon="I",genre="DECKBUILDER",
   },
   {
-   version="0.6.1",id="civcraft",name="CIVCRAFT",subtitle="POCKET CIVILIZATION",
+   version="0.7.0",id="civcraft",name="CIVCRAFT",subtitle="POCKET CIVILIZATION",
    description="Local hotseat or networked 2-4 player civilization-building 4X.",
    icon="V",genre="4X / STRATEGY",
   },

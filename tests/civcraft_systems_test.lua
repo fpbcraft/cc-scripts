@@ -13,7 +13,7 @@ local state={version=3,nextId=3,phase="game",
 state.world=W.generate(802,"compact",2,"continents")
 S.migrate(state)
 local city,p=state.cities[1],state.players[1]
-assert(state.version==4 and city.population==2)
+assert(state.version==5 and city.population==2)
 assert(not S.canResearch(p,"writing"),"Research prerequisites enforced")
 assert(S.research(p,"agriculture"))
 assert(p.researchTarget=="agriculture" and not p.techs.agriculture,
@@ -29,8 +29,13 @@ local afterStaffing=S.yields(p,city,state,H)
 assert(afterStaffing.science>beforeStaffing.science,'Job shortcut chooses a science-yielding tile')
 assert(city.jobs.wood==0 and city.jobs.science==1)
 assert(not S.assign(city,'wood','science',state))
+city.worked={}
+state.world.tiles['2:3']='plains';state.world.resources['2:3']=nil
+state.world.tiles['3:2']='plains';state.world.resources['3:2']=nil
+S.ensureWorkers(state,city)
+assert(S.assign(city,'idle','food',state));assert(S.assign(city,'idle','food',state))
 local oldPop=city.population
-for i=1,8 do S.production(state,H)end
+for i=1,40 do S.production(state,H)end
 assert(p.techs.agriculture and not p.researchTarget,
  "Research completes after enough global turn science")
 assert(city.population>oldPop,"Food surplus grows population")

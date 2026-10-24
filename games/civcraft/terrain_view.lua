@@ -13,7 +13,7 @@ function T.draw(r,land,x,y,size,tx,ty)
   end
  end
  local seed=tx*37+ty*67
- local count=size>=24 and 16 or size>=16 and 8 or 3
+ local count=land=='water' and 2 or 0
  for n=1,count do
   local dx=(seed+n*17)%math.max(1,size-4)+2
   local dy=(seed*3+n*11)%math.max(1,size-4)+2
@@ -32,7 +32,7 @@ function T.draw(r,land,x,y,size,tx,ty)
    if land=='mountain' and row<height*.28 then r:fill(cx-span,top+row,span*2+1,1,30)end
   end
  elseif land=='forest'then
-  local trees=size>=24 and 3 or 1
+  local trees=1
   for n=1,trees do
    local px=cx+(n-2)*(size/5);local py=cy+(n%2)*2
    if trees==1 then px=cx end
