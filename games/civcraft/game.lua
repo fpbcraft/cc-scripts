@@ -10,6 +10,24 @@ local MODE=args[1] or 'local'
 local PROTOCOL='fpbcraft.civcraft.v2'
 local localMode=MODE=='local'
 local SAVE='/games/civcraft/data/save.dat'
+local debugging=false
+for _,arg in ipairs(args)do if arg=='--debug'then debugging=true end end
+local function trace(stage,detail)
+ if not debugging then return end
+ local path='/games/civcraft/data/debug.log'
+ if not fs.exists('/games/civcraft/data')then fs.makeDir('/games/civcraft/data')end
+ if fs.exists(path) and fs.getSize(path)>131072 then
+  if fs.exists(path..'.previous')then fs.delete(path..'.previous')end
+  fs.move(path,path..'.previous')
+ end
+ local file=fs.open(path,'a')
+ if file then
+  local now=os.epoch and os.epoch('utc') or math.floor(os.clock()*1000)
+  file.writeLine(tostring(now)..' '..stage..' '..tostring(detail or ''))
+  file.close()
+ end
+end
+trace('session.begin',MODE)
 local slot=1
 local mapSizes={'compact','standard','large'}
 local mapTypes={'continents','archipelago','pangaea','highlands'}
@@ -54,6 +72,7 @@ local Victory=dofile('/games/civcraft/victory.lua')
 local audio=Audio.new()
 local W,H=Hex.width,Hex.height
 local state
+local turnProgress=function()end
 local function terrain(x,y)return Hex.terrain(x,y,state)end
 local function newGame()
  return {version=6,ruleset='create',roundLimit=180,hostileMode='standard',phase='lobby',round=1,turn=1,players={},cities={},units={},nextId=1,logs={'Welcome to CIVCRAFT'},winner=nil,mapSize='standard',mapType='continents',mapSeed=12345,name='NEW EMPIRE'}
@@ -78,13 +97,15 @@ local function player(id)
  for i,p in ipairs(state.players)do if p.id==id then return p,i end end
 end
 local function save()
+ trace('save.begin',state.round)
  World.reveal(state,Hex,Systems)
- if localMode then Saves.save(slot,state);return end
+ if localMode then Saves.save(slot,state);trace('save.end');return end
  local dir=fs.getDir(SAVE);if not fs.exists(dir)then fs.makeDir(dir)end
  local h=assert(fs.open(SAVE..'.tmp','w'))
  h.write(textutils.serialize(state));h.close()
  if fs.exists(SAVE)then fs.delete(SAVE)end
  fs.move(SAVE..'.tmp',SAVE)
+ trace('save.end')
 end
 local function initMap()
  state.world=World.generate(state.mapSeed,state.mapSize,#state.players,state.mapType)
@@ -117,6 +138,8 @@ local function winner(advance)
  if state.round>90 then state.winner=lead and lead.name;state.phase='over' end
 end
 local function nextTurn()
+ trace('round.begin',state.round)
+ turnProgress('PROCESSING ROUND','Economy, exploration and reports')
  state.round=state.round+1
  Combat.round(state,Systems)
  Systems.production(state,Hex)
@@ -138,6 +161,7 @@ local function nextTurn()
   p.turnReport=Reports.build(state,p,p.turnBaseline);p.reportRound=state.round
  end
  winner(true);log('Round '..state.round);save()
+ trace('round.end',state.round)
 end
 local function apply(id,req)
  local p=player(id)
@@ -183,7 +207,12 @@ local function apply(id,req)
   p.ready=true;log(p.name..' is ready')
   if localMode then
    for _,q in ipairs(state.players)do
-    if q.ai and not q.ready then Systems.aiTurn(state,q,Hex)end
+    if q.ai and not q.ready then
+     turnProgress('AI TAKING ITS TURN',q.name)
+     trace('ai.begin',q.name)
+     Systems.aiTurn(state,q,Hex)
+     trace('ai.end',q.name)
+    end
    end
   end
   local all=true;for _,q in ipairs(state.players)do if not q.ready then all=false end end
@@ -313,12 +342,15 @@ local function activeID()
  return myId
 end
 local function draw()
+ trace('draw.begin',appScreen..' panel='..tostring(view.panel)..
+  ' pan='..tostring(view.panX)..','..tostring(view.panY)..' zoom='..tostring(view.zoomLevel))
  local s=localHost and state or snapshot
  view:message(message)
  view:draw(s,localMode and activeID() or myId,{
   handoff=handoff,localMode=localMode,hostID=hostId,screen=appScreen,report=true,
    paused=gamePaused,hasSave=hasHumanSave,slot=slot,
-   slots=localMode and Saves.list() or nil,deleteConfirm=deleteConfirm,audio=audio.enabled})
+   slots=localMode and appScreen=='title' and Saves.list() or nil,deleteConfirm=deleteConfirm,audio=audio.enabled})
+ trace('draw.end')
 end
 local function dispatch(action,params)
  if action=='exit' then exitRequested=true;return end
@@ -446,6 +478,10 @@ local function dispatch(action,params)
  else rednet.send(hostId,req,PROTOCOL)end
 end
 view=UI.new(display,dispatch)
+if view.r and debugging then view.r.trace=trace end
+turnProgress=function(title,detail)
+ if view.turnProgress then view:turnProgress(title,detail)end
+end
 if view.r then view.r.onActivate=function()audio:effect('click')end end
 Systems.checkpoint=function()if view.r and view.r.cooperate then view.r:cooperate()end end
 local function publish()
@@ -493,6 +529,7 @@ local function ui()
  while not exitRequested do
   local e,a,b,c,d
   if view.r and view.r.pullEvent then e,a,b,c,d=view.r:pullEvent()else e,a,b,c,d=os.pullEvent()end
+  if e~='timer' then trace('event',e)end
   if e=='monitor_touch' and display~=term.current() and a==displaySide then
    view:tap(b,c);draw()
   elseif e=='mouse_click' and (not d or d==displaySide)then
@@ -531,4 +568,5 @@ view:close()
 
 if previousMonitorMouse~=nil then pcall(config.set,'monitorsUseMouseEvents',previousMonitorMouse)end
 
-if not completed then error(failure,0)end
+if not completed then trace('error',failure);error(failure,0)end
+trace('session.end')

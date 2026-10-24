@@ -24,6 +24,22 @@ function UI:message(s)
  if not self.localNotice then self.notice=tostring(s or '')end
 end
 function UI:feedback(s)self.notice=tostring(s or '');self.localNotice=true end
+function UI:turnProgress(title,detail)
+ local r=self.r;local w,h=r.w,r.h
+ r:begin()
+ self.hexTargets={};self.mapViewport=nil;self.inspectorBounds=nil
+ self.modalBounds=nil;self.inputMode=nil;self.pointerStart=nil
+ r:fill(0,0,w,h,0)
+ local y=math.max(2,math.floor(h/2)-16)
+ local function line(offset,text,color)
+  local limit=math.max(1,math.floor((w-8)/4))
+  r:center(y+offset,clip(text,limit),color)
+ end
+ line(0,title,8)
+ line(12,detail,7)
+ line(24,'PLEASE WAIT...',5)
+ r:finish()
+end
 function UI:command(action,params)
  self.localNotice=nil;self.notice=""
  if action=='disband' and params and not params.confirmed then self.disbandConfirm=params;return end

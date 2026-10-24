@@ -2,6 +2,16 @@
 
 A Civilization-inspired, turn-based hex 4X for **CC:Tweaked**, supporting local hot-seat (2–4 human/AI slots) or multiplayer over rednet. Local games use one computer or an Advanced Monitor; networked games use an authoritative host. Computers communicate through **rednet modems**, either wireless (within range) or wired (via the same wired modem network). It also works over interdimensional wireless modems. No HTTP or external web server is needed after installation.
 
+## Diagnosing freezes
+
+Run `/games/civcraft/game.lua local --debug` to record actions, AI turns, saves,
+rendering stages and cooperative waits in `/games/civcraft/data/debug.log`.
+The log is closed after each entry so it can be inspected after a forced restart.
+The previous log segment is retained as `debug.log.previous` when the log rotates.
+For network games, use `host --debug` or `join <host-computer-ID> --debug`.
+Logs are disabled during normal play. A last `*.begin` without its matching
+`*.end` helps identify the stalled operation; it does not by itself prove its cause.
+
 ## Install on every participating computer
 
 ```sh
@@ -157,6 +167,8 @@ Names appear above cities and in city navigation, and remain stable in saves.
   their turn. AI players use the same production and research rules. A round
   advances after everyone finishes; the match ends upon reaching a
   campaign victory condition or the round limit.
+  A waiting screen names the AI currently taking its turn, then shows
+  **PROCESSING ROUND** while the next round is prepared.
 
 The map stays central with a permanent, scrollable inspector. The left controls
 always use square icons. **PREV/NEXT**, the scrollbar, and mouse wheel scrolling

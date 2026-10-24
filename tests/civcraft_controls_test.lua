@@ -58,6 +58,10 @@ for _,graphics in ipairs({false,true})do
    end
   end
   draw();bounds();assert(ui.inspectorBounds and ui.mapViewport.w>=16,'Usable map and persistent inspector')
+  ui:turnProgress('AI TAKING ITS TURN','TWO')
+  assert(#ui.r.buttons==0 and not ui.mapViewport and #ui.hexTargets==0,
+   'Waiting screen hides gameplay controls and map targets')
+  draw();bounds();assert(ui.mapViewport,'Normal gameplay returns after processing')
   assert(not click('INSPECT'),'Inspector shortcut is removed')
   local icons={};for _,button in ipairs(ui.r.buttons)do icons[button.label]=button.icon end
   assert(icons.EMPIRE=='station','Empire uses the original city symbol')

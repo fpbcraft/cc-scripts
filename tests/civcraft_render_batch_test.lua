@@ -17,6 +17,19 @@ assert(calls==1,'A complete graphics frame must use one batched peripheral updat
 local function pixel(x,y)return pixels[math.floor(r.oy+y*r.sy)+1]:byte(math.floor(r.ox+x*r.sx)+1)end
 assert(pixel(0,0)==2 and pixel(4,3)==8 and pixel(8,6)==8 and pixel(9,6)==2,'Viewport clipping survives batching')
 assert(pixel(20,10)==13 and pixels[1]:byte(1)==0,'Palette values and letterboxing survive batching')
+local originalGsub=string.gsub
+local expansions=0
+local frameRows=r.frameRows
+string.gsub=function(...)expansions=expansions+1;return originalGsub(...)end
+r:begin();r:fill(0,0,r.w,r.h,2)
+r:withClip({x=4,y=3,w=5,h=4},function()r:fill(0,0,30,30,8)end)
+r:fill(20,10,3,3,13);r:finish()
+string.gsub=originalGsub
+assert(expansions==0,'Identical frames reuse scaled rows without allocating replacements')
+assert(r.frameRows==frameRows,'Frame pixel storage is reused instead of rebuilt for each primitive')
+local cached=r.scaledRows
+r:resize();assert(r.scaledRows==nil,'Resizing invalidates scaled rows')
+assert(next(cached),'The previous frame has a bounded row cache')
 r:begin();r:fill(0,0,r.w,r.h,2)
 local transparent=string.char(255)
 r:withClip({x=5,y=4,w=2,h=2},function()r:blit({string.char(8,8,8),transparent..string.char(13,13)},4,4)end)
@@ -25,13 +38,14 @@ assert(pixel(4,4)==2 and pixel(5,4)==8 and pixel(6,4)==8 and pixel(5,5)==13,'Cac
 local Icons=dofile('games/civcraft/icons.lua')
 local function strip(x,y)
  r:begin();Icons.yieldValue(r,'industry',3,x,y,17,true)
- return table.concat(r.buffer)
+ local rows={};for i,row in ipairs(r.buffer)do rows[i]=table.concat(row)end
+ return table.concat(rows)
 end
 local aligned=strip(10,10)
 for _,fraction in ipairs({.1,.5,.9})do
  assert(strip(10+fraction,10+fraction)==aligned,'Fractional yield placement must not thicken cog pixels')
 end
-assert(r.buffer[13]:byte(13)==0,'The central hole of a cog stays dark')
+assert(r.buffer[13][13]==string.char(0),'The central hole of a cog stays dark')
 local writes=0
 local t={getSize=function()return 20,10 end,setCursorPos=function(x,y)assert(x==1 and y>=1 and y<=10)end,
  blit=function(text,fg,bg)assert(#text==20 and #fg==20 and #bg==20);writes=writes+1 end}
@@ -54,3 +68,16 @@ assert(r:pullEvent()=='mouse_drag');assert(r:pullEvent()=='mouse_up')
 local e,id,data,protocol=r:pullEvent();assert(e=='rednet_message' and id==7 and data.action=='end' and protocol=='protocol')
 os.epoch,os.queueEvent,os.pullEvent=oldEpoch,oldQueue,oldPull
 print('CIVCRAFT: cooperative render yields preserve click, drag, release and network event order.')
+local oldStart,oldCancel=os.startTimer,os.cancelTimer
+events={{'mouse_click',1,4,5},{'timer',777}}
+os.epoch=function()return 200 end
+os.queueEvent=function()end -- Simulate a lost sentinel event.
+os.startTimer=function(delay)assert(delay==.05);return 777 end
+local cancelled
+os.cancelTimer=function(timer)cancelled=timer end
+os.pullEvent=function()local event=table.remove(events,1);assert(event,'Yield needs a bounded fallback');return table.unpack(event)end
+r:cooperate(true)
+assert(cancelled==777 and r:pullEvent()=='mouse_click','Timer fallback preserves input if the render sentinel is lost')
+os.epoch,os.queueEvent,os.pullEvent=oldEpoch,oldQueue,oldPull
+os.startTimer,os.cancelTimer=oldStart,oldCancel
+print('CIVCRAFT: render checkpoint recovers when its sentinel event is lost.')

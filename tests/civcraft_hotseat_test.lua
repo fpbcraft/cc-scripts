@@ -2,6 +2,7 @@
 local files,dirs,versions={}, {["/"]=true},{}
 fs={}
 function fs.exists(p)return files[p]~=nil or dirs[p]==true end
+function fs.getSize(p)return #(files[p]or '')end
 function fs.makeDir(p)dirs[p]=true end
 function fs.getDir(p)return p:match("^(.*)/[^/]+$")or"/"end
 function fs.delete(p)files[p]=nil;dirs[p]=nil end
@@ -11,8 +12,9 @@ function fs.open(p,mode)
   if files[p]==nil then return nil end
   return {readAll=function()return files[p]end,close=function()end}
  end
- local result=""
- return {write=function(s)result=result..s end,close=function()files[p]=result end}
+ local result=mode=='a' and (files[p]or '') or ''
+ return {write=function(s)result=result..s end,writeLine=function(s)result=result..s..'\n'end,
+  close=function()files[p]=result end}
 end
 local last
 textutils={
@@ -38,20 +40,35 @@ term={current=function()return {}end}
 os.getComputerID=function()return 9 end
 keys={q=16,escape=1}
 local frames,stage=0,0
+local progress={}
 local originalDofile=dofile
 dofile=function(path)
  if path:sub(1,16)=="/games/civcraft/" and path~="/games/civcraft/ui.lua"then
-  return originalDofile(path:sub(2))
+  local module=originalDofile(path:sub(2))
+  if path=='/games/civcraft/systems.lua'then
+   local aiTurn=module.aiTurn
+   module.aiTurn=function(state,player,hex)
+    local shown=progress[#progress]
+    assert(shown and shown.title=='AI TAKING ITS TURN' and shown.detail==player.name,
+     'AI waiting screen must render before AI work starts')
+    return aiTurn(state,player,hex)
+   end
+  end
+  return module
  end
  if path~="/games/civcraft/ui.lua"then return originalDofile(path)end
  return {new=function(_,callback)
   return {
    message=function()end,
+   turnProgress=function(self,title,detail)
+    progress[#progress+1]={title=title,detail=detail}
+   end,
    draw=function(self,s,id,opt)
+    if opt.screen~='title'then assert(opt.slots==nil,'Gameplay redraws must not reload campaign slots')end
     frames=frames+1
     stage=stage+1
     if stage==1 then
-     callback("continue")
+     callback("newGame")
      assert(s.phase=="lobby" and #s.players==2 and opt.localMode)
      callback("addPlayer")
     elseif stage==2 then
@@ -74,7 +91,13 @@ dofile=function(path)
      callback("reveal")
     elseif stage==6 then
      assert(not opt.handoff)
+     -- Run a real AI turn after the second human ends their turn.
+     s.players[3]={id=-3,name='TEST AI',ai=true,civ='iron',techs={}}
      callback("end")
+     assert(progress[1].title=='AI TAKING ITS TURN' and progress[1].detail=='TEST AI',
+      'Waiting screen identifies the AI player')
+     assert(progress[2].title=='PROCESSING ROUND','Waiting screen covers round processing')
+     table.remove(s.players,3);callback('save')
     elseif stage==7 then
      assert(s.round==2 and opt.handoff and id==s.players[1].id,
       "Turn rotation and handoff across rounds")
@@ -96,7 +119,7 @@ os.pullEvent=function()
  if count>=8 then return "timer",0 end
  return "term_resize"
 end
-local ok,err=pcall(function()assert(loadfile("games/civcraft/game.lua"))("local","--new")end)
+local ok,err=pcall(function()assert(loadfile("games/civcraft/game.lua"))("local","--new","--debug")end)
 os.pullEvent=originalPull
 dofile=originalDofile
 assert(ok,err)
@@ -105,4 +128,8 @@ assert(last.round==2 and #last.players==2,"Round persists with correct player co
 assert(last.activeIndex==1,"Current player persisted")
 assert(files["/games/civcraft/data/slot-1.dat"],"Separate local save exists")
 assert(not files["/games/civcraft/data/save.dat"],"Network save untouched")
+local diagnostic=files['/games/civcraft/data/debug.log']
+assert(diagnostic and diagnostic:find('ai.begin TEST AI',1,true) and
+ diagnostic:find('ai.end TEST AI',1,true) and diagnostic:find('draw.end',1,true),
+ 'Debug mode persists operation boundaries')
 print("CIVCRAFT: hotseat lobby, turn ownership, privacy handoff, 2nd round and save passed.")

@@ -159,6 +159,8 @@ function R:fitGraphics()
  self.oy=math.floor((self.ph-self.h*scale)/2)
 end
 function R:resize()
+ self.scaledRows=nil
+ self.frameRows=nil
  local cw,ch=self.m.getSize()
  if cw~=self.cw or ch~=self.ch then self.lastTextRows=nil end
  self.cw,self.ch=cw,ch
@@ -190,6 +192,8 @@ local function blitColor(index)
  return ('0123456789abcdef'):sub(value+1,value+1)
 end
 local function splice(value,x1,x2,replacement)return value:sub(1,x1-1)..replacement..value:sub(x2+1)end
+local pixelColors={}
+for color=0,31 do pixelColors[color]=string.char(color)end
 function R:cooperate(force)
  if not (os.epoch and os.queueEvent and os.pullEvent)then return end
  self.work=(self.work or 0)+1
@@ -198,14 +202,22 @@ function R:cooperate(force)
  if not force and now-(self.lastYield or now)<30 then return end
  self.yieldToken=(self.yieldToken or 0)+1
  local token=self.yieldToken
+ if self.trace then self.trace('yield.begin',token)end
+ local timer=os.startTimer and os.startTimer(.05)
  os.queueEvent('civcraft_render_yield',token)
  while true do
   local event=table.pack(os.pullEvent())
   if event[1]=='civcraft_render_yield' and event[2]==token then break end
+  if timer and event[1]=='timer' and event[2]==timer then
+   if self.trace then self.trace('yield.timeout',token)end
+   break
+  end
   self.pendingEvents=self.pendingEvents or {}
   self.pendingEvents[#self.pendingEvents+1]=event
  end
+ if timer and os.cancelTimer then os.cancelTimer(timer)end
  self.lastYield=os.epoch('utc')
+ if self.trace then self.trace('yield.end',token)end
 end
 function R:pullEvent()
  local queue=self.pendingEvents
@@ -226,10 +238,11 @@ function R:fill(x,y,w,h,color)
  if x1<=x0 or y1<=y0 then return end
  if self.mode=='graphics' then
   if self.buffer then
-   local strip=string.rep(string.char(color or 0),x1-x0)
+   -- Mutate reusable pixels; rebuilding strings per stroke causes heavy GC on CraftOS.
+   local pixel=pixelColors[color or 0]
    for row=y0+1,y1 do
-    local old=self.buffer[row]
-    self.buffer[row]=old:sub(1,x0)..strip..old:sub(x1+1)
+    local pixels=self.buffer[row]
+    for column=x0+1,x1 do pixels[column]=pixel end
    end
   else
    local a=math.floor(self.ox+x0*self.sx);local b=math.floor(self.oy+y0*self.sy)
@@ -272,8 +285,8 @@ function R:blit(rows,x,y)
     local a,b=row:find(pattern,start);if not a then break end
     local x0=math.max(left,x+a-1);local x1=math.min(right,x+b)
     if x1>x0 then
-     local old=self.buffer[target+1]
-     self.buffer[target+1]=old:sub(1,x0)..row:sub(x0-x+1,x1-x)..old:sub(x1+1)
+     local pixels=self.buffer[target+1]
+     for column=x0,x1-1 do pixels[column+1]=pixelColors[row:byte(column-x+1)]end
     end
     start=b+1
    end
@@ -424,10 +437,12 @@ end
 function R:begin()
  self:cooperate(true)
  self.buttons={};self.scrollbars={};self.clip=nil
- if self.mode=='graphics' and self.m.setFrozen then pcall(self.m.setFrozen,true)end
  if self.mode=='graphics' then
-  local blank=string.rep(string.char(0),self.w);self.buffer={}
-  for y=1,self.h do self.buffer[y]=blank end
+  self.frameRows=self.frameRows or {};self.buffer=self.frameRows
+  for y=1,self.h do
+   local row=self.buffer[y] or {};self.buffer[y]=row
+   for x=1,self.w do row[x]=pixelColors[0]end
+  end
  else
   self.textBuffer={}
   for y=1,self.ch do self.textBuffer[y]={(' '):rep(self.cw),('0'):rep(self.cw),('f'):rep(self.cw)}end
@@ -435,8 +450,10 @@ function R:begin()
 end
 function R:finish()
  if self.buffer then
+  if self.trace then self.trace('frame.scale.begin')end
   local rows={};local blank=string.rep(string.char(0),self.pw)
-  local expanded={};local integer=self.sx==math.floor(self.sx)
+  local previous=self.scaledRows or {}
+  local expanded,sourceRows={},{};local integer=self.sx==math.floor(self.sx)
   local lut={}
   if integer then for c=0,31 do lut[string.char(c)]=string.rep(string.char(c),self.sx)end end
   for y=0,self.ph-1 do
@@ -444,10 +461,12 @@ function R:finish()
    local source=math.ceil((y+1-self.oy)/self.sy)
    if y<self.oy or source<1 or source>self.h then rows[y+1]=blank
    else
-    local row=self.buffer[source]
+    local row=sourceRows[source]
+    if not row then row=table.concat(self.buffer[source]);sourceRows[source]=row end
     if not expanded[row]then
      local value
-     if integer then value=row:gsub('.',lut)
+     if previous[row]then value=previous[row]
+     elseif integer then value=row:gsub('.',lut)
      else
       local parts={}
       for x=1,self.w do
@@ -456,13 +475,19 @@ function R:finish()
       end
       value=table.concat(parts)
      end
-     value=blank:sub(1,self.ox)..value
-     expanded[row]=(value..blank):sub(1,self.pw)
+     if not previous[row]then
+      value=blank:sub(1,self.ox)..value
+      value=(value..blank):sub(1,self.pw)
+     end
+     expanded[row]=value
     end
     rows[y+1]=expanded[row]
    end
   end
+  self.scaledRows=expanded
+  if self.trace then self.trace('frame.upload.begin')end
   self.m.drawPixels(0,0,rows,self.pw,self.ph)
+  if self.trace then self.trace('frame.upload.end')end
   self.buffer=nil
  end
  if self.textBuffer then
