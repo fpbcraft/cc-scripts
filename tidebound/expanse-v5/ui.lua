@@ -60,17 +60,34 @@ function UI:start(seed)
  self.g=Sim.new({humans=h,names=self.names,archetypes=self.arch,rounds=self.rounds,seed=seed})
  self.screen='handoff';self.selected=nil;self.selectedShip=nil;self.notice='';self.shipID=nil;self:save()
 end
+-- Railbreak-style opaque framed components. UI geometry stays in character
+-- cells; the rendering adapter chooses native pixel graphics or text.
 function UI:box(x,y,w,h,tint)
- local r=self.r;r:rect(x,y,w,h,tint or 1);r:rect(x,y,w,1,3)
+ local r=self.r
+ r:rect(x,y,w,h,tint or 1)
+ r:rect(x,y,w,1,3);r:rect(x,y+h-1,w,1,3)
+ r:rect(x,y,1,h,3);r:rect(x+w-1,y,1,h,3)
 end
 function UI:button(x,y,w,h,label,icon,fn,detail,color)
  x=math.floor(x);y=math.floor(y);w=math.floor(w);h=math.floor(h)
  if w<5 or h<3 then return end
- local r=self.r;r:rect(x,y,w,h,2);r:rect(x,y,1,h,color or 8)
- if icon then r:icon(x+1,y+math.floor((h-2)/2),icon,color or 9)end
- local start=x+(icon and 4 or 2)
- r:text(start,y+1,clip(label,w-(start-x)-1),7,w-(start-x)-1)
- if detail and h>=5 then r:text(start,y+2,clip(detail,w-(start-x)-1),5,w-(start-x)-1)end
+ local r=self.r
+ local accent=color or 8
+ local primary=accent==19
+ r:rect(x,y,w,h,primary and 18 or 2)
+ r:rect(x,y,w,1,primary and 19 or 3)
+ r:rect(x,y+h-1,w,1,3)
+ r:rect(x,y,1,h,accent)
+ local start=x+2
+ if icon and w>=14 then
+  r:icon(x+2,y+math.max(1,math.floor((h-2)/2)),icon,primary and 19 or 9)
+  start=x+6
+ end
+ local available=math.max(1,w-(start-x)-2)
+ local text=clip(label,available)
+ local tx=icon and start or x+math.max(2,math.floor((w-#text)/2))
+ r:text(tx,y+math.max(1,math.floor((h-1)/2)),text,primary and 7 or 7,available)
+ if detail and h>=6 then r:text(start,y+h-2,clip(detail,available),5,available)end
  if fn then r.buttons[#r.buttons+1]={x=x,y=y,w=w,h=h,fn=fn,label=label}end
 end
 function UI:lines(x,y,w,text,color,max)
@@ -78,48 +95,77 @@ function UI:lines(x,y,w,text,color,max)
  return math.min(#rows,max or 10)
 end
 function UI:space()
- local r=self.r;local count=math.max(24,math.floor(r.w*r.h/110))
- for i=1,count do local x=(i*71+27)%r.w;local y=(i*43+7)%r.h
-  r:rect(x,y,1,1,(i+self.frame)%11==0 and 7 or i%4==0 and 4 or 3)
+ local r=self.r
+ -- Fewer, deliberate light sources than the older dense random starfield.
+ local count=math.max(12,math.floor(r.w*r.h/260))
+ for i=1,count do
+  local x=(i*79+31)%r.w;local y=(i*47+19)%r.h
+  r:rect(x,y,i%9==0 and 2 or 1,1,i%7==0 and 8 or 3)
  end
 end
 function UI:headline(text,back)
- local r=self.r;r:rect(0,0,r.w,7,1);r:rect(0,6,r.w,1,3)
- r:icon(2,2,'star',9);r:text(5,3,clip(text,r.w-27),7,r.w-27)
- if back then self:button(r.w-14,1,12,5,'BACK','back',function()self.screen=back;self.page=1 end)end
+ local r=self.r
+ r:rect(0,0,r.w,8,1)
+ r:rect(0,7,r.w,1,9)
+ r:rect(2,2,2,4,9)
+ r:text(7,3,clip(text,r.w-(back and 30 or 12)),7)
+ if back then
+  self:button(r.w-17,1,15,6,'BACK','back',function()
+   self.screen=back;self.page=1
+  end)
+ end
 end
 function UI:title()
- local r=self.r
- self:space()
- local cx=math.floor(r.w/2)
- if r.h<45 then
-  -- Text-only computers and shorter tablets need a real compact layout.
-  -- Avoid overlapping the title artwork and offscreen menu items.
-  if r.h<35 then
-   r:text(math.max(2,cx-9),3,'SHATTERED EXPANSE',9)
-   r:text(math.max(2,cx-12),6,'A FOUR EMPIRE SPACE SAGA',6)
-  else
-   r:bigText(cx-23,2,'SHATTERED',9,1)
-   r:bigText(cx-18,10,'EXPANSE',7,1)
-  end
-  local y=math.max(12,r.h-17)
-  self:button(cx-19,y,38,5,'NEW CAMPAIGN','star',function()self.screen='setup'end)
-  self:button(cx-19,y+6,38,5,'CONTINUE','next',function()if not self:load()then self.notice='NO V5 SAVE FOUND'end end)
-  self:button(cx-19,y+12,38,5,'HOW TO PLAY','help',function()self.screen='help'end)
-  if self.notice~=''then r:text(math.max(2,cx-18),y-2,clip(self.notice,36),15)end
+ local r=self.r;local w,h=r.w,rh=r.h
+ local cx=math.floor(w/2)
+ -- A distinct railway-style illustrated hero, with a stable action footer.
+ local compact=h<42 or w<75
+ r:rect(0,0,w,math.max(12,math.floor(h*.60)),1)
+ r:rect(0,math.max(12,math.floor(h*.60)),w,1,9)
+ if not compact then
+  local centerY=math.floor(h*.28)
+  -- A ship silhouette against a ringed planet; all parts share the same
+  -- palette, and occupy the decorative area rather than the controls.
+  local radius=math.max(5,math.min(12,math.floor(h*.13)))
+  r:disc(cx+math.floor(w*.23),centerY,radius,3)
+  r:disc(cx+math.floor(w*.23)-2,centerY-2,math.max(3,radius-3),8)
+  local shipX=cx-math.floor(w*.26);local shipY=centerY-4
+  r:rect(shipX,shipY,math.floor(w*.26),5,3)
+  r:rect(shipX+4,shipY-3,math.floor(w*.18),4,9)
+  r:rect(shipX+math.floor(w*.1),shipY+5,math.floor(w*.11),3,8)
+  r:rect(shipX+math.floor(w*.19),shipY-2,6,3,7)
+  r:rect(shipX-3,shipY+1,5,2,15)
+  r:bigText(math.max(5,cx-20),math.max(9,math.floor(h*.46)-3),
+   'SHATTERED',9,2)
+  r:bigText(math.max(5,cx-18),math.max(18,math.floor(h*.46)+11),
+   'EXPANSE',7,2)
+  r:text(math.max(4,cx-20),math.max(27,math.floor(h*.61)-2),
+   'FOUR EMPIRES  |  A SPACE 4X SAGA',6)
  else
-  r:disc(cx,math.floor(r.h*.27),math.max(8,math.floor(r.h*.12)),3)
-  r:disc(cx-3,math.floor(r.h*.25),math.max(4,math.floor(r.h*.07)),10)
-  local scale=r.w>=90 and 2 or 1
-  r:bigText(cx-13*scale/2,math.floor(r.h*.38),'SHATTERED',9,scale)
-  r:bigText(cx-10*scale/2,math.floor(r.h*.38)+scale*9,'EXPANSE',7,scale)
-  r:text(cx-14,math.floor(r.h*.57),'A FOUR EMPIRE SPACE SAGA',6)
-  local y=math.min(math.floor(r.h*.67),r.h-20)
-  self:button(cx-19,y,38,5,'NEW CAMPAIGN','star',function()self.screen='setup'end)
-  self:button(cx-19,y+6,38,5,'CONTINUE','next',function()if not self:load()then self.notice='NO V5 SAVE FOUND'end end)
-  self:button(cx-19,y+12,38,5,'HOW TO PLAY','help',function()self.screen='help'end)
-  if self.notice~=''then r:text(cx-18,y-3,clip(self.notice,40),15)end
-  r:text(cx-17,r.h-2,'V5 | SIMPLE 4X + STORIES',5)
+  r:text(math.max(3,cx-13),5,'SHATTERED EXPANSE',9)
+  r:text(math.max(3,cx-11),8,'FOUR EMPIRES / 4X',6)
+  r:disc(math.floor(w*.80),math.floor(h*.30),3,8)
+ end
+ local wide=w>=115
+ local bw=wide and math.floor((w-15)/3)or math.min(w-12,50)
+ local y=wide and h-14 or math.max(13,h-20)
+ if wide then
+  self:button(4,y,bw,10,'NEW CAMPAIGN','star',function()self.screen='setup'end,nil,19)
+  self:button(8+bw,y,bw,10,'CONTINUE','next',function()
+   if not self:load()then self.notice='NO SAVED CAMPAIGN' end
+  end)
+  self:button(12+2*bw,y,bw,10,'HOW TO PLAY','help',function()self.screen='help'end)
+ else
+  self:button(cx-math.floor(bw/2),y,bw,5,'NEW CAMPAIGN','star',
+   function()self.screen='setup'end,nil,19)
+  self:button(cx-math.floor(bw/2),y+6,bw,5,'CONTINUE','next',function()
+   if not self:load()then self.notice='NO SAVED CAMPAIGN'end
+  end)
+  self:button(cx-math.floor(bw/2),y+12,bw,5,'HOW TO PLAY','help',
+   function()self.screen='help'end)
+ end
+ if self.notice~='' then
+  r:text(3,math.max(10,y-4),clip(self.notice,w-6),15)
  end
 end
 function UI:setup()
