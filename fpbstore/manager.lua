@@ -176,8 +176,13 @@ function M.install(app,ref)
 end
 function M.launch(app)
  assert(app and M.get(app.id)==app and M.installed(app),"Game not installed")
- assert(shell and shell.run,"CraftOS shell required")
- return shell.run(app.entry)
+ local launcher,err=loadfile(app.entry)
+ assert(launcher,"Cannot load "..app.name..": "..tostring(err))
+ -- Installed programs are Lua chunks; launch without shell.run on CraftOS iOS.
+ if app.id=="civcraft" then
+  return launcher("local")
+ end
+ return launcher()
 end
 function M.remove(app,deleteSaves)
  assert(app and M.get(app.id)==app,"Unrecognized app")

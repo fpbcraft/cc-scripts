@@ -33,6 +33,17 @@ function http.get(url)
   readAll=function()return body end,close=function()end}
 end
 local runCount=0
+local launched={}
+local nativeLoadfile=loadfile
+loadfile=function(path)
+ if path:match("^/")then
+  return function(...)
+   launched[#launched+1]={path=path,args={...}}
+   return true
+  end
+ end
+ return nativeLoadfile(path)
+end
 shell={}
 function shell.run(file,...)
  runCount=runCount+1
@@ -47,7 +58,7 @@ function shell.run(file,...)
 end
 local M=require("fpbstore.manager")
 assert(#M.catalog.apps>=3,"Catalog must contain the original three games")
-assert(M.storeStatus().installedVersion=="1.1.2",
+assert(M.storeStatus().installedVersion=="1.1.3",
  "Store's installed version should be displayed")
 local old={"cogworks","railbreak","tidebound"}
 for i,id in ipairs(old)do
@@ -74,13 +85,14 @@ for i,id in ipairs(old)do
  assert(files[unknown]=="user-created","Unknown user file survives")
  assert(not M.status(app).managed,"Metadata removed")
 end
-assert(runCount==3,"Three games launched after direct installer execution")
+assert(#launched==3,"Three games launched directly without shell")
+assert(launched[1].path=="/cogworks/main.lua" and launched[2].path=="/railbreak/main.lua")
 local ok=pcall(function()M.install({id="unknown"})end)
 assert(not ok,"Arbitrary catalog entries rejected")
 -- Remote versions can identify both game and store updates without
 -- overwriting any local installation metadata.
 local initialStore=M.storeStatus()
-assert(initialStore.installedVersion=="1.1.2")
+assert(initialStore.installedVersion=="1.1.3")
 local remoteCatalog=[[return {storeVersion="1.2.0",apps={
  {id="cogworks",version="1.2.0"},{id="railbreak",version="2.0.6"},
  {id="tidebound",version="5.1"}}}]]
@@ -99,4 +111,8 @@ files[cog.entry]="-- COGWORKS v1.0.0\\nprint('game')"
 local v=M.status(cog)
 assert(v.installedVersion=="1.0.0" and v.latestVersion=="1.2.0"
  and v.updateAvailable,"Detect installed and latest game versions")
-print("FPB STORE: catalog, install, run, uninstall and save-preservation passed.")
+local civ=M.get("civcraft")
+files[civ.entry]="-- civ app"
+assert(M.launch(civ))
+assert(launched[#launched].args[1]=="local","Store must launch CIVCRAFT hotseat")
+print("FPB STORE: launch, local hotseat, installs and saves passed.")

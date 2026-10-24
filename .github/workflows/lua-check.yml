@@ -21,6 +21,8 @@ jobs:
         run: lua5.3 tests/civcraft_ui_test.lua
       - name: Store launch without package and require
         run: lua5.3 tests/fpbstore_package_free_boot_test.lua
+      - name: Store self-update button without shell or package
+        run: lua5.3 tests/fpbstore_ui_self_update_test.lua
       - name: Store full self-update without Lua package API
         run: lua5.3 tests/fpbstore_self_update_test.lua
       - name: Native graphics and responsive backend regression
