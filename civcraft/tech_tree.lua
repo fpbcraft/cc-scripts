@@ -7,6 +7,37 @@ function T.draw(r,system,player,rect,model,research,onClose)
  model=model or {}
  model.panX=model.panX or 0;model.panY=model.panY or 0
  model.zoom=model.zoom or 1
+ if r.mode=="text" then
+  r:fill(x,y,w,h,1);r:outline(x,y,w,h,8)
+  model.tier=math.max(1,math.min(6,model.tier or 1))
+  r:text(x+5,y+4,"TECH TREE - ERA "..model.tier,8)
+  local found=0
+  for _,id in ipairs(system.techOrder)do
+   local tech=system.techs[id]
+   if tech.tier==model.tier then
+    local row=y+16+found*13
+    found=found+1
+    if row+11<y+h-16 then
+     local learned=player.techs and player.techs[id]
+     local can=system.canResearch(player,id)
+     r:button(x+5,row,w-11,11,tech.name..
+      (learned and " DONE" or can and " READY" or " LOCKED"),
+      function()
+       model.selected=id
+       if can then research(id)end
+      end,{primary=can})
+    end
+   end
+  end
+  r:button(x+4,y+h-14,math.floor(w/3)-5,11,"PREV",function()
+   model.tier=math.max(1,model.tier-1)
+  end)
+  r:button(x+math.floor(w/3),y+h-14,math.floor(w/3)-5,11,
+   "NEXT",function()model.tier=math.min(6,model.tier+1)end)
+  r:button(x+math.floor(2*w/3),y+h-14,math.floor(w/3)-5,11,
+   "CLOSE",onClose)
+  return model
+ end
  r:fill(x,y,w,h,1);r:outline(x,y,w,h,8)
  r:fill(x+2,y+2,w-4,18,2)
  r:text(x+7,y+7,"CIVCRAFT  /  TECHNOLOGY",8,1,w-90)
