@@ -12,7 +12,7 @@ function fs.move(a,b)assert(files[a]~=nil);files[b]=files[a];files[a]=nil end
 function fs.open(path,mode)
  if mode=="r"then
   if not files[path]then return nil end
-  return {readAll=function()return files[path]end,close=function()end}
+  return {readAll=function()return files[path]end,read=function(n)return files[path]:sub(1,n or #files[path])end,close=function()end}
  end
  assert(mode=="w")
  local bytes=""
