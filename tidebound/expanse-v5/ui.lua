@@ -757,10 +757,11 @@ function UI:empire()
   r:text(7,44,'DOMINION '..progress.dominion..'/15 SYSTEMS',6)
   if f.project then r:text(7,48,'PROJECT '..f.project.type:upper()..' '..f.project.progress..'/2 YEARS',19)end
   local y=math.min(r.h-18,54)
-  self:button(6,y,math.min(42,r.w-12),5,'DISCOVERY PROJECT','science',function()
+  local bw=math.floor((r.w-16)/2)
+  self:button(6,y,bw,5,'DISCOVERY PROJECT','science',function()
    self:ask('project',{kind='discovery'},'ANCIENT ARCHIVE','Requires Exploration III, 14 surveyed stars, 3 ancient clues, 3 colonies; then a three-year project.',{credits=25,alloy=15,knowledge=18})
   end)
-  self:button(math.min(50,math.floor(r.w*.49)),y,math.min(40,math.floor(r.w*.44)),5,'UNITY PROJECT','trade',function()
+  self:button(8+bw,y,bw,5,'UNITY PROJECT','trade',function()
    self:ask('project',{kind='unity'},'GALACTIC ACCORD','Requires Prosperity II, two alliances and 4 colonies; then a three-year project.',{credits=30,alloy=12,knowledge=12})
   end)
  end
