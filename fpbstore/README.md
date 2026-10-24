@@ -20,7 +20,7 @@ Then open it any time with `store` (or `/fpbstore/main.lua`). The installer inst
 - Update or reinstall any installed game with the existing installer, without changing its save data.
 - Launch a game and return to the store after the game exits.
 - Remove an installed game's known application code without deleting its saved progress.
-- Update the store itself to fetch new catalog entries and fixes.
+- Update the store itself from the **STORE UPDATE** button. Downloads are staged and validated before activation, with rollback on failure; the Store automatically reloads the new code and catalog afterward.
 
 **Mouse/touch:** click game rows to select, then use INSTALL/UPDATE, PLAY, REMOVE or STORE UPDATE. **Keyboard:** up/down chooses a game, Enter installs/updates, Space plays, Q/Escape quits. Each removal asks for confirmation.
 
