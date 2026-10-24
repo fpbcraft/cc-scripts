@@ -242,4 +242,46 @@ for _,dim in ipairs(sizes)do for _,graphics in ipairs({false,true})do
  eq(u.g.upgrades.brass and u.g.coins==beforeCoins-55,'confirmed purchase applies cost once')
  u:close()
 end end
+-- Inline guidance belongs to the screens, not only to modal descriptions.
+-- Capture renderer text before rasterisation, across all supported graphics sizes.
+for _,dim in ipairs(sizes)do
+ local u=UI.new(monitor(dim[1],dim[2],true),{game=S.new({seed=177})})
+ local printed={}
+ local originalText=u.r.text
+ u.r.text=function(self,x,y,value,...)
+  printed[#printed+1]=tostring(value or '')
+  return originalText(self,x,y,value,...)
+ end
+ local function shows(scene,needle)
+  printed={}
+  u.scene=scene
+  if scene=='map' then u.selected=2 end
+  if scene=='travel' then u.g.pending={event='rocks',from=1,to=2} end
+  u:draw()
+  local joined=table.concat(printed,' | ')
+  eq(joined:find(needle,1,true)~=nil,scene..' displays '..needle..' on '..dim[1]..'x'..dim[2])
+ end
+ shows('upgrades','FORECAST NEXT HAZARD')
+ shows('upgrades','COST 55 C')
+ shows('modules','1 LOG -> 2 PLANKS')
+ shows('market','SAWMILL INPUT')
+ shows('wagons','+8 CAP; +4 PER LV')
+ shows('contracts','OWN ')
+ shows('map','PARTS ')
+ shows('train','+8 CARGO CAPACITY')
+ shows('station','+25 HULL')
+ shows('travel','FREE WITH EQUIPMENT')
+ -- Selection updates the inline wagon panel without forcing a modal.
+ u.g.pending=nil
+ u.scene='train';u:draw()
+ local selectable
+ for _,hit in ipairs(u.r.buttons) do if hit.label=='WAGON' then selectable=hit;break end end
+ eq(selectable~=nil,'train wagon can be selected directly')
+ local px=selectable.x+math.floor(selectable.w/2)
+ local py=selectable.y+math.floor(selectable.h/2)
+ u:touch(math.floor(px*u.r.sx),math.floor(py*u.r.sy))
+ eq(u.info==nil,'selecting wagon does not open a modal')
+ u:close()
+end
+
 print('TRAIN-FIRST GAME/UI: '..passed..' checks passed')

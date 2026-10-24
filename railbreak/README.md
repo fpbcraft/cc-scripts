@@ -16,7 +16,7 @@ The original **factory-first RAILBREAK v1** remains playable: `/railbreak/classi
 ## How to play
 
 1. Start an expedition, choose Explorer / Standard / Frontier, and optionally name 1–4 participants with the on-screen keyboard.
-2. Your train is the main hub. Tap a wagon to inspect and level it up, or buy additional cargo/passenger/fuel/crane wagons. Upgrades are accessed through **TRAIN → TECH**.
+2. Your train is the main hub. Tap a wagon to select it and see its bonus directly on the train screen; use **?** for more detail or **LV UP** for the upgrade confirmation, or buy additional cargo/passenger/fuel/crane wagons. Upgrades are accessed through **TRAIN → TECH**.
 3. Visit the station to buy/sell goods, repair/refuel, upgrade its simple Create-inspired production modules, or run **a production shift**. Modules are not freeform factory grids; each converts goods to other goods in one turn.
 4. Pick a railway connection on the **MAP**. Building an untravelled connection requires parts; travel consumes fuel. The train advances **only when you tap Depart**.
 5. Some departures trigger an event, e.g. rockslide or broken bridge. Read the consequences and choose an option. There are **no real-time countdowns**.
@@ -66,3 +66,16 @@ All six supported sizes are covered by graphics/text input and resize tests.
 Tap **?** in the header of a screen for a short explanation of what to do. Tap the resource icons in the top strip to learn about coins, locomotive fuel, hull condition and reputation. Tapping a market item, station module, contract, route, wagon, or global upgrade opens its **details view**. This view describes the real gameplay effect, current inventory or level, exact costs, and any requirements. Use **BACK** to return without changes or the highlighted action button to confirm. Longer descriptions have **PREV / NEXT** pages even on 3×3 monitors. Travel event options also show their consequences before confirmation, without any time limit.
 
 The Steam Whistle is correctly described as adding **2 shared cargo slots** (not a separate passenger-only capacity). Locomotive level upgrades now add **4 maximum fuel and 4 fuel**; crane level upgrades add **2 cargo slots**. Existing v2 saves are upgraded once for any previously purchased locomotive levels, without overwriting saves. No gameplay time passes while inspecting information.
+
+## Inline gameplay summaries (v2.0.6)
+
+Common information is now visible **without opening a separate help page**:
+- **Tech cards:** specific upgrade effect, cost, and installed status.
+- **Station modules:** input-to-output recipe, current level and next-level price.
+- **Wagon list and train composition:** cargo, fuel, and special wagon benefits; touching a wagon selects it first.
+- **Market:** current stock, buy/sell price and a short use description.
+- **Contracts:** required cargo, current stock, reward, reputation and accepted/completed status.
+- **Route map:** fuel and parts required compared with available supplies.
+- **Travel events and station services:** costs and consequences shown beside choices.
+
+Use a card or the **?** button to read the full explanation. Spending still requires a separate confirmation; displaying summaries never consumes turns or resources. Small monitors retain the same effects using compact layouts.

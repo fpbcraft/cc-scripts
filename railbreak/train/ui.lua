@@ -230,12 +230,14 @@ function UI:map()
  local edge=S.edge(g.location,self.selected)
  if edge then
   local key=S.edgeKey(g.location,self.selected)
-  local msg=Rules.fuelCost(g,edge)..' FUEL + '..(g.built[key] and 0 or edge[4])..' PARTS'
-  r:text(7,sy+14,msg,6,1,w-18)
+  local fuel=Rules.fuelCost(g,edge);local track=g.built[key] and 0 or edge[4]
+  local ready=g.fuel>=fuel and g.cargo.parts>=track
+  r:text(7,sy+14,'FUEL '..fuel..'/'..g.fuel..'  PARTS '..track..'/'..g.cargo.parts,6,1,w-82)
+  r:text(7,sy+25,ready and (track==0 and 'TRACK READY' or 'CAN BUILD & TRAVEL') or 'SUPPLIES NEEDED',ready and 11 or 10,1,w-16)
   r:button(w-69,sy+14,65,17,'DETAILS',function()self:inspect('route',self.selected)end,{primary=true})
   if g.upgrades.brass then
    local evt=C.events[((g.seed+(g.trips+1)*7+self.selected*3)%#C.events)+1]
-   r:text(7,sy+25,g.trips%2==0 and ('FORECAST '..evt.name) or 'CLEAR TRACK',11,1,w-12)
+   if ready then r:text(7,sy+25,g.trips%2==0 and ('FORECAST '..evt.name) or 'CLEAR TRACK',11,1,w-12)end
   end
  elseif self.selected==g.location then r:text(7,sy+14,'CURRENT STATION',6)
  else r:text(7,sy+14,'NO DIRECT RAIL CONNECTION',10,1,w-12)end
@@ -249,7 +251,7 @@ function UI:station()
  local start=top+artH+3
  local cols=2;local gap=4;local bw=math.floor((w-14-gap)/2)
  local entries={{'MARKET','market','box'},{'MODULES','modules','press'},{'CONTRACTS','contracts','contract'},
-  {'REPAIR 12','repair','wrench'},{'REFUEL 9','refuel','coal'},{'RUN SHIFT','shift','parts'}}
+  {'REPAIR 12C','repair','wrench'},{'FUEL 9C','refuel','coal'},{'RUN SHIFT','shift','parts'}}
  local bh=math.max(13,math.floor((h-30-start-8)/3))
  for i,e in ipairs(entries)do
   local x=5+(i-1)%2*(bw+gap);local y=start+math.floor((i-1)/2)*(bh+4)
@@ -257,6 +259,8 @@ function UI:station()
    if e[2]=='repair' or e[2]=='refuel' or e[2]=='shift' then self:inspect('service',e[2])
    else self:go(e[2])end
   end,{primary=e[2]=='shift'})
+  local hint=({repair='+25 HULL',refuel='+4 FUEL',shift='1 TURN',market='BUY / SELL',modules='PRODUCE',contracts='DELIVERIES'})[e[2]]
+  if bh>=25 then r:text(x+5,y+bh-8,hint,5,1,bw-9)end
  end
  self:foot()
 end
@@ -272,10 +276,10 @@ function UI:modules()
   r:fill(x,yy,bw,bh,2);r:outline(x,yy,bw,bh,4)
   r:icon(spec.icon,x+6,yy+5,1)
   r:text(x+19,yy+5,first(spec.name,math.floor((bw-23)/4)),7,1,bw-22)
-  r:text(x+19,yy+16,'LV '..level,level>0 and 11 or 5)
-  if bh>=42 then r:text(x+5,yy+29,first(spec.desc,math.floor((bw-10)/4)),5,1,bw-8)end
+  if bh>=38 then r:text(x+5,yy+17,spec.desc,6,1,bw-10)end
+  if not self:small() then r:text(x+5,yy+33,'LV '..level..'/3  '..(spec.cost+level*25)..' COINS',level>0 and 11 or 8,1,bw-10)end
   if self:small() then
-   r:text(x+19,yy+16,'LV'..level..' '..(spec.cost+level*25)..'C',level>0 and 11 or 8,1,bw-21)
+   r:text(x+5,yy+(bh>=38 and 29 or 16),'LV'..level..'/3  '..(spec.cost+level*25)..'C',level>0 and 11 or 8,1,bw-10)
    r.buttons[#r.buttons+1]={x=x,y=yy,w=bw,h=bh,label=spec.name,fn=function()self:inspect('module',spec.id)end}
   else
    r:button(x+4,yy+bh-16,bw-8,13,'UP '..(spec.cost+level*25),function()self:inspect('module',spec.id)end,{selected=level>0})
@@ -300,10 +304,11 @@ function UI:market()
    r:icon(spec.icon,x+5,yy+5,1)
    r:text(x+18,yy+5,first(spec.name,math.floor((bw-22)/4)),7,1,bw-20)
    if not self:small() then r:text(x+18,yy+16,'OWN '..g.cargo[spec.id],11)end
+   if bh>=43 then r:text(x+5,yy+29,spec.hint or '',5,1,bw-10)end
    local buy,sell=Rules.cost(g,spec)
    local price=self.marketSide=='buy' and buy or sell
    if self:small() then
-    r:text(x+18,yy+16,g.cargo[spec.id]..' / '..price..'C',8,1,bw-21)
+    r:text(x+18,yy+16,'OWN '..g.cargo[spec.id]..' / '..price..'C',8,1,bw-21)
     r.buttons[#r.buttons+1]={x=x,y=yy,w=bw,h=bh,label=spec.name,fn=function()self:inspect('good',spec.id,self.marketSide)end}
    else r:button(x+3,yy+bh-16,bw-6,13,(self.marketSide=='buy' and '-' or '+')..' '..price..' C',function()self:inspect('good',spec.id,self.marketSide)end)end
   end
@@ -335,6 +340,10 @@ function UI:contracts()
    end,{selected=stage=='done'})
    r.buttons[#r.buttons+1]={x=x,y=yy,w=w-75,h=cardH,label='JOB INFO',fn=function()self:inspect('contract',job.id)end}
    if cardH>43 then r:text(24,yy+27,'+'..job.reward..' C / +'..job.rep..' REP',8,1,w-32)end
+   if cardH>51 then
+    local status=stage=='done' and 'DONE' or stage=='active' and 'ACTIVE' or 'AVAILABLE'
+    r:text(24,yy+38,'OWN '..g.cargo[job.item]..'/'..job.count..' '..status,stage=='active' and 11 or 5,1,w-108)
+   end
   end
  end
  r:button(6,h-46,48,16,'< PREV',function()self.page=math.max(1,self.page-1)end)
@@ -347,7 +356,7 @@ function UI:train()
  local artH=self:small() and (r.mode=='graphics' and math.floor((h-64)*.45) or 44) or math.floor((h-45)*.43)
  local taps=Art.train(r,2,21,w-4,artH,g.wagons,self.frame,self.selectedWagon)
  for i,t in ipairs(taps)do local ix=i
-  r.buttons[#r.buttons+1]={x=t.x,y=t.y,w=t.w,h=t.h,fn=function()self.selectedWagon=ix;self:inspect('wagon',ix)end,label='WAGON'}
+  r.buttons[#r.buttons+1]={x=t.x,y=t.y,w=t.w,h=t.h,fn=function()self.selectedWagon=ix;self.page=math.ceil(ix/(not self:small() and w>=210 and 4 or 2))end,label='WAGON'}
  end
  local top=24+artH;local cols=not self:small() and w>=210 and 4 or 2
  local start=(self.page-1)*cols+1;local bw=math.floor((w-14-(cols-1)*3)/cols)
@@ -359,7 +368,7 @@ function UI:train()
    r:icon(wagon.id=='engine' and 'train' or C.wagonById[wagon.id].icon,x+4,top+4,1)
    r:text(x+16,top+4,first(wagon.id,5),7,1,bw-17)
    r:text(x+4,top+17,'LV '..wagon.level,8)
-   r.buttons[#r.buttons+1]={x=x,y=top,w=bw,h=29,fn=function()self.selectedWagon=idx;self:inspect('wagon',idx)end,label='WAGON'}
+   r.buttons[#r.buttons+1]={x=x,y=top,w=bw,h=29,fn=function()self.selectedWagon=idx end,label='WAGON'}
   end
  end
  local maxPage=math.ceil(#g.wagons/cols)
@@ -368,11 +377,18 @@ function UI:train()
   r:button(7,arrows,41,14,'<',function()self.page=math.max(1,self.page-1)end)
   r:button(w-48,arrows,41,14,'>',function()self.page=math.min(maxPage,self.page+1)end)
  end
- local detailsY=self:small() and h-64 or top+34;local selected=g.wagons[self.selectedWagon] or g.wagons[1]
- local detailH=self:small() and 37 or h-detailsY-27
- r:fill(6,detailsY,w-12,detailH,1)
- r:text(11,detailsY+3,selected.id:upper()..' LV '..selected.level,8,1,w-19)
- r:text(11,detailsY+14,'CARGO '..S.load(g)..'/'..S.capacity(g),6)
+ local detailsY=self:small() and math.max(top+47,h-80) or top+34
+ local selected=g.wagons[self.selectedWagon] or g.wagons[1]
+ local detailH=self:small() and math.max(0,h-47-detailsY) or h-detailsY-27
+ if detailH>=15 then
+  r:fill(6,detailsY,w-12,detailH,1)
+  r:text(11,detailsY+3,selected.id:upper()..' LV '..selected.level,8,1,w-52)
+  if detailH>=26 then
+   r:text(11,detailsY+12,Info.wagonBenefit(selected),11,1,w-26)
+   r:text(11,detailsY+22,'LOAD '..S.load(g)..'/'..S.capacity(g),6,1,w-27)
+  end
+  r:button(w-36,detailsY+3,24,14,'?',function()self:inspect('wagon',self.selectedWagon)end)
+ end
  if not self:small() then
   if selected.id=='engine' then Art.loco(r,w*.36,detailsY+25,1.25)
   else Art.wagon(r,w*.36,detailsY+26,selected.id,1.25)end
@@ -393,6 +409,7 @@ function UI:wagons()
   local x,y=5+((i-1)%cols)*(bw+gap),top+math.floor((i-1)/2)*(bh+gap)
   r:fill(x,y,bw,bh,2);r:outline(x,y,bw,bh,4)
   r:icon(spec.icon,x+5,y+5,1);r:text(x+18,y+5,spec.name,7,1,bw-21)
+  if bh>=40 then r:text(x+5,y+22,spec.summary or '',6,1,bw-10)end
   r:button(x+5,y+bh-18,bw-10,15,'BUY '..spec.cost,function()self:inspect('wagonNew',spec.id)end,{primary=true})
  end
  r:button(8,h-47,w-16,18,'TRAIN COMPOSITION',function()self:go('train')end)
@@ -408,11 +425,12 @@ function UI:upgrades()
   local active=self.g.upgrades[spec.id]
   r:fill(x,y,bw,bh,active and 12 or 2);r:outline(x,y,bw,bh,active and 11 or 4)
   r:icon(spec.icon,x+4,y+3,1);r:text(x+17,y+4,spec.name,7,1,bw-20)
+  if bh>=36 then r:text(x+5,y+17,spec.desc,6,1,bw-10)end
   if self:small() then
-   r:text(x+17,y+14,active and 'INSTALLED' or 'BUY '..spec.cost,active and 11 or 8,1,bw-20)
+   r:text(x+5,y+(bh>=36 and 29 or 15),active and 'INSTALLED' or ('COST '..spec.cost..' C'),active and 11 or 8,1,bw-10)
    r.buttons[#r.buttons+1]={x=x,y=y,w=bw,h=bh,label=spec.name,fn=function()self:inspect('upgrade',spec.id)end}
   else
-   if bh>45 then r:text(x+5,y+22,spec.desc,5,1,bw-9)end
+   if bh>=54 then r:text(x+5,y+32,active and 'INSTALLED' or ('COST '..spec.cost..' COINS'),active and 11 or 8,1,bw-10)end
    r:button(x+4,y+bh-16,bw-8,13,active and 'INSTALLED' or 'BUY '..spec.cost,function()self:inspect('upgrade',spec.id)end,{selected=active})
   end
  end
@@ -431,6 +449,11 @@ function UI:travel()
  self:panel(5,y,w-10,math.max(21,h-y-53))
  r:icon('danger',10,y+5,1);r:text(25,y+5,e.name,8,1,w-30)
  r:text(10,y+18,e.desc,6,1,w-18)
+ if h-y-53>=53 then
+  for i,choice in ipairs(e.choices)do
+   r:text(10,y+27+i*10,i..' '..choice.label..': '..Info.eventBrief(g,i),i==1 and 11 or 6,1,w-20)
+  end
+ end
  local by=h-47;local bw=math.floor((w-19)/2)
  for i,c in ipairs(e.choices)do
   local x=6+(i-1)*(bw+6)

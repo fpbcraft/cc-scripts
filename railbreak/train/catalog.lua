@@ -13,21 +13,21 @@ C.edges={
  {1,2,1,1},{1,3,1,1},{1,7,1,1},{2,3,1,1},{2,6,1,2},{3,4,2,1},{3,7,1,1},{4,6,1,1},{4,5,2,2},{6,5,2,1},{7,5,2,2},
 } -- {station a, station b, fuel cost, track-parts cost when first traversed}
 C.goods={
- {id='logs',name='LOGS',icon='wood',base=5},
- {id='planks',name='PLANKS',icon='wood',base=7},
- {id='ore',name='IRON ORE',icon='ore',base=6},
- {id='sheets',name='SHEETS',icon='sheet',base=11},
- {id='parts',name='PARTS',icon='parts',base=13},
- {id='coal',name='COAL',icon='coal',base=5},
- {id='food',name='FOOD',icon='food',base=6},
- {id='passengers',name='RIDERS',icon='people',base=7},
+ {id='logs',hint='SAWMILL INPUT',name='LOGS',icon='wood',base=5},
+ {id='planks',hint='BRIDGES / JOBS',name='PLANKS',icon='wood',base=7},
+ {id='ore',hint='PRESS / FOUNDRY',name='IRON ORE',icon='ore',base=6},
+ {id='sheets',hint='BRIDGES / JOBS',name='SHEETS',icon='sheet',base=11},
+ {id='parts',hint='TRACK / REPAIRS',name='PARTS',icon='parts',base=13},
+ {id='coal',hint='DEPOT > FUEL',name='COAL',icon='coal',base=5},
+ {id='food',hint='RIDERS / RELIEF',name='FOOD',icon='food',base=6},
+ {id='passengers',hint='PASSENGER JOBS',name='RIDERS',icon='people',base=7},
 }
 C.goodsById={};for _,g in ipairs(C.goods)do C.goodsById[g.id]=g end
 C.wagons={
- {id='cargo',name='CARGO WAGON',icon='box',cost=58,cap=8,description='+8 goods capacity'},
- {id='passenger',name='PASSENGER',icon='people',cost=60,cap=4,description='+4 cargo capacity; +2 per level'},
- {id='fuel',name='FUEL TENDER',icon='coal',cost=55,cap=2,description='+8 fuel capacity'},
- {id='crane',name='CRANE WAGON',icon='crane',cost=95,cap=2,description='Clear obstructions cheaply'},
+ {id='cargo',summary='+8 CAP; +4 PER LV',name='CARGO WAGON',icon='box',cost=58,cap=8,description='+8 goods capacity'},
+ {id='passenger',summary='+4 CAP; +2 PER LV',name='PASSENGER',icon='people',cost=60,cap=4,description='+4 cargo capacity; +2 per level'},
+ {id='fuel',summary='+8 FUEL TANK, +2 CAP',name='FUEL TENDER',icon='coal',cost=55,cap=2,description='+8 fuel capacity'},
+ {id='crane',summary='ROCKSLIDES FREE, +2 CAP',name='CRANE WAGON',icon='crane',cost=95,cap=2,description='Clear obstructions cheaply'},
 }
 C.wagonById={};for _,w in ipairs(C.wagons)do C.wagonById[w.id]=w end
 C.modules={
@@ -40,12 +40,12 @@ C.modules={
 }
 C.moduleById={};for _,m in ipairs(C.modules)do C.moduleById[m.id]=m end
 C.upgrades={
- {id='brass',name='BRASS CONTROLS',icon='parts',cost=55,desc='Extra route insight'},
- {id='burner',name='EFF. BURNER',icon='coal',cost=70,desc='-1 fuel on long routes'},
- {id='loader',name='AUTO LOADER',icon='box',cost=62,desc='+5 cargo space'},
- {id='relay',name='SIGNAL RELAY',icon='signal',cost=65,desc='Bypass signal failures'},
- {id='whistle',name='STEAM WHISTLE',icon='train',cost=40,desc='+2 shared cargo capacity'},
- {id='armor',name='REINFORCEMENT',icon='wrench',cost=52,desc='+30 max hull, repair 30'},
+ {id='brass',name='BRASS CONTROLS',icon='parts',cost=55,desc='FORECAST NEXT HAZARD'},
+ {id='burner',name='EFF. BURNER',icon='coal',cost=70,desc='-1 FUEL ON LONG ROUTES'},
+ {id='loader',name='AUTO LOADER',icon='box',cost=62,desc='+5 CARGO SLOTS'},
+ {id='relay',name='SIGNAL RELAY',icon='signal',cost=65,desc='SIGNAL REPAIRS FREE'},
+ {id='whistle',name='STEAM WHISTLE',icon='train',cost=40,desc='+2 CARGO SLOTS'},
+ {id='armor',name='REINFORCEMENT',icon='wrench',cost=52,desc='+30 MAX HULL; REPAIR 30'},
 }
 C.upgradeById={};for _,u in ipairs(C.upgrades)do C.upgradeById[u.id]=u end
 C.contracts={

@@ -159,6 +159,35 @@ function Info.describe(g,kind,id,extra)
  return info
 end
 
+-- Short, live summaries shown on primary screens; full descriptions remain available.
+function Info.wagonBenefit(w)
+ local l=w.level or 1
+ if w.id=='engine' then return '+4 FUEL TANK PER LEVEL' end
+ if w.id=='cargo' then return '+'..(8+(l-1)*4)..' CARGO CAPACITY' end
+ if w.id=='passenger' then return '+'..(4+(l-1)*2)..' CARGO CAPACITY' end
+ if w.id=='fuel' then return '+'..(8+(l-1)*4)..' FUEL TANK; +2 CARGO' end
+ if w.id=='crane' then return 'FREE ROCKSLIDES; +'..(2+(l-1)*2)..' CARGO' end
+ return 'TRAIN EQUIPMENT'
+end
+function Info.eventBrief(g,choiceIndex)
+ if not(g and g.pending) then return 'NO EVENT' end
+ local event=C.eventById[g.pending.event]
+ local choice=event and event.choices[choiceIndex]
+ if not choice then return 'UNKNOWN CHOICE' end
+ local parts={}
+ for good,quantity in pairs(choice.cost or {}) do
+  local free=false
+  if event.id=='rocks' and choiceIndex==1 then
+   for _,w in ipairs(g.wagons)do if w.id=='crane'then free=true;break end end
+  elseif event.id=='signal' and choiceIndex==1 and g.upgrades.relay then free=true end
+  parts[#parts+1]=free and 'FREE WITH EQUIPMENT' or (quantity..' '..good:upper())
+ end
+ if choice.coins then parts[#parts+1]=choice.coins..' COINS' end
+ if choice.damage then parts[#parts+1]='-'..choice.damage..' HULL' end
+ if choice.turns then parts[#parts+1]='+'..choice.turns..' TURN' end
+ return #parts>0 and table.concat(parts,' / ') or 'NO EXTRA COST'
+end
+
 function Info.wrap(lines,width)
  local out={};width=math.max(8,math.floor(width))
  for _,str in ipairs(lines)do

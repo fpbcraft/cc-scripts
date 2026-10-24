@@ -27,3 +27,7 @@ HELP: Includes main menu access. The game autosaves after successful actions.
 
 SAVES: /railbreak/data/train-save.lua (v2) vs /railbreak/data/save.lua (old)
 No timers govern gameplay. Animation is cosmetic only.
+
+V2.0.6: UPGRADE EFFECTS, WAGON BONUSES, MODULE RECIPES, ROUTE COSTS
+AND JOB REQUIREMENTS ARE SHOWN DIRECTLY ON THEIR SCREENS.
+TAP A WAGON TO SELECT; USE ? FOR DETAILS AND LV UP TO CONFIRM.
