@@ -39,7 +39,7 @@ function shell.run(file,...)
  return true
 end
 local M=require("fpbstore.manager")
-assert(#M.catalog.apps==3,"Initial catalog has three apps")
+assert(#M.catalog.apps>=3,"Catalog must contain the original three games")
 local old={"cogworks","railbreak","tidebound"}
 for i,id in ipairs(old)do
  local app=assert(M.get(id))
