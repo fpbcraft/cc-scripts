@@ -5,6 +5,24 @@ local Manager=require("fpbstore.manager")
 local catalog=Manager.catalog
 local args={...}
 if args[1]=="--test-api"then return Manager end
+-- Game/installer errors can leave graphics mode or a redirected terminal
+-- active. Always restore the original store terminal before drawing.
+local host=term.current()
+local function restoreScreen()
+ if term.redirect and term.current()~=host then pcall(term.redirect,host)end
+ if host.setGraphicsMode then pcall(host.setGraphicsMode,0)end
+ if host.setPaletteColor and term.nativePaletteColor then
+  for i=0,15 do
+   local color=2^i
+   local ok,r,g,b=pcall(term.nativePaletteColor,color)
+   if ok and r then pcall(host.setPaletteColor,color,r,g,b)end
+  end
+ end
+ host.setBackgroundColor(colors.black)
+ host.setTextColor(colors.white)
+ host.clear()
+ host.setCursorPos(1,1)
+end
 -- Basalt supplies a responsive terminal shell when installed. It never
 -- replaces native pixel gameplay and remains optional for plain CraftOS.
 if args[1]~="--classic" then
@@ -12,6 +30,7 @@ if args[1]~="--classic" then
  if available and modern and modern.run then
   local keepRunning=true
   while keepRunning do
+   restoreScreen()
    local ok,supported,action,app=pcall(modern.run,Manager)
    if not ok or not supported then break end
    if action=="exit" or action=="none" then return end
@@ -44,13 +63,19 @@ if args[1]~="--classic" then
      package.loaded["fpbstore.catalog"]=nil
      package.loaded["fpbstore.manager"]=nil
      package.loaded["fpbstore.basalt_ui"]=nil
-     assert(shell.run("/fpbstore/main.lua"),"Updated Store failed to relaunch")
+     restoreScreen()
+     local updated,err=loadfile("/fpbstore/main.lua")
+     assert(updated,err or "Updated Store missing")
+     updated()
+     return
      return
     end
    end
+   restoreScreen()
   end
  end
 end
+restoreScreen()
 local screen=term.current()
 local selected=1
 local confirmation=nil
@@ -183,6 +208,7 @@ local function perform(action,arg)
   local ok,result=pcall(Manager.launch,app)
   if not ok then banner="GAME ERROR: "..tostring(result)
   else banner="RETURNED FROM "..app.name end
+  restoreScreen()
   screen=term.current()
   return
  end
@@ -218,6 +244,7 @@ local function perform(action,arg)
     if event=="key" or event=="mouse_click" or event=="monitor_touch" then break end
    end
   end
+  restoreScreen()
   screen=term.current()
  end
 end
@@ -230,9 +257,11 @@ local function run()
   local ev,a,b,c=os.pullEvent()
   if ev=="term_resize"then
    -- Layout is recomputed from real available columns and rows.
-  elseif ev=="mouse_click"then
+  elseif ev=="mouse_click" or ev=="monitor_touch"then
+   local tx,ty=b,c
+   if ev=="monitor_touch"then tx,ty=b,c end
    for _,hit in ipairs(buttons)do
-    if b>=hit.x and b<hit.x+hit.w and c==hit.y then
+    if tx>=hit.x and tx<hit.x+hit.w and ty==hit.y then
      if perform(hit.action,hit.arg)=="exit"then return end
      break
     end
@@ -272,5 +301,7 @@ if restartAfterUpdate then
  -- before loading so the new catalog and manager take effect immediately.
  package.loaded["fpbstore.catalog"]=nil
  package.loaded["fpbstore.manager"]=nil
- assert(shell.run("/fpbstore/main.lua"),"Updated Store failed to launch")
+ local updated,loadError=loadfile("/fpbstore/main.lua")
+ assert(updated,loadError or "Updated store unavailable")
+ updated()
 end
