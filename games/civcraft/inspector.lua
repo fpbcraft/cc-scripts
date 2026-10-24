@@ -87,7 +87,7 @@ function I.draw(ui,state,player,rect,modal)
     local id=item.id;local allowed=item.allowed
     local active=city.project and city.project.kind==kind and city.project.id==id
     local progress=active and city.project.progress or (city.projectProgress or {})[kind..':'..id] or 0
-    local turns=math.max(1,math.ceil((Systems.projectCost(kind,id)-progress)/math.max(1,yields.industry)))
+    local turns=math.max(1,math.ceil((Systems.projectCost(kind,id,player)-progress)/math.max(1,yields.industry)))
     rows[#rows+1]={project={label=id:upper()..' '..turns..'T',selected=active,
      run=function()ui:command('queue',{cityX=city.x,cityY=city.y,kind=kind,id=id})end,
      info=function()ui:openCodex(kind=='unit'and 'units'or 'buildings',id)end,id=id}}

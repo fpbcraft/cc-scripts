@@ -50,10 +50,11 @@ Names appear above cities and in city navigation, and remain stable in saves.
 - **Production:** Choose **PROD**, then **UNITS** or **BUILDS**. City projects
   accumulate industry each full turn instead of consuming a resource wallet
   immediately. Changing projects preserves their individual progress.
-  Switching asks for confirmation. Locked projects are hidden; the adjacent book opens their Codex entry. Projects take 2.5 times their former wood cost in industry. Technologies and strategic stocks unlock specialized units.
+  Switching asks for confirmation. Locked projects are hidden; the adjacent book opens their Codex entry. Most projects take 2.5 times their former wood cost in industry. Scouts cost 5 industry; settlers start at 12 and rise by 5 for each settler your empire finishes training (12, 17, 22, 27, ...). The count persists after founding or losing a unit, and applies across all cities. Old saves estimate the initial count from surviving settlers and cities beyond the capital. Technologies and strategic stocks unlock specialized units.
 - **Research:** The connected **TECH TREE** shows prerequisites, researched
   and available technologies, progress and expected turns. Select a technology
-  and start research; science accumulates when a full round ends. Drag the
+  and start research; science accumulates when a full round ends. Research costs
+  are three times the earlier values, starting at 24 science. Drag the
   research canvas to pan, or drag compact details to scroll.
 - **Turns and victory:** Each human player issues orders independently and ends
   their turn. AI players use the same production and research rules. A round
@@ -62,15 +63,17 @@ Names appear above cities and in city navigation, and remain stable in saves.
 
 The map stays central with a permanent, scrollable inspector. The left controls
 always use square icons. **PREV/NEXT**, the scrollbar, and mouse wheel scrolling
-keep inspector actions reachable. The square bottom icons open **TECH TREE**,
-**EMPIRE**, **NEXT IDLE UNIT**, **NEXT IDLE CITY**, zoom in/out, and **END TURN**.
-The top-right book, clipboard, and pause icons open **CODEX**, **REPORT**, and
-**PAUSE**. Four narrow, clickable map edges pan in their respective directions.
+keep inspector actions reachable. The bottom-left icons open **TECH TREE** and
+**NEXT IDLE UNIT**. The labeled **END TURN** button sits at the bottom right.
+The top-right city, book, clipboard and pause icons open **EMPIRE**, **CODEX**,
+**REPORT** and **PAUSE**. Zoom buttons are in the left sidebar, with the fullscreen
+**WORLD OVERVIEW** button anchored at its bottom. Four narrow, clickable map
+edges pan in their respective directions.
 Drag inside the map to pan on a computer; CraftOS monitor windows also support
 mouse dragging. Vanilla Minecraft monitor taps use the edge strips.
 
-**+ / -** zoom while preserving the camera center. The compact minimap respects fog of
-war and can be clicked to jump to a region; its adjacent icon opens a larger overview. The default map shows terrain,
+**+ / -** zoom while preserving the camera center. The world overview respects
+fog of war and can be clicked to jump to a region. The default map shows terrain,
 cities, units and borders. **RESOURCES**, **YIELDS**, and **TERRITORY** are
 independent overlay toggles; **TERRAIN** clears them. Yields zoom in to show
 consistent drumstick/cog/flask icons. Yields of one through five repeat the icon;

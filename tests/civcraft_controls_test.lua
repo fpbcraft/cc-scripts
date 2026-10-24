@@ -57,10 +57,19 @@ for _,graphics in ipairs({false,true})do
     end
    end
   end
-  draw();bounds();assert(ui.inspectorBounds and ui.mapViewport.w>=32,'Usable map and persistent inspector')
+  draw();bounds();assert(ui.inspectorBounds and ui.mapViewport.w>=16,'Usable map and persistent inspector')
   assert(not click('INSPECT'),'Inspector shortcut is removed')
   local icons={};for _,button in ipairs(ui.r.buttons)do icons[button.label]=button.icon end
-  assert(icons.EMPIRE~=icons['NEXT IDLE CITY'],'Empire and next idle city have distinct symbols')
+  assert(icons.EMPIRE=='station','Empire uses the original city symbol')
+  assert(not icons['NEXT IDLE CITY'],'There is no separate idle-city button')
+  assert(icons['WORLD OVERVIEW']=='fullscreen','World overview uses a fullscreen symbol')
+  for _,button in ipairs(ui.r.buttons)do
+   if button.label=='ZOOM IN' or button.label=='ZOOM OUT' or button.label=='WORLD OVERVIEW'then
+    assert(button.x<30 and button.y>30 and button.y<ui.r.h-15,'Zoom and overview stay in the left sidebar')
+   end
+   assert(button.label~='MINIMAP','There is no always-visible minimap')
+   if button.label=='END TURN'then assert(button.x+button.w==ui.r.w-2 and button.w>=52,'End turn is a labeled button aligned right')end
+  end
   assert(not next(ui.overlays),'Default view has no optional overlays')
   assert(click('RESOURCES'));draw();assert(ui.overlays.resources)
   assert(click('YIELDS'));draw();assert(ui.overlays.yields and ui.overlays.resources and ui.mapViewport.tile==40)
@@ -120,7 +129,7 @@ for _,graphics in ipairs({false,true})do
   ui:tile(destination.x,destination.y);assert(ui.pendingMove and ui.pendingMove.path)
   ui:tile(destination.x,destination.y);assert(not ui.pendingMove and calls[#calls][1]=='move','Clicking the preview tile again confirms its route')
   ui:focus('city',state.cities[1]);draw()
-  for _,button in ipairs(ui.r.buttons)do if button.label=='TERRAIN' or button.label=='YIELDS'or button.label=='END TURN'then
+  for _,button in ipairs(ui.r.buttons)do if button.label=='TERRAIN' or button.label=='YIELDS'then
    assert(button.w==button.h and button.w==12,'Navigation controls stay square at every size')
   end end
   assert(click('EMPIRE'));draw();bounds();assert(click('CITIES'));draw();bounds()
@@ -139,9 +148,9 @@ for _,graphics in ipairs({false,true})do
   state.units[1].x,state.units[1].y=oldX,oldY
   ui:focus('city',state.cities[1]);draw()
   for _,button in ipairs(ui.r.buttons)do
-   if button.label=='CODEX' or button.label=='REPORT' or button.label=='PAUSE'then
+   if button.label=='CODEX' or button.label=='REPORT' or button.label=='PAUSE' or button.label=='EMPIRE'then
     assert(button.icon and button.y<24,'Secondary actions are icons in the top bar')
-   elseif button.label=='END TURN' or button.label=='EMPIRE' or button.label=='NEXT IDLE UNIT'then
+   elseif button.label=='END TURN' or button.label=='NEXT IDLE UNIT'then
     assert(button.icon and button.y>=ui.r.h-15,'Primary actions use a compact icon footer')
    end
   end

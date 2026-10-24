@@ -72,4 +72,4 @@ for _,graphics in ipairs({true,false})do
  assert(model.selected=='engineering' and ui.panX==mapX and ui.panY==mapY,'Research drag never selects nodes or pans the map behind it')
  ui:draw(game,1,{});ui:close()
 end
-print('CIVCRAFT: repeated yields, themed persistent city names, distinct icons and research dragging passed.')
+print('CIVCRAFT: repeated yields, themed persistent city names, yield icons and research dragging passed.')

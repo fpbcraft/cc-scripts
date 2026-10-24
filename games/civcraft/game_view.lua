@@ -20,7 +20,8 @@ function G.draw(ui,state,player)
  local wide=w>=220 and h>=140
  local header=30
  local bottom=h-15
- local left=16
+ local sidebarColumns=h<145 and 2 or 1
+ local left=sidebarColumns==2 and 30 or 16
  local right=wide and math.max(92,math.floor(w*.32)) or math.max(48,math.min(72,math.floor(w*.42)))
  if ui.panel~='context'then ui.pendingMove=nil;ui.cityStrikeSource=nil;ui.source=nil;ui.reachable={}end
  ui.inputMode='map'
@@ -28,7 +29,7 @@ function G.draw(ui,state,player)
  r:fill(0,0,w,header,1)
  r:text(4,3,'CIVCRAFT',8,1,40)
  local infoX=12+r:textWidth('CIVCRAFT')
- r:text(infoX,3,'R'..state.round..' '..(player and player.name or ''),7,1,w-51-infoX)
+ r:text(infoX,3,'R'..state.round..' '..(player and player.name or ''),7,1,w-66-infoX)
  HUD.resources(ui,state,player)
  r:text(4,header-7,ui.hoverLabel or (ui.notice~='' and ui.notice or 'SELECT A HEX OR AN ACTION'),6,1,w-8)
  local function iconButton(x,y,width,label,icon,run,style)
@@ -37,17 +38,19 @@ function G.draw(ui,state,player)
   r.buttons[#r.buttons].label=label;r.buttons[#r.buttons].icon=icon
  end
  for i,action in ipairs({
+  {'EMPIRE','station',function()ui.panel='empire';ui.lastDrag=nil end},
   {'CODEX','book',function()ui.panel='encyclopedia';ui.lastDrag=nil end},
   {'REPORT','contract',function()ui.panel='report';ui.reportOffset=0 end},
   {'PAUSE','pause',function()ui:command('pause')end}})do
-  iconButton(w-47+(i-1)*15,1,14,action[1],action[2],action[3])
+  iconButton(w-62+(i-1)*15,1,14,action[1],action[2],action[3])
  end
  Map.draw(ui,state,player,{x=left+4,y=header+2,w=w-left-right-10,h=bottom-header-4})
  local y=header+3
  local modeStep=14
  for i,mode in ipairs(modes)do
   local icon=({'map','station','ore','food'})[i]
-  local x=2;local width=left-4
+  local x=2+((i-1)%sidebarColumns)*14;local width=12
+  y=header+3+math.floor((i-1)/sidebarColumns)*14
   ui.overlays=ui.overlays or {}
   r:button(x,y,12,12,nil,function()
    if mode=='terrain'then ui.overlays={}
@@ -61,27 +64,25 @@ function G.draw(ui,state,player)
    r:icon(icon,x+math.floor((width-9)/2),y+math.max(0,math.floor((modeStep-11)/2)),1)
    r.buttons[#r.buttons].label=mode:upper()
   end
-  y=y+modeStep
  end
- local miniHeight=12
- Inspector.draw(ui,state,player,{x=w-right-2,y=header+1,w=right,h=bottom-header-miniHeight-5})
- r:button(w-50,bottom-14,12,12,nil,function()ui.panel='minimap'end)
- r:icon('map',w-49,bottom-13,1);r.buttons[#r.buttons].label='MINIMAP OVERVIEW'
- Minimap.draw(ui,state,player,{x=w-36,y=bottom-miniHeight-2,w=32,h=miniHeight})
+ for i,action in ipairs({{'ZOOM IN','plus',1},{'ZOOM OUT','minus',-1}})do
+  local slot=#modes+i-1
+  iconButton(2+(slot%sidebarColumns)*14,header+3+math.floor(slot/sidebarColumns)*14,12,
+   action[1],action[2],function()ui:zoom(action[3])end)
+ end
+ iconButton(2,bottom-13,12,'WORLD OVERVIEW','fullscreen',function()ui.panel='minimap'end)
+ Inspector.draw(ui,state,player,{x=w-right-2,y=header+1,w=right,h=bottom-header-3})
 
  local actions={
   {'TECH TREE','tree',function()ui.panel='tech';ui.source=nil;ui.reachable={};ui.workCity=nil;ui.lastDrag=nil end},
-  {'EMPIRE','empire',function()ui.panel='empire';ui.lastDrag=nil end},
-  {'NEXT IDLE UNIT','nextUnit',function()ui:nextIdle()end},
-  {'NEXT IDLE CITY','nextCity',function()ui:nextIdleCity()end},
-  {'ZOOM IN','plus',function()ui:zoom(1)end},
-  {'ZOOM OUT','minus',function()ui:zoom(-1)end},
-  {'END TURN','endTurn',function()ui:command('end')end}}
+  {'NEXT IDLE UNIT','nextUnit',function()ui:nextIdle()end}}
  local width=12
  r:fill(0,bottom,w,15,1)
  for i,action in ipairs(actions)do
-  iconButton(2+(i-1)*(width+2),bottom+1,width,action[1],action[2],action[3],{primary=i==7})
+  iconButton(2+(i-1)*(width+2),bottom+1,width,action[1],action[2],action[3])
  end
+ r:button(w-54,bottom+1,52,12,'END TURN',function()ui:command('end')end,{primary=true,icon='endTurn'})
+ r.buttons[#r.buttons].icon='endTurn'
  local rect={x=3,y=3,w=w-6,h=h-6}
  if ui.disbandConfirm then
   modal(ui,rect,true);r:text(8,8,'DISBAND UNIT?',8)

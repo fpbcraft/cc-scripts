@@ -63,4 +63,26 @@ S.production(state,H);assert(p.stockpile.iron==1,'Owned strategic deposits accru
 u.kind='scout';u.movesLeft=3;u.moved=false;W.reveal(state,H,S)
 local x,y=u.x,u.y;assert(S.autoExplore(state,u,H))
 assert(u.autoExplore and (u.x~=x or u.y~=y) and u.movesLeft<3,'Auto exploration follows a legal frontier route')
+state,p,city,u=campaign()
+assert(S.projectCost('unit','scout',p)==5 and S.projectCost('unit','settler',p)==12,'Early exploration and expansion are cheaper')
+assert(S.research(p,'mining') and S.queue(p,city,'unit','scout',state,H))
+S.production(state,H);assert(city.project,'Scout takes more than one starting round')
+S.production(state,H);assert(not city.project and not p.techs.mining,'A scout finishes before the first technology')
+assert(S.queue(p,city,'unit','settler',state,H))
+for i=1,4 do S.production(state,H)end
+assert(p.settlersTrained==1 and S.projectCost('unit','settler',p)==17,'Completed settlers increase the next cost empire-wide')
+assert(not p.techs.mining,'First research is slower than early expansion')
+for i=#state.units,1,-1 do if state.units[i].kind=='settler'then table.remove(state.units,i)end end
+S.migrate(state);assert(p.settlersTrained==1 and S.projectCost('unit','settler',p)==17,'Loss and migration never reduce the trained count')
+assert(S.queue(p,city,'unit','settler',state,H));assert(p.settlersTrained==1,'Queueing does not charge the next settler cost')
+assert(S.queue(p,city,'unit','scout',state,H));assert(p.settlersTrained==1,'Changing a project does not increment trained settlers')
+local other=state.players[2];assert(S.projectCost('unit','settler',other)==12,'Each empire has its own settler scaling')
+for i=1,S.techCost('mining')do S.production(state,H)end;assert(p.techs.mining,'Slower research still completes through accumulated science')
+-- Simultaneous queues cannot both finish at the first-settler cost.
+state,p,city,u=campaign();p.gold=100
+local second={id=9,owner=1,x=8,y=4,population=2,buildings={}}
+state.cities[2]=second;S.migrate(state)
+for _,c in ipairs(state.cities)do c.project={kind='unit',id='settler',progress=11}end
+S.production(state,H)
+assert(p.settlersTrained==1 and second.project,'The second city pays the new cost after the first completes')
 print('CIVCRAFT: growth time, starvation, one-hex borders, gold/upkeep, shipyards, embarkation, paths, HP/XP/healing and city combat passed.')

@@ -101,6 +101,12 @@ function M.migrate(state)
  for i,p in ipairs(state.players or {})do
   p.civ=p.civ or M.civs[(i-1)%#M.civs+1].id
   p.techs=p.techs or {}
+  if p.settlersTrained==nil then
+   local cities,settlers=0,0
+   for _,c in ipairs(state.cities or {})do if c.owner==p.id then cities=cities+1 end end
+   for _,u in ipairs(state.units or {})do if u.owner==p.id and u.kind=='settler'then settlers=settlers+1 end end
+   p.settlersTrained=math.max(0,cities-1)+settlers
+  end
   p.ai=p.ai or false
   p.explored=p.explored or {}
   p.food=p.food or 0;p.wood=p.wood or 0;p.science=p.science or 0;p.gold=p.gold or 20
@@ -222,10 +228,12 @@ function M.techCost(id)
  local tech=M.techs[id]
  return tech and tech.cost or nil
 end
-function M.projectCost(kind,id)
+function M.projectCost(kind,id,player)
  local record=(kind=="unit" and M.units or M.buildings)[id]
  if not record then return nil end
- return record.production or math.ceil((record.wood or 8)*2.5)
+ local base=record.production or math.ceil((record.wood or 8)*2.5)
+ if kind=='unit' and id=='settler'then return base+(record.productionStep or 0)*((player and player.settlersTrained)or 0)end
+ return base
 end
 function M.yields(p,c,state,hex,owned)
  local jobs=c.jobs
@@ -305,6 +313,7 @@ local function spawn(state,p,c,id,hex)
  state.units[#state.units+1]={id=state.nextId,owner=p.id,x=x,y=y,
   kind=id,moved=true,movesLeft=0}
  state.nextId=state.nextId+1
+ if id=='settler'then p.settlersTrained=(p.settlersTrained or 0)+1 end
  return true
 end
 function M.growth(p,c,state)
@@ -398,7 +407,7 @@ function M.production(state,hex)
       pr.kind=="unit" and M.canRecruit(p,pr.id,state,hex,c)
      if valid then
       pr.progress=pr.progress+yield.industry
-      local cost=M.projectCost(pr.kind,pr.id)
+      local cost=M.projectCost(pr.kind,pr.id,p)
       if pr.progress>=cost then
        local completed
        if pr.kind=="building"then c.buildings[pr.id]=true;Combat.city(c);completed=true

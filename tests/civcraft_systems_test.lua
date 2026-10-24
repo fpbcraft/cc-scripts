@@ -42,7 +42,7 @@ assert(city.population>oldPop,"Food surplus grows population")
 assert(city.jobs.food+city.jobs.wood+city.jobs.science<=city.population,
  "Population allocation is conserved")
 assert(S.research(p,"writing"))
-for i=1,10 do S.production(state,H)end
+for i=1,S.techCost("writing")do S.production(state,H)end
 assert(p.techs.writing,"Prerequisite tech completed over turns")
 assert(S.build(p,city,"farm",state,H))
 assert(not city.buildings.farm,"Buildings must enter a production project")
@@ -53,7 +53,7 @@ assert(city.buildings.farm and not city.project,"Building finishes on turn bound
 assert(p.wood>=beforeWood,"No instant building purchase")
 assert(not S.canRecruit(p,"horseman",state,H),"Units require technology")
 assert(S.research(p,"horseback"))
-for i=1,10 do S.production(state,H)end
+for i=1,S.techCost("horseback")do S.production(state,H)end
 assert(p.techs.horseback)
 assert(not S.canRecruit(p,"horseman",state,H),
  "Cavalry requires strategic horses within controlled territory")
