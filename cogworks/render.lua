@@ -272,7 +272,7 @@ function R:hit(x,y)
    elseif y>=63 and y<72 then return "next"end
   end
  else
-  if x>=self.bx and y>=self.by and
+  if self.bx and self.by and x>=self.bx and y>=self.by and
    x<self.bx+30 and y<self.by+12 then
    local col=math.floor((x-self.bx)/6)+1
    local row=math.floor((y-self.by)/3)+1
