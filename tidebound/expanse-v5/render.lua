@@ -89,18 +89,26 @@ function Renderer.new(mon,forceText)
   if ok then
    local success,pw,ph=pcall(mon.getSize,2)
    if success and pw and ph and pw>self.w and ph>self.h then
-    self.kind="gfx";self.px=pw/self.w;self.py=ph/self.h
+    self.kind="gfx";self:fitGraphics(pw,ph)
     if mon.setPaletteColor then for c,rgb in pairs(PALETTE)do pcall(mon.setPaletteColor,c,rgb)end end
    else pcall(mon.setGraphicsMode,0) end
   end
  end
  return self
 end
+-- Fit the game in a proportion-preserving centered viewport.
+function Renderer:fitGraphics(pw,ph)
+ self.gw,self.gh=pw,ph
+ local scale=math.min(pw/self.w,ph/self.h)
+ self.px,self.py=scale,scale
+ self.ox=math.floor((pw-self.w*scale)/2)
+ self.oy=math.floor((ph-self.h*scale)/2)
+end
 function Renderer:resize()
  self.w,self.h=self.m.getSize()
  if self.kind=="gfx" then
   local ok,pw,ph=pcall(self.m.getSize,2)
-  if ok and pw and ph then self.px=pw/self.w;self.py=ph/self.h end
+  if ok and pw and ph then self:fitGraphics(pw,ph)end
  end
 end
 function Renderer:rect(x,y,w,h,c)
@@ -109,8 +117,8 @@ function Renderer:rect(x,y,w,h,c)
  local ex=math.min(self.w,x+w);local ey=math.min(self.h,y+h)
  x=math.max(0,x);y=math.max(0,y);if ex<=x or ey<=y then return end
  if self.kind=="gfx" then
-  local px=math.floor(x*self.px);local py=math.floor(y*self.py)
-  self.m.drawPixels(px,py,c,math.max(1,math.floor(ex*self.px)-px),math.max(1,math.floor(ey*self.py)-py))
+  local px=math.floor(self.ox+x*self.px);local py=math.floor(self.oy+y*self.py)
+  self.m.drawPixels(px,py,c,math.max(1,math.floor(self.ox+ex*self.px)-px),math.max(1,math.floor(self.oy+ey*self.py)-py))
  else
   self.m.setBackgroundColor(TEXT_COLORS[c] or 32768)
   for iy=y,ey-1 do self.m.setCursorPos(x+1,iy+1);self.m.write(string.rep(" ",ex-x))end
@@ -128,7 +136,7 @@ function Renderer:pixel(px,py,c,size)
 end
 function Renderer:line(x1,y1,x2,y2,c)
  if self.kind=="gfx" then
-  x1=x1*self.px;y1=y1*self.py;x2=x2*self.px;y2=y2*self.py
+  x1=self.ox+x1*self.px;y1=self.oy+y1*self.py;x2=self.ox+x2*self.px;y2=self.oy+y2*self.py
   local d=math.max(math.abs(x2-x1),math.abs(y2-y1))
   for i=0,d,2 do local t=i/math.max(1,d);self:pixel(x1+(x2-x1)*t,y1+(y2-y1)*t,c,1)end
  else
@@ -142,7 +150,7 @@ function Renderer:line(x1,y1,x2,y2,c)
 end
 function Renderer:disc(cx,cy,r,c)
  if self.kind=="gfx" then
-  local x=cx*self.px;local y=cy*self.py;local rp=r*math.min(self.px,self.py)
+  local x=self.ox+cx*self.px;local y=self.oy+cy*self.py;local rp=r*math.min(self.px,self.py)
   for yy=-math.ceil(rp),math.ceil(rp) do
    local dx=math.sqrt(math.max(0,rp*rp-yy*yy));local ax=math.floor(x-dx)
    local length=math.max(1,math.floor(x+dx)-ax)
@@ -164,7 +172,7 @@ function Renderer:text(x,y,str,c,maxlen)
  end
  for i=1,#str do
   local pattern=FONT[str:sub(i,i)] or FONT["?"]
-  local left=(x+i-1)*self.px;local top=y*self.py
+  local left=self.ox+(x+i-1)*self.px;local top=self.oy+y*self.py
   for ry=1,7 do
    local row=pattern[ry];local col=1
    while col<=5 do
@@ -184,7 +192,7 @@ function Renderer:bigText(x,y,word,c,scale)
  word=tostring(word):upper()
  for i=1,#word do
   local pattern=FONT[word:sub(i,i)] or FONT["?"]
-  local left=(x+(i-1)*scale)*self.px;local top=y*self.py
+  local left=self.ox+(x+(i-1)*scale)*self.px;local top=self.oy+y*self.py
   for ry=1,7 do
    local line=pattern[ry];local k=1
    while k<=5 do
@@ -209,7 +217,7 @@ function Renderer:icon(x,y,name,c)
   local fallback={coin="$",alloy="A",shield="S",book="B",council="C",home="H",ark="K",pause="|",scroll="=",star="*",planet="@",ship="^",scan="?",flag="F",colony="H",mine="M",forge="A",lab="S",dock="D",fort="#",energy="E",alloy="A",science="S",influence="I",research="R",move=">",war="X",trade="$",next=">",back="<",help="?",trophy="*",check="+",close="X",orbit="O"}
   return self:text(x,y,fallback[name] or "*",c)
  end
- local left=x*self.px;local top=y*self.py;local iconScale=2
+ local left=self.ox+x*self.px;local top=self.oy+y*self.py;local iconScale=2
  for ry=1,7 do local row=data[ry];local k=1
   while k<=5 do
    if row:sub(k,k)=="1" then
@@ -232,6 +240,9 @@ end
 function Renderer:beginFrame()
  self.buttons={};self.frame=self.frame+1
  if self.kind=="gfx" and self.m.setFrozen then pcall(self.m.setFrozen,true) end
+ if self.kind=="gfx"then
+  self.m.drawPixels(0,0,0,self.gw,self.gh)
+ end
  self:rect(0,0,self.w,self.h,0)
 end
 function Renderer:endFrame()
