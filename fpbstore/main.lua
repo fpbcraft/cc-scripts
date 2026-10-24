@@ -177,7 +177,21 @@ local function perform(action,arg)
    restartAfterUpdate=true
   elseif ok then banner=action=="remove" and "APP REMOVED - SAVES PRESERVED"
     or (action=="store-update" and "STORE UPDATED" or "INSTALL/UPDATE COMPLETE")
-  else banner="ERROR: "..tostring(result)end
+  else
+   banner="ERROR: "..tostring(result)
+   -- Preserve the full diagnostic rather than clipping it to the footer.
+   screen.setBackgroundColor(colors.black);screen.clear()
+   screen.setCursorPos(1,1);screen.setTextColor(colors.red)
+   print("FPB STORE / "..action:upper().." FAILED")
+   screen.setTextColor(colors.white)
+   print(tostring(result))
+   print("")
+   print("Press any key or tap to return to the Store.")
+   while true do
+    local event=os.pullEvent()
+    if event=="key" or event=="mouse_click" or event=="monitor_touch" then break end
+   end
+  end
   screen=term.current()
  end
 end
