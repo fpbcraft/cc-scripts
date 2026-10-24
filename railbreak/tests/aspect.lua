@@ -1,4 +1,4 @@
-package.path="./?.lua;./?/init.lua;"..package.path
+package.path="./railbreak/?.lua;./railbreak/?/init.lua;"..package.path
 local R=require("train.render")
 local function simulate(width,height)
  local m={mode=0,draws={},w=80,h=54}
