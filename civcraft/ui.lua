@@ -225,13 +225,18 @@ function UI:draw(state,playerID,opts)
      (t=="water" or t=="forest" or t=="mountain" or t=="hills")then
    Icons.draw(r,t,px+half-4,py+half-4,9,7)
   end
-  local highlighted=false
+  local reachable
   for _,p in ipairs(self.reachable or {})do
-   if p.x==x and p.y==y then highlighted=true;break end
+   if p.x==x and p.y==y then reachable=p;break end
   end
-  if highlighted then
-   r:fill(px+bevel,py+tile-3,math.max(2,tile-2*bevel),2,11)
-   r:fill(px+1,py+half,2,2,11)
+  if reachable then
+   local tint=reachable.attack and 10 or 11
+   r:fill(px+bevel,py+tile-3,math.max(2,tile-2*bevel),2,tint)
+   r:fill(px+1,py+half,2,2,tint)
+   if tile>=13 then
+    r:text(px+half-2,py+tile-10,
+     reachable.ranged and "R" or tostring(reachable.cost),7,1,6)
+   end
   end
   if c then
    if tile>=11 then Icons.draw(r,"city",px+half-5,py+half-5,11,P[ownerIndex(state,c.owner)]or 8)
