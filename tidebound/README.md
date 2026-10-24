@@ -1,4 +1,4 @@
-# TIDEBOUND: The Shattered Expanse (v5.1)
+# SHATTERED EXPANSE (v5.4)
 
 A four-civilization, hot-seat space 4X game with **1–4 human commanders and AI filling the remaining seats**, designed for a **5×5 CC:Tweaked Advanced Monitor**. The new edition implements the approved v5 simplification and UI mockups: no overlapping menu stacks, three resources, three ship roles, three research paths, and persistent roleplaying decisions.
 
@@ -109,3 +109,7 @@ scrollable text fallback. The graphics renderer restores text mode on exit.
 The existing custom game graphics remain independent of Basalt. Basalt is
 currently optional for FPB Store's terminal UI; a full game-screen migration is
 a separate follow-up rather than a dependency of this native-graphics update.
+
+## Visual overhaul
+
+The interface now follows the same design system as RAILBREAK: weathered-metal panels, dark teal framing, gold accents, readable full-cell bitmap lettering, opaque buttons and segmented navigation. The galaxy view uses a framed tactical chart with visible star markers and nearby system names on sufficiently large screens. Title, status, buttons, navigation, and information panels share this style, while all existing v5 simulation rules, campaigns, choices and saved-game paths remain compatible.

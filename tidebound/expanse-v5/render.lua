@@ -1,12 +1,6 @@
 -- TIDEBOUND shared 256-color pixel renderer from Stellar Frontier.
-local PALETTE={
-  [0]=0x090E1D,[1]=0x111B30,[2]=0x1A2A40,[3]=0x294058,[4]=0x435A72,[5]=0x819BB5,
-  [6]=0xD5E5F1,[7]=0xF9FBFF,[8]=0x36B9C4,[9]=0x5BEEE3,[10]=0x305EAA,[11]=0x78A9FF,
-  [12]=0x9852BD,[13]=0xDDA9FA,[14]=0xA95B65,[15]=0xFF9A9A,[16]=0xCB9B4C,[17]=0xF4CC79,
-  [18]=0x2D795C,[19]=0x7FE4A4,[20]=0xD36D37,[21]=0xF8AB64,[22]=0x6D729E,[23]=0xD4D0C2,
-  [24]=0x142238,[25]=0x25354D,[26]=0xFFDBAA,[27]=0x4D899A,[28]=0x171429,[29]=0x5D3C73,
-  [30]=0xA1B4C9,[31]=0x2B263F,
-}
+local Theme=dofile((_G.EXPANSE_V5_ROOT or "/tidebound/expanse-v5").."/theme.lua")
+local PALETTE=Theme.palette
 local TEXT_COLORS={
  [0]=32768,[1]=128,[2]=2048,[3]=1024,[4]=256,[5]=8,[6]=1,[7]=1,[8]=512,[9]=32,
  [10]=2048,[11]=8,[12]=8192,[13]=1024,[14]=16384,[15]=16384,[16]=4096,[17]=16,
@@ -178,8 +172,8 @@ function Renderer:text(x,y,str,c,maxlen)
    while col<=5 do
     if row:sub(col,col)=="1" then
      local start=col;while col<=5 and row:sub(col,col)=="1" do col=col+1 end
-     local px=math.floor(left+(start-1)*self.px/6);local xx=math.floor(left+col*self.px/6)
-     local py=math.floor(top+(ry-1)*self.py/9);local yy=math.floor(top+ry*self.py/9)
+     local px=math.floor(left+(start-1)*self.px/5);local xx=math.floor(left+col*self.px/5)
+     local py=math.floor(top+(ry-1)*self.py/7);local yy=math.floor(top+ry*self.py/7)
      self.m.drawPixels(px,py,c,math.max(1,xx-px),math.max(1,yy-py))
     else col=col+1 end
    end
@@ -198,8 +192,8 @@ function Renderer:bigText(x,y,word,c,scale)
    while k<=5 do
     if line:sub(k,k)=="1" then
      local start=k;while k<=5 and line:sub(k,k)=="1" do k=k+1 end
-     local px=math.floor(left+(start-1)*scale*self.px/6);local xx=math.floor(left+k*scale*self.px/6)
-     local py=math.floor(top+(ry-1)*scale*self.py/9);local yy=math.floor(top+ry*scale*self.py/9)
+     local px=math.floor(left+(start-1)*scale*self.px/5);local xx=math.floor(left+k*scale*self.px/5)
+     local py=math.floor(top+(ry-1)*scale*self.py/7);local yy=math.floor(top+ry*scale*self.py/7)
      self.m.drawPixels(px,py,c,math.max(1,xx-px),math.max(1,yy-py))
     else k=k+1 end
    end
@@ -222,8 +216,8 @@ function Renderer:icon(x,y,name,c)
   while k<=5 do
    if row:sub(k,k)=="1" then
     local start=k;while k<=5 and row:sub(k,k)=="1" do k=k+1 end
-    local xx=math.floor(left+(start-1)*self.px*iconScale/6);local endx=math.floor(left+k*self.px*iconScale/6)
-    local yy=math.floor(top+(ry-1)*self.py*iconScale/9);local endy=math.floor(top+ry*self.py*iconScale/9)
+    local xx=math.floor(left+(start-1)*self.px*iconScale/5);local endx=math.floor(left+k*self.px*iconScale/5)
+    local yy=math.floor(top+(ry-1)*self.py*iconScale/7);local endy=math.floor(top+ry*self.py*iconScale/7)
     self.m.drawPixels(xx,yy,c,math.max(1,endx-xx),math.max(1,endy-yy))
    else k=k+1 end
   end

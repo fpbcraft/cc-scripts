@@ -60,17 +60,34 @@ function UI:start(seed)
  self.g=Sim.new({humans=h,names=self.names,archetypes=self.arch,rounds=self.rounds,seed=seed})
  self.screen='handoff';self.selected=nil;self.selectedShip=nil;self.notice='';self.shipID=nil;self:save()
 end
+-- Railbreak-style opaque framed components. UI geometry stays in character
+-- cells; the rendering adapter chooses native pixel graphics or text.
 function UI:box(x,y,w,h,tint)
- local r=self.r;r:rect(x,y,w,h,tint or 1);r:rect(x,y,w,1,3)
+ local r=self.r
+ r:rect(x,y,w,h,tint or 1)
+ r:rect(x,y,w,1,3);r:rect(x,y+h-1,w,1,3)
+ r:rect(x,y,1,h,3);r:rect(x+w-1,y,1,h,3)
 end
 function UI:button(x,y,w,h,label,icon,fn,detail,color)
  x=math.floor(x);y=math.floor(y);w=math.floor(w);h=math.floor(h)
  if w<5 or h<3 then return end
- local r=self.r;r:rect(x,y,w,h,2);r:rect(x,y,1,h,color or 8)
- if icon then r:icon(x+1,y+math.floor((h-2)/2),icon,color or 9)end
- local start=x+(icon and 4 or 2)
- r:text(start,y+1,clip(label,w-(start-x)-1),7,w-(start-x)-1)
- if detail and h>=5 then r:text(start,y+2,clip(detail,w-(start-x)-1),5,w-(start-x)-1)end
+ local r=self.r
+ local accent=color or 8
+ local primary=accent==19
+ r:rect(x,y,w,h,primary and 18 or 2)
+ r:rect(x,y,w,1,primary and 19 or 3)
+ r:rect(x,y+h-1,w,1,3)
+ r:rect(x,y,1,h,accent)
+ local start=x+2
+ if icon and w>=14 then
+  r:icon(x+2,y+math.max(1,math.floor((h-2)/2)),icon,primary and 19 or 9)
+  start=x+6
+ end
+ local available=math.max(1,w-(start-x)-2)
+ local text=clip(label,available)
+ local tx=icon and start or x+math.max(2,math.floor((w-#text)/2))
+ r:text(tx,y+math.max(1,math.floor((h-1)/2)),text,primary and 7 or 7,available)
+ if detail and h>=6 then r:text(start,y+h-2,clip(detail,available),5,available)end
  if fn then r.buttons[#r.buttons+1]={x=x,y=y,w=w,h=h,fn=fn,label=label}end
 end
 function UI:lines(x,y,w,text,color,max)
@@ -78,48 +95,77 @@ function UI:lines(x,y,w,text,color,max)
  return math.min(#rows,max or 10)
 end
 function UI:space()
- local r=self.r;local count=math.max(24,math.floor(r.w*r.h/110))
- for i=1,count do local x=(i*71+27)%r.w;local y=(i*43+7)%r.h
-  r:rect(x,y,1,1,(i+self.frame)%11==0 and 7 or i%4==0 and 4 or 3)
+ local r=self.r
+ -- Fewer, deliberate light sources than the older dense random starfield.
+ local count=math.max(12,math.floor(r.w*r.h/260))
+ for i=1,count do
+  local x=(i*79+31)%r.w;local y=(i*47+19)%r.h
+  r:rect(x,y,i%9==0 and 2 or 1,1,i%7==0 and 8 or 3)
  end
 end
 function UI:headline(text,back)
- local r=self.r;r:rect(0,0,r.w,7,1);r:rect(0,6,r.w,1,3)
- r:icon(2,2,'star',9);r:text(5,3,clip(text,r.w-27),7,r.w-27)
- if back then self:button(r.w-14,1,12,5,'BACK','back',function()self.screen=back;self.page=1 end)end
+ local r=self.r
+ r:rect(0,0,r.w,8,1)
+ r:rect(0,7,r.w,1,9)
+ r:rect(2,2,2,4,9)
+ r:text(7,3,clip(text,r.w-(back and 30 or 12)),7)
+ if back then
+  self:button(r.w-17,1,15,6,'BACK','back',function()
+   self.screen=back;self.page=1
+  end)
+ end
 end
 function UI:title()
- local r=self.r
- self:space()
- local cx=math.floor(r.w/2)
- if r.h<45 then
-  -- Text-only computers and shorter tablets need a real compact layout.
-  -- Avoid overlapping the title artwork and offscreen menu items.
-  if r.h<35 then
-   r:text(math.max(2,cx-9),3,'SHATTERED EXPANSE',9)
-   r:text(math.max(2,cx-12),6,'A FOUR EMPIRE SPACE SAGA',6)
-  else
-   r:bigText(cx-23,2,'SHATTERED',9,1)
-   r:bigText(cx-18,10,'EXPANSE',7,1)
-  end
-  local y=math.max(12,r.h-17)
-  self:button(cx-19,y,38,5,'NEW CAMPAIGN','star',function()self.screen='setup'end)
-  self:button(cx-19,y+6,38,5,'CONTINUE','next',function()if not self:load()then self.notice='NO V5 SAVE FOUND'end end)
-  self:button(cx-19,y+12,38,5,'HOW TO PLAY','help',function()self.screen='help'end)
-  if self.notice~=''then r:text(math.max(2,cx-18),y-2,clip(self.notice,36),15)end
+ local r=self.r;local w,h=r.w,r.h
+ local cx=math.floor(w/2)
+ -- A distinct railway-style illustrated hero, with a stable action footer.
+ local compact=h<42 or w<75
+ r:rect(0,0,w,math.max(12,math.floor(h*.60)),1)
+ r:rect(0,math.max(12,math.floor(h*.60)),w,1,9)
+ if not compact then
+  local centerY=math.floor(h*.28)
+  -- A ship silhouette against a ringed planet; all parts share the same
+  -- palette, and occupy the decorative area rather than the controls.
+  local radius=math.max(5,math.min(12,math.floor(h*.13)))
+  r:disc(cx+math.floor(w*.23),centerY,radius,3)
+  r:disc(cx+math.floor(w*.23)-2,centerY-2,math.max(3,radius-3),8)
+  local shipX=cx-math.floor(w*.26);local shipY=centerY-4
+  r:rect(shipX,shipY,math.floor(w*.26),5,3)
+  r:rect(shipX+4,shipY-3,math.floor(w*.18),4,9)
+  r:rect(shipX+math.floor(w*.1),shipY+5,math.floor(w*.11),3,8)
+  r:rect(shipX+math.floor(w*.19),shipY-2,6,3,7)
+  r:rect(shipX-3,shipY+1,5,2,15)
+  r:bigText(math.max(5,cx-20),math.max(9,math.floor(h*.46)-3),
+   'SHATTERED',9,2)
+  r:bigText(math.max(5,cx-18),math.max(18,math.floor(h*.46)+11),
+   'EXPANSE',7,2)
+  r:text(math.max(4,cx-20),math.max(27,math.floor(h*.61)-2),
+   'FOUR EMPIRES  |  A SPACE 4X SAGA',6)
  else
-  r:disc(cx,math.floor(r.h*.27),math.max(8,math.floor(r.h*.12)),3)
-  r:disc(cx-3,math.floor(r.h*.25),math.max(4,math.floor(r.h*.07)),10)
-  local scale=r.w>=90 and 2 or 1
-  r:bigText(cx-13*scale/2,math.floor(r.h*.38),'SHATTERED',9,scale)
-  r:bigText(cx-10*scale/2,math.floor(r.h*.38)+scale*9,'EXPANSE',7,scale)
-  r:text(cx-14,math.floor(r.h*.57),'A FOUR EMPIRE SPACE SAGA',6)
-  local y=math.min(math.floor(r.h*.67),r.h-20)
-  self:button(cx-19,y,38,5,'NEW CAMPAIGN','star',function()self.screen='setup'end)
-  self:button(cx-19,y+6,38,5,'CONTINUE','next',function()if not self:load()then self.notice='NO V5 SAVE FOUND'end end)
-  self:button(cx-19,y+12,38,5,'HOW TO PLAY','help',function()self.screen='help'end)
-  if self.notice~=''then r:text(cx-18,y-3,clip(self.notice,40),15)end
-  r:text(cx-17,r.h-2,'V5 | SIMPLE 4X + STORIES',5)
+  r:text(math.max(3,cx-13),5,'SHATTERED EXPANSE',9)
+  r:text(math.max(3,cx-11),8,'FOUR EMPIRES / 4X',6)
+  r:disc(math.floor(w*.80),math.floor(h*.30),3,8)
+ end
+ local wide=w>=115
+ local bw=wide and math.floor((w-15)/3)or math.min(w-12,50)
+ local y=wide and h-14 or math.max(7,h-17)
+ if wide then
+  self:button(4,y,bw,10,'NEW CAMPAIGN','star',function()self.screen='setup'end,nil,19)
+  self:button(8+bw,y,bw,10,'CONTINUE','next',function()
+   if not self:load()then self.notice='NO SAVED CAMPAIGN' end
+  end)
+  self:button(12+2*bw,y,bw,10,'HOW TO PLAY','help',function()self.screen='help'end)
+ else
+  self:button(cx-math.floor(bw/2),y,bw,5,'NEW CAMPAIGN','star',
+   function()self.screen='setup'end,nil,19)
+  self:button(cx-math.floor(bw/2),y+6,bw,5,'CONTINUE','next',function()
+   if not self:load()then self.notice='NO SAVED CAMPAIGN'end
+  end)
+  self:button(cx-math.floor(bw/2),y+12,bw,5,'HOW TO PLAY','help',
+   function()self.screen='help'end)
+ end
+ if self.notice~='' then
+  r:text(3,math.max(10,y-4),clip(self.notice,w-6),15)
  end
 end
 function UI:setup()
@@ -182,35 +228,57 @@ function UI:navigate(name)
 end
 function UI:status()
  local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
- r:rect(0,0,r.w,7,1);r:rect(0,6,r.w,1,3)
- r:rect(1,1,2,4,factionColor(p));r:text(5,1,clip(f.name,math.max(6,math.floor(r.w*.27))),7)
- r:text(5,3,'YEAR '..g.round..'/'..g.limit,5)
- local sx=math.max(math.floor(r.w*.35),25)
- local gap=math.floor((r.w-sx-2)/3)
- for i,d in ipairs({{'coin','credits','C',17},{'alloy','alloy','A',9},{'science','knowledge','K',13}})do
-  local x=sx+(i-1)*gap
-  r:icon(x,2,d[1],d[4]);r:text(x+4,3,d[3]..math.floor(f[d[2]]),7)
+ local w=r.w
+ r:rect(0,0,w,9,1);r:rect(0,8,w,1,9)
+ local titleW=math.max(22,math.floor(w*.30))
+ r:rect(1,1,3,6,factionColor(p))
+ r:text(6,1,clip(f.name,titleW-7),7)
+ r:text(6,5,'YEAR '..g.round..'/'..g.limit,5)
+ local values={{'coin','credits','CR',17},{'alloy','alloy','AL',9},
+  {'science','knowledge','KN',13}}
+ local col=math.floor((w-titleW-4)/3)
+ for i,d in ipairs(values)do
+  local x=titleW+(i-1)*col
+  if col>8 then
+   r:rect(x,1,col-1,7,2);r:rect(x,1,col-1,1,3)
+   r:icon(x+1,2,d[1],d[4])
+   r:text(x+4,4,d[3]..math.floor(f[d[2]]),7,col-5)
+  end
  end
 end
 function UI:dock()
- local r=self.r;local y=r.h-8;r:rect(0,y,r.w,8,1);r:rect(0,y,r.w,1,3)
- local nav={{'GALAXY','star','galaxy'},{'SHIPS','ship','ships'},{'WORLDS','colony','colony'},{'TECH','lab','research'},{'DIPLO','trade','diplomacy'},{'EMPIRE','flag','empire'}}
- local ew=math.max(13,math.floor(r.w*.13));local available=r.w-ew-2;local tabW=math.floor(available/6)
+ local r=self.r;local y=r.h-10;local w=r.w
+ r:rect(0,y,w,10,1);r:rect(0,y,w,1,9)
+ local nav={{'GALAXY','star','galaxy'},{'SHIPS','ship','ships'},
+  {'WORLDS','colony','colony'},{'TECH','lab','research'},
+  {'DIPLO','trade','diplomacy'},{'EMPIRE','flag','empire'}}
+ local endW=math.max(12,math.floor(w*.13))
+ local available=w-endW-2
+ local tabW=math.max(7,math.floor(available/#nav))
  for i,v in ipairs(nav)do
   local x=1+(i-1)*tabW
-  r:rect(x,y+1,tabW-1,6,self.screen==v[3] and 3 or 1)
-  r:icon(x+math.floor(tabW/2)-1,y+1,v[2],self.screen==v[3] and 9 or 5)
-  local label=clip(v[1],math.max(3,tabW-1));r:text(x+math.max(0,math.floor((tabW-#label)/2)),y+4,label,self.screen==v[3] and 7 or 5,tabW)
-  r.buttons[#r.buttons+1]={x=x,y=y+1,w=tabW-1,h=6,label=v[1],fn=function()self:navigate(v[3])end}
+  local current=self.screen==v[3]
+  r:rect(x,y+1,tabW-1,8,current and 2 or 1)
+  r:rect(x,y+1,tabW-1,1,current and 19 or 3)
+  if tabW>=12 then
+   r:icon(x+math.floor(tabW/2)-1,y+2,v[2],current and 9 or 5)
+  end
+  local label=clip(v[1],math.max(3,tabW-1))
+  r:text(x+math.max(0,math.floor((tabW-#label)/2)),y+6,label,
+   current and 7 or 5,tabW)
+  r.buttons[#r.buttons+1]={x=x,y=y+1,w=tabW-1,h=8,label=v[1],
+   fn=function()self:navigate(v[3])end}
  end
- self:button(r.w-ew,y+1,ew-1,6,'END','next',function()self:finishTurn()end,nil,19)
+ self:button(w-endW,y+1,endW-1,8,'END','next',function()
+  self:finishTurn()
+ end,nil,19)
 end
 function UI:frameScreen()
  self:space();self:status();self:dock()
 end
 function UI:noticeBar()
  if self.notice=='' then return end
- local r=self.r;local y=r.h-12
+ local r=self.r;local y=r.h-15
  r:rect(1,y,r.w-2,4,3);r:text(3,y+1,clip(self.notice,r.w-6),7)
 end
 -- Map coordinates never move when a context menu opens. This means ships and
@@ -363,6 +431,18 @@ function UI:contextGeometry(systems,ships,targets)
 end
 function UI:starMap()
  local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
+ -- Keep the galaxy in a calm, framed tactical plotting area, rather than
+ -- mixing clickable map markers with a full-screen animated starfield.
+ r:rect(2,10,r.w-4,r.h-22,1)
+ r:rect(2,10,r.w-4,1,3)
+ r:rect(2,r.h-13,r.w-4,1,3)
+ if r.w>=90 then
+  for x=12,r.w-7,16 do
+   for y=17,r.h-16,10 do
+    r:rect(x,y,1,1,3)
+   end
+  end
+ end
  local moving=self.shipID and Sim.findShip(g,self.shipID)
  local targets,systems,ships=self:mapTargets()
  self.mapMarkers={systems=systems,ships=ships}
@@ -469,8 +549,9 @@ function UI:confirm()
  end,nil,19)
 end
 function UI:contentPanel(title)
- local r=self.r;self:box(2,9,r.w-4,r.h-19,1)
- r:text(5,11,clip(title,r.w-12),9)
+ local r=self.r;self:box(2,10,r.w-4,r.h-22,1)
+ r:rect(4,11,math.min(3,r.w-8),4,9)
+ r:text(9,12,clip(title,r.w-15),7)
 end
 function UI:ships()
  local r=self.r;local p=Sim.current(self.g);local own=where(function(s)return s.owner==p end,self.g.ships)

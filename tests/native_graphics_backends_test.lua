@@ -57,6 +57,7 @@ r:close()
 assert(screen.mode==0,"Native graphics mode restored on exit")
 -- TIDEBOUND: graphics must retain geometric proportions and centered
 -- mouse hitboxes even when the CraftOS text-cell and pixel ratios differ.
+_G.EXPANSE_V5_ROOT="tidebound/expanse-v5"
 local TideRender=assert(loadfile("tidebound/expanse-v5/render.lua"))()
 local tideScreen={mode=0,draws=0}
 function tideScreen.getSize(which)
