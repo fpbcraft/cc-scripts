@@ -2,6 +2,7 @@
 
 ComputerCraft/CC:Tweaked programs for the fpbcraft Minecraft server.
 
+- **[IRONSPIRE](ironspire/README.md)** — touchscreen deckbuilding roguelike with card combat, shops, rests and a boss. Installer: `install-ironspire.lua`.
 - **[FPB Store](fpbstore/README.md)** — browse, install, update, launch and safely remove COGWORKS, RAILBREAK and SHATTERED, with more apps supported through the catalog. One-time installer: `install-fpbstore.lua`; then run `store`.
 
 - [Skyways airship autopilot](airship/README.md) — Basalt 2.5 touchscreen flight dashboard, animated airship startup, route/preset management, optional engine control, and a one-command installer (`install-airship.lua`).

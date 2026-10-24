@@ -40,6 +40,14 @@ return {
    saves={"/shattered/v5-save.dat","/shattered/v5-save.dat.bak"},
   },
   {
+   version="0.1.0",id="ironspire",name="IRONSPIRE",subtitle="CLOCKWORK ASCENT",
+   description="Solo deckbuilding roguelike with card battles and branching routes.",
+   icon="I",genre="DECKBUILDER",root="/ironspire",
+   entry="/ironspire/main.lua",installer="install-ironspire.lua",
+   managedFiles={"main.lua","render.lua","README.md"},
+   saves={"/ironspire/data"},
+  },
+  {
    version="0.3.0",id="civcraft",name="CIVCRAFT",subtitle="POCKET CIVILIZATION",
    description="Local hotseat or networked 2-4 player civilization-building 4X.",
    icon="V",genre="4X / STRATEGY",root="/civcraft",
