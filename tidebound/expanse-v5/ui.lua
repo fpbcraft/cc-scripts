@@ -148,7 +148,7 @@ function UI:title()
  end
  local wide=w>=115
  local bw=wide and math.floor((w-15)/3)or math.min(w-12,50)
- local y=wide and h-14 or math.max(13,h-20)
+ local y=wide and h-14 or math.max(7,h-17)
  if wide then
   self:button(4,y,bw,10,'NEW CAMPAIGN','star',function()self.screen='setup'end,nil,19)
   self:button(8+bw,y,bw,10,'CONTINUE','next',function()
