@@ -5,6 +5,7 @@ local package=package or {path="/?.lua",loaded={}}
 package.path="/ironspire/?.lua;"..(package.path or "")
 local require=require or function(name)return dofile("/ironspire/"..name..".lua")end
 local R=require("render")
+local Map=require("map")
 local C={
  strike={name="STRIKE",cost=1,desc="Deal 6 damage",damage=6},
  guard={name="GUARD",cost=1,desc="Gain 5 block",block=5},
@@ -32,7 +33,7 @@ local function shuffle(a)
 end
 local function new()
  return {hp=72,maxhp=72,gold=75,floor=0,deck={"strike","strike","strike","strike","strike","guard","guard","guard","guard","bash"},
-  relics={},screen="map",log="Choose your path.",turn=0}
+  relics={},screen="map",log="Choose your path.",turn=0,map=Map.generate(),lane=2}
 end
 local function save(s)
  if not fs or not textutils then return end
@@ -47,7 +48,7 @@ local function loadSave()
  local h=fs.open("/ironspire/data/save.lua","r");if not h then return nil end
  local data=h.readAll();h.close()
  local ok,s=pcall(textutils.unserialize,data)
- if ok and type(s)=="table" and type(s.deck)=="table" and type(s.hp)=="number" and type(s.floor)=="number" then return s end
+ if ok and type(s)=="table" and type(s.deck)=="table" and type(s.hp)=="number" and type(s.floor)=="number" then return Map.migrate(s) end
  return nil
 end
 local function drawCards(s,n)
@@ -122,8 +123,14 @@ local function endTurn(s)
  for _,key in ipairs(s.hand)do s.discard[#s.discard+1]=key end
  beginTurn(s);save(s)
 end
-local function advance(s,kind)
- s.floor=s.floor+1
+local function advance(s,kind,lane)
+ Map.migrate(s)
+ local target=s.floor+1
+ if not Map.reachable(s,target,lane or 2) then return false end
+ local node=s.map[target][lane or 2]
+ if node.kind~="boss" and node.kind~=kind then return false end
+ s.lane=lane or 2
+ s.floor=target
  s.log="Floor "..s.floor.."."
  if s.floor==9 or kind=="battle" or kind=="elite"then
   startFight(s,s.floor==9)
@@ -133,6 +140,7 @@ local function advance(s,kind)
   s.screen="event"
  end
  save(s)
+ return true
 end
 local function next(s)
  s.screen="map";s.log="Choose your next route.";save(s)
@@ -143,7 +151,7 @@ local function fit(value,n)
 end
 local UI={};UI.__index=UI
 function UI.new(m,s)
- return setmetatable({r=R.new(m),s=s or new(),page=1,quit=false},UI)
+ return setmetatable({r=R.new(m),s=Map.migrate(s or new()),page=1,quit=false,selectedCard=nil},UI)
 end
 function UI:draw()
  local r=self.r;local s=self.s;r:begin()
@@ -159,15 +167,42 @@ function UI:draw()
  text(math.max(81,w-95),6,"F"..s.floor.."  HP "..s.hp.."/"..s.maxhp.."  G"..s.gold,7,90)
  local top=25;local bottom=h-23
  if s.screen=="map"then
-  r:center(top,"CHOOSE YOUR ROUTE",8)
-  local options=s.floor==8 and {"BOSS"} or {"BATTLE","REST","SHOP"}
-  local count=#options;local gap=5;local bw=math.floor((w-14-gap*(count-1))/count)
-  for i,kind in ipairs(options)do
-   local x=7+(i-1)*(bw+gap)
-   local real=kind=="BOSS" and "battle" or kind:lower()
-   tile(x,top+22,bw,math.min(78,bottom-top-30),kind,kind=="BATTLE" and "Gain cards" or kind=="REST" and "Heal or forge" or kind=="SHOP" and "Spend gold" or "Final fight",
-   function()advance(s,real)end,{primary=i==1})
+  Map.migrate(s)
+  r:center(top,"THE CLOCKWORK ASCENT",8)
+  local cols=3
+  local gap=math.max(5,math.floor((w-22)/22))
+  local bw=math.floor((w-14-gap*2)/3)
+  local rowHeight=math.max(27,math.min(36,math.floor((bottom-top-31)/4)))
+  local first=math.max(1,math.min(6,s.floor-1))
+  if s.floor>=6 then first=math.max(1,s.floor-2)end
+  for floor=first,math.min(9,first+3)do
+   local y=top+19+(floor-first)*rowHeight
+   local cy=y+9
+   for lane=1,3 do
+    local node=s.map[floor][lane]
+    local x=7+(lane-1)*(bw+gap)
+    local reachable=Map.reachable(s,floor,lane)
+    local visited=floor<=s.floor and ((floor==s.floor and lane==s.lane) or false)
+    local col=reachable and 11 or visited and 8 or node.kind=="closed" and 14 or 3
+    if floor<9 and floor>=s.floor then
+     for nextLane=math.max(1,lane-1),math.min(3,lane+1)do
+      if s.map[floor+1][nextLane].kind~="closed" then
+       local nx=7+(nextLane-1)*(bw+gap)+math.floor(bw/2)
+       r:line(x+math.floor(bw/2),cy+11,nx,cy+rowHeight-1,4)
+      end
+     end
+    end
+    r:fill(x,y,bw,22,reachable and 12 or visited and 16 or 2)
+    r:outline(x,y,bw,22,col)
+    local label=({battle="FIGHT",elite="ELITE",rest="REST",shop="SHOP",event="EVENT",boss="BOSS",closed="--"})[node.kind]
+    text(x+3,y+3,"F"..floor.." "..label,reachable and 7 or 5,bw-6)
+    if reachable then
+     button(x+2,y+11,bw-4,10,"GO >",function()advance(s,node.kind,lane)end,{primary=true})
+    elseif visited then text(x+4,y+13,"YOU",8,bw-8)
+    end
+   end
   end
+  text(8,bottom-10,"GOLD: "..s.gold.."   SELECT A CONNECTED NODE",6,w-14)
  elseif s.screen=="combat" then
   local e=s.enemy;local a=intent(s)
   r:center(top,e.name,10)
@@ -191,8 +226,18 @@ function UI:draw()
     r:fill(x,y,cardW,cardH,s.energy>=c.cost and 2 or 14);r:outline(x,y,cardW,cardH,c.cost==0 and 13 or 3)
     text(x+3,y+3,c.name,8,cardW-6);text(x+3,y+12,"ENERGY "..c.cost,7,cardW-6)
     text(x+3,y+21,fit(c.desc,math.floor((cardW-6)/4)),6,cardW-6)
-    button(x+2,y+cardH-12,cardW-4,11,"PLAY",function()play(s,i);self.page=1 end,{primary=s.energy>=c.cost})
+    button(x+2,y+cardH-12,math.floor((cardW-6)/2),11,"?",function()self.selectedCard=i end)
+    button(x+4+math.floor((cardW-6)/2),y+cardH-12,math.floor((cardW-6)/2),11,"PLAY",function()play(s,i);self.page=1;self.selectedCard=nil end,{primary=s.energy>=c.cost})
    end
+  end
+  if self.selectedCard and s.hand[self.selectedCard] then
+   local card=C[s.hand[self.selectedCard]]
+   local iy=top+60
+   r:fill(6,iy,w-12,42,14);r:outline(6,iy,w-12,42,8)
+   text(12,iy+4,card.name.." - "..card.cost.." ENERGY",18,w-24)
+   text(12,iy+15,card.desc,7,w-24)
+   text(12,iy+25,"DAMAGE "..(card.damage or 0).."  BLOCK "..(card.block or 0).."  DRAW "..(card.draw or 0),6,w-24)
+   button(w-38,iy+1,29,11,"CLOSE",function()self.selectedCard=nil end)
   end
   button(7,bottom-14,math.floor((w-22)/3),14,"< HAND",function()self.page=math.max(1,self.page-1)end)
   button(12+math.floor((w-22)/3),bottom-14,math.floor((w-22)/3),14,"END TURN",function()endTurn(s);self.page=1 end,{primary=true})
@@ -253,7 +298,7 @@ function UI:touch(x,y)
  self:draw()
 end
 function UI:close()self.r:close()end
-local API={new=new,play=play,endTurn=endTurn,advance=advance,startFight=startFight,UI=UI,cards=C,save=save,load=loadSave}
+local API={new=new,play=play,endTurn=endTurn,advance=advance,startFight=startFight,UI=UI,cards=C,Map=Map,save=save,load=loadSave}
 if args[1]=="--test-api" then return API end
 local monitor,name
 if peripheral and peripheral.getNames then
