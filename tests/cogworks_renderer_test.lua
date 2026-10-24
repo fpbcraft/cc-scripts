@@ -115,6 +115,23 @@ model.settings.animations=false
 local count=largeTitles
 r:draw(model)
 assert(largeTitles==count+1,"Disabled animation reveals everything immediately")
+-- Every authored mission tip must fit completely in the enlarged hero panel.
+-- The compact pixel font takes 4px per character; <=42 fits x=15..183.
+for index,level in ipairs(E.levels)do
+ local lines=r:wrapBriefingTip(level.tip)
+ assert(#lines>=1 and #lines<=2,"Description needs at most two lines: "..index)
+ assert(table.concat(lines," ")==level.tip,
+  "Description wording is preserved: "..index)
+ for _,line in ipairs(lines)do
+  assert(#line<=42,"Description will not be clipped: "..index)
+ end
+ model.briefing=B.forLevel(index)
+ model.settings.animations=false
+ r:draw(model)
+end
+local long=r:wrapBriefingTip(
+ "BUILD EVERY CONNECTION; UNUSED PORTS LEAK POWER.")
+assert(#long==2,"Long instruction must wrap instead of truncating")
 model.settings.animations=true
 assert(r:hitNormalized(-0.1,0.5)==nil and r:hitNormalized(1,0.5)==nil,
  "Out-of-range normalized monitor clicks rejected")
