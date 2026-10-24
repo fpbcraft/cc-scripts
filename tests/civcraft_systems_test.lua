@@ -18,7 +18,12 @@ assert(not S.canResearch(p,"writing"),"Research prerequisites enforced")
 assert(S.research(p,"agriculture"))
 assert(p.researchTarget=="agriculture" and not p.techs.agriculture,
  "Research should be scheduled, not instantly purchased")
+local beforeStaffing=S.yields(p,city,state,H)
 assert(S.assign(city,"wood","science"))
+local afterStaffing=S.yields(p,city,state,H)
+assert(afterStaffing.science==beforeStaffing.science+1 and
+ afterStaffing.industry==beforeStaffing.industry-1,
+ "Direct +/- assignment changes projected science and industry")
 assert(city.jobs.wood==0 and city.jobs.science==1)
 assert(not S.assign(city,"wood","science"))
 local oldPop=city.population

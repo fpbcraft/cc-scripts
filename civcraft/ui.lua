@@ -47,6 +47,7 @@ function UI:tile(x,y)
   end
  else
   self.selected={x=x,y=y};self.panel="context";self.actionPage=1
+  self.cityPanel="jobs";self.workCity=nil
   local unit=where(self.state and self.state.units,x,y)
   if unit and unit.owner==self.playerID and not unit.moved then
    self.source={x=x,y=y}
@@ -397,56 +398,97 @@ function UI:draw(state,playerID,opts)
   else r:text(sidebarX+3,top+42,"NO PRODUCTION",5,1,sw-6)end
   Systems.ensureWorkers(state,selectedCity)
   local used=0;for _ in pairs(selectedCity.worked or {})do used=used+1 end
-  local cy=top+53
-  r:text(sidebarX+3,cy,"CITIZENS "..used.."/"..(selectedCity.population or 2),7,1,sw-6)
-  local activeWork=self.workCity and
-    self.workCity.x==selectedCity.x and self.workCity.y==selectedCity.y
-  r:button(sidebarX+3,cy+10,sw-6,15,
-   activeWork and "DONE WORK" or "WORK HEXES",function()
-    if activeWork then self.workCity=nil
-    else
-     self.source=nil;self.reachable={}
-     self.workCity={x=selectedCity.x,y=selectedCity.y}
-    end
-   end,{icon="people",selected=activeWork})
-  local py=cy+28
-  r:button(sidebarX+3,py,math.floor((sw-8)/2),15,"UNITS",function()
-   self.productionCategory="unit";self.actionPage=1
-  end,{icon="train"})
-  r:button(sidebarX+5+math.floor((sw-8)/2),py,math.floor((sw-8)/2),15,"BUILDS",function()
-   self.productionCategory="building";self.actionPage=1
-  end,{icon="foundry"})
-  local source=self.productionCategory~="building" and Systems.units or
-    Systems.buildings
-  if source then
+  -- City inspector tabs keep staffing and production inside the viewport.
+  -- All three citizen sectors are adjustable directly with touch +/- controls.
+  local tabY=top+53
+  local tabW=math.floor((sw-8)/3)
+  local function cityTab(tab)
+   self.cityPanel=tab
+   if tab~="tiles" then self.workCity=nil end
+  end
+  r:button(sidebarX+3,tabY,tabW,13,"JOBS",function()cityTab("jobs")end,
+   {selected=(self.cityPanel or "jobs")=="jobs"})
+  r:button(sidebarX+5+tabW,tabY,tabW,13,"TILES",function()
+   cityTab("tiles")
+   self.source=nil;self.reachable={}
+   self.workCity={x=selectedCity.x,y=selectedCity.y}
+  end,{selected=self.cityPanel=="tiles"})
+  r:button(sidebarX+7+tabW*2,tabY,tabW,13,"PROD",function()
+   cityTab("production")
+   self.actionPage=1
+  end,{selected=self.cityPanel=="production"})
+  if self.cityPanel=="production"then
+   local categoryY=tabY+16
+   local half=math.floor((sw-8)/2)
+   r:button(sidebarX+3,categoryY,half,14,"UNITS",function()
+    self.productionCategory="unit";self.actionPage=1
+   end,{icon="train",selected=self.productionCategory~="building"})
+   r:button(sidebarX+5+half,categoryY,half,14,"BUILDS",function()
+    self.productionCategory="building";self.actionPage=1
+   end,{icon="foundry",selected=self.productionCategory=="building"})
+   local source=self.productionCategory=="building" and Systems.buildings or Systems.units
    local list={}
-   for id,record in pairs(source)do list[#list+1]=id end
+   for id in pairs(source)do list[#list+1]=id end
    table.sort(list)
-   local first=self.actionPage or 1
-   local startY=py+20
-   local visibleRows=math.max(1,math.floor((contentBottom-startY-25)/15))
-   self.actionPage=math.max(1,math.min(first,math.max(1,#list-visibleRows+1)))
+   local startY=categoryY+17
+   local visibleRows=math.max(1,math.floor((contentBottom-startY-18)/14))
+   self.actionPage=math.max(1,math.min(self.actionPage or 1,
+    math.max(1,#list-visibleRows+1)))
    for n=self.actionPage,math.min(#list,self.actionPage+visibleRows-1)do
     local id=list[n]
-    local kind=self.productionCategory~="building" and "unit" or "building"
+    local kind=self.productionCategory=="building" and "building" or "unit"
     local eligible=kind=="unit" and Systems.canRecruit(mine,id,state,Hex) or
-      Systems.canBuild(mine,selectedCity,id)
-    local cost=Systems.projectCost(kind,id)
-    local progress=selectedCity.project and selectedCity.project.kind==kind and
-       selectedCity.project.id==id and selectedCity.project.progress or 0
-     local turns=math.max(1,math.ceil((cost-progress)/math.max(1,yields.industry)))
-    r:button(sidebarX+3,startY+(n-self.actionPage)*15,sw-6,13,
-      id:upper().." "..turns.."T",function()
+     Systems.canBuild(mine,selectedCity,id)
+    local cost=Systems.projectCost(kind,id) or 1
+    local active=selectedCity.project and selectedCity.project.kind==kind and
+      selectedCity.project.id==id
+    local progress=active and selectedCity.project.progress or
+      (selectedCity.projectProgress or {})[kind..":"..id] or 0
+    local turns=math.max(1,math.ceil((cost-progress)/math.max(1,yields.industry)))
+    r:button(sidebarX+3,startY+(n-self.actionPage)*14,sw-6,12,
+      (eligible and "" or "!")..id:upper().." "..turns.."T",function()
        if eligible then self:command("queue",{x=selectedCity.x,y=selectedCity.y,
-        kind=kind,id=id})else self.notice="LOCKED / REQUIREMENTS MISSING"end
-      end,{icon=kind=="unit" and "train" or "foundry",selected=selectedCity.project and
-        selectedCity.project.id==id})
+        kind=kind,id=id}) else self.notice="LOCKED / NEED TECH OR RESOURCE" end
+      end,{icon=kind=="unit" and "train" or "foundry",selected=active})
    end
    if #list>visibleRows then
-    r:button(sidebarX+3,contentBottom-18,math.floor((sw-8)/2),15,"PREV",
-     function()self.actionPage=math.max(1,(self.actionPage or 1)-visibleRows)end)
-    r:button(sidebarX+5+math.floor((sw-8)/2),contentBottom-18,math.floor((sw-8)/2),15,"NEXT",
-     function()self.actionPage=math.min(#list,(self.actionPage or 1)+visibleRows)end)
+    r:button(sidebarX+3,contentBottom-16,half,14,"PREV",function()
+     self.actionPage=math.max(1,(self.actionPage or 1)-visibleRows)
+    end)
+    r:button(sidebarX+5+half,contentBottom-16,half,14,"NEXT",function()
+     self.actionPage=math.min(#list,(self.actionPage or 1)+visibleRows)
+    end)
+   end
+  elseif self.cityPanel=="tiles"then
+   Systems.ensureWorkers(state,selectedCity)
+   local used=0
+   for _ in pairs(selectedCity.worked or {})do used=used+1 end
+   r:text(sidebarX+3,tabY+20,"WORKED "..used.."/"..(selectedCity.population or 2),7,1,sw-6)
+   r:button(sidebarX+3,tabY+32,sw-6,15,"DONE WORK",function()
+    self.workCity=nil;self.cityPanel="jobs"
+   end,{icon="people"})
+   r:text(sidebarX+3,tabY+54,"TAP LAND HEXES",6,1,sw-6)
+  else
+   local rowY=tabY+16
+   for i,job in ipairs(Systems.jobs)do
+    local iy=rowY+(i-1)*17
+    local count=selectedCity.jobs[job] or 0
+    local name=job=="food" and "FOOD" or job=="wood" and "IND" or "SCI"
+    r:text(sidebarX+3,iy+4,name.." "..count,7,1,sw-47)
+    r:button(sidebarX+sw-44,iy,20,14,"-",function()
+     if selectedCity.jobs[job]>0 then
+      local to=job=="food" and "wood" or "food"
+      self:command("assign",{x=selectedCity.x,y=selectedCity.y,from=job,to=to})
+     end
+    end)
+    r:button(sidebarX+sw-22,iy,20,14,"+",function()
+     for _,from in ipairs(Systems.jobs)do
+      if from~=job and selectedCity.jobs[from]>0 then
+       self:command("assign",{x=selectedCity.x,y=selectedCity.y,from=from,to=job})
+       break
+      end
+     end
+    end)
    end
   end
  elseif selectedUnit and selectedUnit.owner==playerID then
@@ -470,7 +512,9 @@ function UI:draw(state,playerID,opts)
   end
  else
   r:text(sidebarX+3,top+22,"TILE "..self.selected.x..","..self.selected.y,7,1,sw-6)
-  r:text(sidebarX+3,top+35,terrain(self.selected.x,self.selected.y,state),6,1,sw-6)
+  local knowledge=World.known(mine,self.selected.x,self.selected.y)
+  r:text(sidebarX+3,top+35,knowledge=="hidden" and "UNEXPLORED" or
+   terrain(self.selected.x,self.selected.y,state),6,1,sw-6)
   if World.known(mine,self.selected.x,self.selected.y)~="hidden"then
    r:text(sidebarX+3,top+47,World.deposit(world,self.selected.x,self.selected.y) or
      "NO DEPOSIT",8,1,sw-6)
