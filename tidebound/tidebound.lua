@@ -1,4 +1,4 @@
--- TIDEBOUND: The Shattered Expanse v5.0. Run: /tidebound/tidebound.lua
+-- TIDEBOUND: The Shattered Expanse v5.1. Run: /tidebound/tidebound.lua
 local argv={...};if #argv==0 and type(arg)=='table' and arg[1]then argv[1]=arg[1]end
 _G.EXPANSE_V5_ROOT=_G.EXPANSE_V5_ROOT or '/tidebound/expanse-v5'
 local UI=dofile(_G.EXPANSE_V5_ROOT..'/ui.lua')

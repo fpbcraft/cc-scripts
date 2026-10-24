@@ -29,7 +29,7 @@ function UI.new(monitor,forceText)
  self.r=Renderer.new(monitor,forceText)
  self.screen='title';self.g=nil;self.humans=2;self.rounds=20;self.names={};self.arch={1,2,3,4}
  for i,a in ipairs(C.factions)do self.names[i]=a.name end
- self.selected=nil;self.focusSystem=nil;self.shipID=nil;self.pending=nil;self.notice='';self.frame=0
+ self.selected=nil;self.selectedShip=nil;self.focusSystem=nil;self.shipID=nil;self.pending=nil;self.notice='';self.frame=0
  self.target=2;self.section='galaxy';self.page=1;self.edit=1;self.galaxyPage=1
  self.recentIncome=nil;self.returnTo='galaxy';self.activeAction=nil
  return self
@@ -48,7 +48,7 @@ function UI:load()
  for _,path in ipairs({'/tidebound/v5-save.dat','/tidebound/v5-save.dat.bak','v5-save.dat','v5-save.dat.bak'})do
   if fs.exists(path)then local h=fs.open(path,'r')
    if h then local value=h.readAll();h.close();local ok,g=pcall(textutils.unserialize,value)
-    if ok and Sim.validState(g)then self.g=g;Sim.advanceAI(g);self.screen=g.ended and 'results' or 'handoff';self.selected=nil;self.shipID=nil;return true end
+    if ok and Sim.validState(g)then self.g=g;Sim.advanceAI(g);self.screen=g.ended and 'results' or 'handoff';self.selected=nil;self.selectedShip=nil;self.shipID=nil;return true end
    end
   end
  end
@@ -58,7 +58,7 @@ function UI:start(seed)
  local h={};for i=1,4 do h[i]=i<=self.humans end
  seed=seed or math.floor(((os and os.epoch and os.epoch('utc'))or(os.clock()*100000))%2100000000)+1
  self.g=Sim.new({humans=h,names=self.names,archetypes=self.arch,rounds=self.rounds,seed=seed})
- self.screen='handoff';self.selected=nil;self.notice='';self.shipID=nil;self:save()
+ self.screen='handoff';self.selected=nil;self.selectedShip=nil;self.notice='';self.shipID=nil;self:save()
 end
 function UI:box(x,y,w,h,tint)
  local r=self.r;r:rect(x,y,w,h,tint or 1);r:rect(x,y,w,1,3)
@@ -154,12 +154,12 @@ function UI:handoff()
  r:text(cx-17,math.floor(r.h*.61),'PASS MONITOR TO COMMANDER',5)
  self:button(cx-20,math.floor(r.h*.70),40,7,'BEGIN TURN','next',function()
   self.screen=(#f.events>0 and 'event') or (f.offers and #f.offers>0 and 'diplomacy') or 'galaxy'
-  self.selected=nil;self.shipID=nil;self.page=1
+  self.selected=nil;self.selectedShip=nil;self.shipID=nil;self.page=1
  end,nil,19)
 end
 function UI:navigate(name)
  self.screen=name;self.page=1;self.notice=''
- if name~='galaxy' then self.selected=nil end
+ if name~='galaxy' then self.selected=nil;self.selectedShip=nil;self.shipID=nil end
 end
 function UI:status()
  local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
@@ -194,79 +194,229 @@ function UI:noticeBar()
  local r=self.r;local y=r.h-12
  r:rect(1,y,r.w-2,4,3);r:text(3,y+1,clip(self.notice,r.w-6),7)
 end
-function UI:starPos(s,mapRight)
- local r=self.r;mapRight=mapRight or r.w
- local width=mapRight-10
- return math.floor(5+s.x*width),math.floor(10+s.y*(r.h-25))
+-- Map coordinates never move when a context menu opens. This means ships and
+-- planets remain in the same place throughout an interaction.
+function UI:starPos(s)
+ local r=self.r
+ return math.floor(5+s.x*(r.w-10)),math.floor(10+s.y*(r.h-25))
 end
-function UI:starMap(mapRight)
+local function overlaps(a,b)
+ return a.x<b.x+b.w and a.x+a.w>b.x and a.y<b.y+b.h and a.y+a.h>b.y
+end
+local function insideMap(r,t)
+ return t.x>=2 and t.y>=11 and t.x+t.w<=r.w-2 and t.y+t.h<=r.h-10
+end
+-- Layout is based on entity IDs and the galaxy seed, not the selected panel.
+-- There is a distinct, non-overlapping clickable marker for each visible ship.
+function UI:mapTargets()
  local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
- mapRight=mapRight or r.w;local selectedShip=self.shipID and Sim.findShip(g,self.shipID)
- r:text(3,8,self.shipID and 'SELECT LINKED DESTINATION' or 'GALAXY / SELECT A STAR',5,math.max(8,mapRight-5))
- for _,e in ipairs(g.links)do
-  local a,b=g.systems[e[1]],g.systems[e[2]]
-  if f.charted[a.id] or f.charted[b.id] or f.seen[a.id] or f.seen[b.id]then
-   local x,y=self:starPos(a,mapRight);local xx,yy=self:starPos(b,mapRight)
-   r:line(x,y,xx,yy,3)
+ local targets={};local systems={};local ships={}
+ local cellW=(r.w>=100 and 6 or 4);local cellH=(r.h>=65 and 5 or 3)
+ local function available(rect)
+  if not insideMap(r,rect) then return false end
+  for _,old in ipairs(targets)do if overlaps(old,rect)then return false end end
+  return true
+ end
+ local function place(preferred,w,h)
+  local best
+  -- Prefer the intended position. A nearby free slot is used when ships
+  -- congregate around the same planet; no overlapping click targets.
+  local offsets={{0,0},{0,-4},{0,4},{-5,0},{5,0},{-6,-4},{6,-4},{-6,4},{6,4},
+   {-10,0},{10,0},{-10,-6},{10,-6},{-10,6},{10,6},{0,-9},{0,9}}
+  for _,offset in ipairs(offsets)do
+   local rect={x=preferred.x+offset[1],y=preferred.y+offset[2],w=w,h=h}
+   if available(rect)then return rect end
+  end
+  -- Dense maps can still contain individually clickable ships. Find the
+  -- nearest free rectangle instead of silently dropping the ship's marker.
+  local limit=math.max(r.w,r.h)
+  for dist=1,limit do
+   for dx=-dist,dist do
+    local dy=dist-math.abs(dx)
+    for _,sign in ipairs({-1,1})do
+     local rect={x=preferred.x+dx,y=preferred.y+dy*sign,w=w,h=h}
+     if available(rect)then return rect end
+    end
+   end
+  end
+  return best
+ end
+ for _,system in ipairs(g.systems)do
+  local x,y=self:starPos(system)
+  local rect=place({x=x-math.floor(cellW/2),y=y-math.floor(cellH/2)},cellW,cellH)
+  if rect then
+   rect.kind='system';rect.id=system.id;rect.system=system.id
+   rect.cx=rect.x+math.floor(rect.w/2);rect.cy=rect.y+math.floor(rect.h/2)
+   targets[#targets+1]=rect;systems[system.id]=rect
   end
  end
- for _,s in ipairs(g.systems)do
-  local x,y=self:starPos(s,mapRight);local visible=f.seen[s.id] or s.owner==p;local scanned=f.charted[s.id]
-  local col=s.owner==p and factionColor(p) or (s.owner>0 and visible and factionColor(s.owner)) or visible and (s.kind=='RELIC' and 13 or 7) or 4
-  local radius=visible and 2 or 1
-  r:disc(x,y,radius,col)
-  if s.owner~=0 and visible then r:disc(x,y,math.max(1,radius-1),7)end
-  if self.selected==s.id then r:disc(x,y,math.min(3,radius+1),9)end
-  if selectedShip and Sim.linked(g,selectedShip.location,s.id)then r:rect(x-3,y-3,7,1,19)end
-  if visible and r.w>=90 and mapRight>=66 then r:text(x-4,y+3,clip(s.name,9),5)end
-  -- Map geometry and hitboxes use the same coordinates. Not added for systems
-  -- covered by an inspector, avoiding hidden clickable hotspots.
-  local hitW=math.min(7,math.floor((mapRight-10)/6)-1);local hitH=math.max(3,math.min(5,math.floor((r.h-25)/5)-1))
-  if hitW>=3 and x-hitW/2>0 and x+hitW/2<mapRight and y-hitH/2>8 and y+hitH/2<r.h-9 then
-   r.buttons[#r.buttons+1]={x=math.floor(x-hitW/2),y=math.floor(y-hitH/2),w=hitW,h=hitH,label=s.name,fn=function()
-    if self.shipID then self:requestMove(s.id) else self.selected=s.id;self.notice='' end
-   end}
+ for _,sh in ipairs(g.ships)do
+  local system=g.systems[sh.location]
+  if sh.owner==p or f.seen[sh.location] or system.owner==p then
+   local origin=systems[sh.location]
+   if origin then
+    local w,h=(r.w>=100 and 5 or 4),(r.h>=65 and 4 or 3)
+    local rect=place({x=origin.x+origin.w+2,y=origin.y-2},w,h)
+    if rect then
+     rect.kind='ship';rect.id=sh.id;rect.system=sh.location
+     rect.cx=rect.x+math.floor(rect.w/2);rect.cy=rect.y+math.floor(rect.h/2)
+     targets[#targets+1]=rect;ships[sh.id]=rect
+    end
+   end
   end
  end
+ return targets,systems,ships
 end
-function UI:galaxy()
- local r=self.r;local panelW=self.selected and math.min(44,math.floor(r.w*.38)) or 0
- self:starMap(self.selected and r.w-panelW-3 or nil)
- if self.selected then self:inspector(self.g.systems[self.selected],panelW)end
- if self.shipID then self:button(3,r.h-16,20,5,'CANCEL MOVE','close',function()self.shipID=nil;self.notice=''end)end
-end
-function UI:inspector(s,panelW)
- local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
- local x=r.w-panelW;local y=9;local bottom=r.h-10
- self:box(x,y,panelW-2,bottom-y,1)
+function UI:systemCommands(s)
+ local g=self.g;local p=Sim.current(g);local f=g.factions[p]
  local visible=f.seen[s.id] or s.owner==p
- r:text(x+2,y+2,clip(visible and s.name or 'UNSURVEYED',panelW-10),9);self:button(x+panelW-10,y+1,7,4,'X',nil,function()self.selected=nil;self.notice=''end)
- r:text(x+2,y+5,visible and clip(s.kind..' / '..(s.owner==0 and 'NEUTRAL' or g.factions[s.owner].name),panelW-5) or 'SEND A SCOUT TO REVEAL',5)
- local own=s.owner==p;local buttons={}
- if not visible then buttons={{'UNEXPLORED','scan',function()self.notice='MOVE A SCOUT HERE TO SURVEY THIS SYSTEM'end}}
- elseif own and s.colony then
-  buttons={{'DEVELOP','colony',function()self.focusSystem=s.id;self:navigate('colony')end,'Change specialization or upgrade'},
-   {'SCOUT C3 A7','scan',function()self:ask('build_ship',{system=s.id,kind='scout'},'LAUNCH SCOUT','Explores connected systems.',C.ships.scout.cost)end},
-   {'ARK C5 A12','ark',function()self:ask('build_ship',{system=s.id,kind='ark'},'LAUNCH ARK','Establishes a new colony.',C.ships.ark.cost)end},
-   {'FLEET C5 A10','ship',function()self:ask('build_ship',{system=s.id,kind='fleet'},'LAUNCH FLEET','Defends and attacks border systems.',C.ships.fleet.cost)end}}
- elseif own then buttons={{'OWNED OUTPOST','flag',function()self.notice='OUTPOSTS PRODUCE +1 ALLOY PER YEAR' end}}
+ if not visible then
+  return {{'HOW TO EXPLORE','scan',function()self.notice='SELECT A SCOUT ICON, MOVE IT HERE TO SURVEY'end}}
+ end
+ if s.owner==p and s.colony then
+  return {
+   {'MANAGE WORLD','colony',function()self.focusSystem=s.id;self:navigate('colony')end},
+   {'BUILD SCOUT C3 A7','scan',function()self:ask('build_ship',{system=s.id,kind='scout'},'BUILD SCOUT',C.ships.scout.description,C.ships.scout.cost)end},
+   {'BUILD ARK C5 A12','colony',function()self:ask('build_ship',{system=s.id,kind='ark'},'BUILD COLONY ARK',C.ships.ark.description,C.ships.ark.cost)end},
+   {'BUILD FLEET C5 A10','ship',function()self:ask('build_ship',{system=s.id,kind='fleet'},'BUILD FLEET',C.ships.fleet.description,C.ships.fleet.cost)end},
+  }
+ elseif s.owner==p then
+  return {{'YOUR OUTPOST','flag',function()self.notice='OUTPOST: +1 ALLOY EACH YEAR'end}}
  elseif s.owner==0 then
   local ark
   for _,sh in ipairs(Sim.shipsAt(g,s.id,p))do if sh.kind=='ark' then ark=sh.id;break end end
-  buttons={{'FOUND COLONY','colony',function()
-    if ark then self:ask('colonize',{ship=ark},'FOUND COLONY','Consumes this Ark. Adds a specialized world.',{credits=8,alloy=12})
-    else self.notice='SEND AN ARK HERE, THEN FOUND A COLONY' end
-   end}, {'HOW TO CLAIM','help',function()self.notice='SCOUT, MOVE AN ARK HERE, AND COLONIZE' end}}
- else buttons={{'RIVAL SYSTEM','war',function()self:navigate('diplomacy');self.target=s.owner end}, {'MY FLEETS','ship',function()self:navigate('ships')end}}end
- local pos=y+9;local rowH=5;local max=math.max(1,math.floor((bottom-pos-2)/rowH));local maxPage=math.max(1,math.ceil(#buttons/max))
- self.page=math.max(1,math.min(self.page,maxPage))
- for i=(self.page-1)*max+1,math.min(#buttons,self.page*max)do
-  local b=buttons[i];self:button(x+2,pos+((i-1)%max)*rowH,panelW-6,rowH-1,b[1],b[2],b[3])
+  return {{ark and 'FOUND COLONY' or 'COLONIZATION HELP','colony',function()
+   if ark then self:ask('colonize',{ship=ark},'FOUND COLONY','Consumes a Colony Ark. Adds a new world.',{credits=8,alloy=12})
+   else self.notice='SELECT AN ARK ON THE MAP AND MOVE IT HERE'end
+  end}}
  end
- if maxPage>1 then
-  self:button(x+2,bottom-6,11,4,'PREV','back',function()self.page=math.max(1,self.page-1)end)
-  self:button(x+panelW-15,bottom-6,11,4,'NEXT','next',function()self.page=math.min(maxPage,self.page+1)end)
+ return {{'DIPLOMACY','trade',function()self.target=s.owner;self:navigate('diplomacy')end},
+  {'BORDER CONFLICT','war',function()self.notice='SELECT A FLEET AND MOVE IT HERE WHILE AT WAR'end}}
+end
+function UI:shipCommands(sh)
+ local p=Sim.current(self.g)
+ if sh.owner~=p then
+  return {{'ENEMY SHIP','ship',function()self.notice='ONLY OWNED SHIPS CAN RECEIVE ORDERS'end},
+   {'VIEW SYSTEM','planet',function()self.selected=sh.location;self.selectedShip=nil end}}
  end
+ local entries={{sh.kind=='fleet' and 'MOVE / ATTACK' or 'MOVE SHIP','move',function()
+  if sh.orders<1 then self.notice='NO SHIP ORDERS LEFT THIS YEAR';return end
+  self.shipID=sh.id;self.selectedShip=nil;self.selected=nil;self.notice='TAP A LINKED DESTINATION STAR'
+ end}}
+ if sh.kind=='ark' then
+  entries[#entries+1]={'FOUND COLONY','colony',function()
+   self:ask('colonize',{ship=sh.id},'FOUND COLONY','Settles the system occupied by this Colony Ark.',{credits=8,alloy=12})
+  end}
+ end
+ entries[#entries+1]={'VIEW SYSTEM','planet',function()self.selected=sh.location;self.selectedShip=nil end}
+ return entries
+end
+function UI:contextGeometry(systems,ships,targets)
+ if self.shipID then return nil end
+ local target=self.selectedShip and ships[self.selectedShip] or self.selected and systems[self.selected]
+ if not target then return nil end
+ local sh=self.selectedShip and Sim.findShip(self.g,self.selectedShip)
+ local sys=not sh and self.g.systems[self.selected]
+ if not sh and not sys then return nil end
+ local entries=sh and self:shipCommands(sh) or self:systemCommands(sys)
+ local r=self.r;local w=math.min(r.w-6,r.w>=100 and 29 or 25)
+ local header=5;local row=3;local h=header+#entries*row+1
+ local anchorX=target.x+target.w+2;local anchorY=target.y-1
+ local candidates={{anchorX,anchorY},{target.x-w-2,anchorY},
+  {target.x,target.y+target.h+2},{target.x,target.y-h-2}}
+ local best,bestScore
+ for index,pair in ipairs(candidates)do
+  local x=math.max(2,math.min(r.w-w-2,pair[1]))
+  local y=math.max(9,math.min(r.h-h-10,pair[2]))
+  local rect={x=x,y=y,w=w,h=h}
+  local score=index*.1+math.abs(x-pair[1])*.35+math.abs(y-pair[2])*.35
+  for _,other in ipairs(targets or {})do
+   if overlaps(rect,other) then
+    local ownShip=other.kind=='ship' and Sim.findShip(self.g,other.id)
+    score=score+((ownShip and ownShip.owner==Sim.current(self.g)) and 15 or 5)
+    if other==target then score=score+30 end
+   end
+  end
+  if not bestScore or score<bestScore then best=rect;bestScore=score end
+ end
+ best.entries=entries;best.ship=sh;best.system=sys
+ return best
+end
+function UI:starMap()
+ local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
+ local moving=self.shipID and Sim.findShip(g,self.shipID)
+ local targets,systems,ships=self:mapTargets()
+ self.mapMarkers={systems=systems,ships=ships}
+ local menu=self:contextGeometry(systems,ships,targets)
+ self.contextBounds=menu
+ r:text(3,8,moving and 'SELECT LINKED DESTINATION' or 'TAP A STAR OR A SHIP',5,r.w-5)
+ for _,edge in ipairs(g.links)do
+  local a,b=g.systems[edge[1]],g.systems[edge[2]]
+  if f.charted[a.id] or f.charted[b.id] or f.seen[a.id] or f.seen[b.id] then
+   local one,two=systems[a.id],systems[b.id]
+   if one and two then r:line(one.cx,one.cy,two.cx,two.cy,3)end
+  end
+ end
+ for _,target in ipairs(targets)do
+  if target.kind=='system' then
+   local s=g.systems[target.id];local visible=f.seen[s.id] or s.owner==p
+   local col=s.owner==p and factionColor(p) or (s.owner>0 and visible and factionColor(s.owner)) or (visible and s.kind=='RELIC' and 13) or (visible and 7) or 4
+   r:disc(target.cx,target.cy,visible and 2 or 1,col)
+   if s.colony and visible then r:rect(target.cx,target.cy,1,1,7)end
+   if self.selected==s.id then r:rect(target.x,target.y,target.w,1,9)end
+   if moving and Sim.linked(g,moving.location,s.id) then r:rect(target.x,target.y+target.h-1,target.w,1,19)end
+  else
+   local sh=Sim.findShip(g,target.id)
+   if sh then
+    local colour=sh.owner==p and 11 or 15
+    r:rect(target.x,target.y,target.w,target.h,sh.owner==p and 2 or 28)
+    r:rect(target.x,target.y,1,target.h,factionColor(sh.owner))
+    r:icon(target.x+1,target.y, C.ships[sh.kind].icon,colour)
+    if self.selectedShip==sh.id then r:rect(target.x,target.y,target.w,1,9)end
+    if sh.owner==p and sh.orders<1 then r:rect(target.x,target.y+target.h-1,target.w,1,4)end
+   end
+  end
+  -- Context popovers cover any controls behind them; their covered markers
+  -- are never registered, so the clickable geometry matches the picture.
+  local cancelArea=moving and {x=3,y=r.h-16,w=20,h=5}
+  if (not menu or not overlaps(target,menu)) and (not cancelArea or not overlaps(target,cancelArea)) then
+   local captured=target
+   r.buttons[#r.buttons+1]={x=target.x,y=target.y,w=target.w,h=target.h,
+    label=(target.kind=='system' and g.systems[target.id].name or Sim.findShip(g,target.id).name),fn=function()
+     if captured.kind=='system' then
+      if self.shipID then self:requestMove(captured.id)
+      else self.selected=captured.id;self.selectedShip=nil;self.notice=''end
+     else
+      self.shipID=nil;self.selectedShip=captured.id;self.selected=nil;self.notice=''
+     end
+    end}
+  end
+ end
+end
+function UI:contextMenu()
+ local m=self.contextBounds
+ if not m then return end
+ local r=self.r;local x,y,w=m.x,m.y,m.w
+ self:box(x,y,w,m.h,1)
+ r:rect(x+1,y+1,w-2,3,2)
+ local title=m.ship and m.ship.name or m.system.name
+ local subtitle=m.ship and ('ORDERS '..m.ship.orders..'/2 | '..self.g.systems[m.ship.location].name)
+  or (not self.g.factions[Sim.current(self.g)].seen[m.system.id] and 'UNSURVEYED')
+  or (m.system.owner==0 and 'NEUTRAL / '..m.system.kind)
+  or ((m.system.owner==Sim.current(self.g) and 'YOURS' or 'RIVAL')..' / '..m.system.kind)
+ r:text(x+2,y+1,clip(title,w-10),9,w-10)
+ r:text(x+2,y+3,clip(subtitle,w-4),5,w-4)
+ self:button(x+w-6,y+1,5,3,'X',nil,function()self.selected=nil;self.selectedShip=nil end)
+ for i,entry in ipairs(m.entries)do
+  self:button(x+1,y+5+(i-1)*3,w-2,3,entry[1],entry[2],entry[3])
+ end
+end
+function UI:galaxy()
+ self:starMap()
+ self:contextMenu()
+ if self.shipID then self:button(3,self.r.h-16,20,5,'CANCEL MOVE','close',function()
+  self.shipID=nil;self.notice='MOVE CANCELLED'
+ end)end
 end
 function UI:ask(kind,args,title,description,cost)
  local g=self.g;local p=Sim.current(g);local ok,why=Sim.can(g,p,kind,args)
@@ -293,7 +443,7 @@ function UI:confirm()
  self:button(x+3,top+math.max(19,math.floor(r.h*.55)-7),math.floor((w-8)/2),6,'CANCEL','close',function()self.screen=p.returnTo;self.pending=nil end)
  self:button(x+5+math.floor((w-8)/2),top+math.max(19,math.floor(r.h*.55)-7),math.floor((w-8)/2),6,'CONFIRM','check',function()
   local valid,reason=Sim.command(self.g,Sim.current(self.g),p.kind,p.args)
-  self.pending=nil;self.shipID=nil;self.screen=p.returnTo
+  self.pending=nil;self.shipID=nil;self.selectedShip=nil;self.selected=nil;self.screen=p.returnTo
   if valid then self.notice='ORDER COMPLETED';self:save()
    if #self.g.factions[Sim.current(self.g)].events>0 then self.screen='event' end
   else self.notice=reason end
@@ -493,7 +643,7 @@ function UI:finishTurn()
  local success,reason=Sim.endTurn(g,p)
  if not success then self.notice=reason;return end
  Sim.advanceAI(g);self.recentIncome={credits=income.credits,alloy=income.alloy,knowledge=income.knowledge,year=completed}
- self.screen=g.ended and 'results' or 'summary';self.selected=nil;self.shipID=nil;self:save()
+ self.screen=g.ended and 'results' or 'summary';self.selected=nil;self.selectedShip=nil;self.shipID=nil;self:save()
 end
 function UI:summary()
  local r=self.r;self:space();self:headline('COUNCIL REPORT')
@@ -563,7 +713,13 @@ function UI:draw()
  end
  r:endFrame()
 end
-function UI:touch(x,y)return self.r:hit(x,y)end
+function UI:touch(x,y)
+ if self.r:hit(x,y) then return true end
+ if self.screen=='galaxy' and (self.selected or self.selectedShip) then
+  self.selected=nil;self.selectedShip=nil;self.notice='';return true
+ end
+ return false
+end
 function UI:monitorTouch(x,y)
  local r=self.r;if type(x)~='number' or type(y)~='number'then return false end
  if r.kind=='gfx' then

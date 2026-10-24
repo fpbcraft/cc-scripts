@@ -140,4 +140,92 @@ for i=1,5 do
  local a,b,c,d=outcome(i*173);local aa,bb,cc,dd=outcome(i*173)
  test(a==aa and b==bb and c==cc and d==dd,'deterministic AI campaign')
 end
+-- Map-first controls: every planet and every visible ship has its own touch
+-- target, and the Windows-style menu is the only overlay on the galaxy map.
+local function overlaps(a,b)
+ return a.x<b.x+b.w and a.x+a.w>b.x and a.y<b.y+b.h and a.y+a.h>b.y
+end
+for _,size in ipairs(sizes) do for _,gfx in ipairs({true,false}) do
+ local ui=UI.new(fakeMonitor(size[1],size[2],gfx))
+ ui:start(1703);ui.screen='galaxy';ui:draw()
+ local initial=ui.mapMarkers
+ local count=0
+ for _,star in ipairs(ui.g.systems)do
+  test(initial.systems[star.id]~=nil,'no planet target '..star.id)
+  count=count+1
+ end
+ for _,sh in ipairs(ui.g.ships)do
+  if sh.owner==M.current(ui.g) then test(initial.ships[sh.id]~=nil,'no owned ship target '..sh.id)end
+ end
+ local function tapMarker(marker)
+  local x=marker.x+math.floor(marker.w/2);local y=marker.y+math.floor(marker.h/2)
+  return gfx and ui:monitorTouch(x*ui.r.px,y*ui.r.py) or ui:monitorTouch(x+1,y+1)
+ end
+ local targets={}
+ for _,rect in pairs(initial.systems)do targets[#targets+1]=rect end
+ for _,rect in pairs(initial.ships)do targets[#targets+1]=rect end
+ for i=1,#targets do
+  local a=targets[i]
+  test(a.x>=0 and a.y>=0 and a.x+a.w<=ui.r.w and a.y+a.h<=ui.r.h,'offscreen marker')
+  for j=i+1,#targets do test(not overlaps(a,targets[j]),'ambiguous map marker')end
+ end
+ local home=ui.g.systems[1];local original=initial.systems[1]
+ test(tapMarker(original),'touch planet directly')
+ test(ui.selected==1 and not ui.selectedShip,'planet target selects directly')
+ ui:draw()
+ local menu=ui.contextBounds
+ test(menu~=nil and menu.w<=30 and menu.h<=18,'compact context menu')
+ test(menu.x>=0 and menu.y>=7 and menu.x+menu.w<=ui.r.w and menu.y+menu.h<=ui.r.h-9,'context menu out of map')
+ test(ui.mapMarkers.systems[1].x==original.x and ui.mapMarkers.systems[1].y==original.y,'galaxy shifted on selection')
+ local foundWorld=false
+ for _,b in ipairs(ui.r.buttons)do if b.label=='MANAGE WORLD' then foundWorld=true end end
+ test(foundWorld,'direct colony context menu option')
+ local firstShip
+ for _,sh in ipairs(ui.g.ships)do if sh.owner==1 then firstShip=sh;break end end
+ local marker=ui.mapMarkers.ships[firstShip.id]
+ -- If the popover covers a ship at a cramped size, tapping empty space closes
+ -- it. No intermediate Ships or Worlds screen is required.
+ if overlaps(marker,menu)then
+  test(ui:touch(0,ui.r.h-10),'outside tap closes context menu')
+  ui:draw();marker=ui.mapMarkers.ships[firstShip.id]
+ end
+ test(tapMarker(marker),'touch ship directly')
+ test(ui.selectedShip==firstShip.id and ui.screen=='galaxy','direct ship selection')
+ ui:draw()
+ local menus=ui.contextBounds
+ test(menus and menus.ship and menus.ship.id==firstShip.id,'ship context menu shows selected unit')
+ local move
+ for _,b in ipairs(ui.r.buttons)do
+  if b.label=='MOVE SHIP' or b.label=='MOVE / ATTACK' then move=b end
+ end
+ test(move~=nil,'ship move command without ship submenu')
+ local before=firstShip.location
+ test(tapMarker(move),'move command touch')
+ test(ui.shipID==firstShip.id and ui.screen=='galaxy','move mode activates without fleet registry')
+ ui:draw()
+ local targetID=M.neighbors(ui.g,before)[1]
+ test(tapMarker(ui.mapMarkers.systems[targetID]),'touch destination star')
+ test(ui.screen=='confirm','ship destination confirmation')
+ ui:draw()
+ local accept
+ for _,b in ipairs(ui.r.buttons)do if b.label=='CONFIRM' then accept=b end end
+ test(accept and tapMarker(accept),'confirm move')
+ test(M.findShip(ui.g,firstShip.id).location==targetID,'directly selected ship moved')
+ ui.screen='galaxy';ui.selected=home.id;ui:draw()
+ local registered=ui.r.buttons
+ for i=1,#registered do for j=i+1,#registered do
+  test(not overlaps(registered[i],registered[j]),'context overlaps touch targets: '..tostring(registered[i].label)..' vs '..tostring(registered[j].label))
+ end end
+end end
+for seed=1,12 do
+ local ui=UI.new(fakeMonitor(126,89,true));ui:start(seed*733);ui.screen='galaxy';ui:draw()
+ local targetList={}
+ for _,t in pairs(ui.mapMarkers.systems)do targetList[#targetList+1]=t end
+ for _,t in pairs(ui.mapMarkers.ships)do targetList[#targetList+1]=t end
+ test(#targetList>=33,'all starting planets and friendly ships represented')
+ for i=1,#targetList do for j=i+1,#targetList do
+  test(not overlaps(targetList[i],targetList[j]),'seeded map target collision')
+ end end
+end
+
 print('TIDEBOUND v5: '..checks..' assertions passed')
