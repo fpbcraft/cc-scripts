@@ -12,7 +12,7 @@ assert(http and http.get,'Enable HTTP in CC:Tweaked config')
 local root='/tidebound';local nextDir=root..'/.install-next';local backup=root..'/.install-previous'
 local origin='https://raw.githubusercontent.com/fpbcraft/cc-scripts/'..ref..'/tidebound/'
 local files={
- 'tidebound.lua','terminal_view.lua','tidebound-shattered-v4.lua','tidebound-stellar-frontier.lua',
+ 'tidebound.lua','display.lua','terminal_view.lua','tidebound-shattered-v4.lua','tidebound-stellar-frontier.lua',
  'tidebound-kingdoms.lua','tidebound-classic.lua',
  'expanse/content.lua','expanse/events.lua','expanse/sim.lua','expanse/render.lua','expanse/ui.lua',
  'expanse-v5/content.lua','expanse-v5/events.lua','expanse-v5/sim.lua',
