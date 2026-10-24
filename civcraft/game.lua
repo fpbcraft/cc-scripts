@@ -1,4 +1,4 @@
--- CIVCRAFT v0.4.0: Railbreak-style 4X with local hotseat or rednet networking
+-- CIVCRAFT v0.5.0: Railbreak-style 4X with local hotseat or rednet networking
 -- Host: /civcraft/game.lua host [--new]  Join: /civcraft/game.lua join [host ID]
 local args={...}
 local MODE=args[1] or 'local'
