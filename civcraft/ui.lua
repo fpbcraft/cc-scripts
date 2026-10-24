@@ -3,12 +3,14 @@
 local Renderer=dofile("/civcraft/render.lua")
 local Hex=dofile("/civcraft/hex.lua")
 local Systems=dofile("/civcraft/systems.lua")
+local World=dofile("/civcraft/world.lua")
+local TechTree=dofile("/civcraft/tech_tree.lua")
 local Icons=dofile("/civcraft/icons.lua")
 local UI={};UI.__index=UI
 local P={8,13,11,21}
 local MAP_W,MAP_H=Hex.width,Hex.height
 local function clip(s,n)return tostring(s or ""):upper():sub(1,math.max(0,n))end
-local terrain=Hex.terrain
+local function terrain(x,y,state)return Hex.terrain(x,y,state)end
 local function where(list,x,y)
  for _,thing in ipairs(list or {})do
   if thing.x==x and thing.y==y then return thing end
@@ -42,7 +44,7 @@ function UI:tile(x,y)
   local unit=where(self.state and self.state.units,x,y)
   if unit and unit.owner==self.playerID and not unit.moved then
    self.source={x=x,y=y}
-   self.reachable=Hex.reachable(self.state,unit,self.playerID)
+   self.reachable=Hex.reachable(self.state,unit,self.playerID,Systems)
    self.notice="SELECT A GREEN HEX TO MOVE"
   else self.reachable={};self.source=nil end
  end
@@ -137,12 +139,14 @@ function UI:draw(state,playerID,opts)
  local mine
  for _,p in ipairs(state.players)do if p.id==playerID then mine=p end end
  local compact=w<150 or h<110
+ local MAP_W,MAP_H=state.world and state.world.width or Hex.width,
+  state.world and state.world.height or Hex.height
  local top=header+7
  local contentBottom=h-footer-3
  -- Pointy odd-row hexes: centres are half a cell apart horizontally between
  -- adjacent rows; 3/4 cell vertically, matching the same Hex distance rules.
  local reserved=compact and 14 or math.max(75,math.floor(w*.29))
- local tile=math.max(10,math.min(
+ local tile=math.max(7,math.min(
   math.floor((contentBottom-top-7)/(1+(MAP_H-1)*.75)),
   math.floor((w-reserved-17)/(MAP_W+.5))))
  local stepY=tile*.75
@@ -157,11 +161,16 @@ function UI:draw(state,playerID,opts)
  end
  for y=1,MAP_H do for x=1,MAP_W do
   local px,py=tilePos(x,y)
-  local t=terrain(x,y)
-  local c=where(state.cities,x,y)
-  local u=where(state.units,x,y)
-  local base=t=="water" and 19 or t=="mountain" and 4 or
-    t=="forest" and 12 or 2
+  local t=terrain(x,y,state)
+  local visibility=World.known(mine,x,y)
+  local hidden=visibility=="hidden"
+  local c=not hidden and where(state.cities,x,y)
+  local u=visibility=="visible" and where(state.units,x,y)
+  if c and c.owner~=playerID and visibility~="visible"then c=nil end
+  local base=hidden and 15 or
+    visibility=="explored" and 14 or
+    t=="water" and 19 or t=="mountain" and 4 or
+    t=="forest" and 12 or t=="hills" and 9 or 2
   local half=math.floor(tile/2)
   local bevel=math.max(2,math.floor(tile*.24))
   -- Filled pointy hex silhouette (top/bottom caps and vertical body).
@@ -171,7 +180,7 @@ function UI:draw(state,playerID,opts)
    r:fill(px+inset,py+dy,math.max(1,tile-inset*2-1),1,base)
   end
   r:outline(px+bevel,py,math.max(1,tile-2*bevel),1,3)
-  if t=="water" or t=="forest" or t=="mountain"then
+  if not hidden and (t=="water" or t=="forest" or t=="mountain" or t=="hills")then
    Icons.draw(r,t,px+half-4,py+half-4,9,7)
   end
   local highlighted=false
@@ -189,6 +198,7 @@ function UI:draw(state,playerID,opts)
    Icons.draw(r,u.kind,px+half-5,py+half-5,11,P[ownerIndex(state,u.owner)]or 8)
    if u.moved then r:fill(px+tile-4,py+half,2,2,4)end
   end
+  if visibility=="explored"then r:fill(px+half-1,py+half-1,2,2,4)end
   if self.selected.x==x and self.selected.y==y then
    r:outline(px+bevel,py,math.max(2,tile-2*bevel),tile,8)
   end
@@ -247,7 +257,7 @@ function UI:draw(state,playerID,opts)
  r:fill(0,barY-4,w,2,8)
  local selectedCity=where(state.cities,self.selected.x,self.selected.y)
  local selectedUnit=where(state.units,self.selected.x,self.selected.y)
- local description="TILE "..self.selected.x..","..self.selected.y.." "..terrain(self.selected.x,self.selected.y)
+ local description="TILE "..self.selected.x..","..self.selected.y.." "..terrain(self.selected.x,self.selected.y,state)
  if selectedCity then description=description.." CITY" end
  if selectedUnit then description=description.." "..selectedUnit.kind end
  r:text(8,barY,clip(description,math.floor((w-10)/4)),7)
@@ -263,7 +273,7 @@ function UI:draw(state,playerID,opts)
   actions[#actions+1]={"MOVE",function()
    if selectedUnit.moved then self.notice="ALREADY MOVED";return end
    self.source={x=x,y=y}
-   self.reachable=Hex.reachable(state,selectedUnit,playerID)
+   self.reachable=Hex.reachable(state,selectedUnit,playerID,Systems)
   end}
  elseif selectedCity and selectedCity.owner==playerID then
   if self.panel=="context" then
@@ -298,7 +308,7 @@ function UI:draw(state,playerID,opts)
    end
   end
  else
-  actions[#actions+1]={"INSPECT",function()self.notice=terrain(x,y):upper()end}
+  actions[#actions+1]={"INSPECT",function()self.notice=terrain(x,y,state):upper()end}
  end
  actions[#actions+1]={"BACK",function()
   self.panel="context";self.source=nil;self.reachable={}
