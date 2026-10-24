@@ -1,7 +1,16 @@
 -- FPB Store: terminal-first game manager, responsive to computer and monitor size.
 -- Launch: /store.lua or /fpbstore/main.lua
-package.path="/?.lua;/?/init.lua;"..package.path
-local Manager=require("fpbstore.manager")
+-- CraftOS-PC iOS can omit the Lua package library altogether.
+-- Use direct module files instead of relying on package.path in that case.
+local function module(name)
+ if type(package)=="table" and type(package.path)=="string" and
+  type(require)=="function"then
+  package.path="/?.lua;/?/init.lua;"..package.path
+  return require(name)
+ end
+ return dofile("/"..name:gsub("%.","/")..".lua")
+end
+local Manager=module("fpbstore.manager")
 local catalog=Manager.catalog
 local args={...}
 if args[1]=="--test-api"then return Manager end
