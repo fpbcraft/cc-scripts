@@ -32,7 +32,12 @@ assert(files[Save.path(1)..".bak"],"Previous slot revision should be backed up")
 Save.delete(2)
 assert(Save.load(2)==nil and Save.load(1).name=="GREEN")
 files["/civcraft/data/local-save.dat"]="sav1"
+files["/civcraft/data/slots-migrated"]=nil
 Save.delete(1)
-assert(Save.load(1)==a,"Legacy single save remains loadable in empty slot 1")
+assert(Save.load(1)==nil,"Confirmed deletion must not resurrect legacy save")
+assert(files["/civcraft/data/local-save.dat"]=="sav1",
+ "Legacy backup itself is preserved")
+files["/civcraft/data/slots-migrated"]=nil
+assert(Save.load(1)==a,"Legacy save can be imported on fresh install")
 assert(not pcall(Save.path,4),"Out of bounds save slot")
 print("CIVCRAFT: three independent saves, backup, deletion and legacy import passed.")
