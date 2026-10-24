@@ -164,11 +164,13 @@ function M.updateStore(ref)
  local source=fetch(M.BASE..ref.."/install-fpbstore.lua")
  local fn,err=load(source,"@install-fpbstore.lua","t")
  assert(fn,err)
- local tmp="/fpbstore/.self-update.lua"
- write(tmp,source)
- local ok,result=pcall(function()return shell.run(tmp,ref)end)
- if fs.exists(tmp)then fs.delete(tmp)end
- assert(ok and result,"Store update failed")
+ -- A downloaded installer is already a Lua chunk. Execute it directly:
+ -- CraftOS-PC/iOS can run store scripts without a shell instance.
+ local ok,result=xpcall(function()return fn(ref)end,function(e)
+  return tostring(e)..(debug and debug.traceback and
+   "\\n"..debug.traceback() or "")
+ end)
+ assert(ok,"Store update failed: "..tostring(result))
  return true
 end
 return M
