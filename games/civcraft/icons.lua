@@ -133,6 +133,7 @@ local yieldGlyphs={
 }
 local yieldColors={food=18,wood=7,science=13,gold=8}
 function I.yield(r,kind,x,y,size)
+ x,y=math.floor(x),math.floor(y)
  if kind=='industry'then kind='wood'end
  local glyph=yieldGlyphs[kind];if not glyph then return end
  local scale=math.max(1,math.floor((size or 5)/5))
@@ -147,6 +148,7 @@ function I.yieldWidth(r,value)
  return value<=5 and value*6-1 or 7+r:textWidth(tostring(value))
 end
 function I.yieldValue(r,kind,value,x,y,width,background)
+ x,y=math.floor(x),math.floor(y)
  local numeric=tonumber(value)
  if numeric and numeric<=0 then return 0 end
  local repeated=numeric and numeric>=1 and numeric<=5 and numeric==math.floor(numeric)

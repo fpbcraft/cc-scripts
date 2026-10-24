@@ -77,7 +77,9 @@ fog of war and can be clicked to jump to a region. The default map shows terrain
 cities, units and borders. **RESOURCES**, **YIELDS**, and **TERRITORY** are
 independent overlay toggles; **TERRAIN** clears them. Yields zoom in to show
 consistent drumstick/cog/flask icons. Yields of one through five repeat the icon;
-larger yields use an icon and number. Zero yields are omitted. Terrain detail increases with zoom.
+larger yields use an icon and number. Zero yields are omitted. A city tile shows
+its base yields plus buildings and civilization bonuses; adding its worked tiles
+gives the total shown in the inspector. Terrain detail increases with zoom.
 
 **EMPIRE** opens a paged list of all owned units and cities; selecting an entry
 centers the map and opens its inspector. **NEXT IDLE UNIT** cycles through awake

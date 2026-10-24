@@ -22,6 +22,16 @@ local transparent=string.char(255)
 r:withClip({x=5,y=4,w=2,h=2},function()r:blit({string.char(8,8,8),transparent..string.char(13,13)},4,4)end)
 r:finish()
 assert(pixel(4,4)==2 and pixel(5,4)==8 and pixel(6,4)==8 and pixel(5,5)==13,'Cached sprites respect transparency and viewport clipping')
+local Icons=dofile('games/civcraft/icons.lua')
+local function strip(x,y)
+ r:begin();Icons.yieldValue(r,'industry',3,x,y,17,true)
+ return table.concat(r.buffer)
+end
+local aligned=strip(10,10)
+for _,fraction in ipairs({.1,.5,.9})do
+ assert(strip(10+fraction,10+fraction)==aligned,'Fractional yield placement must not thicken cog pixels')
+end
+assert(r.buffer[13]:byte(13)==0,'The central hole of a cog stays dark')
 local writes=0
 local t={getSize=function()return 20,10 end,setCursorPos=function(x,y)assert(x==1 and y>=1 and y<=10)end,
  blit=function(text,fg,bg)assert(#text==20 and #fg==20 and #bg==20);writes=writes+1 end}

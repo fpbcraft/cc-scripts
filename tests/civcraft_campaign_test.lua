@@ -12,6 +12,20 @@ local function campaign()
  S.migrate(state);W.reveal(state,H,S);return state,state.players[1],state.cities[1],state.units[1]
 end
 local state,p,city,u=campaign()
+for _,civ in ipairs(S.civs)do
+ local testPlayer={civ=civ.id}
+ local center=S.centerYields(testPlayer,city)
+ assert(center.food==2 and center.industry==1 and center.science==(civ.id=='scholar'and 3 or 1),'City center includes base science and civilization bonuses')
+end
+local originalCiv=p.civ;p.civ='scholar';city.buildings.library=true
+local center=S.centerYields(p,city);assert(center.science==5,'City tile includes library science')
+local sums={food=center.food,industry=center.industry,science=center.science}
+for _,tile in ipairs(S.workable(state,city))do if city.worked[tile.key]then
+ for key,value in pairs(tile.yield)do sums[key]=sums[key]+value end
+end end
+local totals=S.yields(p,city,state,H)
+for key,value in pairs(sums)do assert(totals[key]==value,'City map yield plus worked tiles equals inspector total')end
+p.civ=originalCiv;city.buildings.library=nil
 assert(S.projectCost('unit','warrior')>S.units.warrior.wood,'Projects require more industry than before')
 local t=S.treasury(p,state);assert(t.income==4 and t.upkeep==1 and t.net==3)
 S.production(state,H);assert(p.gold==23,'Treasury pays maintenance at the round boundary')

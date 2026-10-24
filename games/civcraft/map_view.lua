@@ -1,6 +1,7 @@
 -- World geometry, painting and pointer targets use the same pointy hex polygons.
 local Hex=dofile('/games/civcraft/hex.lua')
 local World=dofile('/games/civcraft/world.lua')
+local Systems=dofile('/games/civcraft/systems.lua')
 local Icons=dofile('/games/civcraft/icons.lua')
 local Terrain=dofile('/games/civcraft/terrain_view.lua')
 local V={}
@@ -71,6 +72,12 @@ function V.draw(ui,state,player,rect)
     if owner~=ui.playerID and visibility~='visible'then owner=nil end
     local deposit=not hidden and World.deposit(world,x,y)
     local yields=not hidden and World.yields(world,x,y)
+    local city=cityIndex[World.key(x,y)]
+    if city and (city.owner==ui.playerID or visibility=='visible')then
+     for _,owner in ipairs(state.players or {})do if owner.id==city.owner then
+      yields=Systems.centerYields(owner,city);break
+     end end
+    end
     local base=hidden and 15 or Terrain.color(land,visibility=='explored')
     if visibility=='visible'then
      if overlays.territory then base=owner and ownerColor(state,owner) or base end

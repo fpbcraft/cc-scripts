@@ -235,6 +235,23 @@ function M.projectCost(kind,id,player)
  if kind=='unit' and id=='settler'then return base+(record.productionStep or 0)*((player and player.settlersTrained)or 0)end
  return base
 end
+function M.centerYields(p,c)
+ local civ=p.civ;local buildings=c.buildings or {}
+ local food,industry,science=2,1,1
+ food=food+(buildings.farm and 2 or 0)+(buildings.market and 2 or 0)
+ industry=industry+(buildings.mine and 2 or 0)+
+  (buildings.workshop and 1 or 0)+(buildings.bazaar and 3 or 0)+
+  (buildings.bank and 3 or 0)
+ science=science+(buildings.library and 2 or 0)+
+  (buildings.academy and 3 or 0)+(buildings.university and 4 or 0)+
+  (buildings.observatory and 4 or 0)+(buildings.grandacademy and 6 or 0)
+ if civ=="verdant" and buildings.farm then food=food+1 end
+ if civ=="iron" and buildings.mine then industry=industry+1 end
+ if civ=="scholar" then science=science+2 end
+ if civ=="forge" and buildings.workshop then industry=industry+2 end
+ if civ=="merchant" and buildings.market then food=food+2 end
+ return {food=food,industry=industry,science=science}
+end
 function M.yields(p,c,state,hex,owned)
  local jobs=c.jobs
  local civ=p.civ
@@ -259,7 +276,8 @@ function M.yields(p,c,state,hex,owned)
  if state and state.world then
   -- Replace abstract F/W/S worker counters with owned worked hexes.
   M.ensureWorkers(state,c)
-  food,industry,science=2,1,1 -- city center is worked automatically
+  local center=M.centerYields(p,c)
+  food,industry,science=center.food,center.industry,center.science
   for _,tile in ipairs(M.workable(state,c))do
    if c.worked and c.worked[tile.key]then
     food=food+tile.yield.food
@@ -267,19 +285,6 @@ function M.yields(p,c,state,hex,owned)
     science=science+tile.yield.science
    end
   end
-  food=food+(c.buildings.farm and 2 or 0)+(c.buildings.market and 2 or 0)
-  industry=industry+(c.buildings.mine and 2 or 0)+
-   (c.buildings.workshop and 1 or 0)+(c.buildings.bazaar and 3 or 0)+
-   (c.buildings.bank and 3 or 0)
-  science=science+(c.buildings.library and 2 or 0)+
-   (c.buildings.academy and 3 or 0)+(c.buildings.university and 4 or 0)+
-   (c.buildings.observatory and 4 or 0)+(c.buildings.grandacademy and 6 or 0)
-  if civ=="verdant" and c.buildings.farm then food=food+1 end
-  if civ=="iron" and c.buildings.mine then industry=industry+1 end
-  if civ=="scholar" then science=science+2 end
-  if civ=="forge" and c.buildings.workshop then industry=industry+2 end
-  if civ=="merchant" and c.buildings.market then food=food+2 end
-
  end
  return {food=food,industry=industry,science=science}
 end
