@@ -190,6 +190,19 @@ function R:piece(x,y,size,tile,light)
    end
   end
  end
+ -- Redraw terminal labels above shaft outlets so +1 / -2 stays readable.
+ if tile.kind=="M"then
+  local active=light and light.correct
+  self:rect(x+2,y+2,size-4,size-4,active and 9 or 8)
+  self:rect(x+3,y+3,size-6,size-6,1)
+  self:font(x+2,y+math.floor(size/2)-2,
+   (tile.sign<0 and "-" or "+")..tostring(tile.speed),active and 9 or 15)
+ elseif tile.kind=="S"then
+  self:rect(x+3,y+3,size-6,size-6,6)
+  self:font(x+4,y+math.floor(size/2)-2,"S",0)
+ elseif tile.kind=="B"then
+  self:rect(cx+DX[tile.r+1]*4,cy+DY[tile.r+1]*4,2,2,9)
+ end
 end
 function R:paletteRow(y,kind,count,selected)
  local chosen=selected==kind
@@ -298,9 +311,11 @@ function R:text(g,result,unlocked,selected,message)
   local p={false,false,false,false}
   if tile then for d=0,3 do p[d+1]=E.hasPort(tile,d)end end
   local icon=tile and (tile.kind=="B" and "2" or tile.kind) or "."
+  local center=tile and tile.kind=="M" and
+   ((tile.sign<0 and "-" or "+")..tostring(tile.speed)) or (" "..icon)
   fillText(m,px,py,5,fg,bg,p[1] and "  ^  " or "     ")
   fillText(m,px,py+1,5,fg,bg,
-   (p[4] and "<" or " ").." "..icon.." "..(p[2] and ">" or " "))
+   (p[4] and "<" or " ").." "..center..(p[2] and ">" or " "))
   fillText(m,px,py+2,5,fg,bg,p[3] and "  v  " or "     ")
  end end
  self.toolWidth=math.floor(w/5)
