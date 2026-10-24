@@ -67,6 +67,8 @@ local events={
  {"monitor_touch","monitor_1",5,5},   -- new game slot 1
  {"monitor_touch","monitor_1",10,10}, -- vanilla right click places a shaft
  {"monitor_touch","monitor_1",10,10,2}, -- button-aware addon removes
+ {"monitor_left_click","monitor_1",9.5/70,9.5/40}, -- optional left-click: build
+ {"monitor_touch","monitor_1",10,10}, -- now right click removes
  {"char","q"},                        -- pause
  {"monitor_touch","monitor_1",6,24}, -- title menu
  {"char","q"},                        -- exit
@@ -97,5 +99,6 @@ for _,progress in ipairs(history)do
  if placed and #parts==0 then removed=true end
 end
 assert(placed and removed,"Regular touch places and explicit button 2 removes")
+assert(#history>=5,"Additional normalized left click and right-remove are persisted")
 assert(files["/cogworks/settings.dat"],"Settings should persist")
 print("COGWORKS: title, save, pause, exit, 0.5 scale and touch controls passed.")
