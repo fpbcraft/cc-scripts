@@ -67,6 +67,7 @@ check(files["/cogworks/levels.lua"]~=nil,"levels installed")
 check(files["/cogworks/app.lua"]~=nil and files["/cogworks/storage.lua"]~=nil,
  "Menus and storage installed")
 check(files["/cogworks/expansion.lua"]~=nil,"Machine expansion installed")
+check(files["/cogworks/tutorials.lua"]~=nil,"Ponder tutorials installed")
 check(files["/cogworks/saves/slot-1.dat"]=="SLOT ONE","slot unaffected")
 check(files["/cogworks/settings.dat"]=="CUSTOM SETTINGS","settings unaffected")
 check(files["/cogworks/save.dat"]=="PRESERVED PROGRESS","progress unchanged")
