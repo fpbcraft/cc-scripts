@@ -169,14 +169,28 @@ function R:piece(x,y,size,tile,light)
    self:rect(cx-1,cy-1,3,3,1)
    self:rect(cx,cy,1,1,15)
   elseif tile.kind=="V"then
-   self:rect(cx-3,cy-2,3,5,7)
-   self:rect(cx+1,cy-2,3,5,7)
-   self:rect(cx-2,cy-2,5,1,13)
-   self:rect(cx-2,cy+2,5,1,13)
+   -- The paired rollers turn with the transmission axis.
+   if tile.r%2==1 then
+    self:rect(cx-4,cy-3,8,2,7)
+    self:rect(cx-4,cy+2,8,2,7)
+    self:rect(cx-4,cy-2,2,5,13)
+    self:rect(cx+2,cy-2,2,5,13)
+   else
+    self:rect(cx-3,cy-4,2,8,7)
+    self:rect(cx+2,cy-4,2,8,7)
+    self:rect(cx-2,cy-4,5,2,13)
+    self:rect(cx-2,cy+2,5,2,13)
+   end
   elseif tile.kind=="D"then
-   for j=-3,2,2 do self:rect(cx-3,cy+j,6,1,11)end
-   self:rect(cx-3,cy-3,1,7,4)
-   self:rect(cx+2,cy-3,1,7,4)
+   if tile.r%2==1 then
+    for j=-3,3,2 do self:rect(cx+j,cy-3,1,7,11)end
+    self:rect(cx-3,cy-3,7,1,4)
+    self:rect(cx-3,cy+3,7,1,4)
+   else
+    for j=-3,3,2 do self:rect(cx-3,cy+j,7,1,11)end
+    self:rect(cx-3,cy-3,1,7,4)
+    self:rect(cx+3,cy-3,1,7,4)
+   end
   elseif tile.kind=="B"then
    self:rect(cx-3,cy-3,7,7,7)
    self:rect(cx-2,cy-2,5,5,1)
