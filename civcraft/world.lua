@@ -4,7 +4,7 @@ W.sizes={compact={12,8},standard={16,10},large={20,12}}
 local function key(x,y)return x..":"..y end
 W.key=key
 local function hash(seed,x,y,salt)
- local n=(seed*73+x*110351+y*143417+salt*7193)%2147483647
+ local n=(seed*1103515245+x*110351+y*143417+salt*7193)%2147483647
  n=(n*48271+17)%2147483647
  return n/2147483647
 end
