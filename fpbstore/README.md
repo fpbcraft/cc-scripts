@@ -47,3 +47,18 @@ The Store reads version declarations from the latest remote `fpbstore/catalog.lu
 - `/store.lua` — permanent shortcut.
 
 Existing /cogworks, /railbreak, /tidebound and /civcraft saves are preserved.
+
+## Optional Basalt 2.5 storefront
+
+FPB Store detects an installed Basalt 2.5 module and uses a touch-friendly
+Basalt catalog when available. Without Basalt it retains the built-in terminal
+UI. The official optional installation command is:
+
+```lua
+wget run https://basalt.madefor.cc/2.5/install.lua minified
+```
+
+Make the resulting `basalt.lua` importable via the CraftOS Lua module search path
+(for example `/basalt.lua`). To force the older store interface, run
+`/fpbstore/main.lua --classic`. Native pixel-graphics gameplay in the
+individual games remains independent of Basalt.
