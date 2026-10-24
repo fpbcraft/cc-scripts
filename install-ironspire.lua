@@ -30,7 +30,7 @@ remove(backup);fs.makeDir(backup)
 local moved,new={},{}
 local success,reason=pcall(function()
  for _,path in ipairs(files)do
-  local dst=fs.combine(root,path),prior=fs.combine(backup,path)
+  local dst,prior=fs.combine(root,path),fs.combine(backup,path)
   if fs.exists(dst)then fs.move(dst,prior);moved[#moved+1]=path end
   fs.move(fs.combine(stage,path),dst);new[#new+1]=path
  end
