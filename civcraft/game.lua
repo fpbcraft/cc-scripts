@@ -1,7 +1,7 @@
 -- CIVCRAFT v0.2.0: Railbreak-style 4X with local hotseat or rednet networking
 -- Host: /civcraft/game.lua host [--new]  Join: /civcraft/game.lua join [host ID]
 local args={...}
-local MODE=args[1] or 'host'
+local MODE=args[1] or 'local'
 local PROTOCOL='fpbcraft.civcraft.v1'
 local localMode=MODE=='local'
 local SAVE=localMode and '/civcraft/data/local-save.dat' or '/civcraft/data/save.dat'
