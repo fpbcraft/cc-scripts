@@ -12,9 +12,13 @@ if peripheral then
  if argv[1]then name=argv[1];monitor=peripheral.wrap(name)
  else monitor=peripheral.find('monitor');if monitor and peripheral.getName then name=peripheral.getName(monitor)end end
 end
-assert(monitor,'Connect a colour Advanced Monitor. Pass its peripheral name if necessary.')
+local computerMode=not monitor
+if computerMode then
+ monitor=dofile('/tidebound/terminal_view.lua').new(term.current(),80,54)
+end
 local app=UI.new(monitor)
 assert(app.r.w>=68 and app.r.h>=44,'Requires a 3x3 or larger Advanced Monitor (5x5 recommended).')
-local ok,err=xpcall(function()app:loop(name)end,function(e)return tostring(e)..'\n'..(debug and debug.traceback and debug.traceback()or'')end)
+local ok,err=xpcall(function()app:loop(name,computerMode and monitor or nil)end,function(e)return tostring(e)..'\n'..(debug and debug.traceback and debug.traceback()or'')end)
 if app.r.kind=='gfx' then pcall(monitor.setGraphicsMode,0)end
+if computerMode then monitor.close()end
 if not ok then error(err,0)end
