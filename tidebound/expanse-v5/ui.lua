@@ -431,6 +431,18 @@ function UI:contextGeometry(systems,ships,targets)
 end
 function UI:starMap()
  local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
+ -- Keep the galaxy in a calm, framed tactical plotting area, rather than
+ -- mixing clickable map markers with a full-screen animated starfield.
+ r:rect(2,10,r.w-4,r.h-22,1)
+ r:rect(2,10,r.w-4,1,3)
+ r:rect(2,r.h-13,r.w-4,1,3)
+ if r.w>=90 then
+  for x=12,r.w-7,16 do
+   for y=17,r.h-16,10 do
+    r:rect(x,y,1,1,3)
+   end
+  end
+ end
  local moving=self.shipID and Sim.findShip(g,self.shipID)
  local targets,systems,ships=self:mapTargets()
  self.mapMarkers={systems=systems,ships=ships}
