@@ -133,9 +133,18 @@ local function apply(id,req)
    if not template or not Systems.canRecruit(p,req.id) then
     return false,'Unit locked or too expensive'
    end
-   if unitAt(x,y)then return false,'City occupied' end
+   local spawnX,spawnY=x,y
+   if template.naval then
+    spawnX=nil
+    for _,hex in ipairs(Hex.neighbours(x,y,state))do
+     if terrain(hex.x,hex.y)=='water' and not unitAt(hex.x,hex.y)then
+      spawnX,spawnY=hex.x,hex.y;break
+     end
+    end
+    if not spawnX then return false,'Requires an open coastal hex' end
+   elseif unitAt(x,y)then return false,'City occupied' end
    p.food=p.food-template.food;p.wood=p.wood-template.wood
-   addUnit(id,x,y,req.id);ok=true
+   addUnit(id,spawnX,spawnY,req.id);ok=true
   end
   if ok then save()end
   return ok,why
@@ -164,34 +173,46 @@ local function apply(id,req)
   local sx,sy=tonumber(req.sx),tonumber(req.sy)
   local moving=sx and sy and unitAt(sx,sy)
   if not moving or moving.owner~=id or (moving.movesLeft or (moving.moved and 0 or 1))<=0 then return false,'Unit cannot move' end
-  if Hex.distance(sx,sy,x,y)~=1 then return false,'Move only to an adjacent hex' end
-  if terrain(x,y)=='~' or terrain(x,y)=='^' then return false,'Impassable terrain' end
-  if u then
-   if u.owner==id then return false,'Occupied by ally' end
-   if (Systems.units[moving.kind] or {}).strength<=0 then return false,'Civilian units cannot fight' end
-   local offense=(Systems.units[moving.kind] or Systems.units.warrior).strength
-   local defense=(Systems.units[u.kind] or Systems.units.warrior).strength
-   if c and c.owner==u.owner and c.buildings and c.buildings.walls then
-    defense=defense+1
+  local legal
+  for _,dest in ipairs(Hex.reachable(state,moving,id,Systems))do
+   if dest.x==x and dest.y==y then legal=dest;break end
+  end
+  if not legal then return false,'Destination out of range or blocked' end
+  local stats=Systems.units[moving.kind] or Systems.units.warrior
+  if u and u.owner~=id then
+   local enemy=Systems.units[u.kind] or Systems.units.warrior
+   local offense=stats.strength or 0
+   local defense=enemy.defense or enemy.strength or 1
+   if u.kind=='horseman' and moving.kind=='spearman' then offense=offense+2 end
+   if terrain(x,y)=='hills' then defense=defense+1 end
+   if p.civ=='highland' and terrain(sx,sy)=='hills' then offense=offense+1 end
+   if c and c.owner==u.owner and c.buildings then
+    if c.buildings.walls then defense=defense+1 end
+    if c.buildings.fortress then defense=defense+2 end
+   end
+   for _,defender in ipairs(state.players)do
+    if defender.id==u.owner and defender.civ=='sentinel' and c then defense=defense+1 end
    end
    if offense<defense then
     for i,v in ipairs(state.units)do
      if v==moving then table.remove(state.units,i);break end
     end
-    log(p.name..' lost a battle')
-    save();return true
+    log(p.name..' lost an attack');save();return true
    end
    for i,v in ipairs(state.units)do if v==u then table.remove(state.units,i);break end end
-   log(p.name..' defeated an enemy unit')
+   log(p.name..' won a battle')
   end
-  if c and c.owner~=id then
-   if (Systems.units[moving.kind] or {}).strength<=0 then return false,'Military unit needed' end
+  if c and c.owner~=id and not legal.ranged then
+   if (stats.strength or 0)<=0 then return false,'Military unit needed' end
    c.owner=id;log(p.name..' captured a city!')
   end
-  moving.x=x;moving.y=y;moving.movesLeft=(moving.movesLeft or 1)-1;moving.moved=moving.movesLeft<=0
+  if not legal.ranged then moving.x=x;moving.y=y end
+  moving.movesLeft=legal.ranged and 0 or math.max(0,moving.movesLeft-legal.cost)
+  moving.moved=moving.movesLeft<=0
  elseif req.action=='found' then
   if not u or u.owner~=id or u.kind~='settler' then return false,'Choose a settler' end
   if c then return false,'Tile has a city' end
+  if not Hex.passable(x,y,state,u,Systems)then return false,'Unsettleable terrain' end
   for _,v in ipairs(state.cities)do if Hex.distance(v.x,v.y,x,y)<3 then return false,'Cities need 3 hex spacing' end end
   for i,v in ipairs(state.units)do if v==u then table.remove(state.units,i);break end end
   table.insert(state.cities,{id=state.nextId,x=x,y=y,owner=id,level=1,population=2,foodStore=0,jobs={food=1,wood=1,science=0},buildings={}})
