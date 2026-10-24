@@ -759,7 +759,7 @@ function UI:loop(name,computer)
   elseif computer and ev=='mouse_click' then
    local x,y=b,c
    if computer.mouse then x,y=computer.mouse(b,c)end
-   if x then self:monitorTouch(x,y);self:draw();computer.present()end
+   if x then self:monitorTouch(x,y);self:draw();if computer and computer.present then computer.present()end end
   elseif computer and computer.pan and ev=='mouse_scroll' then computer.pan(0,a*4)
   elseif computer and ev=='term_resize' then self.r:resize();self:draw();if computer.present then computer.present()end
   elseif computer and computer.pan and ev=='key' and keys and
