@@ -1,6 +1,10 @@
 -- RAILBREAK: KINETIC FRONTIER - Train-first Edition v2.0
 -- Turn-based, 1-4 players, touch-operated monitor (3x3 to 5x5).
 local argv={...}
+-- CC:Tweaked resolves relative requires against the running program's directory.
+-- This entry point lives in /railbreak, but its modules are namespaced from /.
+-- Include the filesystem root before loading railbreak.train.* modules.
+package.path='/?.lua;/?/init.lua;'..package.path
 local UI=require('railbreak.train.ui')
 local State=require('railbreak.train.state')
 local Rules=require('railbreak.train.rules')

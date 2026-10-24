@@ -38,6 +38,7 @@ With CC: Graphics, `monitor_touch` events are **zero-based pixel coordinates**; 
 Run from the repository root with Lua 5.3+:
 
 ```sh
+lua railbreak/tests/boot.lua        # CraftOS-style boot/module lookup regression
 lua railbreak/tests/train.lua       # train engine, campaign and responsive UI
 lua railbreak/tests/run.lua         # preserved factory-first edition regressions
 lua railbreak/tests/installer.lua   # rollback and non-destructive update behaviour
