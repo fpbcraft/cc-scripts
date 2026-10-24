@@ -103,14 +103,22 @@ assert(tapHex(2,2),"Select owned city")
 ui:draw(state,11,{localMode=true})
 local actions={}
 for _,btn in ipairs(ui.r.buttons)do actions[btn.label]=true end
-assert((actions.UNITS or actions["BUILD UNITS"]) and
- (actions.BUILDS or actions.BUILDINGS) and actions["TECH TREE"],
- "Fixed city production and technology side controls")
+assert(actions.JOBS and actions.TILES and actions.PROD and actions["TECH TREE"],
+ "Staffing, tile management and production controls stay reachable")
 assert(not actions["MOVE UNIT"],"City should not expose unit movement")
 assert(ui.mapViewport and ui.mapViewport.w>0,"Central map viewport")
+touchLabel("+")
+assert(calls[#calls].action=="assign" and calls[#calls].data.to=="food",
+ "City workers can be reallocated directly from the inspector")
+
 local oldPan=ui.panX
 ui:pan(45,0)
 assert(ui.panX>=oldPan,"Pan control clamps within world")
+touchLabel("TILES")
+assert(ui.workCity and ui.workCity.x==2,"Worker assignment uses map tiles")
+ui:draw(state,11,{localMode=true})
+touchLabel("DONE WORK")
+assert(not ui.workCity,"Exit worker mode")
 touchLabel("TECH TREE")
 ui:draw(state,11,{localMode=true})
 local techNode=false
