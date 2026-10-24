@@ -287,6 +287,7 @@ end
 function R:helpGraphics()
  local m=self.m
  if m.setFrozen then pcall(m.setFrozen,true)end
+ m.drawPixels(0,0,0,self.pw,self.ph)
  self:rect(0,0,128,88,0)
  self:rect(0,0,128,11,1)
  self:font(5,3,"PARTS AND RULES",6)
