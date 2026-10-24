@@ -398,7 +398,7 @@ function UI:draw(state,playerID,opts)
   Systems.ensureWorkers(state,selectedCity)
   local used=0;for _ in pairs(selectedCity.worked or {})do used=used+1 end
   local cy=top+53
-  r:text(sidebarX+3,cy,"CITIZENS "..used.."/"..selectedCity.population,7,1,sw-6)
+  r:text(sidebarX+3,cy,"CITIZENS "..used.."/"..(selectedCity.population or 2),7,1,sw-6)
   local activeWork=self.workCity and
     self.workCity.x==selectedCity.x and self.workCity.y==selectedCity.y
   r:button(sidebarX+3,cy+10,sw-6,15,
