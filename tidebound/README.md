@@ -93,3 +93,6 @@ install-tidebound.lua       validated installer with code rollback, preserves sa
 ```
 
 Run offline tests from repository root with `texlua tidebound/tests/v5.lua ./tidebound/expanse-v5`. The simulator is independent of the display; tests cover seeded maps, resource invariants, AI progression, ship orders, narrative decisions, keyboard, direct ship and planet hit targets, contextual action geometry, and touch mapping at three monitor sizes.
+## Play without an external monitor
+
+The game also runs on the computer's **built-in terminal**. Launch normally without connecting a monitor; the game automatically switches to its text-mode computer viewport. The built-in screen is smaller than the game canvas, so **arrow keys pan**, the **mouse wheel scrolls vertically**, and **left-click selects** controls or board cells. A footer shows the visible viewport position. Attaching an Advanced Monitor still uses the usual full-screen UI and touch controls.
