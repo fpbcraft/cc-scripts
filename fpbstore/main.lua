@@ -35,7 +35,7 @@ end
 -- Basalt supplies a responsive terminal shell when installed. It never
 -- replaces native pixel gameplay and remains optional for plain CraftOS.
 if args[1]~="--classic" then
- local available,modern=pcall(require,"fpbstore.basalt_ui")
+ local available,modern=pcall(module,"fpbstore.basalt_ui")
  if available and modern and modern.run then
   local keepRunning=true
   while keepRunning do
@@ -69,9 +69,11 @@ if args[1]~="--classic" then
      os.pullEvent("key")
     end
     if success and action=="store-update"then
-     package.loaded["fpbstore.catalog"]=nil
-     package.loaded["fpbstore.manager"]=nil
-     package.loaded["fpbstore.basalt_ui"]=nil
+     if type(package)=="table" and type(package.loaded)=="table" then
+      for _,name in ipairs({"fpbstore.catalog","fpbstore.manager","fpbstore.basalt_ui"})do
+       package.loaded[name]=nil
+      end
+     end
      restoreScreen()
      local updated,err=loadfile("/fpbstore/main.lua")
      assert(updated,err or "Updated Store missing")
