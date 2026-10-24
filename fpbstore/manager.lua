@@ -1,5 +1,10 @@
 -- FPB Store package management. Operations work outside the UI for testing.
-local C=require("fpbstore.catalog")
+local C
+if type(package)=="table" and type(require)=="function"then
+ C=require("fpbstore.catalog")
+else
+ C=dofile("/fpbstore/catalog.lua")
+end
 local M={catalog=C,REF="main",BASE="https://raw.githubusercontent.com/fpbcraft/cc-scripts/"}
 local function ensure(path)
  if not fs.exists(path)then fs.makeDir(path)end
