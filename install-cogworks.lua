@@ -12,7 +12,7 @@ assert(ref:match("^[%w%._/-]+$") and not ref:find("..",1,true),"Invalid ref")
 assert(http and http.get,"Enable HTTP in CC:Tweaked to install COGWORKS")
 local root="/cogworks";local stage=root.."/.install-next";local backup=root.."/.install-backup"
 local base="https://raw.githubusercontent.com/fpbcraft/cc-scripts/"..ref.."/cogworks/"
-local files={"main.lua","display.lua","terminal_view.lua","app.lua","storage.lua","engine.lua","levels.lua","expansion.lua","tutorials.lua","render.lua","README.md"}
+local files={"main.lua","display.lua","terminal_view.lua","app.lua","storage.lua","engine.lua","levels.lua","expansion.lua","tutorials.lua","briefing.lua","render.lua","README.md"}
 local function remove(path)if fs.exists(path)then fs.delete(path)end end
 local function mkdir(path)if not fs.exists(path)then fs.makeDir(path)end end
 local function write(path,data)
