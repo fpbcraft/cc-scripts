@@ -22,8 +22,15 @@ textutils={serialize=function(t)return tostring(t.ref)end}
 http={}
 function http.get(url)
  downloads[#downloads+1]=url
+ local appId=url:match("/install%-(%w+)%.lua")
+ local paths={cogworks="/cogworks/main.lua",railbreak="/railbreak/main.lua",
+  tidebound="/tidebound/tidebound.lua"}
+ local path=paths[appId]
+ local body=path and ("local file=fs.open("..string.format("%q",path)..
+  ",'w');file.write('-- installed v1.0.0');file.close()") or
+  "print('mock installer ok')"
  return {getResponseCode=function()return 200 end,
-  readAll=function()return "print('mock installer ok')\n"end,close=function()end}
+  readAll=function()return body end,close=function()end}
 end
 local runCount=0
 shell={}
@@ -63,7 +70,7 @@ for i,id in ipairs(old)do
  assert(files[unknown]=="user-created","Unknown user file survives")
  assert(not M.status(app).managed,"Metadata removed")
 end
-assert(runCount==6,"Three installs and three launches")
+assert(runCount==3,"Three games launched after direct installer execution")
 local ok=pcall(function()M.install({id="unknown"})end)
 assert(not ok,"Arbitrary catalog entries rejected")
 -- Remote versions can identify both game and store updates without
