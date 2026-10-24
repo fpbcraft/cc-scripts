@@ -35,6 +35,21 @@ function W.generate(seed,size,count)
  end
  return world
 end
+-- Older CIVCRAFT saves used a deterministic 12x8 map without a world field.
+-- Recreate exactly those tiles rather than transforming saved cities into ocean.
+function W.migrate(state)
+ if state.world or state.phase~="game"then return state end
+ local world={width=12,height=8,seed=0,size="legacy",tiles={},starts={}}
+ for y=1,8 do for x=1,12 do
+  local v=(x*37+y*61+x*y*13)%19
+  local t=v<=1 and "water" or v<=3 and "mountain" or
+   v<9 and "forest" or "plains"
+  world.tiles[key(x,y)]=t
+ end end
+ state.world=world
+ state.mapSize="compact";state.mapSeed=0
+ return state
+end
 function W.terrain(world,x,y)
  if not world or x<1 or y<1 or x>world.width or y>world.height then return nil end
  return world.tiles[key(x,y)] or "plains"
