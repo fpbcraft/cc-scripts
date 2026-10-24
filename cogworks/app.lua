@@ -1,6 +1,7 @@
 -- COGWORKS interface controller. Game rules stay in the pure Lua engine.
 local E=require("cogworks.engine")
 local S=require("cogworks.storage")
+local T=require("cogworks.tutorials")
 local A={};A.__index=A
 local function countAward(awards)
  local n=0
@@ -10,7 +11,7 @@ end
 function A.new()
  local self=setmetatable({scene="title",settings=S.loadSettings(),store=S,
   game=nil,result=nil,slot=nil,progress=nil,selected="I",message="",
-  returnScene="title",pending=nil,inspected=nil},A)
+  returnScene="title",pending=nil,inspected=nil,tutorial=nil},A)
  return self
 end
 function A:slots()
@@ -28,6 +29,22 @@ function A:slots()
  self.cachedSlots=slots
  return slots
 end
+function A:startTutorial(steps,returnScene)
+ if #steps==0 then return false end
+ self.tutorial={steps=steps,index=1,returnScene=returnScene or "game"}
+ self.scene="tutorial"
+ return true
+end
+function A:finishTutorial()
+ if not self.tutorial then return end
+ self.progress.tutorials=self.progress.tutorials or {}
+ for _,step in ipairs(self.tutorial.steps)do
+  self.progress.tutorials[step.key]=true
+ end
+ self.scene=self.tutorial.returnScene
+ self.tutorial=nil
+ self:save()
+end
 function A:openLevel(index)
  assert(self.progress and index>=1 and index<=self.progress.unlocked)
  self.game=E.new(index)
@@ -41,6 +58,7 @@ function A:openLevel(index)
  self.inspected=nil
  self.message=""
  self.scene="game"
+ self:startTutorial(T.unseen(index,self.progress.tutorials),"game")
 end
 function A:enter(slot,newGame)
  assert(slot>=1 and slot<=3)
@@ -94,7 +112,8 @@ function A:model()
  return {scene=self.scene,game=self.game,result=self.result,progress=self.progress,
   settings=self.settings,slot=self.slot,selected=self.selected,message=self.message,
   slots=self:slots(),returnScene=self.returnScene,pending=self.pending,
-  inspected=self.inspected,hasLeftInput=self.hasLeftInput or false}
+  inspected=self.inspected,tutorial=self.tutorial,
+  hasLeftInput=self.hasLeftInput or false}
 end
 -- Return 'exit' only in direct response to player choosing Exit.
 function A:act(action,x,y)
@@ -119,7 +138,10 @@ function A:act(action,x,y)
   if action=="back"then self.scene="title"
   elseif action=="slot"then self:enter(x,false)end
  elseif scene=="help"then
-  if action=="back"then self.scene=self.returnScene end
+  if action=="back"then self.scene=self.returnScene
+  elseif action=="replayTutorial"then
+   self:startTutorial(T.forLevel(self.game.number),self.returnScene)
+  end
  elseif scene=="settings"then
   if action=="back"then self.scene=self.returnScene
   elseif action=="toggleAnimations"then
@@ -129,6 +151,14 @@ function A:act(action,x,y)
    self.settings.showPorts=not self.settings.showPorts
    self.store.saveSettings(self.settings)
   end
+ elseif scene=="tutorial"then
+  if action=="tutorialNext"then
+   if self.tutorial.index<#self.tutorial.steps then
+    self.tutorial.index=self.tutorial.index+1
+   else self:finishTutorial()end
+  elseif action=="tutorialSkip" or action=="back"then
+   self:finishTutorial()
+  end
  elseif scene=="game"then
   local changed=false
   self.message=""
@@ -136,10 +166,6 @@ function A:act(action,x,y)
    local tile=E.get(self.game,x,y)
    if action=="remove" or self.selected=="erase"then
     changed=E.remove(self.game,x,y)
-   elseif self.selected=="switch"then
-    changed=E.toggle(self.game,x,y)
-    if not changed then self.message="SELECT A PLACED CLUTCH" end
-    if not changed then self.message="FIXED PART CANNOT BE REMOVED"end
    elseif tile then
     changed=E.rotate(self.game,x,y)
     if tile.kind=="M" then
@@ -155,7 +181,7 @@ function A:act(action,x,y)
     if not changed then self.message="NO STOCK AVAILABLE"end
    end
   elseif action=="tool"then
-   if x=="erase" or x=="switch" or E.parts[x]then self.selected=x end
+   if x=="erase" or E.parts[x]then self.selected=x end
   elseif action=="next" or action=="prev"then
    local nextIndex=self.game.number+(action=="next" and 1 or -1)
    if nextIndex>=1 and nextIndex<=self.progress.unlocked then
