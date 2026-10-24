@@ -75,6 +75,7 @@ dofile=function(path)
      callback("reveal")
     elseif stage==8 then
      assert(s.round==2 and not opt.handoff)
+     callback("exit")
     end
    end,
    resize=function()end,tap=function()end,close=function()end
@@ -85,7 +86,7 @@ local originalPull=os.pullEvent
 local count=0
 os.pullEvent=function()
  count=count+1
- if count>=8 then return "key",keys.q end
+ if count>=8 then return "timer",0 end
  return "term_resize"
 end
 local ok,err=pcall(function()assert(loadfile("civcraft/game.lua"))("local","--new")end)
