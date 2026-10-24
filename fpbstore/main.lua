@@ -1,0 +1,183 @@
+-- FPB Store: terminal-first game manager, responsive to computer and monitor size.
+-- Launch: /store.lua or /fpbstore/main.lua
+package.path="/?.lua;/?/init.lua;"..package.path
+local Manager=require("fpbstore.manager")
+local catalog=Manager.catalog
+local args={...}
+if args[1]=="--test-api"then return Manager end
+local screen=term.current()
+local selected=1
+local confirmation=nil
+local banner="SELECT AN APP"
+local busy=false
+local buttons={}
+local function centered(s,w)
+ s=tostring(s)
+ if #s>=w then return s:sub(1,w)end
+ return (" "):rep(math.floor((w-#s)/2))..s
+end
+local function put(x,y,s,fg,bg,max)
+ local w,h=screen.getSize()
+ if y<1 or y>h or x>w or x<1 then return end
+ s=tostring(s)
+ local cap=math.min(max or #s,w-x+1)
+ if cap<=0 then return end
+ screen.setCursorPos(x,y)
+ screen.setTextColor(fg or colors.white)
+ screen.setBackgroundColor(bg or colors.black)
+ screen.write(s:sub(1,cap))
+end
+local function button(x,y,w,label,action,arg,enabled)
+ local width,height=screen.getSize()
+ if y<1 or y>height-1 then return end
+ w=math.min(w,width-x+1)
+ if w<3 then return end
+ local bg=enabled==false and colors.gray or colors.blue
+ put(x,y,centered(label,w),colors.white,bg,w)
+ if enabled~=false then
+  buttons[#buttons+1]={x=x,y=y,w=w,action=action,arg=arg}
+ end
+end
+local function draw()
+ buttons={}
+ local w,h=screen.getSize()
+ screen.setBackgroundColor(colors.black)
+ screen.clear()
+ local compact=w<52 or h<23
+ local first=math.min(w,math.max(1,w))
+ put(1,1,centered(" FPB STORE  /  CC APPS ",first),colors.orange,colors.gray,first)
+ put(2,2,"INSTALL  |  UPDATE  |  PLAY  |  REMOVE",colors.lightBlue,nil,w-2)
+ if confirmation then
+  put(2,4,"CONFIRM: "..confirmation.name,colors.yellow,nil,w-2)
+  put(2,6,confirmation.description,colors.white,nil,w-2)
+  if confirmation.kind=="remove" then
+   put(2,8,"Save data will be preserved.",colors.lime,nil,w-2)
+  end
+  button(2,math.min(h-4,10),math.min(18,w-4),"CANCEL","cancel")
+  button(math.max(2,math.min(w-19,22)),math.min(h-4,10),
+   math.min(18,w-4),"CONFIRM","confirm")
+ else
+  local listTop=compact and 4 or 5
+  for i,app in ipairs(catalog.apps)do
+   local y=listTop+(i-1)*(compact and 2 or 3)
+   local status=Manager.status(app)
+   local active=selected==i
+   local name=app.name.."  "..(status.installed and "[INSTALLED]" or "[NOT INSTALLED]")
+   put(2,y,(active and "> " or "  ")..name,
+    active and colors.yellow or colors.white,nil,w-3)
+   if not compact then
+    put(5,y+1,app.subtitle.." - "..app.genre,
+     colors.lightGray,nil,w-6)
+   end
+   buttons[#buttons+1]={x=1,y=y,w=w,action="select",arg=i}
+  end
+  local app=catalog.apps[selected]
+  local status=Manager.status(app)
+  local detailY=listTop+#catalog.apps*(compact and 2 or 3)+1
+  if detailY<h-7 then
+   put(2,detailY,app.description,colors.lightBlue,nil,w-3)
+  end
+  local row=h-5
+  if w>=58 then
+   button(2,row,17,status.installed and "UPDATE" or "INSTALL","install")
+   button(20,row,13,"PLAY","play",nil,status.installed)
+   button(34,row,16,"REMOVE","remove",nil,status.installed)
+   button(51,row,math.min(14,w-51),"STORE UPDATE","store-update")
+  else
+   local cw=math.floor((w-4)/3)
+   button(2,row,cw,status.installed and "UPDATE" or "INSTALL","install")
+   button(3+cw,row,cw,"PLAY","play",nil,status.installed)
+   button(4+cw*2,row,cw,"REMOVE","remove",nil,status.installed)
+   button(2,row+2,math.min(22,w-3),"UPDATE STORE","store-update")
+  end
+ end
+ put(1,h-1,(" "..banner..(" "):rep(w)):sub(1,w),
+  colors.white,colors.gray,w)
+ put(1,h,(" UP/DOWN SELECT   ENTER INSTALL/UPDATE   Q QUIT   R REFRESH"..
+   (" "):rep(w)):sub(1,w),colors.lightGray,colors.black,w)
+end
+local function perform(action,arg)
+ if busy then return end
+ if action=="select"then selected=arg;banner="SELECT AN ACTION";return end
+ if action=="cancel"then confirmation=nil;banner="CANCELLED";return end
+ if action=="remove"then
+  local app=catalog.apps[selected]
+  confirmation={kind="remove",app=app,name=app.name,
+   description="Remove app code from this computer?"}
+  return
+ end
+ if action=="confirm"then
+  local op=confirmation
+  confirmation=nil
+  if not op then return end
+  action=op.kind
+  arg=op.app
+ end
+ local app=arg or catalog.apps[selected]
+ if action=="play" then
+  if not Manager.installed(app) then banner="INSTALL THIS APP FIRST";return end
+  screen.setBackgroundColor(colors.black);screen.clear()
+  local ok,result=pcall(Manager.launch,app)
+  if not ok then banner="GAME ERROR: "..tostring(result)
+  else banner="RETURNED FROM "..app.name end
+  screen=term.current()
+  return
+ end
+ if action=="install" or action=="remove" or action=="store-update" then
+  busy=true
+  screen.setBackgroundColor(colors.black);screen.clear()
+  screen.setCursorPos(1,1)
+  print("FPB STORE / "..action:upper())
+  local ok,result=pcall(function()
+   if action=="install"then return Manager.install(app)
+   elseif action=="remove"then return Manager.remove(app,false)
+   else return Manager.updateStore()end
+  end)
+  busy=false
+  if ok then banner=action=="remove" and "APP REMOVED - SAVES PRESERVED"
+    or (action=="store-update" and "STORE UPDATED" or "INSTALL/UPDATE COMPLETE")
+  else banner="ERROR: "..tostring(result)end
+  screen=term.current()
+ end
+end
+local function run()
+ while true do
+  draw()
+  local ev,a,b,c=os.pullEvent()
+  if ev=="term_resize"then
+   -- Layout is recomputed from real available columns and rows.
+  elseif ev=="mouse_click"then
+   for _,hit in ipairs(buttons)do
+    if b>=hit.x and b<hit.x+hit.w and c==hit.y then
+     perform(hit.action,hit.arg)
+     break
+    end
+   end
+  elseif ev=="key"then
+   if a==keys.q or a==keys.escape then
+    if confirmation then confirmation=nil else break end
+   elseif a==keys.up then
+    selected=math.max(1,selected-1)
+   elseif a==keys.down then
+    selected=math.min(#catalog.apps,selected+1)
+   elseif a==keys.enter then
+    if confirmation then perform("confirm")else perform("install")end
+   elseif a==keys.backspace and confirmation then
+    confirmation=nil
+   elseif a==keys.r then
+    banner="CATALOG REFRESHED"
+   elseif a==keys.space and not confirmation then
+    perform("play")
+   end
+  elseif ev=="char"then
+   local ch=tostring(a):lower()
+   if ch=="q"then if confirmation then confirmation=nil else break end end
+  end
+ end
+end
+local ok,err=xpcall(run,function(e)
+ return tostring(e)..(debug and debug.traceback and "\n"..debug.traceback()or "")
+end)
+screen.setBackgroundColor(colors.black);screen.setTextColor(colors.white)
+screen.clear();screen.setCursorPos(1,1)
+if not ok then error(err,0)end
