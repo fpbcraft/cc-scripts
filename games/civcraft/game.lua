@@ -3,7 +3,7 @@ local bootstrap=loadfile("/games/civcraft/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot~="/games/civcraft"then
  return bootstrap().run("/games/civcraft","game.lua",_ENV,...)
 end
--- CIVCRAFT v0.6.0: Railbreak-style 4X with local hotseat or rednet networking
+-- CIVCRAFT v0.7.0: Railbreak-style 4X with local hotseat or rednet networking
 -- Host: /games/civcraft/game.lua host [--new]  Join: /games/civcraft/game.lua join [host ID]
 local args={...}
 local MODE=args[1] or 'local'
@@ -23,26 +23,36 @@ local function modem()
  return false
 end
 local function screen()
- local best,bestArea=nil,0
+ local best,bestArea,bestSide=nil,0,nil
  for _,side in ipairs(peripheral.getNames()) do
   if peripheral.getType(side)=='monitor' then
    local m=peripheral.wrap(side);m.setTextScale(0.5)
    local w,h=m.getSize()
-   if w*h>bestArea then best,bestArea=m,w*h end
+   if w*h>bestArea then best,bestArea,bestSide=m,w*h,side end
   end
  end
- return best or term.current()
+ return best or term.current(),bestSide
 end
-local display=screen()
+local display,displaySide=screen()
+-- CraftOS can provide drag/wheel events for monitor windows; vanilla monitors use edge taps.
+local previousMonitorMouse
+if displaySide and config and config.get and config.set then
+ local ok,value=pcall(config.get,'monitorsUseMouseEvents')
+ if ok then previousMonitorMouse=value;pcall(config.set,'monitorsUseMouseEvents',true)end
+end
 local Hex=dofile('/games/civcraft/hex.lua')
 local Systems=dofile('/games/civcraft/systems.lua')
 local World=dofile('/games/civcraft/world.lua')
 local Saves=dofile('/games/civcraft/saves.lua')
+local Reports=dofile('/games/civcraft/reports.lua')
+local Audio=dofile('/games/civcraft/audio.lua')
+local Combat=dofile('/games/civcraft/combat.lua')
+local audio=Audio.new()
 local W,H=Hex.width,Hex.height
 local state
 local function terrain(x,y)return Hex.terrain(x,y,state)end
 local function newGame()
- return {version=4,phase='lobby',round=1,turn=1,players={},cities={},units={},nextId=1,logs={'Welcome to CIVCRAFT'},winner=nil,mapSize='standard',mapType='continents',mapSeed=12345,name='NEW EMPIRE'}
+ return {version=5,phase='lobby',round=1,turn=1,players={},cities={},units={},nextId=1,logs={'Welcome to CIVCRAFT'},winner=nil,mapSize='standard',mapType='continents',mapSeed=12345,name='NEW EMPIRE'}
 end
 state=newGame()
 local hasHumanSave=false
@@ -102,6 +112,7 @@ local function winner()
 end
 local function nextTurn()
  state.round=state.round+1
+ Combat.round(state,Systems)
  Systems.production(state,Hex)
  for _,p in ipairs(state.players)do p.ready=false end
  for _,u in ipairs(state.units)do
@@ -110,6 +121,11 @@ local function nextTurn()
   u.movesLeft=base.move+(owner and owner.civ=='nomad' and u.kind=='scout' and 1 or 0)+
    (owner and owner.civ=='mariner' and base.naval and 1 or 0)
   u.moved=false
+ end
+ World.reveal(state,Hex,Systems)
+ for _,unit in ipairs(state.units)do if unit.autoExplore and not unit.standby then Systems.autoExplore(state,unit,Hex)end end
+ for _,p in ipairs(state.players)do
+  p.turnReport=Reports.build(state,p,p.turnBaseline);p.reportRound=state.round
  end
  winner();log('Round '..state.round);save()
 end
@@ -135,7 +151,7 @@ local function apply(id,req)
    if req.action=='workTile' then
     ok,why=Systems.workTile(state,c,tonumber(req.x),tonumber(req.y))
    elseif req.action=='assign' then
-    ok,why=Systems.assign(c,req.from,req.to)
+    ok,why=Systems.assign(c,req.from,req.to,state)
    elseif req.action=='queue' then
     ok,why=Systems.queue(p,c,req.kind,req.id,state,Hex)
    elseif req.action=='build' then
@@ -148,6 +164,7 @@ local function apply(id,req)
   return ok,why
  end
  if req.action=='end' then
+  p.turnBaseline=Reports.capture(state,p)
   p.ready=true;log(p.name..' is ready')
   if localMode then
    for _,q in ipairs(state.players)do
@@ -163,54 +180,51 @@ local function apply(id,req)
  local c,u=cityAt(x,y),unitAt(x,y)
  if req.action=='research' or req.action=='warrior' or req.action=='settler' then
   return false,'Use research and city production projects'
+ elseif req.action=='standby' then
+  if not u or u.owner~=id then return false,'Select an owned unit' end
+  u.standby=req.value==true;if not u.standby then u.healing=false end;if u.standby then u.autoExplore=false end;save();return true
+ elseif req.action=='autoExplore'then
+  if not u or u.owner~=id then return false,'Select an owned scout'end
+  if req.value==false then u.autoExplore=false;save();return true end
+  local ok,why=Systems.autoExplore(state,u,Hex);if ok then save()end;return ok,why
  elseif req.action=='move' then
   local sx,sy=tonumber(req.sx),tonumber(req.sy)
   local moving=sx and sy and unitAt(sx,sy)
-  if not moving or moving.owner~=id or (moving.movesLeft or (moving.moved and 0 or 1))<=0 then return false,'Unit cannot move' end
+  if not moving or moving.owner~=id or moving.standby or (moving.movesLeft or (moving.moved and 0 or 1))<=0 then return false,'Unit cannot move' end
   local legal
   for _,dest in ipairs(Hex.reachable(state,moving,id,Systems))do
    if dest.x==x and dest.y==y then legal=dest;break end
   end
   if not legal then return false,'Destination out of range or blocked' end
-  local stats=Systems.units[moving.kind] or Systems.units.warrior
-  if u and u.owner~=id then
-   local enemy=Systems.units[u.kind] or Systems.units.warrior
-   local offense=stats.strength or 0
-   local defense=enemy.defense or enemy.strength or 1
-   if u.kind=='horseman' and moving.kind=='spearman' then offense=offense+2 end
-   if terrain(x,y)=='hills' then defense=defense+1 end
-   if p.civ=='highland' and terrain(sx,sy)=='hills' then offense=offense+1 end
-   if c and c.owner==u.owner and c.buildings then
-    if c.buildings.walls then defense=defense+1 end
-    if c.buildings.fortress then defense=defense+2 end
-   end
-   for _,defender in ipairs(state.players)do
-    if defender.id==u.owner and defender.civ=='sentinel' and c then defense=defense+1 end
-   end
-   if offense<defense then
-    for i,v in ipairs(state.units)do
-     if v==moving then table.remove(state.units,i);break end
-    end
-    log(p.name..' lost an attack');save();return true
-   end
-   for i,v in ipairs(state.units)do if v==u then table.remove(state.units,i);break end end
-   log(p.name..' won a battle')
+  if legal.attack then
+   local ok,why=Combat.attack(state,moving,legal,Systems)
+   if not ok then return false,why end
+   log(p.name..': '..why)
+   moving.movesLeft=legal.ranged and 0 or math.max(0,moving.movesLeft-legal.cost)
+  else
+   moving.x=x;moving.y=y;moving.movesLeft=math.max(0,moving.movesLeft-legal.cost)
+   moving.actedThisRound=true;moving.healing=false;moving.autoExplore=false
   end
-  if c and c.owner~=id and not legal.ranged then
-   if (stats.strength or 0)<=0 then return false,'Military unit needed' end
-   c.owner=id;log(p.name..' captured a city!')
-  end
-  if not legal.ranged then moving.x=x;moving.y=y end
-  moving.movesLeft=legal.ranged and 0 or math.max(0,moving.movesLeft-legal.cost)
   moving.moved=moving.movesLeft<=0
+ elseif req.action=='disband'then
+  if not u or u.owner~=id or (req.unitID and req.unitID~=u.id)then return false,'Select an owned unit'end
+  for i=#state.units,1,-1 do if state.units[i]==u then table.remove(state.units,i);break end end
+ elseif req.action=='heal'then
+  if not u or u.owner~=id then return false,'Select an owned unit'end
+  u.healing=true;u.standby=true;u.autoExplore=false;u.movesLeft=0;u.moved=true
+ elseif req.action=='cityStrike'then
+  if not c or c.owner~=id then return false,'Select an owned city'end
+  local ok,why=Combat.strike(state,c,tonumber(req.tx),tonumber(req.ty),Systems)
+  if not ok then return false,why end;log(why)
  elseif req.action=='found' then
   if not u or u.owner~=id or u.kind~='settler' then return false,'Choose a settler' end
   if c then return false,'Tile has a city' end
-  if not Hex.passable(x,y,state,u,Systems)then return false,'Unsettleable terrain' end
+  if terrain(x,y)=='water' or not Hex.passable(x,y,state,u,Systems)then return false,'Unsettleable terrain' end
   for _,v in ipairs(state.cities)do if Hex.distance(v.x,v.y,x,y)<3 then return false,'Cities need 3 hex spacing' end end
   for i,v in ipairs(state.units)do if v==u then table.remove(state.units,i);break end end
   table.insert(state.cities,{id=state.nextId,x=x,y=y,owner=id,level=1,population=2,foodStore=0,jobs={food=1,wood=1,science=0},buildings={}})
-  state.nextId=state.nextId+1;log(p.name..' founded a city')
+  local founded=state.cities[#state.cities];Systems.nameCity(state,founded)
+  state.nextId=state.nextId+1;World.ensureTerritories(state,Hex,false);log(p.name..' founded '..founded.name)
  else return false,'Unknown action' end
  winner();save();return true
 end
@@ -220,12 +234,12 @@ local hostId,localHost=nil,(MODE=='host' or localMode)
 if localHost then
  if localMode then
   local loaded=args[2]~='--new' and Saves.load(slot)
-  if type(loaded)=='table'then state=World.migrate(Systems.migrate(loaded));hasHumanSave=true end
+  if type(loaded)=='table'then state=Systems.migrate(World.migrate(loaded));hasHumanSave=true end
  elseif fs.exists(SAVE) and args[2]~='--new' then
   local h=fs.open(SAVE,'r')
   if h then local loaded=textutils.unserialize(h.readAll());h.close()
    if type(loaded)=='table' and loaded.version then
-    state=World.migrate(Systems.migrate(loaded));hasHumanSave=true
+    state=Systems.migrate(World.migrate(loaded));hasHumanSave=true
    end
   end
  elseif args[2]=='--new' and fs.exists(SAVE)then fs.delete(SAVE)end
@@ -278,9 +292,9 @@ local function draw()
  local s=localHost and state or snapshot
  view:message(message)
  view:draw(s,localMode and activeID() or myId,{
-  handoff=handoff,localMode=localMode,hostID=hostId,screen=appScreen,
+  handoff=handoff,localMode=localMode,hostID=hostId,screen=appScreen,report=true,
    paused=gamePaused,hasSave=hasHumanSave,slot=slot,
-   slots=localMode and Saves.list() or nil,deleteConfirm=deleteConfirm})
+   slots=localMode and Saves.list() or nil,deleteConfirm=deleteConfirm,audio=audio.enabled})
 end
 local function dispatch(action,params)
  if action=='exit' then exitRequested=true;return end
@@ -291,7 +305,7 @@ local function dispatch(action,params)
    local loaded=Saves.load(slot)
    hasHumanSave=type(loaded)=='table'
    if hasHumanSave then
-    state=World.migrate(Systems.migrate(loaded))
+    state=Systems.migrate(World.migrate(loaded))
     if state.world then W,H=state.world.width,state.world.height end
    else state=newGame();Systems.migrate(state)end
    World.reveal(state,Hex,Systems)
@@ -342,9 +356,10 @@ local function dispatch(action,params)
   if not hasHumanSave then message='NO CAMPAIGN IN THIS SLOT';return end
   appScreen='game';gamePaused=false;return
  end
+ if action=='audio'then audio:toggle(appScreen);return end
  if action=='pause' then gamePaused=true;return end
  if action=='resume' then gamePaused=false;return end
- if action=='title' then appScreen='title';gamePaused=false;save();return end
+ if action=='title' then appScreen='title';gamePaused=false;save();audio:update(appScreen);return end
  if action=='save' then save();message='GAME SAVED';return end
  if action=='civ' and state.phase=='lobby' then
   local p=state.players[params and params.player or 1]
@@ -381,7 +396,8 @@ local function dispatch(action,params)
  if localHost then
   local id=activeID()
   local ok,reason=apply(id,req)
-  message=ok and 'ORDER ACCEPTED' or tostring(reason)
+  message=ok and (reason or 'ORDER ACCEPTED')or tostring(reason)
+  audio:effect(not ok and 'error' or action=='move' and 'move' or action=='end' and 'turn' or action=='queue' and 'build' or action=='researchTech' and 'research' or 'click')
   if ok then hasHumanSave=true end
   if localMode and ok and action=='end' then
    -- AI orders ran before the full-round check in apply().
@@ -403,6 +419,8 @@ local function dispatch(action,params)
  else rednet.send(hostId,req,PROTOCOL)end
 end
 view=UI.new(display,dispatch)
+if view.r then view.r.onActivate=function()audio:effect('click')end end
+Systems.checkpoint=function()if view.r and view.r.cooperate then view.r:cooperate()end end
 local function publish()
  if not hasModem then return end
  for _,p in ipairs(state.players)do
@@ -437,33 +455,53 @@ local function clientListener()
   if id==hostId and type(packet)=='table' then
    if packet.type=='state' and type(packet.state)=='table' then snapshot=packet.state
    elseif packet.type=='result' then message=packet.ok and 'Order accepted' or tostring(packet.message)end
-   draw()
+   os.queueEvent('civcraft_state_changed')
   end
  end
 end
 local function ui()
- draw()
+ local resizeTimer,frameTimer
+ local displayTimer=os.startTimer and os.startTimer(.25)
+ draw();audio:update(appScreen)
  while not exitRequested do
-  local e,a,b,c=os.pullEvent()
-  if e=='monitor_touch' and display~=term.current()then
+  local e,a,b,c,d
+  if view.r and view.r.pullEvent then e,a,b,c,d=view.r:pullEvent()else e,a,b,c,d=os.pullEvent()end
+  if e=='monitor_touch' and display~=term.current() and a==displaySide then
    view:tap(b,c);draw()
-  elseif e=='mouse_click' and display==term.current()then
-   view:tap(b,c);draw()
-  elseif e=='mouse_drag' and display==term.current() then
-   view:drag(b,c);draw()
-  elseif e=='mouse_scroll' and display==term.current() then
+  elseif e=='mouse_click' and (not d or d==displaySide)then
+   view:pointerDown(b,c);if not view.pointerStart then draw()end
+  elseif e=='mouse_drag' and (not d or d==displaySide) then
+   view:drag(b,c)
+   if not frameTimer then frameTimer=os.startTimer(.03)end
+  elseif e=='mouse_scroll' and (not d or d==displaySide) then
    view:scroll(a,b,c);draw()
+  elseif e=='mouse_up' and (not d or d==displaySide)then view:pointerUp();frameTimer=nil;draw()
+  elseif e=='civcraft_state_changed'then draw()
   elseif e=='term_resize' or e=='monitor_resize' then
-   view:resize();draw()
+   view:resize();draw();resizeTimer=os.startTimer and os.startTimer(.15)
+  elseif e=='timer' and a==audio.timer then audio:update(appScreen)
+  elseif e=='timer' and a==frameTimer then
+   frameTimer=nil;draw()
+  elseif e=='timer' and a==displayTimer then
+   local width,height=display.getSize()
+   if view.r and (width~=view.r.cw or height~=view.r.ch)then view:resize();draw()end
+   displayTimer=os.startTimer(.25)
+  elseif e=='timer' and a==resizeTimer then
+   resizeTimer=nil;view:resize();draw()
   elseif e=='key' and keys and (a==keys.q or a==keys.escape)then
-   gamePaused=not gamePaused;draw()
+   if a~=keys.escape or not view:back()then gamePaused=not gamePaused end;draw()
   end
   if localHost and hasModem then publish()end
  end
 end
-if localHost and hasModem then
- parallel.waitForAny(server,ui)
-elseif localHost then ui()
-else parallel.waitForAny(clientListener,ui)end
+local completed,failure=pcall(function()
+ if localHost and hasModem then parallel.waitForAny(server,ui)
+ elseif localHost then ui()
+ else parallel.waitForAny(clientListener,ui)end
+end)
 if localHost and hasModem then pcall(rednet.unhost,PROTOCOL)end
 view:close()
+
+if previousMonitorMouse~=nil then pcall(config.set,'monitorsUseMouseEvents',previousMonitorMouse)end
+
+if not completed then error(failure,0)end

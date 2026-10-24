@@ -1,4 +1,4 @@
-# CIVCRAFT v0.6 — Territorial Hex Civilization
+# CIVCRAFT v0.7.0 — Territorial Hex Civilization
 
 A Civilization-inspired, turn-based hex 4X for **CC:Tweaked**, supporting local hot-seat (2–4 human/AI slots) or multiplayer over rednet. Local games use one computer or an Advanced Monitor; networked games use an authoritative host. Computers communicate through **rednet modems**, either wireless (within range) or wired (via the same wired modem network). It also works over interdimensional wireless modems. No HTTP or external web server is needed after installation.
 
@@ -24,51 +24,141 @@ The join command discovers a hosted game automatically. If discovery fails or mu
 
 For a clean new match, explicitly run `/games/civcraft/game.lua host --new`. This deletes the existing match save. Simply reinstalling will **not** delete saves. To opt into host autostart for a dedicated computer, add `--startup` to the installer command; it will not overwrite an existing startup script.
 
-## Gameplay (v0.6)
+## Gameplay (v0.7)
 
 CIVCRAFT is a turn-based 4X game on a **seeded hexagonal world**. In the lobby,
 choose a map size (**Compact 18×12**, **Standard 28×18**, or **Large 40×26**),
 a map type (**Continents**, **Archipelago**, **Pangaea**, or **Highlands**),
 the seed, and each participant's civilization. Two to four human/AI empires
 compete to explore, settle, develop, research, and conquer. Saves preserve the
-generated terrain, territory, fog, technology, and production progress.
+generated terrain, territory, fog, technology, and production progress. Cities
+receive short, randomly selected names from their civilization's themed pool.
+Names appear above cities and in city navigation, and remain stable in saves.
 
 - **Explore and expand:** Units use movement points, terrain-dependent movement
   costs, vision and attack ranges. Scouts reveal farther, naval vessels travel
   on water, and settlers found cities at least three hexes apart. Fog hides
   unexplored land and enemy units outside current sight.
 - **Manage cities:** Each citizen works a tile and has a Food, Industry or Science
-  assignment. Use the city inspector's **JOBS** tab and direct **+ / -**
-  controls to reallocate workforce; the displayed turn yields update. Use
-  **TILES** to choose which owned hexes are worked.
+  assignment. Jobs and worked tiles share the same population pool. **JOBS +**
+  automatically chooses a free owned tile of that yield type; **-** unworks one
+  and makes that citizen idle. **TILES** (or **HEX** on compact screens) lets
+  you choose the exact tile. Jobs are derived from the tile's strongest yield,
+  with science winning ties, then industry if it exceeds food. No matching free
+  tile means that job cannot be added. Manual and automatic assignments update
+  the same yields; citizens cannot be counted twice.
 - **Production:** Choose **PROD**, then **UNITS** or **BUILDS**. City projects
   accumulate industry each full turn instead of consuming a resource wallet
   immediately. Changing projects preserves their individual progress.
-  Technologies and connected horses/iron deposits unlock specialized units.
+  Switching asks for confirmation. Locked projects are hidden; the adjacent book opens their Codex entry. Most projects take 2.5 times their former wood cost in industry. Scouts cost 5 industry; settlers start at 12 and rise by 5 for each settler your empire finishes training (12, 17, 22, 27, ...). The count persists after founding or losing a unit, and applies across all cities. Old saves estimate the initial count from surviving settlers and cities beyond the capital. Technologies and strategic stocks unlock specialized units.
 - **Research:** The connected **TECH TREE** shows prerequisites, researched
   and available technologies, progress and expected turns. Select a technology
-  and start research; science accumulates when a full round ends.
+  and start research; science accumulates when a full round ends. Research costs
+  are three times the earlier values, starting at 24 science. Drag the
+  research canvas to pan, or drag compact details to scroll.
 - **Turns and victory:** Each human player issues orders independently and ends
   their turn. AI players use the same production and research rules. A round
   advances after everyone finishes; the match ends upon reaching the city
   victory condition or the round limit.
 
-The map stays central, with fixed view/pan controls on the left and a contextual
-city, unit or tile inspector on the right. The technology graph has a separate
-detail inspector. A pause menu provides **Resume**, **Save**, **Main Menu**
-and **Exit**.
+The map stays central with a permanent, scrollable inspector. The left controls
+always use square icons. **PREV/NEXT**, the scrollbar, and mouse wheel scrolling
+keep inspector actions reachable. The bottom-left icons open **TECH TREE** and
+**NEXT IDLE UNIT**. The labeled **END TURN** button sits at the bottom right.
+The top-right city, book, clipboard and pause icons open **EMPIRE**, **CODEX**,
+**REPORT** and **PAUSE**. Zoom buttons are in the left sidebar, with the fullscreen
+**WORLD OVERVIEW** button anchored at its bottom. Four narrow, clickable map
+edges pan in their respective directions.
+Drag inside the map to pan on a computer; CraftOS monitor windows also support
+mouse dragging. Vanilla Minecraft monitor taps use the edge strips.
+
+**+ / -** zoom while preserving the camera center. The world overview respects
+fog of war and can be clicked to jump to a region. The default map shows terrain,
+cities, units and borders. **RESOURCES**, **YIELDS**, and **TERRITORY** are
+independent overlay toggles; **TERRAIN** clears them. Yields zoom in to show
+consistent drumstick/cog/flask icons. Yields of one through five repeat the icon;
+larger yields use an icon and number. Zero yields are omitted. A city tile shows
+its base yields plus buildings and civilization bonuses; adding its worked tiles
+gives the total shown in the inspector. Terrain detail increases with zoom.
+
+**EMPIRE** opens a paged list of all owned units and cities; selecting an entry
+centers the map and opens its inspector. **NEXT IDLE UNIT** cycles through awake
+units with movement left, skipping sleeping and spent units. These navigation
+actions never activate movement mode. When a unit occupies a city tile, use the
+inspector's **CITY / UNIT** chooser to inspect either one; map taps select the
+unit first.
+
+Selecting a unit only inspects it. Click it again, or **DESELECT**, to clear it.
+Use **MOVE / ATTACK** to show destinations: cyan dotted outlines and movement
+cost numbers mark moves; red crosses mark attacks. Choose a target to preview
+the route, then click it again or press the confirm icon. Gold pips identify
+units that can still act. Gold-framed worker badges identify worked tiles. **CANCEL MOVE** leaves the unit selected.
+**SLEEP UNIT** excludes a unit from unfinished-order reminders across rounds;
+**WAKE UNIT** restores active orders. Other unit actions require their own
+inspector buttons. Escape closes a dialog or cancels the current action first.
+
+**END TURN** asks for confirmation when awake units have moves remaining, a city
+has no production, or an available research project is unassigned. **GO TO** buttons jump to the missing orders; **END ANYWAY**
+skips them. Hotseat handoffs clear the outgoing camera, selection and
+action overlays; the next player starts centered on their own city or unit.
+A scrollable **turn report dialog** lists economic changes, completed research
+and buildings, city growth, and recruited/lost/damaged units. **REPORT** reopens
+it. Reports contain only that player's empire information.
+
+**CODEX** contains every unit, building, technology and gameplay mechanic,
+including costs, requirements, abilities and controls. The technology graph has a separate
+detail inspector. A pause menu provides **Resume**, **Save**, **Main Menu**, **Exit** and
+a persistent **Audio** toggle. A connected speaker plays interaction effects
+and an original title-screen melody; play remains silent without a speaker.
+
+## Economy, growth and combat
+
+The top strip shows gold, food, industry, science and strategic stocks with
+projected changes. Click it for the complete ledger. Cities earn two gold plus
+population each round, with market/bazaar/bank bonuses. Units pay their listed
+upkeep; an exhausted treasury disbands unpaid units. You can disband a unit
+from its inspector after confirmation. Owned iron, horses and saltpeter deposits
+produce one stock per round; specialized units consume two on completion.
+
+Each citizen eats two food per round. Growth needs surplus food in storage
+(20 + 8 × population) and at least four rounds since the last population change.
+The inspector shows growth time, stagnation or starvation. Three hungry rounds
+with empty storage lose a citizen, down to one. Borders grow independently,
+claiming one adjacent hex at a time within three hexes of the city.
+
+Units have 100 HP, experience, levels and effective attack/defense power.
+Injuries weaken them; levels strengthen them. Melee exchanges damage, while
+ranged attacks avoid immediate retaliation. Each unit attacks once per round.
+**FORTIFY / HEAL** restores health each round, faster in friendly territory;
+resting units also recover. Cities have 200 HP and separate outer defenses:
+walls add 100 HP, fortresses 200. Siege units deal full damage against walls.
+Only surviving melee units capture cities. Cities recover unless besieged;
+functioning walls permit one ranged strike per round. The Codex explains the
+combat formulas, healing, siege and experience rules.
+
+Scouts and explorers can **AUTO EXPLORE** along safe routes, continuing on new
+rounds until stopped or no frontier remains. Coastal cities need a **SHIPYARD**
+to build naval units. **NAVIGATION** permits land units to embark at two moves
+per water hex; embarked units cannot attack or found cities.
 
 ## Display and modems
 
-Best experienced on a **5×5 Advanced Monitor** at scale 0.5 (a 4×3 monitor can also work). The program selects the largest monitor on each machine, or falls back to a colour-capable computer terminal. Monitor taps and terminal mouse clicks are supported. The visual presentation intentionally uses standard CC colour text, so no graphics mod, Basalt, Pine3D or extra dependency is required.
+Designed for **3×3 through 5×5 Advanced Monitors** at scale 0.5, including rectangular arrangements. Compact layouts preserve both side panels and page long lists. The program selects the largest monitor on each machine, or falls back to a colour-capable computer terminal. Monitor taps and terminal mouse clicks are supported. The renderer uses native pixel graphics when available and standard CC colour text otherwise. No graphics mod, Basalt, Pine3D or extra dependency is required.
 
 Each machine needs a peripheral modem for networked play; wired modems need to be part of the same wired network. CC:Tweaked does **not** offer unlimited-range normal wireless networking—distance and dimensions matter.
 
 ## Implementation notes
 
+Pixel rendering batches the whole frame into a single `drawPixels` call.
+Terrain sprites and territory claims are cached, and only visible map rows and
+columns are traversed while panning. Text terminals batch changed rows with
+`blit`. Drag events are coalesced to avoid building a backlog of redraws. Long drawing
+and pathfinding work yields cooperatively to CraftOS without dropping queued
+input or disabling its watchdog.
+
 The host maintains the only authoritative world state, checks unit ownership and resource costs, and broadcasts snapshots. Clients display those snapshots and submit commands; they never directly modify the host state. This is a cooperative local network game, not an adversarial or cryptographically secure network protocol. Local hot-seat supports human and AI seats; networked games currently require at least two registered computers to start.
 
-Earlier release notes below document the incremental development of CIVCRAFT. For current gameplay rules, see **Gameplay (v0.6)** above.
+Earlier release notes below document the incremental development of CIVCRAFT. For current gameplay rules, see **Gameplay (v0.7)** above.
 
 ## Local hot-seat mode (2–4 players, one computer)
 

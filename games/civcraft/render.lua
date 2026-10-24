@@ -2,6 +2,7 @@
 -- Graphics mode uses a denser 3x4 virtual grid per text cell (2x2.25 real pixels).
 -- The native text fallback retains its original 2x3 layout for compatibility.
 -- In CC: Graphics mode monitor_touch is ZERO-based PIXELS. Vanilla is ONE-based cells.
+local Icons=dofile('/games/civcraft/icons.lua')
 local R={} R.__index=R
 R.palette={
  [0]=0x0D1A21,[1]=0x192D35,[2]=0x223A42,[3]=0x31515A,[4]=0x64756C,[5]=0x789390,
@@ -157,7 +158,9 @@ function R:fitGraphics()
  self.oy=math.floor((self.ph-self.h*scale)/2)
 end
 function R:resize()
- self.cw,self.ch=self.m.getSize()
+ local cw,ch=self.m.getSize()
+ if cw~=self.cw or ch~=self.ch then self.lastTextRows=nil end
+ self.cw,self.ch=cw,ch
  if self.mode=='graphics' then self.w=self.cw*3;self.h=self.ch*4
  else self.w=self.cw*2;self.h=self.ch*3 end
  if self.mode=='graphics' then
@@ -165,24 +168,117 @@ function R:resize()
   if ok then self.pw=pw;self.ph=ph;self:fitGraphics() end
  end
 end
+-- Every map primitive shares this viewport clip, including text and icons.
+function R:withClip(rect,draw)
+ local previous=self.clip
+ local x,y=rect.x,rect.y
+ local right,bottom=x+rect.w,y+rect.h
+ if previous then
+  x=math.max(x,previous.x);y=math.max(y,previous.y)
+  right=math.min(right,previous.x+previous.w)
+  bottom=math.min(bottom,previous.y+previous.h)
+ end
+ self.clip={x=x,y=y,w=math.max(0,right-x),h=math.max(0,bottom-y)}
+ local ok,err=pcall(draw)
+ self.clip=previous
+ if not ok then error(err,0)end
+end
+local function blitColor(index)
+ local color=terminalColors[index] or 32768;local value=0
+ while color>1 do color=color/2;value=value+1 end
+ return ('0123456789abcdef'):sub(value+1,value+1)
+end
+local function splice(value,x1,x2,replacement)return value:sub(1,x1-1)..replacement..value:sub(x2+1)end
+function R:cooperate(force)
+ if not (os.epoch and os.queueEvent and os.pullEvent)then return end
+ self.work=(self.work or 0)+1
+ if not force and self.work%128~=0 then return end
+ local now=os.epoch('utc')
+ if not force and now-(self.lastYield or now)<30 then return end
+ self.yieldToken=(self.yieldToken or 0)+1
+ local token=self.yieldToken
+ os.queueEvent('civcraft_render_yield',token)
+ while true do
+  local event=table.pack(os.pullEvent())
+  if event[1]=='civcraft_render_yield' and event[2]==token then break end
+  self.pendingEvents=self.pendingEvents or {}
+  self.pendingEvents[#self.pendingEvents+1]=event
+ end
+ self.lastYield=os.epoch('utc')
+end
+function R:pullEvent()
+ local queue=self.pendingEvents
+ if queue and #queue>0 then
+  local event=table.remove(queue,1)
+  return table.unpack(event,1,event.n)
+ end
+ return os.pullEvent()
+end
 function R:fill(x,y,w,h,color)
+ self:cooperate()
  local x0=math.max(0,math.floor(x));local y0=math.max(0,math.floor(y))
  local x1=math.min(self.w,math.ceil(x+w));local y1=math.min(self.h,math.ceil(y+h))
+ if self.clip then
+  x0=math.max(x0,self.clip.x);y0=math.max(y0,self.clip.y)
+  x1=math.min(x1,self.clip.x+self.clip.w);y1=math.min(y1,self.clip.y+self.clip.h)
+ end
  if x1<=x0 or y1<=y0 then return end
  if self.mode=='graphics' then
-  local a=math.floor(self.ox+x0*self.sx);local b=math.floor(self.oy+y0*self.sy)
-  local rw=math.max(1,math.floor(self.ox+x1*self.sx)-a);local rh=math.max(1,math.floor(self.oy+y1*self.sy)-b)
-  self.m.drawPixels(a,b,color or 0,rw,rh)
+  if self.buffer then
+   local strip=string.rep(string.char(color or 0),x1-x0)
+   for row=y0+1,y1 do
+    local old=self.buffer[row]
+    self.buffer[row]=old:sub(1,x0)..strip..old:sub(x1+1)
+   end
+  else
+   local a=math.floor(self.ox+x0*self.sx);local b=math.floor(self.oy+y0*self.sy)
+   local rw=math.max(1,math.floor(self.ox+x1*self.sx)-a);local rh=math.max(1,math.floor(self.oy+y1*self.sy)-b)
+   self.m.drawPixels(a,b,color or 0,rw,rh)
+  end
  else
   local ax=math.floor(x0/2)+1;local ay=math.floor(y0/3)+1
   local bx=math.min(self.cw,math.ceil(x1/2));local by=math.min(self.ch,math.ceil(y1/3))
-  self.m.setBackgroundColor(terminalColors[color] or 32768)
-  for row=ay,by do self.m.setCursorPos(ax,row);self.m.write((' '):rep(math.max(0,bx-ax+1)))end
+  local count=math.max(0,bx-ax+1)
+  if self.textBuffer then
+   for row=ay,by do
+    local line=self.textBuffer[row]
+    line[1]=splice(line[1],ax,bx,(' '):rep(count))
+    line[3]=splice(line[3],ax,bx,blitColor(color):rep(count))
+   end
+  else
+   self.m.setBackgroundColor(terminalColors[color] or 32768)
+   for row=ay,by do self.m.setCursorPos(ax,row);self.m.write((' '):rep(count))end
+  end
  end
 end
 function R:outline(x,y,w,h,color)
  self:fill(x,y,w,1,color);self:fill(x,y+h-1,w,1,color)
  self:fill(x,y,1,h,color);self:fill(x+w-1,y,1,h,color)
+end
+function R:blit(rows,x,y)
+ self:cooperate()
+ if not self.buffer then return false end
+ x,y=math.floor(x),math.floor(y)
+ local clip=self.clip or {x=0,y=0,w=self.w,h=self.h}
+ local left=math.max(0,clip.x);local right=math.min(self.w,clip.x+clip.w)
+ local top=math.max(0,clip.y);local bottom=math.min(self.h,clip.y+clip.h)
+ local pattern='[^'..string.char(255)..']+'
+ for i,row in ipairs(rows)do
+  local target=y+i-1
+  if target>=top and target<bottom then
+   local start=1
+   while start<=#row do
+    local a,b=row:find(pattern,start);if not a then break end
+    local x0=math.max(left,x+a-1);local x1=math.min(right,x+b)
+    if x1>x0 then
+     local old=self.buffer[target+1]
+     self.buffer[target+1]=old:sub(1,x0)..row:sub(x0-x+1,x1-x)..old:sub(x1+1)
+    end
+    start=b+1
+   end
+  end
+ end
+ return true
 end
 function R:line(x1,y1,x2,y2,color)
  -- Thick sections are fast; diagonal lines are sampled into a 1-pixel stroke.
@@ -200,11 +296,25 @@ function R:text(x,y,txt,color,scale,maxWidth)
  local widthPerChar=self.mode=='text' and 2 or (scale>=2 and 6*scale or 4)
  txt=txt:sub(1,math.max(0,math.floor(maxWidth/widthPerChar)))
  if self.mode=='text' then
+  if self.clip then
+   local c=self.clip
+   if y<c.y or y+3>c.y+c.h then return end
+   local skip=math.max(0,math.ceil((c.x-x)/2))
+   txt=txt:sub(skip+1);x=x+skip*2
+   txt=txt:sub(1,math.max(0,math.floor((c.x+c.w-x)/2)))
+  end
   if y<0 or y>=self.h then return end
   local tx=math.floor(x/2)+1;local ty=math.floor(y/3)+1
   if tx>=1 and tx<=self.cw and ty>=1 and ty<=self.ch then
-   self.m.setCursorPos(tx,ty);self.m.setBackgroundColor(terminalColors[0]);self.m.setTextColor(terminalColors[color] or 1)
-   self.m.write(txt:sub(1,self.cw-tx+1))
+   txt=txt:sub(1,self.cw-tx+1)
+   if self.textBuffer then
+    local line=self.textBuffer[ty];local last=tx+#txt-1
+    line[1]=splice(line[1],tx,last,txt)
+    line[2]=splice(line[2],tx,last,blitColor(color):rep(#txt))
+   else
+    self.m.setCursorPos(tx,ty);self.m.setBackgroundColor(terminalColors[0]);self.m.setTextColor(terminalColors[color] or 1)
+    self.m.write(txt)
+   end
   end
   return
  end
@@ -235,11 +345,23 @@ function R:center(y,txt,color,scale,x,w)
 end
 function R:icon(id,x,y,s)
  s=s or 1
+ if id=='food' or id=='industry'then Icons.yield(self,id,x,y,9*s);return end
  local shapes={
   coin={'011111110','111111111','110000011','110111011','110101011','110111011','110000011','111111111','011111110'},
   coal={'000110000','011111000','111111100','111111110','111111111','111111110','111111100','011111000','001110000'},
   parts={'001110000','011111000','111111100','110001110','100001110','110001110','111111100','011111000','001110000'},
   people={'110001100','110001100','000000000','111001110','111001110','111001110','111001110','000000000','000000000'},
+  plus={'000010000','000010000','000010000','000010000','111111111','000010000','000010000','000010000','000010000'},
+  minus={'000000000','000000000','000000000','000000000','111111111','000000000','000000000','000000000','000000000'},
+  book={'111101111','100111001','101101101','100101001','101101101','100101001','100101001','111101111','000010000'},
+  search={'001110000','010001000','100000100','100000100','100000100','010001000','001110100','000000010','000000001'},
+  tree={'000111000','000101000','000111000','000010000','011111110','010000010','111000111','101000101','111000111'},
+  pause={'011000110','011000110','011000110','011000110','011000110','011000110','011000110','011000110','011000110'},
+  fullscreen={'000001111','000000011','000000101','000001001','100010000','100100000','101000000','110000000','111100000'},
+  empire={'001000100','011101110','111111111','101111101','111010111','101010101','111111111','000000000','000000000'},
+  nextCity={'001000000','011100100','111111110','110011111','110011110','111111100','000000000','000000000','000000000'},
+  nextUnit={'111100100','100101110','111111111','011101110','011100100','001100000','001100000','000000000','000000000'},
+  endTurn={'001000000','001100000','001110000','001111000','001111100','001111000','001110000','001100000','001000000'},
   box={'111111111','100010001','101010101','100010001','101010101','100010001','101010101','100010001','111111111'},
   wood={'000000000','111111100','111111100','000000000','011111110','011111110','000000000','111111100','111111100'},
   sheet={'000000000','011111110','011111110','000000000','111111100','111111100','000000000','011111110','011111110'},
@@ -261,19 +383,20 @@ function R:icon(id,x,y,s)
   signal={'001111100','001101100','001111100','001111100','001101100','001111100','000110000','000110000','000110000'},
   clock={'001111100','011111110','111101111','111101111','111100111','111111111','011111110','001111100','000000000'},
   ore={'000111000','001111100','011111110','111111111','111111111','111111111','011111110','001111100','000000000'},
-  food={'000010000','001111000','011111100','111111110','111111110','011111100','001111000','000110000','000000000'},
+  food={'000000000','000000000','000010000','000111000','001010100','000010000','000010000','000000000','000000000'},
  }
  local bits=shapes[id] or shapes.box
  for i,row in ipairs(bits)do local run=nil
   for col=1,10 do
    local lit=col<=9 and row:sub(col,col)=='1'
    if lit and not run then run=col end
-   if not lit and run then self:fill(x+(run-1)*s,y+(i-1)*s,(col-run)*s,s,({coin=8,coal=17,parts=17,people=13,box=9,wood=9,sheet=6,fuel=10,wrench=17,map=11,station=9,contract=8,train=10,bolt=8,back=6,right=6,danger=10,star=8,press=17,saw=17,foundry=10,crane=9,signal=11,clock=5,ore=17,food=9})[id] or 8);run=nil end
+   if not lit and run then self:fill(x+(run-1)*s,y+(i-1)*s,(col-run)*s,s,({coin=8,coal=17,parts=17,people=13,box=9,wood=9,sheet=6,fuel=10,wrench=17,map=11,station=9,contract=8,train=10,bolt=8,back=6,right=6,danger=10,star=8,press=17,saw=17,foundry=10,crane=9,signal=11,clock=5,ore=17,food=18})[id] or 8);run=nil end
   end
  end
 end
 function R:button(x,y,w,h,label,fn,opt)
- opt=opt or {};if w<10 or h<10 then return end
+ opt=opt or {};if w<10 or h<8 then return end
+ if self.clip and (x<self.clip.x or y<self.clip.y or x+w>self.clip.x+self.clip.w or y+h>self.clip.y+self.clip.h)then return end
  local bg=opt.selected and 12 or opt.primary and 11 or opt.danger and 10 or 2
  self:fill(x,y,w,h,bg);self:outline(x,y,w,h,opt.primary and 8 or 3)
  if opt.icon and w>=48 then self:icon(opt.icon,x+4,y+math.max(3,math.floor((h-9)/2)),1)end
@@ -293,21 +416,81 @@ function R:touch(x,y)
 end
 function R:hit(x,y)
  for i=#self.buttons,1,-1 do local b=self.buttons[i]
-  if x>=b.x and x<b.x+b.w and y>=b.y and y<b.y+b.h then b.fn();return b.label or true end
+  if x>=b.x and x<b.x+b.w and y>=b.y and y<b.y+b.h then if self.onActivate then self.onActivate(b.label)end;b.fn(x,y);return b.label or true end
  end
  return false
 end
 function R:begin()
- self.buttons={}
+ self:cooperate(true)
+ self.buttons={};self.scrollbars={};self.clip=nil
  if self.mode=='graphics' and self.m.setFrozen then pcall(self.m.setFrozen,true)end
  if self.mode=='graphics' then
-  self.m.drawPixels(0,0,0,self.pw,self.ph)
+  local blank=string.rep(string.char(0),self.w);self.buffer={}
+  for y=1,self.h do self.buffer[y]=blank end
+ else
+  self.textBuffer={}
+  for y=1,self.ch do self.textBuffer[y]={(' '):rep(self.cw),('0'):rep(self.cw),('f'):rep(self.cw)}end
  end
- self:fill(0,0,self.w,self.h,0)
 end
-function R:finish()if self.mode=='graphics' and self.m.setFrozen then pcall(self.m.setFrozen,false)end end
+function R:finish()
+ if self.buffer then
+  local rows={};local blank=string.rep(string.char(0),self.pw)
+  local expanded={};local integer=self.sx==math.floor(self.sx)
+  local lut={}
+  if integer then for c=0,31 do lut[string.char(c)]=string.rep(string.char(c),self.sx)end end
+  for y=0,self.ph-1 do
+   self:cooperate()
+   local source=math.ceil((y+1-self.oy)/self.sy)
+   if y<self.oy or source<1 or source>self.h then rows[y+1]=blank
+   else
+    local row=self.buffer[source]
+    if not expanded[row]then
+     local value
+     if integer then value=row:gsub('.',lut)
+     else
+      local parts={}
+      for x=1,self.w do
+       local count=math.floor(self.ox+x*self.sx)-math.floor(self.ox+(x-1)*self.sx)
+       parts[x]=row:sub(x,x):rep(count)
+      end
+      value=table.concat(parts)
+     end
+     value=blank:sub(1,self.ox)..value
+     expanded[row]=(value..blank):sub(1,self.pw)
+    end
+    rows[y+1]=expanded[row]
+   end
+  end
+  self.m.drawPixels(0,0,rows,self.pw,self.ph)
+  self.buffer=nil
+ end
+ if self.textBuffer then
+  local previous=self.lastTextRows or {}
+  for y,line in ipairs(self.textBuffer)do
+   local old=previous[y]
+   if not old or old[1]~=line[1] or old[2]~=line[2] or old[3]~=line[3]then
+    self.m.setCursorPos(1,y)
+    if self.m.blit then self.m.blit(line[1],line[2],line[3])
+    else
+     local at=1
+     while at<=self.cw do
+      local ending=at
+      while ending<self.cw and line[2]:sub(ending+1,ending+1)==line[2]:sub(at,at) and
+       line[3]:sub(ending+1,ending+1)==line[3]:sub(at,at)do ending=ending+1 end
+      self.m.setTextColor(2^tonumber(line[2]:sub(at,at),16))
+      self.m.setBackgroundColor(2^tonumber(line[3]:sub(at,at),16))
+      self.m.write(line[1]:sub(at,ending));at=ending+1
+     end
+    end
+   end
+  end
+  self.lastTextRows=self.textBuffer;self.textBuffer=nil
+ end
+ if self.mode=='graphics' and self.m.setFrozen then pcall(self.m.setFrozen,false)end
+end
 function R:close()
  if self.mode=='graphics' then
+  if self.m.setFrozen then pcall(self.m.setFrozen,false)end
   if self.originalPalette and self.m.setPaletteColor then
    for i,c in pairs(self.originalPalette)do pcall(self.m.setPaletteColor,i,c[1],c[2],c[3])end
   end
