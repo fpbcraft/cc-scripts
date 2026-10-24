@@ -6,6 +6,7 @@ function B.run(manager)
  if not ok or type(basalt)~="table" or
   type(basalt.getMainFrame)~="function" or
   type(basalt.run)~="function" then return false end
+ manager.refreshVersions()
  local frame=basalt.getMainFrame()
  local w,h=term.getSize()
  if w<36 or h<16 then return false end
@@ -30,9 +31,13 @@ function B.run(manager)
  local function refresh()
   for i,item in ipairs(appButtons)do
    local app=manager.catalog.apps[i]
-   local installed=manager.installed(app)
-   item.text=(i==selected and "> " or "  ")..app.name..
-     (installed and " [READY]" or " [INSTALL]")
+   local info=manager.status(app)
+   local installed=info.installedVersion and ("v"..info.installedVersion) or
+    (info.installed and "v?" or "NOT INSTALLED")
+   local latest=info.latestVersion and ("v"..info.latestVersion) or "?"
+   local upgrade=info.updateAvailable and " UPDATE!" or ""
+   item.text=((i==selected and "> " or "  ")..app.name..
+    " "..installed.." > "..latest..upgrade):sub(1,w-5)
   end
   status.text=message:sub(1,w-3)
  end
@@ -48,7 +53,7 @@ function B.run(manager)
   action=name
   basalt.stop()
  end
- local row=h-6
+ local row=h-7
  local width=math.floor((w-5)/3)
  button(2,row,width,"INSTALL/UPDATE",function()finish("install")end)
  button(3+width,row,width,"PLAY",function()finish("play")end)
