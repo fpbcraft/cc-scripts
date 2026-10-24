@@ -29,7 +29,7 @@ return {
    saves={"/railbreak/data"},
   },
   {
-   version="5.4",id="tidebound",name="SHATTERED EXPANSE",subtitle="FOUR EMPIRES",
+   version="5.5",id="tidebound",name="SHATTERED EXPANSE",subtitle="FOUR EMPIRES",
    description="A space 4X with exploration, diplomacy and events.",
    icon="T",genre="4X / RPG",root="/tidebound",
    entry="/tidebound/tidebound.lua",installer="install-tidebound.lua",
