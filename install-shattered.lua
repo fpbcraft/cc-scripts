@@ -91,13 +91,11 @@ end
 remove(nextDir);remove(backup)
 -- Retire obsolete game executables without deleting any save file.
 for _,legacy in ipairs({
- 'shattered-shattered-v4.lua','shattered-stellar-frontier.lua',
- 'shattered-kingdoms.lua','shattered-classic.lua',
  'expanse/content.lua','expanse/events.lua','expanse/sim.lua',
  'expanse/render.lua','expanse/ui.lua'
 })do remove(fs.combine(root,legacy))end
 if autostart then
- local launcher="shell.run('/shattered/shattered.lua')\n"
+ local launcher="local f,e=loadfile('/shattered/shattered.lua');assert(f,e);f()\n"
  local prior=fs.exists('/startup.lua') and read('/startup.lua') or nil
  local shadow=fs.exists('/startup') and read('/startup') or nil
  if shadow and shadow~=launcher then print('Startup not changed: unrelated /startup exists.')
