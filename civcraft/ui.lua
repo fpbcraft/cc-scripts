@@ -91,6 +91,25 @@ function UI:draw(state,playerID,opts)
   r:finish();return
  end
  if opts.screen=="title" then
+  if h<115 then
+   r:center(3,"CIVCRAFT",8,1)
+   r:center(11,"SELECT A SAVE SLOT",6)
+   if opts.slots then
+    local size=math.floor((w-8)/3)
+    for i,record in ipairs(opts.slots)do
+     local label="SLOT "..i..(record.occupied and " R"..(record.round or 1) or " FREE")
+     r:button(3+(i-1)*size,16,size-2,10,label,function()
+      self:command("selectSlot",{slot=i})
+     end,{primary=opts.slot==i})
+    end
+   end
+   local by=math.max(26,h-31)
+   local bx,bw=math.max(4,math.floor(w*.12)),math.max(33,math.floor(w*.76))
+   r:button(bx,by,bw,10,"NEW CAMPAIGN",function()self:command("newGame")end,{primary=true})
+   r:button(bx,by+10,bw,10,"CONTINUE",function()self:command("continue")end)
+   r:button(bx,by+20,bw,10,"EXIT",function()self:command("exit")end)
+   r:finish();return
+  end
   r:center(math.floor(h*.10),"CIVCRAFT",8,w>=155 and 3 or 2)
   r:center(math.floor(h*.23),"HEX EMPIRES / EXPLORE / CONQUER",7)
   local bw=math.min(w-20,math.max(100,math.floor(w*.72)))
