@@ -238,6 +238,19 @@ function R:graphics(g,result,unlocked,selected,message)
   local tile=E.get(g,x,y)
   if tile then
    self:piece(left,top,9,tile,result.lights[tile.id])
+   -- Bright red end caps indicate ports without reciprocal connections.
+   -- These are forbidden in the advanced full-network contracts.
+   if g.fullNetwork and tile.kind~="X"then
+    for dir=0,3 do
+     if E.hasPort(tile,dir)then
+      local dx,dy=DX[dir+1],DY[dir+1]
+      local other=E.get(g,x+dx,y+dy)
+      if not other or not E.hasPort(other,(dir+2)%4)then
+       self:rect(left+4+dx*4,top+4+dy*4,1,1,8)
+      end
+     end
+    end
+   end
   end
  end end
  self:rect(80,13,48,66,1)
@@ -360,6 +373,7 @@ function R:helpText()
   "",
   "Advanced: use every stock part",
   "Advanced: connect every open port",
+  "Red end caps show open ports",
   "Advanced: all parts must be powered",
   "Tap empty cell to place chosen part",
   "Tap placed part to rotate it",
