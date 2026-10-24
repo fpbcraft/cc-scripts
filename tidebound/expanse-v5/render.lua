@@ -237,6 +237,17 @@ end
 function Renderer:endFrame()
  if self.kind=="gfx" and self.m.setFrozen then pcall(self.m.setFrozen,false) end
 end
+-- A second interaction route with exactly the same hitboxes as regular touches.
+-- Never accidentally activate a button when it is being inspected.
+function Renderer:hitSecondary(x,y)
+ for i=#self.buttons,1,-1 do local b=self.buttons[i]
+  if x>=b.x and x<b.x+b.w and y>=b.y and y<b.y+b.h then
+   if b.alt then b.alt() end
+   return true
+  end
+ end
+ return false
+end
 function Renderer:hit(x,y)
  for i=#self.buttons,1,-1 do local b=self.buttons[i]
   if x>=b.x and x<b.x+b.w and y>=b.y and y<b.y+b.h then b.fn();return true end

@@ -1,0 +1,34 @@
+modLoader="javafml"
+loaderVersion="[2,)"
+license="MIT"
+
+[[mods]]
+modId="fpbmonitorinput"
+version="0.1.0"
+displayName="FPB Monitor Input"
+description='''Distinguishes left monitor clicks from CC:Tweaked's standard right-click touches.'''
+authors="FPBCRAFT"
+
+[[mixins]]
+config="fpbmonitorinput.mixins.json"
+
+[[dependencies.fpbmonitorinput]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.21.2)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.fpbmonitorinput]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.248,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.fpbmonitorinput]]
+modId="computercraft"
+type="required"
+versionRange="[1.116.0,)"
+ordering="AFTER"
+side="BOTH"

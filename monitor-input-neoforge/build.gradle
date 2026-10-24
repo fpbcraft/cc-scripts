@@ -1,0 +1,29 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+group = 'com.fpbcraft'
+version = '0.1.0'
+base { archivesName = 'fpb-monitor-input' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = '21.1.250'
+    mods {
+        fpbmonitorinput { sourceSet(sourceSets.main) }
+    }
+}
+
+repositories {
+    maven {
+        url = 'https://maven.squiddev.cc'
+        content { includeGroup('cc.tweaked') }
+    }
+}
+
+dependencies {
+    compileOnly 'cc.tweaked:cc-tweaked-1.21.1-common-api:1.120.2'
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

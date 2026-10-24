@@ -71,7 +71,12 @@ function UI:button(x,y,w,h,label,icon,fn,detail,color)
  local start=x+(icon and 4 or 2)
  r:text(start,y+1,clip(label,w-(start-x)-1),7,w-(start-x)-1)
  if detail and h>=5 then r:text(start,y+2,clip(detail,w-(start-x)-1),5,w-(start-x)-1)end
- if fn then r.buttons[#r.buttons+1]={x=x,y=y,w=w,h=h,fn=fn,label=label}end
+ if fn then r.buttons[#r.buttons+1]={x=x,y=y,w=w,h=h,fn=fn,label=label,
+  alt=function()
+   -- Menus remain usable with either button; gameplay left-click is inspect-only.
+   if not self.g or self.screen=='setup' or self.screen=='keyboard' then fn();return end
+   self.notice=clip(detail or ('RIGHT-CLICK TO '..label),math.max(10,self.r.w-8))
+  end}end
 end
 function UI:lines(x,y,w,text,color,max)
  local r=self.r;local rows=wrap(text,w);for i=1,math.min(#rows,max or 10)do r:text(x,y+i-1,rows[i],color or 6,w)end
@@ -225,6 +230,9 @@ function UI:starMap(mapRight)
   if hitW>=3 and x-hitW/2>0 and x+hitW/2<mapRight and y-hitH/2>8 and y+hitH/2<r.h-9 then
    r.buttons[#r.buttons+1]={x=math.floor(x-hitW/2),y=math.floor(y-hitH/2),w=hitW,h=hitH,label=s.name,fn=function()
     if self.shipID then self:requestMove(s.id) else self.selected=s.id;self.notice='' end
+   end,alt=function()
+    -- Inspect while choosing a movement target, without consuming ship orders.
+    self.selected=s.id;self.notice=visible and ('INTEL: '..s.name..' / '..s.kind) or 'UNKNOWN SYSTEM - SCOUT TO REVEAL'
    end}
   end
  end
@@ -564,6 +572,13 @@ function UI:draw()
  r:endFrame()
 end
 function UI:touch(x,y)return self.r:hit(x,y)end
+-- Companion NeoForge mod sends zero-to-one normalized monitor coordinates.
+-- They deliberately differ from CC: Graphics' zero-based pixel monitor_touch.
+function UI:monitorLeftTouch(nx,ny)
+ if type(nx)~='number' or type(ny)~='number' or nx<0 or nx>=1 or ny<0 or ny>=1 then return false end
+ local x=math.floor(nx*self.r.w);local y=math.floor(ny*self.r.h)
+ return self.r:hitSecondary(x,y)
+end
 function UI:monitorTouch(x,y)
  local r=self.r;if type(x)~='number' or type(y)~='number'then return false end
  if r.kind=='gfx' then
@@ -578,6 +593,7 @@ function UI:loop(name)
  while true do
   local ev,a,b,c=os.pullEvent()
   if ev=='monitor_touch' and (not name or a==name)then self:monitorTouch(b,c);self:draw()
+  elseif ev=='monitor_left_click' and (not name or a==name) then self:monitorLeftTouch(b,c);self:draw()
   elseif ev=='monitor_resize' and (not name or a==name) then self.r:resize();self:draw()
   elseif ev=='timer' and a==timer then self:draw();timer=os.startTimer((self.screen=='title' or self.screen=='galaxy') and .85 or 1.8)
   elseif ev=='char' and self.screen=='keyboard' then self.names[self.edit]=safeName(self.names[self.edit]..a);self:draw()

@@ -95,6 +95,11 @@ for _,size in ipairs(sizes)do for _,gfx in ipairs({true,false})do
   return ui:monitorTouch(x+1,y+1)
  end
  draw('title');local btn=ui.r.buttons[1];test(btn.label=='NEW CAMPAIGN');test(tap(btn));test(ui.screen=='setup','setup transition')
+ -- Left-click companion events use normalized coordinates, independent of gfx/text.
+ draw('title');local begin=ui.r.buttons[1]
+ test(ui:monitorLeftTouch((begin.x+begin.w/2)/ui.r.w,(begin.y+begin.h/2)/ui.r.h))
+ test(ui.screen=='setup','left-click should navigate on title and setup')
+ test(not ui:monitorLeftTouch(-0.1,0.5) and not ui:monitorLeftTouch(1,0.5))
  draw('setup');test(#ui.r.buttons>=8,'setup controls')
  ui:start(1024);draw('handoff');test(tap(ui.r.buttons[#ui.r.buttons]));test(ui.screen=='galaxy','handoff')
  for _,screen in ipairs({'galaxy','ships','colony','research','diplomacy','empire','help','summary','results','event'})do
@@ -117,6 +122,12 @@ for _,size in ipairs(sizes)do for _,gfx in ipairs({true,false})do
  end
  test(ui:monitorTouch(-1,-1)==false)
  draw('galaxy');ui.selected=1;draw('galaxy');test(#ui.r.buttons>5,'inspector buttons')
+ -- Secondary click must show help, never issue a primary command.
+ local topShip=ui.r.buttons[2]
+ local prior=ui.screen
+ test(ui:monitorLeftTouch((topShip.x+topShip.w/2)/ui.r.w,(topShip.y+topShip.h/2)/ui.r.h))
+ test(ui.screen==prior,'secondary click must not open/activate game controls')
+ test(not ui:monitorLeftTouch(1,1),'normalized coordinate must be in [0,1)')
 end end
 -- Diplo: a human-to-human proposal remains pending until explicitly accepted.
 local d=M.new({seed=910,humans={true,true,true,true}})

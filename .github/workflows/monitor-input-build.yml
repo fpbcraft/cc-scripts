@@ -1,0 +1,35 @@
+name: Monitor Input NeoForge build
+on:
+  push:
+    paths:
+      - 'monitor-input-neoforge/**'
+      - '.github/workflows/monitor-input-build.yml'
+  pull_request:
+    paths:
+      - 'monitor-input-neoforge/**'
+      - '.github/workflows/monitor-input-build.yml'
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Validate monitor geometry independently
+        run: |
+          mkdir -p /tmp/monitor-geometry-test
+          javac -d /tmp/monitor-geometry-test monitor-input-neoforge/src/main/java/com/fpbcraft/monitorinput/MonitorGeometry.java monitor-input-neoforge/tests/MonitorGeometryTest.java
+          java -cp /tmp/monitor-geometry-test MonitorGeometryTest
+      - name: Compile NeoForge mod
+        working-directory: monitor-input-neoforge
+        run: gradle build --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fpb-monitor-input-jar
+          path: monitor-input-neoforge/build/libs/*.jar

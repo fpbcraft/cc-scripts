@@ -1,5 +1,12 @@
 # TIDEBOUND: The Shattered Expanse (v5.0)
 
+## Optional advanced-monitor left click (experimental)
+
+Right-click remains CC:Tweaked's normal `monitor_touch` and activates buttons. The optional `fpb-monitor-input` NeoForge addon emits `monitor_left_click(side, normalizedX, normalizedY)` for physical left clicks on the front of Advanced Monitors. On a game screen, left clicking a star inspects it **without issuing movement orders**; left clicking buttons reveals their purpose. Title and setup still accept either button. The feature is completely optional and does not change saves.
+
+The addon's source is in [`../monitor-input-neoforge/`](../monitor-input-neoforge/). Unlike the `wget` Lua installer, the NeoForge addon must be built and placed in the **server and clients'** `mods` directories, and has not yet been validated in Minecraft. Do not deploy an unverified build on a production server.
+
+
 A four-civilization, hot-seat space 4X game with **1–4 human commanders and AI filling the remaining seats**, designed for a **5×5 CC:Tweaked Advanced Monitor**. The new edition implements the approved v5 simplification and UI mockups: no overlapping menu stacks, three resources, three ship roles, three research paths, and persistent roleplaying decisions.
 
 ## Install or update
