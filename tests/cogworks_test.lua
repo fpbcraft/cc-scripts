@@ -26,9 +26,14 @@ for index,data in ipairs(E.levels)do
  assert(result.win,"Reference solution invalid for level "..index..
   " (goals "..result.correct.."/"..result.goals..", jam="..tostring(result.jam)..")")
  totalGoals=totalGoals+result.goals
+ local options=E.challenges(solved,result)
+ if index>=2 then assert(#options>0,"Most levels need bonus contracts")end
+ for _,challenge in ipairs(options)do
+  assert(challenge.earned,"Canonical solution earns "..challenge.id.." at stage "..index)
+ end
  if index<=3 then assert(not data.fullNetwork,"Tutorial stages should stay relaxed")end
  if index>=4 then
-  assert(data.fullNetwork,"Advanced levels must demand fully connected machinery")
+  assert(data.fullNetwork,"Advanced stages should track full network metrics for bonuses")
   eq(result.openPorts,0,"Solved level has no dangling ports: "..index)
   eq(result.unpowered,0,"Solved level has no unpowered parts: "..index)
   eq(result.remaining,0,"Solved level has no unused stock: "..index)
@@ -85,16 +90,30 @@ assert(E.place(g,2,3,"I",0),"Place a new shaft")
 assert(E.rotate(g,2,3),"Rotate constructed part")
 eq(E.get(g,2,3).r,1,"Rotation 90 degrees")
 assert(not E.rotate(g,1,3),"Generator orientation locked")
--- A solved advanced stage is incomplete if any allocated stock remains unused.
+-- Main progress is independent of optional full-network contracts.
 local advanced=E.new(20,true)
 local complete=E.evaluate(advanced)
 assert(complete.win and complete.complete,"Reference advanced board complete")
 advanced.remaining.I=(advanced.remaining.I or 0)+1
 local incomplete=E.evaluate(advanced)
 eq(incomplete.correct,incomplete.goals,"Power still reaches every machine")
-assert(not incomplete.win and not incomplete.complete,
- "Unused stock invalidates a seemingly finished workshop")
+assert(incomplete.win and not incomplete.complete,
+ "Main objective wins even when optional stock has not been used")
 eq(incomplete.remaining,1,"Leftover piece identified")
+local bonus={}
+for _,challenge in ipairs(E.challenges(advanced,incomplete))do bonus[challenge.id]=challenge.earned end
+assert(bonus.sealed and not bonus.master,
+ "Leaving spare stock only blocks master bonus")
+advanced.remaining.I=advanced.remaining.I-1
+advanced.moves=1000
+advanced.hints=1
+local precision={}
+for _,challenge in ipairs(E.challenges(advanced,E.evaluate(advanced)))do
+ precision[challenge.id]=challenge.earned
+end
+assert(precision.master and not precision.precision,
+ "Unoptimized/hinted wins should not earn precision bonus")
+assert(E.evaluate(advanced).win,"Mastery contracts must never prevent level completion")
 -- Verify requirements derive from reversing gears and speed controllers.
 local hadReverse,hadBoost=false,false
 for i=8,#E.levels do
