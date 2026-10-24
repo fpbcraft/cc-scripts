@@ -742,8 +742,10 @@ end
 function UI:monitorTouch(x,y)
  local r=self.r;if type(x)~='number' or type(y)~='number'then return false end
  if r.kind=='gfx' then
-  if x<0 or y<0 or x>=r.w*r.px or y>=r.h*r.py then return false end
-  x=math.floor(x/r.px)+1;y=math.floor(y/r.py)+1
+  local ox,oy=r.ox or 0,r.oy or 0
+  if x<ox or y<oy or x>=ox+r.w*r.px or y>=oy+r.h*r.py then return false end
+  x=math.floor((x-ox)/r.px)+1
+  y=math.floor((y-oy)/r.py)+1
  end
  if x<1 or y<1 or x>r.w or y>r.h then return false end
  return self:touch(x-1,y-1)

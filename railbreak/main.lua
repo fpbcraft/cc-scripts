@@ -5,7 +5,12 @@ local argv={...}
 -- script directory, not to the shell's current working directory.
 -- The installer creates /railbreak/train and /railbreak/core. Anchor imports
 -- there explicitly, avoiding double-prefixing /railbreak/railbreak/.
-package.path='/railbreak/?.lua;/railbreak/?/init.lua;'..package.path
+local package=package or {path="/?.lua;/?/init.lua",loaded={}}
+package.path='/railbreak/?.lua;/railbreak/?/init.lua;'..(package.path or "")
+local require=require or function(name)
+ local path='/railbreak/'..name:gsub('%.','/')..'.lua'
+ return dofile(path)
+end
 local UI=require('train.ui')
 local State=require('train.state')
 local Rules=require('train.rules')

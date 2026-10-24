@@ -187,7 +187,7 @@ local snapshot=localHost and state or nil
 local message='Tap a tile, then choose an action'
 local selected={x=2,y=2};local source=nil
 local buttons={}
-local colors={colors.red,colors.cyan,colors.lime,colors.orange}
+local factionColors={colors.red,colors.cyan,colors.lime,colors.orange}
 local function draw()
  local s=localHost and state or snapshot
  if not s then display.setBackgroundColor(colors.black);display.clear();display.setCursorPos(1,1);display.write('Connecting to '..hostId..'...');return end
@@ -230,8 +230,8 @@ local function draw()
    for _,v in ipairs(s.cities)do if v.x==x and v.y==y then c=v;break end end
    for _,v in ipairs(s.units)do if v.x==x and v.y==y then u=v;break end end
    local mark=t;local color=t=='~' and colors.blue or (t=='^' and colors.gray or (t=='f' and colors.green or colors.lightGray))
-   if c then mark='C';for i,p in ipairs(s.players)do if p.id==c.owner then color=colors[i] end end end
-   if u then mark=u.kind=='warrior' and 'W' or 'S';for i,p in ipairs(s.players)do if p.id==u.owner then color=colors[i] end end end
+   if c then mark='C';for i,p in ipairs(s.players)do if p.id==c.owner then color=factionColors[i] end end end
+   if u then mark=u.kind=='warrior' and 'W' or 'S';for i,p in ipairs(s.players)do if p.id==u.owner then color=factionColors[i] end end end
    if selected.x==x and selected.y==y then display.setBackgroundColor(colors.white);color=colors.black
    else display.setBackgroundColor(colors.black) end
    line((x-1)*2+1,y+2,mark..' ',color)
@@ -242,7 +242,7 @@ local function draw()
  line(x0,3,'PLAYERS')
  for i,p in ipairs(s.players)do
   local mine=p.id==myId
-  line(x0,3+i,(mine and '>' or ' ')..i..' '..p.name:sub(1,6)..(p.ready and '*' or ''),colors[i])
+  line(x0,3+i,(mine and '>' or ' ')..i..' '..p.name:sub(1,6)..(p.ready and '*' or ''),factionColors[i])
  end
  if me then
   line(x0,10,'Food '..me.food..' Wood '..me.wood)

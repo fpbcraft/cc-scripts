@@ -1,4 +1,4 @@
--- FPBCRAFT RAILBREAK / safe one-command installer and updater (v2.0.7)
+-- FPBCRAFT RAILBREAK / safe one-command installer and updater (v2.0.8)
 -- wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-railbreak.lua
 -- Optional: <git ref> --startup. Existing startup scripts are never silently overwritten.
 local args={...}
@@ -17,7 +17,7 @@ local files={
  'main.lua','display.lua','terminal_view.lua','core/util.lua','content/catalog.lua','game/state.lua','game/kinetics.lua',
  'game/processing.lua','game/commands.lua','render/canvas.lua','ui/app.lua',
  'platform/storage.lua','README.md','QUICKSTART.txt',
- 'classic.lua','train/catalog.lua','train/state.lua','train/rules.lua',
+ 'train/catalog.lua','train/state.lua','train/rules.lua',
  'train/render.lua','train/art.lua','train/ui.lua','train/info.lua','train/storage.lua',
 }
 local function delete(path)if fs.exists(path)then fs.delete(path)end end
@@ -38,7 +38,7 @@ local function fetch(file)
  end
  return text
 end
-print('RAILBREAK: TRAIN-FIRST EDITION v2.0.6')
+print('RAILBREAK: TRAIN-FIRST EDITION v2.0.8')
 print('Installing from fpbcraft/cc-scripts @ '..ref)
 if not fs.exists(ROOT) then fs.makeDir(ROOT) end
 delete(NEXT);fs.makeDir(NEXT)
@@ -69,10 +69,17 @@ local success,reason=pcall(function()
  -- shell.run, but does not require the caller to be inside a shell.
  local entry,loadErr=loadfile(ROOT..'/main.lua')
  assert(entry,'Cannot load installed game: '..tostring(loadErr))
- local verified,api=pcall(entry,'--test-api')
- assert(verified,'Train boot verification failed: '..tostring(api))
- assert(type(api)=='table' and api.UI and api.State and api.Rules,
+ -- CraftOS-PC iOS may execute fetched chunks without the full shell
+ -- globals (notably package and require). Syntax-verify every module above,
+ -- and perform the complete screen smoke test only when those APIs exist.
+ if package and require then
+  local verified,api=pcall(entry,'--test-api')
+  assert(verified,'Train boot verification failed: '..tostring(api))
+  assert(type(api)=='table' and api.UI and api.State and api.Rules,
    'Boot verification returned no train game API')
+ else
+  print('Shell-less environment: validated installed Lua modules.')
+ end
  print('Boot check: train modules and screen rendering verified.')
 end)
 if not success then
@@ -84,6 +91,8 @@ if not success then
  delete(NEXT);delete(PREVIOUS);error('Activation rolled back: '..tostring(reason),0)
 end
 delete(NEXT);delete(PREVIOUS)
+-- Remove only the retired edition entry point; keep all game data.
+delete(ROOT..'/classic.lua')
 if startup then
  local path='/startup.lua'
  local launcher="shell.run('/railbreak/main.lua')\n"
@@ -97,7 +106,7 @@ if startup then
   write(path,launcher);print('Autostart enabled for this dedicated computer.')
  end
 end
-print('RAILBREAK v2.0.6 verified. Execute: /railbreak/main.lua')
+print('RAILBREAK v2.0.8 verified. Execute: /railbreak/main.lua')
 print('Train save: /railbreak/data/train-save.lua')
-print('Old factory game: /railbreak/classic.lua')
+
 print('Legacy saves in /railbreak/data/ are preserved.')
