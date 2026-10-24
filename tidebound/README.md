@@ -1,97 +1,87 @@
-# TIDEBOUND: The Shattered Expanse (v4.0)
+# TIDEBOUND: The Shattered Expanse (v5.0)
 
-A **four-civilization** shared-screen space 4X game for CC:Tweaked Advanced Monitors, redesigned around politics, discoveries, faction personalities, and narrative decisions. Supports **1–4 human players**, with the remaining empires operated by local AI. Best on a **5×5 Advanced Monitor** with the optional **CC: Graphics** mod's 256-color pixel mode. It falls back to character mode if graphics is unavailable.
+A four-civilization, hot-seat space 4X game with **1–4 human commanders and AI filling the remaining seats**, designed for a **5×5 CC:Tweaked Advanced Monitor**. The new edition implements the approved v5 simplification and UI mockups: no overlapping menu stacks, three resources, three ship roles, three research paths, and persistent roleplaying decisions.
 
-> This is a gameplay overhaul, not a save-compatible update of Stellar Frontier 3.x. The installer preserves your existing v3 save and installs v3 separately.
-
-## Installation
-
-Run on an Advanced Computer attached to a color Advanced Monitor:
+## Install or update
 
 ```sh
 wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-tidebound.lua
 /tidebound/tidebound.lua
 ```
 
-The installer downloads and syntax-checks all nine Lua files before changing active game code. It preserves saves and automatically rolls back the code files if activation fails. Use `--startup` only on a dedicated game computer. Existing startup scripts are backed up if possible and otherwise left untouched.
+Requires an Advanced Computer and a connected colour Advanced Monitor. The game autodetects a monitor; specify its peripheral name as a CLI argument to override it. **CC: Graphics** mode 2 is used automatically when available, with a text-mode fallback. This version was tested offline against simulated **3×3, 4×4 and 5×5** monitor sizes; 5×5 is the target. Actual modded Minecraft performance and interaction have not yet been verified.
 
-Previous editions remain installed:
+`--startup` on the installer is optional. It is intended only for a dedicated game computer and preserves a previously installed startup script when possible.
+
+## The v5 rules
+
+- **30 connected star systems** with fog of war and strategic chokepoints.
+- **Four empires**, with individual names and archetypes. One to four humans; the rest AI.
+- **Three resources:** Credits (diplomacy and administration), Alloy (colonies and fleets), Knowledge (research).
+- **Three ships:** Scout (reveals systems), Colony Ark (founds a colony), Fleet (fights other empires). Each ship receives **two orders per year**; empire decisions have no global action cap.
+- **Colonies:** One specialization per colony: Industry, Science or Commerce. Each can be upgraded twice. You can change specialization or upgrade once per colony per year.
+- **Research:** Three 3-level paths — Exploration, Prosperity, Warfare. Research consumes Knowledge; it does not consume ship orders.
+- **Diplomacy:** Trade, non-aggression, alliance, war and peace. Human offers queue until the recipient accepts or declines. AI acceptances respond to relationship and personality.
+- **Narrative:** Branching council events with immediate resource/trust effects, remembered ideological choices and time-delayed follow-up chapters.
+- **Income and orders:** When all four players finish a year, production is added, ship orders reset and multi-year projects progress. Turn order rotates annually.
+
+### Expanding the galaxy
+
+1. Select **Ships** and tap **ORDER** on a Scout. Tap an adjacent linked system, then confirm the move. Scouting reveals its contents.
+2. Move a **Colony Ark** to a discovered neutral system adjacent to your borders.
+3. Tap **FOUND** on the Ark in Ships, or select the system and choose **FOUND COLONY**. The Ark is consumed and establishment costs **8 Credits + 12 Alloy**.
+4. Open **Worlds** to specialize the new colony. The planet's type affects specialty output.
+5. Select your own colony in Galaxy to launch new ships using resources (Scouts C3/A7, Arks C5/A12, Fleets C5/A10).
+
+### Victory
+
+| Route | Requirements |
+|---|---|
+| **Discovery** | Exploration III, 14 surveyed systems, 3 ancient clues from Rift/Relic exploration, 3 colonies, then fund and finish a 3-year Ancient Archive project |
+| **Unity** | Prosperity II, 2 alliances, 4 colonies, then fund and finish a 3-year Galactic Accord project |
+| **Dominion** | Control at least 15 of the 30 systems |
+| **Legacy** | Highest empire score when the selected year limit expires |
+
+The intended balance is that different routes remain viable; *AI campaign simulations currently favour Unity*, so tactical balance remains an active playtesting concern rather than a finished claim.
+
+## UI
+
+The galaxy uses the full available play area between a narrow top status bar and bottom navigation dock. Selecting a star opens **only one inspector**, with the galaxy narrowing to leave it space. Scouts, orders, research, colony specialization, diplomacy, empire overview, events, handoff and results have dedicated screens. Every order is prevalidated with requirements and has an explicit confirmation view.
+
+Graphics-mode `monitor_touch` uses 0-based pixel coordinates and the fallback uses 1-based character coordinates. This game converts input to one coordinate system before hit detection.
+
+## Saves, legacy editions and rollback
+
+- v5: `/tidebound/v5-save.dat`, with `.bak` fallback.
+- v4: `/tidebound/expanse-save.dat`, **not migrated or overwritten by v5**.
+- v3: `/tidebound/save.dat`, kept unchanged.
+
+Previous games are launchable independently:
 
 ```sh
-/tidebound/tidebound-stellar-frontier.lua   # Stellar Frontier v3.0.1
-/tidebound/tidebound-kingdoms.lua           # Kingdoms v2.1
-/tidebound/tidebound-classic.lua            # Naval game v1
+/tidebound/tidebound-shattered-v4.lua   # The Shattered Expanse v4
+/tidebound/tidebound-stellar-frontier.lua # Stellar Frontier v3
+/tidebound/tidebound-kingdoms.lua        # Kingdoms v2
+/tidebound/tidebound-classic.lua         # Original naval edition
 ```
 
-Saves: `/tidebound/expanse-save.dat` (v4) and `/tidebound/save.dat` (v3). Each v4 save keeps a `.bak` fallback copy. Legacy saves are not converted.
+The installer downloads and syntax-checks every Lua module before activation; it rolls back file replacements after a failed activation and leaves all save files outside its code replacement list.
 
-## The world
-
-- **Four empires**; choose 1–4 humans and AI fills the remainder.
-- **40 connected star systems** with fog of war, worlds with unique properties, chokepoints, neutral settlements, Rift Aether resources and precursor anomalies.
-- Play as the **Imperium**, **Concord**, **Ascendancy**, or **Free Systems** or change civilization names. Each civilization has different economic, scientific, military or diplomatic tendencies.
-- Campaign length configurable from 16 to 32 galactic years (default 24). Rotating turn order across rounds.
-
-## Your turn: empire economy vs. ship orders
-
-There is **no empire-wide action cap**. As many economic, political, construction and science decisions as resources and queues permit may be made during your turn. Ship movements and actions are **per-vessel**. Every science ship, construction ship or military ship gets its own available orders, replenished at the start of each new galactic year.
-
-- **Science vessels:** travel one connected star lane per order, reveal unknown systems, study anomalies and uncover narrative events.
-- **Construction ships:** travel between connected systems, establish outposts in surveyed adjacent neutral territory, and found colonies.
-- **Frigates / cruisers / capital ships:** strategic movement, fleet battles and planetary invasions against rivals at war. Capital ships are slow but powerful.
-- **Construction:** each colony has one active district project, and each shipyard one active ship project. Buildings generally finish within 1–2 years. More colonies mean greater simultaneous production.
-- **Research:** four branches (Engineering, Physics, Society and Exploration), four levels each. Technologies cost accrued Research; they don't consume ship orders.
-- **Diplomacy:** trade accords, research sharing, non-aggression, defensive alliances, war declarations and requested peace treaties. Offers to humans await their response; AI accepts or refuses according to relationships and priorities.
-- **RPG decisions:** 20 contextual dilemmas and linked follow-up chapters, with consequences for resources, prestige, stability, inter-empire trust and emergent civilization ethics.
-
-## Resources
-
-| Resource | Used for |
-| --- | --- |
-| **C**redits | Development, ships, treaties, civic policy, upkeep |
-| **M**aterials | Outposts, ships, buildings, colony expansions |
-| **R**esearch | Four technology branches, new production and strategic options |
-| **A**ether | Rare ship classes, experimental technologies, scientific megaprojects |
-
-Both ordinary and specialist colonies produce resources at the end of every galactic year. Choose between **Balanced, Industry, Scholarship, and Mercantile** civic priorities to alter production. Each policy change costs 4 Credits and may be made once per year.
-
-## Victory routes
-
-- **Domination:** occupy 22 of 40 systems.
-- **Scientific:** finish Physics 4 and Exploration 4, collect and invest C35/M40/A4, and complete the three-year Transcendence project.
-- **Diplomatic:** research Society 3, sign two defensive alliances, invest C45/M18, and complete the three-year Galactic Charter project.
-- **Economic:** develop five colonies, stockpile C125/M65, and invest it in a three-year Mercantile Union project.
-- **Legacy:** highest score at the final galactic year, calculated from territory, colony development, technology, resources, prestige and diplomacy.
-
-## Using the touch UI
-
-1. From the animated title screen choose **New Campaign** or **Continue**.
-2. Choose the number of humans, adjust empire names using the on-screen keyboard and cycle their founding archetypes.
-3. Pass the monitor to the person shown on the **Begin Turn** screen.
-4. Tap a visible star to inspect its owner, colony and structures. Select **System Orders** to choose improvements, ships, colonization, diplomacy/integration and exploration actions. Disabled orders are still tappable to explain **why** they are unavailable.
-5. **Ships** lists each vessel with its remaining orders. Tap **Order** and then an adjacent linked star to move the chosen ship.
-6. **Science** spends research reserves on discoveries; **Empire** shows production and civic policies; **Diplomacy** manages rival governments; **History** records decisions and galactic events.
-7. Choose the consequences of any pending events before ending your turn. Press **End** to pass control onward. All intervening AI turns execute automatically.
-
-**Touch coordinates:** Graphics mode uses zero-based *pixel* touch coordinates, while vanilla text-mode monitors produce one-based *character* coordinates. The input boundary handles both formats before dispatching UI events.
-
-**Hotseat privacy:** A handoff screen masks the world and says which human is next; complete privacy is inherently limited when sharing a physical monitor.
-
-## Technical layout
+## Architecture
 
 ```text
-tidebound.lua                        Application launcher
-expanse/content.lua                 Civilization definitions, machines, tech, ships, costs
-expanse/events.lua                  Narrative dilemmas and follow-up event chains
-expanse/sim.lua                     Pure seeded turn engine, AI, economy, warfare, diplomacy
-expanse/render.lua                  Graphics-mode / text-mode drawing and hitboxes
-expanse/ui.lua                      Title/setup, map, menus, orders, modal explanations, saves
+install-tidebound.lua       validated installer with code rollback, preserves saves
+/tidebound/tidebound.lua    v5 launcher + monitor discovery
+/tidebound/expanse-v5/
+  content.lua               faction, tech, ship and economy data
+  events.lua                branching, delayed narrative events
+  sim.lua                   deterministic rules, resources, AI and victory
+  render.lua                256-colour pixel rendering and text fallback
+  ui.lua                    title, setup, keyboard, galaxy, inspector,
+                            ships, worlds, research, diplomacy, council,
+                            victory, confirmation and touch mapping
+/tidebound/tests/v5.lua    seeded simulation and fake-monitor tests
+/tidebound/expanse/         previous v4 modules (unchanged)
 ```
 
-The simulation never calls the monitor renderer. Touch input generates validated simulation commands. Save version is `4` and is intentionally independent of old releases.
-
-## Testing
-
-Local regression test suite under `tidebound/tests/simulation.lua` (run from the repository checkout on a system with `texlua`, from the project root). It tests procedural connectivity, AI turn progression, ship actions, economic production, research, diplomacy, event resolution, and simulated Graphics/text hit coordinates at three monitor sizes.
-
-The offline renderer and Lua integration are tested. Physical Minecraft/NeoForge monitor tests have **not** yet been performed; performance on the actual server and overall game balance still need playtesting.
+Run offline tests from repository root with `texlua tidebound/tests/v5.lua ./tidebound/expanse-v5`. The simulator is independent of the display; tests cover seeded maps, resource invariants, AI progression, ship orders, narrative decisions, keyboard and touch hitboxes at three monitor sizes.

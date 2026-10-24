@@ -1,21 +1,25 @@
-THE SHATTERED EXPANSE v4.0 (TIDEBOUND)
+TIDEBOUND V5: THE SHATTERED EXPANSE
 
 INSTALL:
-  wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-tidebound.lua
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-tidebound.lua
 
 PLAY:
-  /tidebound/tidebound.lua
+/tidebound/tidebound.lua
 
-1. Choose 1-4 human empires. AI plays every remaining empire.
-2. Pass the monitor to each human on the Begin Turn screen.
-3. Tap a star, then SYSTEM ORDERS. Tap unavailable actions for explanations.
-4. Ships > ORDER > destination (connected star) to move the selected ship.
-5. Science ships reveal systems; builders establish outposts and colonies.
-6. Research and buildings cost accumulated resources, not empire actions.
-7. Each ship has individual orders, refreshed every galactic year.
-8. Pick narrative decisions and diplomatic replies before ending your turn.
-9. Win by military conquest, research, diplomacy, economics or Legacy score.
+HARDWARE:
+Advanced Computer + Advanced Monitor (5x5 recommended); CC: Graphics optional.
 
-IMPORTANT: v3 old save is preserved at /tidebound/save.dat.
-New v4 save at /tidebound/expanse-save.dat (with fallback .bak).
-Play the old edition: /tidebound/tidebound-stellar-frontier.lua
+THE TURN:
+Select a star to inspect. Ships -> ORDER -> linked star -> Confirm.
+Scouts reveal a system. Ark -> found an adjacent surveyed neutral system.
+Worlds sets Industry / Science / Commerce for each colony.
+Tech spends Knowledge, with no empire action cap. Fleet gets 2 moves/year.
+Diplomacy creates pacts, alliance and war. Council events change your story.
+END advances to the next player and runs AI turns automatically.
+
+VICTORY:
+Discovery (explore + ancient clues), Unity (alliances), Dominion (15 systems)
+or highest Legacy score at the end of the campaign.
+
+SAVES: /tidebound/v5-save.dat (v4 and v3 saves retained separately)
+OLD V4: /tidebound/tidebound-shattered-v4.lua

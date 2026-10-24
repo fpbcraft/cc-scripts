@@ -1,100 +1,100 @@
--- FPBCRAFT TIDEBOUND / installer & updater v4.0
+-- FPBCRAFT TIDEBOUND installer/updater v5.0
 -- wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-tidebound.lua
--- Optional: branch/ref (default main), --startup to auto-launch on a dedicated computer.
+-- Optional: <branch-or-tag> [--startup]; never changes startup by default.
 local args={...};local ref,autostart='main',false
 for _,a in ipairs(args)do
  if a=='--startup' then autostart=true
  elseif a=='--no-startup' then autostart=false
  else ref=a end
 end
-assert(ref:match('^[%w._/-]+$') and not ref:find('..',1,true),'Invalid Git ref')
-assert(http and http.get,'Enable CC:Tweaked HTTP in server configuration')
-local root='/tidebound'
-local staging=root..'/.install-next'
-local backup=root..'/.install-previous'
+assert(ref:match('^[%w._/-]+$') and not ref:find('..',1,true),'Invalid git ref')
+assert(http and http.get,'Enable HTTP in CC:Tweaked config')
+local root='/tidebound';local nextDir=root..'/.install-next';local backup=root..'/.install-previous'
 local origin='https://raw.githubusercontent.com/fpbcraft/cc-scripts/'..ref..'/tidebound/'
 local files={
- 'tidebound.lua',
- 'tidebound-stellar-frontier.lua',
- 'tidebound-kingdoms.lua',
- 'tidebound-classic.lua',
- 'expanse/content.lua',
- 'expanse/events.lua',
- 'expanse/sim.lua',
- 'expanse/render.lua',
- 'expanse/ui.lua',
+ 'tidebound.lua','tidebound-shattered-v4.lua','tidebound-stellar-frontier.lua',
+ 'tidebound-kingdoms.lua','tidebound-classic.lua',
+ 'expanse/content.lua','expanse/events.lua','expanse/sim.lua','expanse/render.lua','expanse/ui.lua',
+ 'expanse-v5/content.lua','expanse-v5/events.lua','expanse-v5/sim.lua',
+ 'expanse-v5/render.lua','expanse-v5/ui.lua'
 }
-local function drop(path)if fs.exists(path) then fs.delete(path)end end
-local function write(path,value)
- local dir=fs.getDir(path);if dir~='' and not fs.exists(dir)then fs.makeDir(dir)end
+local function remove(path)if fs.exists(path)then fs.delete(path)end end
+local function write(path,bytes)
+ local parent=fs.getDir(path);if parent~='' and not fs.exists(parent)then fs.makeDir(parent)end
  local h,err=fs.open(path,'w');assert(h,'Cannot write '..path..': '..tostring(err))
- h.write(value);h.close()
+ h.write(bytes);h.close()
 end
 local function read(path)
  local h=fs.open(path,'r');if not h then return nil end
- local out=h.readAll();h.close();return out
+ local data=h.readAll();h.close();return data
 end
-local function download(name)
- local h,err=http.get(origin..name,nil,true)
- assert(h,'Download failed for '..name..': '..tostring(err))
- local code=h.getResponseCode and h.getResponseCode() or 200
- local text=h.readAll();h.close()
- assert(code==200 and text and #text>80,'HTTP '..tostring(code)..' for '..name)
- local chunk,reason=load(text,'@'..name,'t')
- assert(chunk,'Syntax error in '..name..': '..tostring(reason))
- return text
+local function fetch(name)
+ local response,err=http.get(origin..name,nil,true)
+ assert(response,'Download failed for '..name..': '..tostring(err))
+ local status=response.getResponseCode and response.getResponseCode() or 200
+ local body=response.readAll();response.close()
+ assert(status==200 and body and #body>60,'HTTP '..status..' downloading '..name)
+ local fn,syntaxError=load(body,'@'..name,'t')
+ assert(fn,'Syntax error in '..name..': '..tostring(syntaxError))
+ return body
 end
-print('TIDEBOUND: SHATTERED EXPANSE / INSTALLER')
-print('Source: fpbcraft/cc-scripts @ '..ref)
+print('TIDEBOUND / THE SHATTERED EXPANSE V5 INSTALLER')
+print('Source: '..ref)
 if not fs.exists(root)then fs.makeDir(root)end
--- Only touch code files; leave all save files outside these directories intact.
-drop(staging);fs.makeDir(staging)
-local fetched,fetchError=pcall(function()
+-- Recover from a computer shutdown while replacing a previous version.
+if fs.exists(backup)then
  for _,name in ipairs(files)do
-  write(fs.combine(staging,name),download(name));print('Fetched '..name)
- end
-end)
-if not fetched then drop(staging);error('Install aborted, old game unchanged: '..tostring(fetchError),0)end
--- Roll back every code file if any activation operation fails.
-drop(backup);fs.makeDir(backup)
-local changed,activated={},{}
-local ok,reason=pcall(function()
- for _,name in ipairs(files)do
-  local old=fs.combine(root,name);local oldBackup=fs.combine(backup,name)
-  if fs.exists(old)then
-   local dir=fs.getDir(oldBackup);if not fs.exists(dir)then fs.makeDir(dir)end
-   fs.move(old,oldBackup);changed[#changed+1]=name
+  local previous=fs.combine(backup,name)
+  local installed=fs.combine(root,name)
+  if fs.exists(previous) and not fs.exists(installed)then
+   local parent=fs.getDir(installed)
+   if not fs.exists(parent)then fs.makeDir(parent)end
+   fs.move(previous,installed)
   end
-  local targetDir=fs.getDir(old);if not fs.exists(targetDir)then fs.makeDir(targetDir)end
-  fs.move(fs.combine(staging,name),old);activated[#activated+1]=name
+ end
+end
+remove(nextDir);fs.makeDir(nextDir)
+local ok,err=pcall(function()
+ for _,name in ipairs(files)do
+  write(fs.combine(nextDir,name),fetch(name));print('Checked '..name)
  end
 end)
-if not ok then
- for _,name in ipairs(activated)do drop(fs.combine(root,name))end
- for _,name in ipairs(changed)do
-  local oldBackup=fs.combine(backup,name);local dest=fs.combine(root,name)
-  if fs.exists(oldBackup)then fs.move(oldBackup,dest)end
+if not ok then remove(nextDir);error('Download failed; old game unchanged: '..tostring(err),0)end
+remove(backup);fs.makeDir(backup)
+local archived,installed={},{}
+local activated,why=pcall(function()
+ for _,name in ipairs(files)do
+  local dest=fs.combine(root,name);local old=fs.combine(backup,name)
+  if fs.exists(dest)then
+   local folder=fs.getDir(old);if not fs.exists(folder)then fs.makeDir(folder)end
+   fs.move(dest,old);archived[#archived+1]=name
+  end
+  local folder=fs.getDir(dest);if not fs.exists(folder)then fs.makeDir(folder)end
+  fs.move(fs.combine(nextDir,name),dest);installed[#installed+1]=name
  end
- drop(staging);drop(backup)
- error('Activation rolled back: '..tostring(reason),0)
+end)
+if not activated then
+ for _,name in ipairs(installed)do remove(fs.combine(root,name))end
+ for _,name in ipairs(archived)do
+  local old=fs.combine(backup,name);if fs.exists(old)then fs.move(old,fs.combine(root,name))end
+ end
+ remove(nextDir);remove(backup);error('Installation rolled back: '..tostring(why),0)
 end
-drop(staging);drop(backup)
+remove(nextDir);remove(backup)
 if autostart then
  local launcher="shell.run('/tidebound/tidebound.lua')\n"
- local existing=fs.exists('/startup.lua') and read('/startup.lua') or nil
+ local prior=fs.exists('/startup.lua') and read('/startup.lua') or nil
  local shadow=fs.exists('/startup') and read('/startup') or nil
- if shadow and shadow~=launcher then
-  print('Startup unchanged: unrelated /startup exists.')
- elseif existing and existing~=launcher and fs.exists('/startup.tidebound-backup.lua') then
-  print('Startup unchanged: previous startup backup already exists.')
+ if shadow and shadow~=launcher then print('Startup not changed: unrelated /startup exists.')
+ elseif prior and prior~=launcher and fs.exists('/startup.tidebound-backup.lua')then
+  print('Startup not changed: previous backup exists.')
  else
-  if existing and existing~=launcher then fs.copy('/startup.lua','/startup.tidebound-backup.lua')end
-  if shadow then drop('/startup')end
-  write('/startup.lua',launcher)
-  print('Autostart enabled. Existing startup preserved when replaced.')
+  if prior and prior~=launcher then fs.copy('/startup.lua','/startup.tidebound-backup.lua')end
+  if shadow then remove('/startup')end
+  write('/startup.lua',launcher);print('Autostart enabled')
  end
-else print('Autostart unchanged (add --startup on a dedicated computer).')end
-print('Installed v4.0. All saves preserved.')
-print('Play: /tidebound/tidebound.lua')
-print('Legacy v3: /tidebound/tidebound-stellar-frontier.lua')
-print('New save: /tidebound/expanse-save.dat')
+else print('Autostart unchanged (--startup to opt in)')end
+print('Installed TIDEBOUND v5.0. Saves preserved, including v4 and v3.')
+print('PLAY  /tidebound/tidebound.lua')
+print('V4    /tidebound/tidebound-shattered-v4.lua')
+print('SAVES /tidebound/v5-save.dat (+ .bak)')
