@@ -206,6 +206,33 @@ function E.evaluate(g)
  return {lights=lights,powered=powered,goals=goals,correct=correct,
   jam=jam,fullNetwork=g.fullNetwork,openPorts=openPorts,
   unpowered=unpowered,remaining=remaining,complete=complete,
-  win=not jam and goals>0 and goals==correct and complete}
+  win=not jam and goals>0 and goals==correct}
+end
+-- Extra contracts are optional: standard level completion only needs the
+-- machines powered at the right RPM and direction. Bonuses never lock NEXT.
+function E.challenges(g,result)
+ local list={}
+ if g.number<2 then return list end
+ local function add(id,name,description,earned)
+  list[#list+1]={id=id,name=name,description=description,
+   earned=result.win and earned or false}
+ end
+ add("sealed","SEALED LINES","NO OPEN PORTS OR IDLE PARTS",
+  result.openPorts==0 and result.unpowered==0)
+ if g.number>=3 then
+  add("master","FULL FACTORY","STOCK USED, POWERED, SEALED",
+   result.remaining==0 and result.openPorts==0 and result.unpowered==0)
+ end
+ if g.number>=5 then
+  -- One optimal reference route is always achievable within this move limit:
+  -- place every part at r=0, then turn clockwise to its authored rotation.
+  local par=0
+  for _,tile in ipairs(levels[g.number].build)do
+   par=par+1+(tile.r or 0)
+  end
+  add("precision","PRECISION","NO HINTS / AT MOST "..par.." MOVES",
+    g.hints==0 and g.moves<=par)
+ end
+ return list
 end
 return E
