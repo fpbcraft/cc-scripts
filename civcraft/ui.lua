@@ -271,7 +271,20 @@ function UI:draw(state,playerID,opts)
     return n
    end)(),6,1,sw-8)
    local selectedCity=where(state.cities,self.selected.x,self.selected.y)
-   if selectedCity and selectedCity.owner==playerID then
+   local selectedUnit=where(state.units,self.selected.x,self.selected.y)
+   if selectedUnit and selectedUnit.owner==playerID then
+    local unit=Systems.units[selectedUnit.kind] or Systems.units.warrior
+    local cy=my+76
+    r:fill(sidebarX+3,cy,sw-6,math.max(16,boardH-79),2)
+    r:text(sidebarX+5,cy+3,selectedUnit.kind:upper(),8,1,sw-9)
+    r:text(sidebarX+5,cy+15,
+     "ATK "..(unit.strength or 0).." / DEF "..(unit.defense or 0),7,1,sw-9)
+    r:text(sidebarX+5,cy+27,
+     "MOVE "..(selectedUnit.movesLeft or 0).."/"..(unit.move or 1)..
+     "  SIGHT "..(unit.vision or 2),7,1,sw-9)
+    r:text(sidebarX+5,cy+39,"ABILITY",9,1,sw-9)
+    r:text(sidebarX+5,cy+50,unit.ability or "-",6,1,sw-9)
+   elseif selectedCity and selectedCity.owner==playerID then
     local cy=my+76
     r:fill(sidebarX+3,cy,sw-6,math.max(16,boardH-79),2)
     r:text(sidebarX+5,cy+3,"CITY POP "..(selectedCity.population or 2),7,1,sw-9)
@@ -288,8 +301,10 @@ function UI:draw(state,playerID,opts)
   for i,p in ipairs(state.players)do
    local iy=my+79+(i-1)*11
    if iy+10<my+boardH and
-    not (where(state.cities,self.selected.x,self.selected.y) and
-      where(state.cities,self.selected.x,self.selected.y).owner==playerID) then
+    not ((where(state.cities,self.selected.x,self.selected.y) and
+      where(state.cities,self.selected.x,self.selected.y).owner==playerID) or
+      (where(state.units,self.selected.x,self.selected.y) and
+       where(state.units,self.selected.x,self.selected.y).owner==playerID)) then
     r:fill(sidebarX+4,iy,3,9,P[i]or 8)
     r:text(sidebarX+11,iy+2,clip(p.name,math.floor((sw-14)/4))..
       (p.ready and " DONE" or ""),6,1,sw-13)
