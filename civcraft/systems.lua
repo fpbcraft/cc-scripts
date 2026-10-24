@@ -152,7 +152,8 @@ function M.aiTurn(state,p,hex)
    if not u.consumed and #choices>0 then
     local target
     for _,c in ipairs(state.cities)do
-     if c.owner~=p.id then target=c;break end
+     if c.owner~=p.id and ((p.explored or {})[c.x..":"..c.y] or
+       (p.visible or {})[c.x..":"..c.y]) then target=c;break end
     end
     table.sort(choices,function(a,b)
      if u.kind=="settler" then
@@ -174,16 +175,23 @@ function M.aiTurn(state,p,hex)
      for j=#state.units,1,-1 do
       local rival=state.units[j]
       if rival.owner~=p.id and rival.x==choice.x and rival.y==choice.y then
-       table.remove(state.units,j)
+       local offensive=M.units[u.kind].strength or 0
+       local defensive=(M.units[rival.kind] or M.units.warrior).defense or 1
+       if u.kind=="spearman" and rival.kind=="horseman"then offensive=offensive+2 end
+       if offensive>=defensive then table.remove(state.units,j)
+       else u.consumed=true end
+       break
       end
      end
     end
-    for _,c in ipairs(state.cities)do
-     if c.x==choice.x and c.y==choice.y and c.owner~=p.id and
-        M.units[u.kind].strength>0 then c.owner=p.id end
+    if not u.consumed then
+     for _,c in ipairs(state.cities)do
+      if c.x==choice.x and c.y==choice.y and c.owner~=p.id and
+         M.units[u.kind].strength>0 and not choice.ranged then c.owner=p.id end
+     end
+     if not choice.ranged then u.x=choice.x;u.y=choice.y end
+     u.moved=true;u.movesLeft=0
     end
-    if not choice.ranged then u.x=choice.x;u.y=choice.y end
-    u.moved=true;u.movesLeft=0
    end
   end
  end
