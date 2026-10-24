@@ -22,8 +22,15 @@ textutils={serialize=function(t)return tostring(t.ref)end}
 http={}
 function http.get(url)
  downloads[#downloads+1]=url
+ local appId=url:match("/install%-(%w+)%.lua")
+ local paths={cogworks="/cogworks/main.lua",railbreak="/railbreak/main.lua",
+  tidebound="/tidebound/tidebound.lua"}
+ local path=paths[appId]
+ local body=path and ("local file=fs.open("..string.format("%q",path)..
+  ",'w');file.write('-- installed v1.0.0');file.close()") or
+  "print('mock installer ok')"
  return {getResponseCode=function()return 200 end,
-  readAll=function()return "print('mock installer ok')\n"end,close=function()end}
+  readAll=function()return body end,close=function()end}
 end
 local runCount=0
 shell={}
@@ -40,6 +47,8 @@ function shell.run(file,...)
 end
 local M=require("fpbstore.manager")
 assert(#M.catalog.apps>=3,"Catalog must contain the original three games")
+assert(M.storeStatus().installedVersion=="1.1.0",
+ "Store's installed version should be displayed")
 local old={"cogworks","railbreak","tidebound"}
 for i,id in ipairs(old)do
  local app=assert(M.get(id))
@@ -61,7 +70,29 @@ for i,id in ipairs(old)do
  assert(files[unknown]=="user-created","Unknown user file survives")
  assert(not M.status(app).managed,"Metadata removed")
 end
-assert(runCount==6,"Three installs and three launches")
+assert(runCount==3,"Three games launched after direct installer execution")
 local ok=pcall(function()M.install({id="unknown"})end)
 assert(not ok,"Arbitrary catalog entries rejected")
+-- Remote versions can identify both game and store updates without
+-- overwriting any local installation metadata.
+local initialStore=M.storeStatus()
+assert(initialStore.installedVersion=="1.1.0")
+local remoteCatalog=[[return {storeVersion="1.2.0",apps={
+ {id="cogworks",version="1.2.0"},{id="railbreak",version="2.0.6"},
+ {id="tidebound",version="5.1"}}}]]
+local priorHttp=http.get
+http.get=function(url)
+ if url:find("/fpbstore/catalog.lua",1,true)then
+  return {getResponseCode=function()return 200 end,
+   readAll=function()return remoteCatalog end,close=function()end}
+ end
+ return priorHttp(url)
+end
+assert(M.refreshVersions(),"Remote catalog check")
+assert(M.storeStatus().updateAvailable,"Detect newer Store release")
+local cog=M.get("cogworks")
+files[cog.entry]="-- COGWORKS v1.0.0\\nprint('game')"
+local v=M.status(cog)
+assert(v.installedVersion=="1.0.0" and v.latestVersion=="1.2.0"
+ and v.updateAvailable,"Detect installed and latest game versions")
 print("FPB STORE: catalog, install, run, uninstall and save-preservation passed.")

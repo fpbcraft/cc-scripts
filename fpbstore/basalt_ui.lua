@@ -6,6 +6,7 @@ function B.run(manager)
  if not ok or type(basalt)~="table" or
   type(basalt.getMainFrame)~="function" or
   type(basalt.run)~="function" then return false end
+ manager.refreshVersions()
  local frame=basalt.getMainFrame()
  local w,h=term.getSize()
  if w<36 or h<16 then return false end
@@ -23,16 +24,21 @@ function B.run(manager)
   return frame:addButton({x=x,y=y,width=width,height=1,text=title})
    :onClick(fn)
  end
- label(2,2,w-3,"FPB STORE  /  GAMES",colors.orange)
+ local store=manager.storeStatus()
+ label(2,2,w-3,"FPB STORE v"..(store.installedVersion or "?").." / GAMES",colors.orange)
  label(2,3,w-3,"INSTALL - UPDATE - PLAY - REMOVE",colors.lightBlue)
  local status=label(2,h-2,w-3,message,colors.yellow)
  local appButtons={}
  local function refresh()
   for i,item in ipairs(appButtons)do
    local app=manager.catalog.apps[i]
-   local installed=manager.installed(app)
-   item.text=(i==selected and "> " or "  ")..app.name..
-     (installed and " [READY]" or " [INSTALL]")
+   local info=manager.status(app)
+   local installed=info.installedVersion and ("v"..info.installedVersion) or
+    (info.installed and "v?" or "NOT INSTALLED")
+   local latest=info.latestVersion and ("v"..info.latestVersion) or "?"
+   local upgrade=info.updateAvailable and " UPDATE!" or ""
+   item.text=((i==selected and "> " or "  ")..app.name..
+    " "..installed.." > "..latest..upgrade):sub(1,w-5)
   end
   status.text=message:sub(1,w-3)
  end
@@ -48,12 +54,12 @@ function B.run(manager)
   action=name
   basalt.stop()
  end
- local row=h-6
+ local row=h-7
  local width=math.floor((w-5)/3)
  button(2,row,width,"INSTALL/UPDATE",function()finish("install")end)
  button(3+width,row,width,"PLAY",function()finish("play")end)
  button(4+width*2,row,width,"REMOVE",function()finish("remove")end)
- button(2,row+2,math.max(12,w-4),"UPDATE STORE",function()finish("store-update")end)
+ button(2,row+2,math.max(12,w-4),store.updateAvailable and "UPDATE STORE!" or "UPDATE STORE",function()finish("store-update")end)
  button(2,row+4,math.max(12,w-4),"EXIT",function()finish("exit")end)
  refresh()
  basalt.run()

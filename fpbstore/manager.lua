@@ -32,6 +32,7 @@ function M.installed(app)
 end
 local latest={}
 local checked=false
+local latestStore=nil
 local function readVersion(app)
  local marker="/fpbstore/installed/"..app.id..".dat"
  if fs.exists(marker) then
@@ -68,9 +69,9 @@ function M.refreshVersions(ref)
     new[app.id]=app.version
    end
   end
-  return new
+  return {apps=new,store=remote.storeVersion}
  end)
- if ok then latest=result;checked=true;return true end
+ if ok then latest=result.apps;latestStore=result.store;checked=true;return true end
  checked=true;return false,tostring(result)
 end
 local function parts(version)
@@ -85,6 +86,13 @@ local function newer(a,b)
   if x[i]~=y[i] then return x[i]>y[i] end
  end
  return false
+end
+function M.storeStatus()
+ local installed=C.storeVersion
+ local available=latestStore or installed
+ return {installedVersion=installed,latestVersion=available,
+  updateAvailable=latestStore~=nil and newer(available,installed),
+  checked=checked}
 end
 function M.status(app)
  local marker="/fpbstore/installed/"..app.id..".dat"
