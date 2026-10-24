@@ -40,7 +40,7 @@ function UI:tile(x,y)
    self.notice="OUT OF RANGE - SELECT HIGHLIGHTED HEX"
   end
  else
-  self.selected={x=x,y=y};self.panel="context"
+  self.selected={x=x,y=y};self.panel="context";self.actionPage=1
   local unit=where(self.state and self.state.units,x,y)
   if unit and unit.owner==self.playerID and not unit.moved then
    self.source={x=x,y=y}
@@ -87,7 +87,7 @@ function UI:draw(state,playerID,opts)
     opts.deleteConfirm==opts.slot and "SURE?" or "DELETE",
     function()self:command("deleteSlot")end)
   end
-  local by=math.max(math.floor(h*.58),math.floor(h*.32)+65)
+  local by=math.min(h-53,math.max(math.floor(h*.55),math.floor(h*.32)+65))
   r:button(bx,by,bw,16,"NEW CAMPAIGN",
    function()self:command("newGame")end,{primary=true})
   r:button(bx,by+19,bw,16,
@@ -303,10 +303,10 @@ function UI:draw(state,playerID,opts)
   end}
  elseif selectedCity and selectedCity.owner==playerID then
   if self.panel=="context" then
-   actions[#actions+1]={"UNITS",function()self.panel="units"end}
-   actions[#actions+1]={"BUILDINGS",function()self.panel="buildings"end}
-   actions[#actions+1]={"POPULATION",function()self.panel="population"end}
-   actions[#actions+1]={"TECH TREE",function()self.panel="tech"end}
+   actions[#actions+1]={"UNITS",function()self.panel="units";self.actionPage=1 end}
+   actions[#actions+1]={"BUILDINGS",function()self.panel="buildings";self.actionPage=1 end}
+   actions[#actions+1]={"POPULATION",function()self.panel="population";self.actionPage=1 end}
+   actions[#actions+1]={"TECH TREE",function()self.panel="tech";self.actionPage=1 end}
   elseif self.panel=="units"then
    for _,id in ipairs({"warrior","settler","scout","spearman","horseman","archer","explorer","ranger","swordsman","galley","navigator","frigate","flagship"})do
     if Systems.canRecruit(mine,id) then
@@ -329,12 +329,30 @@ function UI:draw(state,playerID,opts)
     end
    end
   elseif self.panel=="tech"then
-   for _,id in ipairs(Systems.techOrder)do
-    if Systems.canResearch(mine,id)then act(id:upper(),"researchTech",{id=id})end
-   end
+   -- Research options live in the connected canvas, not the footer.
   end
  else
   actions[#actions+1]={"INSPECT",function()self.notice=terrain(x,y,state):upper()end}
+ end
+ -- Context lists can be much larger than the narrow bottom action bar.
+ -- Paginate rather than drawing buttons over the map or beyond the screen.
+ if #actions>4 then
+  self.actionPage=self.actionPage or 1
+  local itemsPerPage=3
+  local pages=math.ceil(#actions/itemsPerPage)
+  self.actionPage=math.max(1,math.min(self.actionPage,pages))
+  local page={}
+  for i=(self.actionPage-1)*itemsPerPage+1,
+     math.min(#actions,self.actionPage*itemsPerPage)do
+   page[#page+1]=actions[i]
+  end
+  if self.actionPage>1 then
+   page[#page+1]={"PREV",function()self.actionPage=self.actionPage-1 end}
+  end
+  if self.actionPage<pages then
+   page[#page+1]={"NEXT",function()self.actionPage=self.actionPage+1 end}
+  end
+  actions=page
  end
  actions[#actions+1]={"BACK",function()
   self.panel="context";self.source=nil;self.reachable={}
