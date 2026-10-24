@@ -134,7 +134,7 @@ touchLabel("TECH TREE")
 ui:draw(state,11,{localMode=true})
 local techNode=false
 for _,button in ipairs(ui.r.buttons)do
- if button.label=="agriculture" then techNode=true end
+ if button.label=="agriculture" or button.label=="WHEAT FARMING" then techNode=true end
 end
 assert(techNode,"City tech tab opens connected technology graph canvas")
 touchLabel("CLOSE")

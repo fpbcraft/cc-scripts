@@ -1,7 +1,41 @@
 -- Small recognizable unit/settlement symbols (not font characters).
 local I={}
 local function rect(r,x,y,w,h,c)r:fill(x,y,math.max(1,w),math.max(1,h),c)end
+local sprites={
+ diamond={'0001000','0011100','0111110','1111111','0111110','0011100','0001000'},
+ redstone={'0001000','0101010','0011100','1111111','0011100','0101010','0001000'},
+ copper={'0000000','0011110','0111111','1111110','1111100','0111000','0000000'},
+ zinc={'0000000','0011110','0111111','1111110','1111100','0111000','0000000'},
+ brass={'0000000','0011110','0111111','1111110','1111100','0111000','0000000'},
+ zombie={'0111110','0101010','0111110','0011100','1111111','0011100','0100010'},
+ skeleton={'0111110','0101010','0110110','0001000','0111110','0001000','0100010'},
+ spider={'1000001','0101010','1111111','0111110','1111111','0101010','1000001'},
+ creeper={'0111110','0101010','0110110','0101010','0011100','0011100','0100010'},
+ pillager={'0111110','0101010','0110110','0011100','1111111','1011101','0100010'},
+ engineer={'0011100','0111110','0011100','1111110','1011101','0011100','0100010'},
+ golem={'0111110','0101010','0111110','1111111','1111111','1011101','0010100'},
+ wonder={'0001000','0011100','0111110','0011100','0111110','1111111','1111111'},
+ spawner={'1111111','1010101','1101011','1011101','1101011','1010101','1111111'},
+ village={'0001000','0011100','0111110','1111111','0101010','0111010','0111110'},
+ gear={'0010100','1111111','0111110','1110111','0111110','1111111','0010100'}}
+local spriteColors={diamond=13,redstone=31,copper=9,zinc=5,brass=8,zombie=11,skeleton=7,spider=16,creeper=11,pillager=5,engineer=9,golem=7,wonder=8,spawner=31,village=9,gear=8}
+local function sprite(r,kind,x,y,size,color)
+ local shape=sprites[kind];if not shape then return false end
+ if size<7 then
+  for row,bits in ipairs(shape)do for col=1,7 do if bits:sub(col,col)=='1'then r:fill(x+math.floor((col-1)*size/7),y+math.floor((row-1)*size/7),1,1,color or spriteColors[kind])end end end
+  return true
+ end
+ local scale=math.max(1,math.floor(size/7));local shift=math.floor((size-scale*7)/2)
+ for row,bits in ipairs(shape)do for col=1,7 do if bits:sub(col,col)=='1'then r:fill(x+shift+(col-1)*scale,y+shift+(row-1)*scale,scale,scale,color or spriteColors[kind])end end end
+ return true
+end
 function I.draw(r,kind,x,y,size,color)
+ local aliases={brassengineer='engineer',railengineer='engineer',alchemist='engineer',supplycrew='engineer',expedition='engineer',heavysiege='gear',dispenserbarge='frigate'}
+ if kind=='diamondguard' or kind=='netherguard'then
+  I.draw(r,'swordsman',x,y,size,kind=='diamondguard'and 13 or 4);return
+ end
+ kind=aliases[kind]or kind
+ if sprite(r,kind,x,y,size)then return end
  if kind=='food' or kind=='grain'then I.yield(r,'food',x,y,size);return end
  local a=math.max(1,math.floor(size/9))
  local cx=x+math.floor(size/2)
@@ -165,6 +199,7 @@ function I.yieldValue(r,kind,value,x,y,width,background)
  return drawn
 end
 function I.resource(r,kind,x,y)
+ if sprites[kind]then sprite(r,kind,x,y,5);return end
  local glyph=({iron={'01110','11111','11011','11111','01110'},horses={'00110','01111','11110','01100','01010'},saltpeter={'10100','01010','10101','01110','00100'}})[kind]
  if not glyph then return end
  for row,bits in ipairs(glyph)do for col=1,5 do if bits:sub(col,col)=='1'then r:fill(x+col-1,y+row-1,1,1,kind=='horses'and 9 or 7)end end end

@@ -1,11 +1,11 @@
 -- Deterministic worlds, seed differentiation, exploration and hotseat isolation.
-local W=assert(loadfile("games/civcraft/world.lua"))()
-local H=assert(loadfile("games/civcraft/hex.lua"))()
 local oldDofile=dofile
 dofile=function(p)
  if p:sub(1,16)=="/games/civcraft/"then return oldDofile(p:sub(2))end
  return oldDofile(p)
 end
+local W=assert(loadfile("games/civcraft/world.lua"))()
+local H=assert(loadfile("games/civcraft/hex.lua"))()
 local S=assert(loadfile("games/civcraft/systems.lua"))()
 dofile=oldDofile
 local a=W.generate(12345,"standard",3)

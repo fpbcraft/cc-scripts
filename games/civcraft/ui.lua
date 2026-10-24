@@ -38,7 +38,7 @@ function UI:command(action,params)
   local warnings=self:endWarnings()
   if #warnings>0 then self.endConfirm=warnings;self.endOffset=0;return end
  end
- if action=='end'then self.cityStrikeSource=nil;self.source=nil;self.reachable={};self.workCity=nil end
+ if action=='end'then self.placement=nil;self.pendingMove=nil;self.cityStrikeSource=nil;self.source=nil;self.reachable={};self.workCity=nil end
  if self.dispatch then self.dispatch(action,params or {})end
 end
 function UI:endWarnings()
@@ -60,10 +60,31 @@ function UI:endWarnings()
  return warnings
 end
 function UI:deselect()
+ self.placement=nil
  self.cityStrikeSource=nil;self.source=nil;self.reachable={};self.pendingMove=nil;self.workCity=nil
  self.selected.empty=true;self.localNotice=nil;self.notice=''
 end
+function UI:armPlacement(kind,item,id)
+ self.source=nil;self.workCity=nil;self.cityStrikeSource=nil;self.pendingMove=nil;self.reachable={};self.panel='context'
+ self.placement={kind=kind,item=item,id=id};local p
+ for _,player in ipairs(self.state.players)do if player.id==self.playerID then p=player end end
+ if kind=='wonder'then
+  local L=dofile('/games/civcraft/landmarks.lua')
+  for _,tile in ipairs(Systems.workable(self.state,item))do if L.canPlace(self.state,item,id,tile.x,tile.y,Systems)then self.reachable[#self.reachable+1]={x=tile.x,y=tile.y,cost=0}end end
+ else
+  local R=dofile('/games/civcraft/railways.lua');local tiles=Hex.neighbours(item.x,item.y,self.state);tiles[#tiles+1]={x=item.x,y=item.y}
+  for _,tile in ipairs(tiles)do if R.canBuild(self.state,p,item,tile.x,tile.y,Systems)then self.reachable[#self.reachable+1]={x=tile.x,y=tile.y,cost=2}end end
+ end
+ self:feedback(#self.reachable>0 and 'CHOOSE A CYAN HEX; CONFIRM TO BUILD' or 'NO ELIGIBLE HEXES / CHECK MATERIALS AND RESEARCH')
+end
 function UI:tile(x,y)
+ if self.placement and not self.pendingMove then
+  for _,t in ipairs(self.reachable or {})do if t.x==x and t.y==y then
+   self.pendingMove={placement=self.placement,x=x,y=y,cost=t.cost,player=self.playerID}
+   self:feedback('CLICK HEX AGAIN OR CONFIRM TO BUILD');return
+  end end
+  self:feedback('CHOOSE A HIGHLIGHTED HEX; ESCAPE CANCELS');return
+ end
  if self.cityStrikeSource and not self.pendingMove then
   for _,target in ipairs(self.reachable or {})do if target.x==x and target.y==y then
    local city=where(self.state.cities,self.cityStrikeSource.x,self.cityStrikeSource.y)
@@ -107,6 +128,7 @@ function UI:draw(state,playerID,opts)
  -- into the next player's screen (including the concealed handoff).
  if self.lastPlayer~=nil and self.lastPlayer~=playerID then
   self.source=nil;self.reachable={};self.pendingMove=nil;self.cityStrikeSource=nil;self.productionConfirm=nil;self.disbandConfirm=nil;self.endConfirm=nil;self.panel="context"
+  self.placement=nil
   self.actionPage=1;self.techModel=nil;self.workCity=nil
   self.worldReady=false;self.panX=0;self.panY=0;self.zoomLevel=nil
   self.localNotice=nil;self.notice="";self.activeScroll=nil
@@ -132,7 +154,7 @@ function UI:draw(state,playerID,opts)
   self.source=nil;self.reachable={};self.pendingMove=nil
  end
  if opts.handoff or opts.paused or opts.screen=='title' or not state or state.phase~='game'then
-  self.pendingMove=nil;self.productionConfirm=nil;self.disbandConfirm=nil;self.endConfirm=nil;self.lastDrag=nil
+  self.placement=nil;self.reachable={};self.pendingMove=nil;self.productionConfirm=nil;self.disbandConfirm=nil;self.endConfirm=nil;self.lastDrag=nil
  end
  r:begin()
  self.hexTargets={}
@@ -237,6 +259,7 @@ function UI:draw(state,playerID,opts)
    rows[#rows+1]={buttons={
     {label='MAP SIZE',run=function()self:command('mapSize')end},
     {label='MAP TYPE',run=function()self:command('mapType')end}}}
+   rows[#rows+1]={buttons={{label='MOBS: '..(state.hostileMode or 'off'):upper(),run=function()self:command('hostileMode')end}}}
    rows[#rows+1]={buttons={{label='REROLL SEED',run=function()self:command('mapSeed')end}}}
    if opts.localMode then
     rows[#rows+1]={buttons={
@@ -263,6 +286,7 @@ function UI:draw(state,playerID,opts)
      function()self:command("civ",{player=i})end)
    end
   end
+  r:button(w-101,header+24,85,11,'MOBS '..(state.hostileMode or 'off'):upper(),function()self:command('hostileMode')end)
   local y=h-37
   r:text(13,y-27,"MAP "..tostring(state.mapSize or "STANDARD"):upper()..
    " / "..tostring(state.mapType or "continents"):upper()..
@@ -284,6 +308,7 @@ function UI:draw(state,playerID,opts)
   if h<180 or w<220 then
    r:fill(0,0,w,h,0);r:center(7,'GAME COMPLETE',8)
    r:center(20,'WINNER '..clip(state.winner,18),7)
+   r:center(30,state.victoryReason or 'LEGACY VICTORY',8)
    r:button(math.max(4,math.floor(w/2)-40),h-16,80,12,'EXIT',function()self:command('exit')end)
    r:finish();return
   end
@@ -356,6 +381,12 @@ function UI:armCityStrike(city)
 end
 function UI:confirmMove()
  local order=self.pendingMove;self.pendingMove=nil
+ if order and order.placement and order.player==self.playerID then
+  local placement=order.placement;local item=placement.item
+  if placement.kind=='wonder'then self:command('queue',{kind='wonder',id=placement.id,cityX=item.x,cityY=item.y,tileX=order.x,tileY=order.y})
+  else self:command('buildRail',{sx=item.x,sy=item.y,x=order.x,y=order.y})end
+  self.placement=nil;self.reachable={};return true
+ end
  if order and order.city then
   self:command('cityStrike',{x=order.sx,y=order.sy,tx=order.x,ty=order.y});self.cityStrikeSource=nil;self.reachable={};return true
  end
@@ -374,6 +405,7 @@ function UI:confirmMove()
  self.source=nil;self.reachable={};return false
 end
 function UI:back()
+ if self.placement then self.placement=nil;self.pendingMove=nil;self.reachable={};return true end
  if self.cityStrikeSource then self.cityStrikeSource=nil;self.reachable={};self.pendingMove=nil;return true end
  if self.disbandConfirm then self.disbandConfirm=nil;return true end
  if self.productionConfirm then self.productionConfirm=nil;return true end

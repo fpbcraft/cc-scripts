@@ -1,5 +1,8 @@
 -- Seeded hex geography, strategic deposits, private discovery and territory.
 -- World state is authoritative and saved; map presets never reroll on reload.
+local Content=dofile('/games/civcraft/content.lua')
+local Landmarks=dofile('/games/civcraft/landmarks.lua')
+local Villages=dofile('/games/civcraft/villages.lua')
 local W={}
 W.sizes={compact={18,12},standard={28,18},large={40,26}}
 W.types={"continents","archipelago","pangaea","highlands"}
@@ -71,6 +74,23 @@ function W.generate(seed,size,count,mapType)
   local nx=pos.x+(pos.x<world.width/2 and 1 or -1)
   world.resources[key(nx,pos.y)]="grain"
  end
+ -- New-world deposits, deterministic and independent of discovery.
+ for y=1,h do for x=1,w do
+  local k=key(x,y);local t=world.tiles[k];local value=noise(seed,x,y,37)
+  if t~='water' and t~='mountain' then
+   if value>.96 then world.resources[k]='diamond'
+   elseif value>.91 then world.resources[k]='redstone'
+   elseif value>.85 then world.resources[k]='copper'
+   elseif value>.80 then world.resources[k]='zinc'end
+   if world.resources[k]=='saltpeter'then world.resources[k]='redstone'end
+  end
+ end end
+ -- Every start has accessible iron; trading handles rarer material shortages.
+ for _,pos in ipairs(world.starts)do
+  local nx=pos.x+(pos.x<w/2 and 1 or -1)
+  world.resources[key(nx,pos.y+1)]='iron';world.resources[key(nx,pos.y)]='grain'
+ end
+ world.contentVersion=1;Landmarks.generate(world)
  return world
 end
 function W.terrain(world,x,y)
@@ -101,7 +121,7 @@ function W.migrate(state)
   world.resources=world.resources or {}
   for y=1,world.height do for x=1,world.width do
    local k=key(x,y)
-   if world.resources[k]==nil then
+   if not world.contentVersion and world.resources[k]==nil then
     world.resources[k]=deposit(world.seed or 0,x,y,world.tiles[k])
    end
   end end
@@ -182,6 +202,11 @@ function W.yields(world,x,y)
  elseif deposit=="iron"then industry=industry+1
  elseif deposit=="saltpeter"then science=science+2
  elseif deposit=="horses"then food=food+1 end
+ local landmark=world and (world.landmarks or {})[key(x,y)]
+ local extra=landmark and landmark.natural and Content.naturalWonders[landmark.kind] or {}
+ food=food+(extra.food or 0);industry=industry+(extra.industry or 0);science=science+(extra.science or 0)
+ if deposit=='copper' or deposit=='zinc'then industry=industry+1 end
+ if deposit=='redstone' or deposit=='diamond'then science=science+1 end
  return {food=food,industry=industry,science=science}
 end
 -- Hex territory nearest owner; deterministic tie break by city ID.
@@ -237,28 +262,38 @@ function W.forPlayer(state,id)
  if not observer then return nil end
  if state.phase~="game" and state.phase~="over"then return state end
  local view={version=state.version,phase=state.phase,round=state.round,
-  turn=state.turn,name=state.name,winner=state.winner,
+  turn=state.turn,name=state.name,winner=state.winner,ruleset=state.ruleset,roundLimit=state.roundLimit,hostileMode=state.hostileMode,victoryReason=state.victoryReason,spawners={},
   players={},cities={},units={},logs={}}
  local world=state.world
  if world then
   view.world={width=world.width,height=world.height,size=world.size,
-   mapType=world.mapType,tiles={},resources={}}
+   mapType=world.mapType,tiles={},resources={},landmarks={},rails={},contentVersion=world.contentVersion}
   for y=1,world.height do for x=1,world.width do
    local k=key(x,y)
    if (observer.explored or {})[k] or (observer.visible or {})[k]then
     view.world.tiles[k]=world.tiles[k]
     view.world.resources[k]=(world.resources or {})[k]
+    view.world.landmarks[k]=(world.landmarks or {})[k]
+    view.world.rails[k]=(world.rails or {})[k]
    end
   end end
  end
  for _,p in ipairs(state.players or {})do
   if p.id==id then view.players[#view.players+1]=p
   else view.players[#view.players+1]={id=p.id,name=p.name,civ=p.civ,
-   ai=p.ai,ready=p.ready}end
+   ai=p.ai,ready=p.ready,age=p.age,industryTurns=p.industryTurns,endStage=p.endStage}end
  end
  for _,c in ipairs(state.cities or {})do
-  if c.owner==id or (observer.visible or {})[key(c.x,c.y)]then
-   view.cities[#view.cities+1]=c
+  if c.owner==id or (observer.visible or {})[key(c.x,c.y)] or c.village and (observer.explored or {})[key(c.x,c.y)]then
+   local copy={};for field,value in pairs(c)do copy[field]=value end
+   if c.village then
+    if not (observer.visible or {})[key(c.x,c.y)]then
+     copy={id=c.id,name=c.name,owner=c.owner,x=c.x,y=c.y,village=true,villageOwner=c.villageOwner,villageKind=c.villageKind,remoteVillage=true}
+    end
+    copy.influence={[id]=(c.influence or {})[id]};copy.envoyRounds={[id]=(c.envoyRounds or {})[id]}
+    copy.publicAlly=Villages.ally(c) or false
+   end
+   view.cities[#view.cities+1]=copy
   end
  end
  for _,u in ipairs(state.units or {})do
@@ -266,6 +301,7 @@ function W.forPlayer(state,id)
    view.units[#view.units+1]=u
   end
  end
+ for _,spawner in ipairs(state.spawners or {})do if (observer.explored or {})[key(spawner.x,spawner.y)] or (observer.visible or {})[key(spawner.x,spawner.y)]then view.spawners[#view.spawners+1]=spawner end end
  return view
 end
 function W.known(player,x,y)

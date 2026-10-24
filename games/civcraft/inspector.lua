@@ -3,6 +3,8 @@ local Hex=dofile('/games/civcraft/hex.lua')
 local World=dofile('/games/civcraft/world.lua')
 local Panels=dofile('/games/civcraft/panels.lua')
 local Combat=dofile('/games/civcraft/combat.lua')
+local Landmarks=dofile('/games/civcraft/landmarks.lua')
+local Villages=dofile('/games/civcraft/villages.lua')
 local I={}
 local function at(list,x,y)
  for _,item in ipairs(list or {})do if item.x==x and item.y==y then return item end end
@@ -42,7 +44,7 @@ function I.draw(ui,state,player,rect,modal)
   for i,label in ipairs(tabs)do
    local mode=values[i]
    local function choose()
-    ui.cityPanel=mode;ui.inspectorOffset=0;ui.cityStrikeSource=nil;ui.source=nil;ui.reachable={};ui.pendingMove=nil
+    ui.placement=nil;ui.cityPanel=mode;ui.inspectorOffset=0;ui.cityStrikeSource=nil;ui.source=nil;ui.reachable={};ui.pendingMove=nil
     ui.workCity=mode=='tiles' and {x=city.x,y=city.y} or nil
     if mode=='tiles' and modal then ui.panel='context'end
    end
@@ -64,18 +66,18 @@ function I.draw(ui,state,player,rect,modal)
   if city.wallHP>0 and city.struckRound~=state.round then rows[#rows+1]={buttons={{label='CITY STRIKE',run=function()ui:armCityStrike(city)end}}}end
   if ui.cityPanel=='production'then
    local project=city.project
-   text(project and ('MAKING '..project.id:upper()) or 'NO PRODUCTION',8)
+   text(project and ('MAKING '..Systems.label(project.kind,project.id)) or 'NO PRODUCTION',8)
    rows[#rows+1]={buttons={
-    {label='UNITS',run=function()ui.productionCategory='unit';ui.inspectorOffset=0 end,
-     style={selected=ui.productionCategory~='building'}},
-    {label='BUILDS',run=function()ui.productionCategory='building';ui.inspectorOffset=0 end,
-     style={selected=ui.productionCategory=='building'}}}}
-   local kind=ui.productionCategory=='building' and 'building' or 'unit'
-   local source=kind=='building' and Systems.buildings or Systems.units
+    {label='UNITS',run=function()ui.productionCategory='unit';ui.inspectorOffset=0 end,style={selected=ui.productionCategory=='unit'}},
+    {label='BUILDS',run=function()ui.productionCategory='building';ui.inspectorOffset=0 end,style={selected=ui.productionCategory=='building'}},
+    {label='WONDER',run=function()ui.productionCategory='wonder';ui.inspectorOffset=0 end,style={selected=ui.productionCategory=='wonder'}}}}
+   local kind=ui.productionCategory or 'unit'
+   local source=kind=='wonder' and Systems.wonders or kind=='building' and Systems.buildings or Systems.units
    local list={}
    for id in pairs(source)do
     local allowed
-    if kind=='unit'then allowed=Systems.canRecruit(player,id,state,Hex,city)
+    if kind=='wonder'then allowed=player.techs[source[id].tech] and Landmarks.available(state,id)
+    elseif kind=='unit'then allowed=Systems.canRecruit(player,id,state,Hex,city)
     else allowed=Systems.canBuild(player,city,id,state)end
     if allowed then list[#list+1]={id=id,allowed=true}end
    end
@@ -88,9 +90,9 @@ function I.draw(ui,state,player,rect,modal)
     local active=city.project and city.project.kind==kind and city.project.id==id
     local progress=active and city.project.progress or (city.projectProgress or {})[kind..':'..id] or 0
     local turns=math.max(1,math.ceil((Systems.projectCost(kind,id,player)-progress)/math.max(1,yields.industry)))
-    rows[#rows+1]={project={label=id:upper()..' '..turns..'T',selected=active,
-     run=function()ui:command('queue',{cityX=city.x,cityY=city.y,kind=kind,id=id})end,
-     info=function()ui:openCodex(kind=='unit'and 'units'or 'buildings',id)end,id=id}}
+    rows[#rows+1]={project={label=Systems.label(kind,id)..' '..turns..'T',selected=active,
+     run=function()if kind=='wonder'then ui:armPlacement(kind,city,id)else ui:command('queue',{cityX=city.x,cityY=city.y,kind=kind,id=id})end end,
+     info=function()ui:openCodex(kind=='wonder' and 'wonders' or kind=='unit'and 'units'or 'buildings',id)end,id=id}}
    end
   elseif ui.cityPanel=='tiles'then
    local count=0;for _ in pairs(city.worked or {})do count=count+1 end
@@ -112,7 +114,7 @@ function I.draw(ui,state,player,rect,modal)
  elseif unit and unit.owner==ui.playerID then
   local stats=Systems.units[unit.kind] or Systems.units.warrior
   Combat.unit(unit)
-  text(unit.kind:upper()..' LV'..unit.level,7)
+  text(Systems.label('unit',unit.kind)..' LV'..unit.level,7)
   text('HP '..unit.hp..'/100',unit.hp<35 and 31 or 13)
   text('ATK '..Combat.power(unit,Systems,false,state)..' DEF '..Combat.power(unit,Systems,true,state))
   text('XP '..unit.xp..'/'..(unit.level*10))
@@ -122,7 +124,7 @@ function I.draw(ui,state,player,rect,modal)
   text('RANGE '..stats.range..' VISION '..stats.vision)
   for _,line in ipairs(Panels.wrap(r,stats.ability or '',w-10))do text(line)end
   rows[#rows+1]={buttons={{label='MOVE / ATTACK',run=function()
-   ui.cityStrikeSource=nil
+   ui.placement=nil;ui.cityStrikeSource=nil
    if unit.standby then ui:feedback('Wake this unit before issuing orders.');return end
    if ui.mapViewport and ui.mapViewport.tile<16 then ui:zoom((16-ui.mapViewport.tile)/4)end
    ui.source={x=unit.x,y=unit.y};ui.reachable=Hex.reachable(state,unit,ui.playerID,Systems)
@@ -133,16 +135,28 @@ function I.draw(ui,state,player,rect,modal)
    ui:command('standby',{x=unit.x,y=unit.y,value=not unit.standby})
   end}}}
   rows[#rows+1]={buttons={{label='FORTIFY / HEAL',run=function()ui.source=nil;ui.reachable={};ui.pendingMove=nil;ui:command('heal',{x=unit.x,y=unit.y})end}}}
+  if stats.engineer then rows[#rows+1]={buttons={{label='BUILD RAIL (2 IRON)',run=function()ui:armPlacement('rail',unit)end}}}end
   if unit.kind=='scout' or unit.kind=='explorer'then rows[#rows+1]={buttons={{label=unit.autoExplore and 'STOP EXPLORING' or 'AUTO EXPLORE',run=function()ui:command('autoExplore',{x=unit.x,y=unit.y,value=not unit.autoExplore})end}}}end
   if ui.source then rows[#rows+1]={buttons={{label='CANCEL MOVE',run=function()ui.source=nil;ui.reachable={};ui.pendingMove=nil end}}}end
   rows[#rows+1]={buttons={{label='DISBAND',run=function()ui:command('disband',{x=unit.x,y=unit.y,unitID=unit.id})end}}}
   rows[#rows+1]={buttons={{label='DESELECT',run=function()ui:deselect()end}}}
   if unit.kind=='settler' and not at(state.cities,unit.x,unit.y)then rows[#rows+1]={buttons={{label='FOUND CITY',run=function()ui:command('found',{x=unit.x,y=unit.y})end}}}end
+ elseif city and Villages.independent(city) and World.known(player,city.x,city.y)~='hidden'then
+  text(city.name or 'VILLAGER VILLAGE',8)
+  local kind=Villages.types[city.villageKind]or {};text(kind.name or 'INDEPENDENT VILLAGE')
+  local influence=(city.influence or {})[player.id]or 0
+  text('INFLUENCE '..influence..' / ALLY AT 40')
+  local ally=Villages.ally(city);text(ally==player.id and 'ALLIED WITH YOU' or ally and 'ALLIED WITH A RIVAL' or 'NO ALLIANCE')
+  text('Defeat mobs within 3 hexes: +10 influence. Envoy: +10 influence for 25 gold, once per 5 rounds.')
+  for k,v in pairs(kind)do if type(v)=='number'then text('ALLIANCE: +'..v..' '..k..' in your oldest city')end end
+  text(city.remoteVillage and 'DEFENSE OUTSIDE CURRENT SIGHT' or ('HP '..(city.hp or 200)..'/200'))
+  rows[#rows+1]={buttons={{label='SEND ENVOY (25 GOLD)',run=function()ui:command('envoy',{x=city.x,y=city.y})end}}}
+  text('20 influence enables village material trade from the resource ledger.')
  elseif (city or unit)and World.known(player,ui.selected.x,ui.selected.y)=='visible'then
   if city then
    Combat.city(city);text(city.name or 'ENEMY CITY',31);text('HP '..city.hp..'/200');text('WALLS '..city.wallHP..'/'..city.maxWalls);text('DEF '..Combat.cityPower(state,city,Systems))
   else
-   Combat.unit(unit);text(unit.kind:upper()..' LV'..unit.level,31);text('HP '..unit.hp..'/100');text('ATK '..Combat.power(unit,Systems,false,state));text('DEF '..Combat.power(unit,Systems,true,state))
+   Combat.unit(unit);text(Systems.label('unit',unit.kind)..' LV'..unit.level,31);text('HP '..unit.hp..'/100');text('ATK '..Combat.power(unit,Systems,false,state));text('DEF '..Combat.power(unit,Systems,true,state))
   end
  else
   local known=World.known(player,ui.selected.x,ui.selected.y)
@@ -153,6 +167,16 @@ function I.draw(ui,state,player,rect,modal)
    rows[#rows+1]={yields=yields}
    text(World.deposit(state.world,ui.selected.x,ui.selected.y)or 'NO DEPOSIT')
   end
+ end
+ if not ui.selected.empty and World.known(player,ui.selected.x,ui.selected.y)~='hidden'then
+  local k=World.key(ui.selected.x,ui.selected.y)
+  local landmark=state.world and (state.world.landmarks or {})[k]
+  if landmark then
+   local record=(landmark.natural and Systems.naturalWonders or Systems.wonders)[landmark.kind]
+   if record then text(record.name,8);text(record.description);text(landmark.natural and 'Work this tile for its benefits.' or 'Benefits follow ownership of this tile.')end
+  end
+  if state.world and (state.world.rails or {})[k]then text('RAILWAY: 1/4 move between owned rail hexes.',13)end
+  for _,spawner in ipairs(state.spawners or {})do if spawner.x==ui.selected.x and spawner.y==ui.selected.y then text(spawner.cleared and 'CLEARED SPAWNER' or ('HOSTILE '..spawner.kind:upper()..' - melee occupation clears it for 25 gold'),31)end end
  end
  if unit and unit.owner==ui.playerID then
   local ordered={};local used={}

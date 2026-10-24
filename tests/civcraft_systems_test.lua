@@ -13,7 +13,7 @@ local state={version=3,nextId=3,phase="game",
 state.world=W.generate(802,"compact",2,"continents")
 S.migrate(state)
 local city,p=state.cities[1],state.players[1]
-assert(state.version==5 and city.population==2)
+assert(state.version==6 and city.population==2)
 assert(not S.canResearch(p,"writing"),"Research prerequisites enforced")
 assert(S.research(p,"agriculture"))
 assert(p.researchTarget=="agriculture" and not p.techs.agriculture,
@@ -52,11 +52,13 @@ for i=1,6 do S.production(state,H)end
 assert(city.buildings.farm and not city.project,"Building finishes on turn boundary")
 assert(p.wood>=beforeWood,"No instant building purchase")
 assert(not S.canRecruit(p,"horseman",state,H),"Units require technology")
+assert(S.research(p,"husbandry"))
+for i=1,S.techCost("husbandry")do S.production(state,H)end
 assert(S.research(p,"horseback"))
 for i=1,S.techCost("horseback")do S.production(state,H)end
 assert(p.techs.horseback)
-assert(not S.canRecruit(p,"horseman",state,H),
- "Cavalry requires strategic horses within controlled territory")
+assert(S.canRecruit(p,"horseman",state,H),
+ "Horse riding and animal husbandry unlock cavalry without an extra strategic stock")
 local unitBefore=#state.units
 assert(S.queue(p,city,"unit","scout",state,H))
 for i=1,8 do S.production(state,H)end

@@ -183,7 +183,7 @@ local before=Reports.capture(state,state.players[1])
 state.players[1].techs.mining=true;state.cities[1].buildings.farm=true;state.cities[1].population=3
 state.units[1]=state.units[2];state.units[2]=nil
 local lines=table.concat(Reports.build(state,state.players[1],before),'|')
-assert(lines:find('mining')and lines:find('completed farm')and lines:find('population 2 %-> 3')and lines:find('Unit lost: warrior'))
+assert(lines:find('STONE TOOLS')and lines:find('completed WHEAT FARM')and lines:find('population 2 %-> 3')and lines:find('Unit lost: STONE GUARD'))
 assert(not lines:find('scout'),'Report must not leak enemy units')
 local city=state.cities[1]
 city.worked={};Systems.ensureWorkers(state,city)
