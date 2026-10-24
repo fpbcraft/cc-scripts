@@ -1,6 +1,6 @@
-local C=require('railbreak.train.catalog')
-local S=require('railbreak.train.state')
-local U=require('railbreak.core.util')
+local C=require('train.catalog')
+local S=require('train.state')
+local U=require('core.util')
 local R={}
 local function ok(g,message)
  S.log(g,message);g.score=R.score(g)

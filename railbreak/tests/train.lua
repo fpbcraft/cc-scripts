@@ -1,10 +1,10 @@
 local script=(arg and arg[0]) or ''
 local root=script:match('^(.*)/railbreak/tests/[^/]+$') or '.'
-package.path=root..'/?.lua;'..root..'/?/init.lua;'..package.path
-local S=require('railbreak.train.state')
-local A=require('railbreak.train.rules')
-local C=require('railbreak.train.catalog')
-local UI=require('railbreak.train.ui')
+package.path=root..'/railbreak/?.lua;'..root..'/railbreak/?/init.lua;'..package.path
+local S=require('train.state')
+local A=require('train.rules')
+local C=require('train.catalog')
+local UI=require('train.ui')
 local passed=0
 local function eq(ok,label)passed=passed+1;assert(ok,'TEST '..passed..': '..label)end
 local function doIt(g,command,...)

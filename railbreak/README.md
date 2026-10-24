@@ -45,3 +45,7 @@ lua railbreak/tests/installer.lua   # rollback and non-destructive update behavi
 ```
 
 All artwork is procedural using CC: Graphics pixel primitives; no resource pack or extra peripherals are required. The game is a simulation *in* ComputerCraft and does not control your real Create infrastructure.
+
+## Module-loading reliability (v2.0.2)
+
+The train edition imports modules relative to `/railbreak/` (`train.ui`, `train.rules`, `core.util`). The updater performs a real CraftOS boot check after installing; any failure triggers rollback to the prior files without modifying saved games. A stale cached installer can be bypassed by using the installation command with a pinned commit SHA for both installer and files.

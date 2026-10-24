@@ -1,4 +1,4 @@
--- FPBCRAFT RAILBREAK / safe one-command installer and updater
+-- FPBCRAFT RAILBREAK / safe one-command installer and updater (v2.0.2)
 -- wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/install-railbreak.lua
 -- Optional: <git ref> --startup. Existing startup scripts are never silently overwritten.
 local args={...}
@@ -38,7 +38,7 @@ local function fetch(file)
  end
  return text
 end
-print('RAILBREAK: TRAIN-FIRST EDITION v2')
+print('RAILBREAK: TRAIN-FIRST EDITION v2.0.2')
 print('Installing from fpbcraft/cc-scripts @ '..ref)
 if not fs.exists(ROOT) then fs.makeDir(ROOT) end
 delete(NEXT);fs.makeDir(NEXT)
@@ -62,6 +62,12 @@ local success,reason=pcall(function()
   if not fs.exists(fs.getDir(target))then fs.makeDir(fs.getDir(target))end
   fs.move(fs.combine(NEXT,file),target);new[#new+1]=file
  end
+ -- Execute the just-installed entry point with CraftOS's real package loader.
+ -- A syntax check alone cannot catch module search-path mistakes.
+ assert(shell and shell.run,'Installer needs a CraftOS shell for boot verification')
+ assert(shell.run(ROOT..'/main.lua','--test-api'),
+   'Installed train game failed its CraftOS boot check (rolled back)')
+ print('Boot check: all train modules loaded successfully.')
 end)
 if not success then
  for _,file in ipairs(new)do delete(fs.combine(ROOT,file))end
@@ -85,7 +91,7 @@ if startup then
   write(path,launcher);print('Autostart enabled for this dedicated computer.')
  end
 end
-print('Ready! Execute: /railbreak/main.lua')
+print('RAILBREAK v2.0.2 verified. Execute: /railbreak/main.lua')
 print('Train save: /railbreak/data/train-save.lua')
 print('Old factory game: /railbreak/classic.lua')
 print('Legacy saves in /railbreak/data/ are preserved.')

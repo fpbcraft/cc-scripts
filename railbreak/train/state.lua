@@ -1,5 +1,5 @@
-local C=require('railbreak.train.catalog')
-local U=require('railbreak.core.util')
+local C=require('train.catalog')
+local U=require('core.util')
 local S={VERSION=2}
 function S.new(opts)
  opts=opts or {}

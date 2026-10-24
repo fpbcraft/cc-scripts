@@ -1,5 +1,5 @@
 -- Versioned, independent save slot. Never rewrites the v1 factory edition save.
-local S=require('railbreak.train.state')
+local S=require('train.state')
 local M={}
 local dir='/railbreak/data';local name=dir..'/train-save.lua'
 function M.save(g)

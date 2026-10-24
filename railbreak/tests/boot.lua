@@ -3,7 +3,7 @@
 local script=(arg and arg[0]) or ''
 local root=script:match('^(.*)/railbreak/tests/[^/]+$') or '.'
 
-local env={package={path='/railbreak/?.lua;/railbreak/?/init.lua;/rom/modules/main/?.lua'}}
+local env={package={path='?.lua;?/init.lua;/rom/modules/main/?.lua'}}
 setmetatable(env,{__index=_G})
 local loaded,paths={},{}
 
@@ -38,8 +38,8 @@ local ok,api=pcall(entry,'--test-api')
 assert(ok,'Train-first entry point cannot boot with CC:Tweaked module paths: '..tostring(api))
 assert(type(api)=='table' and type(api.UI)=='table' and type(api.State)=='table' and type(api.Rules)=='table',
  'Train-first boot must return all modules in --test-api mode')
-assert(paths['railbreak.train.ui']=='/railbreak/train/ui.lua','UI module did not resolve from filesystem root')
-assert(paths['railbreak.core.util']=='/railbreak/core/util.lua','Nested shared module did not resolve')
+assert(paths['train.ui']=='/railbreak/train/ui.lua','UI module did not resolve from installation root')
+assert(paths['core.util']=='/railbreak/core/util.lua','Nested shared module did not resolve')
 local n=0
 for _ in pairs(paths) do n=n+1 end
 assert(n>=8,'Expected all train, render and shared modules to load')

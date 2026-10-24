@@ -1,13 +1,14 @@
--- RAILBREAK: KINETIC FRONTIER - Train-first Edition v2.0
+-- RAILBREAK: KINETIC FRONTIER - Train-first Edition v2.0.2
 -- Turn-based, 1-4 players, touch-operated monitor (3x3 to 5x5).
 local argv={...}
--- CC:Tweaked resolves relative requires against the running program's directory.
--- This entry point lives in /railbreak, but its modules are namespaced from /.
--- Include the filesystem root before loading railbreak.train.* modules.
-package.path='/?.lua;/?/init.lua;'..package.path
-local UI=require('railbreak.train.ui')
-local State=require('railbreak.train.state')
-local Rules=require('railbreak.train.rules')
+-- Program-local imports: CC:Tweaked's require is relative to the running
+-- script directory, not to the shell's current working directory.
+-- The installer creates /railbreak/train and /railbreak/core. Anchor imports
+-- there explicitly, avoiding double-prefixing /railbreak/railbreak/.
+package.path='/railbreak/?.lua;/railbreak/?/init.lua;'..package.path
+local UI=require('train.ui')
+local State=require('train.state')
+local Rules=require('train.rules')
 if argv[1]=='--test-api' then return {UI=UI,State=State,Rules=Rules}end
 local monitor,monitorName
 if peripheral then
@@ -54,7 +55,7 @@ local function run()
    app:touch(b,c);animate()
   elseif event=='monitor_resize' then app:resize();animate()
   elseif event=='char' and app.scene=='setup' and app.editing then
-   local U=require('railbreak.core.util')
+   local U=require('core.util')
    local name=app.names[app.editing]
    app.names[app.editing]=U.name(name..a);app:draw()
   elseif event=='key' and app.scene=='setup' and app.editing and keys and a==keys.backspace then

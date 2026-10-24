@@ -1,10 +1,10 @@
-local C=require('railbreak.train.catalog')
-local S=require('railbreak.train.state')
-local Rules=require('railbreak.train.rules')
-local R=require('railbreak.train.render')
-local Art=require('railbreak.train.art')
-local Disk=require('railbreak.train.storage')
-local U=require('railbreak.core.util')
+local C=require('train.catalog')
+local S=require('train.state')
+local Rules=require('train.rules')
+local R=require('train.render')
+local Art=require('train.art')
+local Disk=require('train.storage')
+local U=require('core.util')
 local UI={};UI.__index=UI
 local function first(text,n)return tostring(text or ''):sub(1,n or 18)end
 function UI.new(m,opt)
