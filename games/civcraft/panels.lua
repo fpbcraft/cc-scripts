@@ -3,6 +3,22 @@ local Icons=dofile('/games/civcraft/icons.lua')
 local P={}
 function P.rows(r,rect,rows,model,key)
  key=key or 'offset'
+ local expanded={}
+ for _,row in ipairs(rows)do
+  local split=false
+  if row.yields then
+   local width=math.floor((rect.w-11)/3)
+   for _,kind in ipairs({'food','industry','science'})do
+    if Icons.yieldWidth(r,row.yields[kind])>width then split=true end
+   end
+  end
+  if split then
+   for _,kind in ipairs({'food','industry','science'})do
+    if (row.yields[kind]or 0)>0 then expanded[#expanded+1]={yieldKind=kind,value=row.yields[kind]}end
+   end
+  else expanded[#expanded+1]=row end
+ end
+ rows=expanded
  local rowHeight=12
  local capacity=math.max(1,math.floor((rect.h-12)/rowHeight))
  model[key]=math.max(0,math.min(model[key]or 0,math.max(0,#rows-capacity)))
@@ -19,6 +35,8 @@ function P.rows(r,rect,rows,model,key)
     else r:text(rect.x+2,y+3,row.adjust.label,7,1,rect.w-34)end
     r:button(rect.x+rect.w-30,y,14,11,'-',row.adjust.minus)
     r:button(rect.x+rect.w-14,y,14,11,'+',row.adjust.plus)
+   elseif row.yieldKind then
+    Icons.yieldValue(r,row.yieldKind,row.value,rect.x+2,y+3,rect.w-4)
    elseif row.yields then
     local width=math.floor((rect.w-4)/3)
     for n,kind in ipairs({'food','wood','science'})do

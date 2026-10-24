@@ -15,7 +15,7 @@ function E.draw(ui,rect)
  local list=model.category=='cities' and ui.state.cities or ui.state.units
  for _,item in ipairs(list or {})do if item.owner==ui.playerID then
   local kind=model.category=='cities' and 'city' or 'unit'
-  local label=kind=='city' and ('CITY '..item.x..','..item.y..' POP '..(item.population or 2)) or
+  local label=kind=='city' and ((item.name or 'CITY')..' '..item.x..','..item.y..' POP '..(item.population or 2)) or
    (item.kind:upper()..' '..item.x..','..item.y..' '..(item.standby and 'ZZ' or ('M'..(item.movesLeft or 0))))
   rows[#rows+1]={buttons={{label=label,run=function()ui:focus(kind,item)end}}}
  end end

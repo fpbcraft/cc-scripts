@@ -13,6 +13,19 @@ C.civs={
  {id="wild",name="WILDBORN CIRCLE",bonus="Forest movement free"},
 }
 -- Node tiers are vertical stages; lanes identify visible prerequisite branches.
+-- Short settlement names keep map labels on a single line.
+C.cityNames={
+ verdant={'OAKVALE','FERNWOOD','MOSSBANK','ELMHAVEN','WILLOW','BLOOM','GREENWAY','LEAFREST','IVYGLEN','CEDAR','ROOTVALE','BIRCH'},
+ iron={'IRONHOLD','ANVIL','RIVET','STEELTON','OREGATE','BLACKPIT','HAMMER','SLAGFORD','CINDER','BOLTKEEP','IRONVALE','BRASS'},
+ scholar={'ASTRA','LYRA','NOVA','LUMEN','VEGA','ORION','QUILL','SCRIBE','PRISM','ZENITH','ARCANA','SOLIS'},
+ nomad={'DUNEREST','OASIS','SUNVALE','DUSTWELL','MIRAGE','SANDSEA','REDMESA','WAYSTONE','STARWELL','SILT','DRYFORD','WINDBEND'},
+ mariner={'TIDEPORT','CORAL','SEABREAK','PEARL','FOAMREST','REEF','SALTQUAY','DRIFT','COVE','GULLBAY','ANCHOR','BLUEFIN'},
+ forge={'EMBER','ASHFALL','FIREGATE','COALFORD','SPARK','SMELTER','HEARTH','REDANVIL','KILN','PYRE','FLARE','CHARVALE'},
+ highland={'CAIRN','BENMORE','GLENCOE','BRAEMAR','TORHOLD','CRAGFORD','HEATHER','LOCHREST','HIGHLAND','STAGGLEN','DUNROCK','THISTLE'},
+ merchant={'GILT','COINPORT','GOLDVALE','SILKROAD','BAZAAR','AMBER','MINT','TRADEWAY','SCALE','COPPER','GEMFORD','CROWN'},
+ sentinel={'BASTION','STONEGAP','WARDEN','RAMPART','GRANITE','WATCH','GATEKEEP','RUNEWALL','SHIELD','BEDROCK','TOWER','FLINT'},
+ wild={'BRAMBLE','FOXGLEN','WOLFDEN','THORN','FERN','BADGER','WILDROOT','BOARREST','HAWKNEST','STAGWOOD','BEARVALE','YEW'},
+}
 C.techs={
  agriculture={name="AGRICULTURE",cost=8,requires={},unlock="farm",tier=1,lane=1},
  mining={name="MINING",cost=8,requires={},unlock="mine",tier=1,lane=3},

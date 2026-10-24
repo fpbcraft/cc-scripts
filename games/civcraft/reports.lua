@@ -5,7 +5,7 @@ function R.capture(state,p)
  for id,value in pairs(p.techs or {})do if value then s.techs[id]=true end end
  for _,c in ipairs(state.cities or {})do if c.owner==p.id then
   local b={};for id,value in pairs(c.buildings or {})do if value then b[id]=true end end
-  s.cities[c.x..','..c.y]={population=c.population or 2,buildings=b}
+  s.cities[c.x..','..c.y]={name=c.name,population=c.population or 2,buildings=b}
  end end
  for _,u in ipairs(state.units or {})do if u.owner==p.id then
   s.units[tostring(u.id or (u.kind..':'..u.x..','..u.y))]={kind=u.kind,hp=u.hp}
@@ -25,11 +25,11 @@ function R.build(state,p,before)
  local coords={};for key in pairs(now.cities)do coords[#coords+1]=key end;table.sort(coords)
  for _,key in ipairs(coords)do
   local city,old=now.cities[key],before.cities[key]
-  if not old then lines[#lines+1]='City gained at '..key
+  if not old then lines[#lines+1]=(city.name or 'City')..' gained at '..key
   else
-   if city.population~=old.population then lines[#lines+1]='City '..key..' population '..old.population..' -> '..city.population end
+   if city.population~=old.population then lines[#lines+1]=(city.name or ('City '..key))..' population '..old.population..' -> '..city.population end
    local built={};for id in pairs(city.buildings)do if not old.buildings[id]then built[#built+1]=id end end
-   table.sort(built);for _,id in ipairs(built)do lines[#lines+1]='City '..key..' completed '..id end
+   table.sort(built);for _,id in ipairs(built)do lines[#lines+1]=(city.name or ('City '..key))..' completed '..id end
   end
  end
  for key in pairs(before.cities)do if not now.cities[key]then lines[#lines+1]='City lost at '..key end end

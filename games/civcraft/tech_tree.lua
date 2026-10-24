@@ -45,10 +45,13 @@ local function compact(r,systems,player,rect,model,research,onClose)
   end
  end
  Panels.rows(r,{x=x+3,y=y+14,w=w-6,h=h-17},rows,model)
+ model.dragArea={x=x+3,y=y+14,w=w-13,h=h-29}
+ model.dragMode='list';model.maxPanY=model.pageMax or 0
  return model
 end
 function T.draw(r,systems,player,rect,model,research,onClose)
  model=model or {};model.zoom=model.zoom or 1
+ model.dragArea=nil
  model.panX=model.panX or 0;model.panY=model.panY or 0
  model.selected=model.selected or systems.techOrder[1]
  local x,y,w,h=rect.x,rect.y,rect.w,rect.h
@@ -98,6 +101,8 @@ function T.draw(r,systems,player,rect,model,research,onClose)
  local sx,sy=math.floor(96*zoom),math.floor(37*zoom)
  local maxX=math.max(0,6*sx+nw-graphW+8)
  local maxY=math.max(0,5*sy+nh-graphH+10)
+ model.dragArea={x=graphX,y=graphY,w=graphW,h=graphH}
+ model.dragMode='graph';model.maxPanX=maxX;model.maxPanY=maxY
  model.panX=clamp(model.panX,0,maxX)
  model.panY=clamp(model.panY,0,maxY)
  local function pos(id)

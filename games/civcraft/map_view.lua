@@ -18,6 +18,7 @@ function V.draw(ui,state,player,rect)
  ui.mapFrame=frame
  local r=ui.r;local world=state.world;local overlays=ui.overlays or {}
  local width,height=world and world.width or Hex.width,world and world.height or Hex.height
+ local cityLabels={}
  local size=ui.zoomLevel or math.max(12,math.min(24,math.floor(rect.h/32)*4))
  local step=size*.75
  local maxX=math.max(0,(width+.5)*size-rect.w)
@@ -121,6 +122,7 @@ function V.draw(ui,state,player,rect)
    end
    local city=t.visibility~='hidden' and cityIndex[World.key(x,y)]
    if city and (city.owner==ui.playerID or t.visibility=='visible')then
+    cityLabels[#cityLabels+1]={city=city,x=px+size/2,y=py-6}
     if size<16 then r:fill(px+size/2-1,py+size/2-1,3,3,ownerColor(state,city.owner))
     else Icons.draw(r,'city',px+size/2-5,py+size/2-5,11,ownerColor(state,city.owner))end
    end
@@ -131,19 +133,18 @@ function V.draw(ui,state,player,rect)
    end
    if overlays.yields and t.visibility~='hidden' then
     if size>=40 then
-     local fw=7+r:textWidth(tostring(t.yields.food));local iw=7+r:textWidth(tostring(t.yields.industry))
-     local total=fw+iw+5;local start=px+size/2-total/2
-     Icons.yieldValue(r,'food',t.yields.food,start,py+math.floor(size*.2),fw,true)
-     Icons.yieldValue(r,'wood',t.yields.industry,start+fw+5,py+math.floor(size*.2),iw,true)
-     local sw=7+r:textWidth(tostring(t.yields.science))
-     Icons.yieldValue(r,'science',t.yields.science,px+size/2-sw/2,py+math.floor(size*.7),sw,true)
+     for i,kind in ipairs({'food','industry','science'})do
+      local value=t.yields[kind];local width=Icons.yieldWidth(r,value)
+      local yy=py+size*({.18,.65,.82})[i]
+      if width>0 then Icons.yieldValue(r,kind,value,px+size/2-width/2,yy,width,true)end
+     end
     else
      local kind='food';local value=t.yields.food
      for _,entry in ipairs({{'wood',t.yields.industry},{'science',t.yields.science}})do
       if entry[2]>value then kind=entry[1];value=entry[2]end
      end
      if size>=16 then
-      local width=7+r:textWidth(tostring(value))
+      local width=math.min(size-4,Icons.yieldWidth(r,value))
       Icons.yieldValue(r,kind,value,px+size/2-width/2,py+size*.65,width,true)
      else Icons.yield(r,kind,px+size/2-2,py+size/2-2,5)end
     end
@@ -182,6 +183,15 @@ function V.draw(ui,state,player,rect)
    if not ui.selected.empty and ui.selected.x==x and ui.selected.y==y then
     local vertices=Hex.vertices(px+1,py+1,size-2)
     for i,a in ipairs(vertices)do local b=vertices[i%6+1];r:line(a.x,a.y,b.x,b.y,7)end
+   end
+  end
+  for _,label in ipairs(cityLabels)do
+   local name=label.city.name or 'CITY'
+   local width=r:textWidth(name)
+   if width+4<=rect.w then
+    local xx=math.max(rect.x+2,math.min(rect.x+rect.w-width-2,label.x-width/2))
+    r:fill(xx-2,label.y-1,width+4,7,0)
+    r:text(xx,label.y,name,ownerColor(state,label.city.owner),1,width)
    end
   end
  end)

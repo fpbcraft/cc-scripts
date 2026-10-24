@@ -59,6 +59,8 @@ for _,graphics in ipairs({false,true})do
   end
   draw();bounds();assert(ui.inspectorBounds and ui.mapViewport.w>=32,'Usable map and persistent inspector')
   assert(not click('INSPECT'),'Inspector shortcut is removed')
+  local icons={};for _,button in ipairs(ui.r.buttons)do icons[button.label]=button.icon end
+  assert(icons.EMPIRE~=icons['NEXT IDLE CITY'],'Empire and next idle city have distinct symbols')
   assert(not next(ui.overlays),'Default view has no optional overlays')
   assert(click('RESOURCES'));draw();assert(ui.overlays.resources)
   assert(click('YIELDS'));draw();assert(ui.overlays.yields and ui.overlays.resources and ui.mapViewport.tile==40)
@@ -123,7 +125,7 @@ for _,graphics in ipairs({false,true})do
   end end
   assert(click('EMPIRE'));draw();bounds();assert(click('CITIES'));draw();bounds()
   local chosen=false
-  for _,button in ipairs(ui.r.buttons)do if button.label and button.label:match('^CITY ')then button.fn();chosen=true;break end end
+  for _,button in ipairs(ui.r.buttons)do if button.label and button.label:find(state.cities[1].name,1,true)==1then button.fn();chosen=true;break end end
   assert(chosen and ui.panel=='context' and ui.selected.kind=='city','Empire menu focuses owned cities')
   draw();assert(click('NEXT IDLE UNIT'));draw();assert(ui.selected.kind=='unit' and not ui.source,'Next idle selects without arming orders')
   state.units[1].standby=true;assert(not ui:nextIdle(),'Sleeping units are skipped');state.units[1].standby=nil

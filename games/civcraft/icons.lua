@@ -127,8 +127,8 @@ function I.draw(r,kind,x,y,size,color)
 end
 local yieldGlyphs={
  gold={'01110','11011','10101','11011','01110'},
- food={'00100','01110','10101','00100','00100'},
- wood={'01110','00110','00100','01000','10000'},
+ food={'01110','11110','11100','00110','00011'},
+ wood={'10101','01110','11011','01110','10101'},
  science={'01110','00100','01010','10001','11111'},
 }
 local yieldColors={food=18,wood=7,science=13,gold=8}
@@ -138,14 +138,29 @@ function I.yield(r,kind,x,y,size)
  local scale=math.max(1,math.floor((size or 5)/5))
  local offset=math.floor(((size or 5)-5*scale)/2)
  for row,bits in ipairs(glyph)do for col=1,5 do if bits:sub(col,col)=='1'then
-  r:fill(x+offset+(col-1)*scale,y+offset+(row-1)*scale,scale,scale,yieldColors[kind])
+  r:fill(x+offset+(col-1)*scale,y+offset+(row-1)*scale,scale,scale,kind=='food' and (row>=4 and 7 or (row==2 and col==2)and 9 or 16)or yieldColors[kind])
  end end end
 end
+function I.yieldWidth(r,value)
+ value=tonumber(value)or 0
+ if value<=0 then return 0 end
+ return value<=5 and value*6-1 or 7+r:textWidth(tostring(value))
+end
 function I.yieldValue(r,kind,value,x,y,width,background)
- local text=tostring(value or 0);local total=7+r:textWidth(text)
- if background then r:fill(x-1,y-1,total+2,7,0)end
- I.yield(r,kind,x,y,5);r:text(x+7,y,text,7,1,math.max(0,(width or total)-7))
- return total
+ local numeric=tonumber(value)
+ if numeric and numeric<=0 then return 0 end
+ local repeated=numeric and numeric>=1 and numeric<=5 and numeric==math.floor(numeric)
+ local total=repeated and numeric*6-1 or 7+r:textWidth(tostring(value or 0))
+ local columns=repeated and math.max(1,math.min(numeric,math.floor(((width or total)+1)/6)))or 1
+ local rows=repeated and math.ceil(numeric/columns)or 1
+ local drawn=repeated and columns*6-1 or total
+ if background then r:fill(x-1,y-1,drawn+2,rows*6+1,0)end
+ if repeated then
+  for i=0,numeric-1 do I.yield(r,kind,x+(i%columns)*6,y+math.floor(i/columns)*6,5)end
+ else
+  I.yield(r,kind,x,y,5);r:text(x+7,y,tostring(value or 0),7,1,math.max(0,(width or total)-7))
+ end
+ return drawn
 end
 function I.resource(r,kind,x,y)
  local glyph=({iron={'01110','11111','11011','11111','01110'},horses={'00110','01111','11110','01100','01010'},saltpeter={'10100','01010','10101','01110','00100'}})[kind]

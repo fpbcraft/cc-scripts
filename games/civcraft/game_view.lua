@@ -71,9 +71,9 @@ function G.draw(ui,state,player)
 
  local actions={
   {'TECH TREE','tree',function()ui.panel='tech';ui.source=nil;ui.reachable={};ui.workCity=nil;ui.lastDrag=nil end},
-  {'EMPIRE','station',function()ui.panel='empire';ui.lastDrag=nil end},
+  {'EMPIRE','empire',function()ui.panel='empire';ui.lastDrag=nil end},
   {'NEXT IDLE UNIT','nextUnit',function()ui:nextIdle()end},
-  {'NEXT IDLE CITY','station',function()ui:nextIdleCity()end},
+  {'NEXT IDLE CITY','nextCity',function()ui:nextIdleCity()end},
   {'ZOOM IN','plus',function()ui:zoom(1)end},
   {'ZOOM OUT','minus',function()ui:zoom(-1)end},
   {'END TURN','endTurn',function()ui:command('end')end}}

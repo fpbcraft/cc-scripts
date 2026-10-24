@@ -31,7 +31,9 @@ choose a map size (**Compact 18×12**, **Standard 28×18**, or **Large 40×26**)
 a map type (**Continents**, **Archipelago**, **Pangaea**, or **Highlands**),
 the seed, and each participant's civilization. Two to four human/AI empires
 compete to explore, settle, develop, research, and conquer. Saves preserve the
-generated terrain, territory, fog, technology, and production progress.
+generated terrain, territory, fog, technology, and production progress. Cities
+receive short, randomly selected names from their civilization's themed pool.
+Names appear above cities and in city navigation, and remain stable in saves.
 
 - **Explore and expand:** Units use movement points, terrain-dependent movement
   costs, vision and attack ranges. Scouts reveal farther, naval vessels travel
@@ -51,7 +53,8 @@ generated terrain, territory, fog, technology, and production progress.
   Switching asks for confirmation. Locked projects are hidden; the adjacent book opens their Codex entry. Projects take 2.5 times their former wood cost in industry. Technologies and strategic stocks unlock specialized units.
 - **Research:** The connected **TECH TREE** shows prerequisites, researched
   and available technologies, progress and expected turns. Select a technology
-  and start research; science accumulates when a full round ends.
+  and start research; science accumulates when a full round ends. Drag the
+  research canvas to pan, or drag compact details to scroll.
 - **Turns and victory:** Each human player issues orders independently and ends
   their turn. AI players use the same production and research rules. A round
   advances after everyone finishes; the match ends upon reaching the city
@@ -70,8 +73,8 @@ mouse dragging. Vanilla Minecraft monitor taps use the edge strips.
 war and can be clicked to jump to a region; its adjacent icon opens a larger overview. The default map shows terrain,
 cities, units and borders. **RESOURCES**, **YIELDS**, and **TERRITORY** are
 independent overlay toggles; **TERRAIN** clears them. Yields zoom in to show
-consistent wheat/hammer/flask icons and numeric values; the tile inspector always shows the
-full numeric breakdown. Terrain detail increases with zoom.
+consistent drumstick/cog/flask icons. Yields of one through five repeat the icon;
+larger yields use an icon and number. Zero yields are omitted. Terrain detail increases with zoom.
 
 **EMPIRE** opens a paged list of all owned units and cities; selecting an entry
 centers the map and opens its inspector. **NEXT IDLE UNIT** cycles through awake

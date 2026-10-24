@@ -74,6 +74,28 @@ function M.civ(id)
  for _,v in ipairs(M.civs)do if v.id==id then return v end end
  return M.civs[1]
 end
+function M.nameCity(state,city)
+ if city.name and city.name~=''then return city.name end
+ local civ='verdant'
+ for _,p in ipairs(state.players or {})do if p.id==city.owner then civ=p.civ or civ;break end end
+ local pool=Content.cityNames[civ]or Content.cityNames.verdant
+ local used={}
+ for _,c in ipairs(state.cities or {})do if c.name then used[c.name:upper()]=true end end
+ -- Campaign-seeded randomness keeps host/client migrations reproducible.
+ local seed=(state.world and state.world.seed or state.mapSeed or 1)%2147483647
+ seed=(seed*48271+(city.id or 0)*997+(city.x or 0)*131+(city.y or 0)*71)%2147483647
+ local start=seed%#pool
+ for i=0,#pool-1 do
+  local name=pool[(start+i)%#pool+1]
+  if not used[name]then city.name=name;return name end
+ end
+ local base=pool[start+1];local suffix=2
+ while true do
+  local tail=tostring(suffix);local name=base:sub(1,8-#tail)..tail
+  if not used[name]then city.name=name;return name end
+  suffix=suffix+1
+ end
+end
 function M.migrate(state)
  World.ensureTerritories(state,Hex,(state.version or 0)<5)
  for i,p in ipairs(state.players or {})do
@@ -85,6 +107,7 @@ function M.migrate(state)
   p.researchProgress=p.researchProgress or {};p.stockpile=p.stockpile or {iron=0,horses=0,saltpeter=0}
  end
  for _,c in ipairs(state.cities or {})do
+  M.nameCity(state,c)
   c.population=c.population or 2;c.foodStore=c.foodStore or 0;c.growthAge=c.growthAge or 0;c.hungryTurns=c.hungryTurns or 0
   c.jobs=c.jobs or {food=1,wood=1,science=0}
   c.buildings=c.buildings or {}
@@ -459,6 +482,7 @@ function M.aiTurn(state,p,hex)
      state.cities[#state.cities+1]={id=state.nextId,owner=p.id,
       x=u.x,y=u.y,level=1,population=2,foodStore=0,
       jobs={food=1,wood=1,science=0},buildings={}}
+     M.nameCity(state,state.cities[#state.cities])
      state.nextId=state.nextId+1
      u.consumed=true
     end

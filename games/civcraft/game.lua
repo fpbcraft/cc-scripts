@@ -223,7 +223,8 @@ local function apply(id,req)
   for _,v in ipairs(state.cities)do if Hex.distance(v.x,v.y,x,y)<3 then return false,'Cities need 3 hex spacing' end end
   for i,v in ipairs(state.units)do if v==u then table.remove(state.units,i);break end end
   table.insert(state.cities,{id=state.nextId,x=x,y=y,owner=id,level=1,population=2,foodStore=0,jobs={food=1,wood=1,science=0},buildings={}})
-  state.nextId=state.nextId+1;World.ensureTerritories(state,Hex,false);log(p.name..' founded a city')
+  local founded=state.cities[#state.cities];Systems.nameCity(state,founded)
+  state.nextId=state.nextId+1;World.ensureTerritories(state,Hex,false);log(p.name..' founded '..founded.name)
  else return false,'Unknown action' end
  winner();save();return true
 end

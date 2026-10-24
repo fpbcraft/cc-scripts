@@ -1,4 +1,5 @@
 local native=dofile
+dofile=function(path)return native(path:gsub("^/games/civcraft/","games/civcraft/"))end
 colors={black=32768,white=1,gray=128,lightGray=256,orange=2,lightBlue=8,yellow=16,green=8192,blue=2048,lime=32,red=16384,brown=4096}
 local Renderer=native('games/civcraft/render.lua')
 local calls,pixels=0,nil

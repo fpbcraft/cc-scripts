@@ -11,7 +11,8 @@ function I.draw(ui,state,player,rect,modal)
  local r=ui.r;local x,y,w,h=rect.x,rect.y,rect.w,rect.h
  ui.inspectorBounds=rect
  r:fill(x,y,w,h,1);r:outline(x,y,w,h,3)
- r:text(x+3,y+3,'INSPECTOR',8,1,w-(modal and 40 or 6))
+ local selectedCity=not ui.selected.empty and at(state.cities,ui.selected.x,ui.selected.y)
+ r:text(x+3,y+3,selectedCity and ui.selected.kind~='unit' and selectedCity.name or 'INSPECTOR',8,1,w-(modal and 40 or 6))
  if modal then r:button(x+w-36,y+1,34,11,'CLOSE',function()ui.panel='context'end)end
  local city=not ui.selected.empty and at(state.cities,ui.selected.x,ui.selected.y)
  local unit=not ui.selected.empty and at(state.units,ui.selected.x,ui.selected.y)
@@ -139,7 +140,7 @@ function I.draw(ui,state,player,rect,modal)
   if unit.kind=='settler' and not at(state.cities,unit.x,unit.y)then rows[#rows+1]={buttons={{label='FOUND CITY',run=function()ui:command('found',{x=unit.x,y=unit.y})end}}}end
  elseif (city or unit)and World.known(player,ui.selected.x,ui.selected.y)=='visible'then
   if city then
-   Combat.city(city);text('ENEMY CITY',31);text('HP '..city.hp..'/200');text('WALLS '..city.wallHP..'/'..city.maxWalls);text('DEF '..Combat.cityPower(state,city,Systems))
+   Combat.city(city);text(city.name or 'ENEMY CITY',31);text('HP '..city.hp..'/200');text('WALLS '..city.wallHP..'/'..city.maxWalls);text('DEF '..Combat.cityPower(state,city,Systems))
   else
    Combat.unit(unit);text(unit.kind:upper()..' LV'..unit.level,31);text('HP '..unit.hp..'/100');text('ATK '..Combat.power(unit,Systems,false,state));text('DEF '..Combat.power(unit,Systems,true,state))
   end

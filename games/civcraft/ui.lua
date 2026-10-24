@@ -50,7 +50,7 @@ function UI:endWarnings()
   end
  end
  for _,c in ipairs(state.cities or {})do
-  if c.owner==self.playerID and not c.project then warnings[#warnings+1]={text='City '..c.x..','..c.y..' has no production.',kind='city',item=c}end
+  if c.owner==self.playerID and not c.project then warnings[#warnings+1]={text=(c.name or ('City '..c.x..','..c.y))..' has no production.',kind='city',item=c}end
  end
  for _,p in ipairs(state.players or {})do if p.id==self.playerID and not p.researchTarget then
   for id in pairs(Systems.techs)do if Systems.canResearch(p,id)then
@@ -316,7 +316,7 @@ function UI:focus(kind,item)
   self.panX=math.max(0,math.min(v.maxX,(item.x-.5+((item.y-1)%2)*.5)*v.tile-v.w/2))
   self.panY=math.max(0,math.min(v.maxY,(item.y-1)*v.tile*.75+v.tile/2-v.h/2))
  end
- self:feedback((kind=='unit' and item.kind:upper() or 'CITY')..' AT '..item.x..','..item.y)
+ self:feedback((kind=='unit' and item.kind:upper() or item.name or 'CITY')..' AT '..item.x..','..item.y)
 end
 function UI:nextIdle()
  local candidates={};local current
@@ -379,7 +379,7 @@ function UI:back()
  if self.productionConfirm then self.productionConfirm=nil;return true end
  if self.endConfirm then self.endConfirm=nil;return true end
  if self.pendingMove then self.pendingMove=nil;return true end
- if self.panel~='context'then self.panel='context';return true end
+ if self.panel~='context'then self.panel='context';self.pointerStart=nil;self.techDrag=nil;return true end
  if self.source or self.workCity then self.source=nil;self.reachable={};self.workCity=nil;return true end
  if not self.selected.empty then self:deselect();return true end
  return false
@@ -403,7 +403,14 @@ function UI:pan(dx,dy)
 end
 function UI:pointerDown(x,y)
  local rx,ry=self.r:touch(x,y);local v=self.mapViewport
- self.pointerStart=nil;self.pointerDragged=false;self.blockDrag=true
+ self.pointerStart=nil;self.pointerDragged=false;self.blockDrag=true;self.techDrag=nil
+ local model=self.panel=='tech' and self.techModel
+ local area=model and model.dragArea
+ if rx and area and rx>=area.x and rx<area.x+area.w and ry>=area.y and ry<area.y+area.h then
+  self.pointerStart={x=x,y=y};self.blockDrag=false
+  self.techDrag={x=rx,y=ry,panX=model.panX or 0,panY=model.panY or 0,offset=model.offset or 0}
+  return true
+ end
  if rx and v and self.panel=='context' and not self.productionConfirm and not self.disbandConfirm and not self.endConfirm and
   rx>=v.x and rx<v.x+v.w and ry>=v.y and ry<v.y+v.h then
   self.pointerStart={x=x,y=y};self.lastDrag={x=rx,y=ry};self.blockDrag=false
@@ -415,16 +422,28 @@ function UI:pointerUp()
  local start=self.pointerStart
  if start and not self.pointerDragged then self:tap(start.x,start.y)end
  self.pointerStart=nil;self.pointerDragged=false;self.blockDrag=nil
- self.lastDrag=nil;self.activeScroll=nil
+ self.lastDrag=nil;self.activeScroll=nil;self.techDrag=nil
 end
 function UI:drag(x,y)
  local px,py=self.r:touch(x,y)
  if px then
   for _,bar in ipairs(self.r.scrollbars or {})do
-   if (self.activeScroll and self.activeScroll.model==bar.model and self.activeScroll.key==bar.key) or (px>=bar.x and px<bar.x+bar.w and py>=bar.y and py<bar.y+bar.h)then
+   if (self.activeScroll and self.activeScroll.model==bar.model and self.activeScroll.key==bar.key) or (not self.techDrag and px>=bar.x and px<bar.x+bar.w and py>=bar.y and py<bar.y+bar.h)then
     bar.move(px,py);self.activeScroll=bar;self.lastDrag=nil;return true
    end
   end
+ end
+ if self.techDrag and self.panel=='tech' and px then
+  local drag,model=self.techDrag,self.techModel
+  local dx,dy=drag.x-px,drag.y-py
+  if math.abs(dx)+math.abs(dy)>=3 then self.pointerDragged=true end
+  if self.pointerDragged then
+   if model.dragMode=='graph'then
+    model.panX=math.max(0,math.min(model.maxPanX,drag.panX+dx))
+    model.panY=math.max(0,math.min(model.maxPanY,drag.panY+dy))
+   else model.offset=math.max(0,math.min(model.maxPanY,drag.offset+math.floor(dy/12)))end
+  end
+  return true
  end
  if self.blockDrag or self.panel~='context' or self.productionConfirm or self.disbandConfirm or self.endConfirm then self.lastDrag=nil;return false end
  local rx,ry=self.r:touch(x,y);local v=self.mapViewport
