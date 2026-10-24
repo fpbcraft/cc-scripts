@@ -61,7 +61,7 @@ Every puzzle starts empty, except for its fixed terminals and obstacles. Some le
 | **2x Drive** | Amber `2` with a green input marker | Doubles RPM from input to output; reverse flow halves it |
 | **Stone** | Dark blocked square | Cannot hold machinery |
 
-The ports are always visibly marked on the corresponding edges. Connected, powered machinery animates with amber motion markers. A target turns green when its speed and rotation are correct. Inconsistent closed loops can cause a red **JAM** warning.
+The ports are always visibly marked on the corresponding edges. Connected, powered machinery animates with amber motion markers. A target turns green when its speed and rotation are correct. **Red end caps** identify open/unconnected ports on advanced levels, and the status bar reports unused stock and open ports. Inconsistent closed loops can cause a red **JAM** warning.
 
 ### Other controls
 
