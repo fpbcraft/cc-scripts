@@ -1,4 +1,4 @@
-# CIVCRAFT — Networked Pocket Civilization
+# CIVCRAFT — Hexagonal Pocket Civilization
 
 A small Civilization-inspired, turn-based 4X game for **CC:Tweaked**. One computer hosts the authoritative match; **2–4 human players** each use their own computer and optionally an Advanced Monitor. Computers communicate through **rednet modems**, either wireless (within range) or wired (via the same wired modem network). It also works over interdimensional wireless modems. No HTTP or external web server is needed after installation.
 
@@ -26,11 +26,11 @@ For a clean new match, explicitly run `/civcraft/game.lua host --new`. This dele
 
 ## Gameplay
 
-The map is a 12×8 continent grid: `.` plains, `f` forest, `^` mountain, `~` water; mountains and water block movement. Your settlements and units are coloured by player. `C` denotes a city, `W` a warrior, and `S` a settler. Touch a tile to select it.
+The map is a 12×8 **pointy-top hexagonal** continent map: `.` plains, `f` forest, `^` mountain, `~` water; mountains and water block movement. Your settlements and units are coloured by player. Cities are walled-settlement icons, warriors carry a shield and sword, and settlers appear as wagons. Forest, mountain and water also have distinct pixel-art symbols. Touch a tile to select it.
 
 - **Cities:** Each city produces 2 food, 2 wood, and 1 science at the end of a full round. Technology boosts food and science production.
 - **Warriors:** Recruit for 5 wood at an unoccupied city. Select one, tap MOVE, then tap an adjacent passable tile. Warriors can defeat an enemy unit or capture an enemy city.
-- **Settlers:** Recruit for 8 food and 8 wood at an unoccupied city. Move to unoccupied land, then tap FOUND. New cities must be at least 3 Manhattan tiles from another city.
+- **Settlers:** Recruit for 8 food and 8 wood at an unoccupied city. Move to unoccupied land, then tap FOUND. New cities must be at least 3 hexes from another city.
 - **Research:** Spend science on up to 3 technology levels (8, 14, and 20 science). These boost city production.
 - **Turns:** Each player issues orders independently; actions are applied by the host. Tap END TURN when finished. Only after everyone finishes does production accrue and movement reset.
 - **Victory:** Found or capture 5 cities, or have the highest resource/technology/city score after 25 rounds.
@@ -56,3 +56,9 @@ Run `/civcraft/game.lua local`. From the lobby, add or remove participants (two 
 ### Updated graphics
 
 CIVCRAFT now uses a pixel-art map, icon-based units and cities, a dark Railbreak-inspired UI, large touch targets, a compact local-player lobby, and a dynamically scaled renderer. The game continues to work in ordinary text terminals without pixel graphics, with fewer visual details.
+
+## Hex map and contextual touch controls (v0.3.0)
+
+The six-direction hex grid is shared between CIVCRAFT's rules and visual interface. Selecting one of your unmoved units highlights its **legal destinations**; blocked water and mountain hexes, friendly occupied hexes, and invalid attacks are excluded. Select a highlighted hex to move or attack. A city selection exposes **WARRIOR**, **SETTLER**, and **RESEARCH** commands; a settler selection exposes **FOUND CITY**, while open terrain can be inspected. The contextual action bar also offers **CANCEL** and **END TURN**. Hex selection resolves the actual six-sided polygon, not overlapping rectangular hitboxes.
+
+Local multiplayer: run `/civcraft/game.lua local` (or simply launch CIVCRAFT from FPB Store) for 2–4 players sharing one screen, with private turn handoffs and separate local saves. To host a network match, explicitly run `/civcraft/game.lua host`.
