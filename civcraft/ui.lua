@@ -202,141 +202,251 @@ function UI:draw(state,playerID,opts)
  self.state=state;self.playerID=playerID
  local mine
  for _,p in ipairs(state.players)do if p.id==playerID then mine=p end end
- local compact=w<150 or h<110
- local MAP_W,MAP_H=state.world and state.world.width or Hex.width,
-  state.world and state.world.height or Hex.height
- local top=header+7
- local contentBottom=h-footer-3
- -- Pointy odd-row hexes: centres are half a cell apart horizontally between
- -- adjacent rows; 3/4 cell vertically, matching the same Hex distance rules.
- local reserved=compact and 14 or math.max(75,math.floor(w*.29))
- local tile=math.max(5,math.min(
-  math.floor((contentBottom-top-7)/(1+(MAP_H-1)*.75)),
-  math.floor((w-reserved-17)/(MAP_W+.5))))
+ local compact=w<185 or h<120
+ local world=state.world
+ local MAP_W,MAP_H=world and world.width or Hex.width,
+  world and world.height or Hex.height
+ local top=header+5
+ local barY=h-math.max(18,math.floor(h*.115))
+ local contentBottom=barY-2
+ local leftW=compact and 35 or 54
+ local rightW=compact and math.max(62,math.floor(w*.31)) or
+   math.max(88,math.floor(w*.30))
+ local vx,vy=leftW+3,top+1
+ local vw=math.max(44,w-leftW-rightW-9)
+ local vh=math.max(48,contentBottom-vy)
+ local tile=math.max(12,math.min(23,math.floor(vh/8)))
  local stepY=tile*.75
- local mx,my=8,top+2
- self.hexTargets={}
- local boardW,boardH=math.ceil((MAP_W+.5)*tile),math.ceil((MAP_H-1)*stepY+tile)
- r:fill(mx-3,my-3,boardW+6,boardH+6,1)
- r:outline(mx-3,my-3,boardW+6,boardH+6,3)
- local function tilePos(x,y)
-  return math.floor(mx+(x-1)*tile+((y-1)%2)*tile/2),
-   math.floor(my+(y-1)*stepY)
- end
- for y=1,MAP_H do for x=1,MAP_W do
-  local px,py=tilePos(x,y)
-  local t=terrain(x,y,state)
-  local visibility=World.known(mine,x,y)
-  local hidden=visibility=="hidden"
-  local c=not hidden and where(state.cities,x,y)
-  local u=visibility=="visible" and where(state.units,x,y)
-  if c and c.owner~=playerID and visibility~="visible"then c=nil end
-  local base=hidden and 15 or
-    visibility=="explored" and 14 or
-    t=="water" and 19 or t=="mountain" and 4 or
-    t=="forest" and 12 or t=="hills" and 9 or 2
-  local half=math.floor(tile/2)
-  local bevel=math.max(2,math.floor(tile*.24))
-  -- Filled pointy hex silhouette (top/bottom caps and vertical body).
-  for dy=0,tile-1 do
-   local inset=dy<bevel and math.floor((bevel-dy)*half/bevel) or
-    dy>=tile-bevel and math.floor((dy-(tile-bevel)+1)*half/bevel) or 0
-   r:fill(px+inset,py+dy,math.max(1,tile-inset*2-1),1,base)
-  end
-  r:outline(px+bevel,py,math.max(1,tile-2*bevel),1,3)
-  if tile>=9 and not hidden and
-     (t=="water" or t=="forest" or t=="mountain" or t=="hills")then
-   Icons.draw(r,t,px+half-4,py+half-4,9,7)
-  end
-  local reachable
-  for _,p in ipairs(self.reachable or {})do
-   if p.x==x and p.y==y then reachable=p;break end
-  end
-  if reachable then
-   local tint=reachable.attack and 10 or 11
-   r:fill(px+bevel,py+tile-3,math.max(2,tile-2*bevel),2,tint)
-   r:fill(px+1,py+half,2,2,tint)
-   if tile>=13 then
-    r:text(px+half-2,py+tile-10,
-     reachable.ranged and "R" or tostring(reachable.cost),7,1,6)
+ local boardW=(MAP_W+.5)*tile
+ local boardH=(MAP_H-1)*stepY+tile
+ local maxPanX=math.max(0,math.ceil(boardW-vw))
+ local maxPanY=math.max(0,math.ceil(boardH-vh))
+ if self.lastWorld~=world then
+  self.panX,self.panY=0,0;self.lastWorld=world
+  for _,c in ipairs(state.cities)do
+   if c.owner==playerID then
+    self.panX=(c.x-.5)*tile-vw/2
+    self.panY=(c.y-.5)*stepY-vh/2;break
    end
   end
-  if c then
-   if tile>=11 then Icons.draw(r,"city",px+half-5,py+half-5,11,P[ownerIndex(state,c.owner)]or 8)
-   else r:fill(px+half-2,py+half-2,4,4,P[ownerIndex(state,c.owner)]or 8)end
-  end
-  if u then
-   if tile>=11 then Icons.draw(r,u.kind,px+half-5,py+half-5,11,P[ownerIndex(state,u.owner)]or 8)
-   else r:fill(px+half-1,py+half-1,3,3,P[ownerIndex(state,u.owner)]or 8)end
-   if u.moved then r:fill(px+tile-4,py+half,2,2,4)end
-  end
-  if visibility=="explored"then r:fill(px+half-1,py+half-1,2,2,4)end
-  if self.selected.x==x and self.selected.y==y then
-   r:outline(px+bevel,py,math.max(2,tile-2*bevel),tile,8)
-  end
-  self.hexTargets[#self.hexTargets+1]={x=px,y=py,w=tile,h=tile,
-   tx=x,ty=y}
- end end
- local sidebarX=mx+boardW+9
- if not compact and sidebarX<w-48 then
-  local sw=w-sidebarX-7
-  r:fill(sidebarX,my-3,sw,boardH+6,1)
-  r:text(sidebarX+4,my+4,"YOUR EMPIRE",8,1,sw-8)
-  if mine then
-   r:icon("food",sidebarX+5,my+18,1)
-   r:text(sidebarX+17,my+20,"FOOD "..(mine.food or 0),7,1,sw-21)
-   r:icon("wood",sidebarX+5,my+32,1)
-   r:text(sidebarX+17,my+34,"WOOD "..(mine.wood or 0),7,1,sw-21)
-   r:icon("bolt",sidebarX+5,my+46,1)
-   r:text(sidebarX+17,my+48,"SCI "..(mine.science or 0),7,1,sw-21)
-   r:text(sidebarX+4,my+62,"TECHS "..(function()
-    local n=0;for _ in pairs(mine.techs or {})do n=n+1 end
-    return n
-   end)(),6,1,sw-8)
-   local selectedCity=where(state.cities,self.selected.x,self.selected.y)
-   local selectedUnit=where(state.units,self.selected.x,self.selected.y)
-   if selectedUnit and selectedUnit.owner==playerID then
-    local unit=Systems.units[selectedUnit.kind] or Systems.units.warrior
-    local cy=my+76
-    r:fill(sidebarX+3,cy,sw-6,math.max(16,boardH-79),2)
-    r:text(sidebarX+5,cy+3,selectedUnit.kind:upper(),8,1,sw-9)
-    r:text(sidebarX+5,cy+15,
-     "ATK "..(unit.strength or 0).." / DEF "..(unit.defense or 0),7,1,sw-9)
-    r:text(sidebarX+5,cy+27,
-     "MOVE "..(selectedUnit.movesLeft or 0).."/"..(unit.move or 1)..
-     "  SIGHT "..(unit.vision or 2),7,1,sw-9)
-    r:text(sidebarX+5,cy+39,"ABILITY",9,1,sw-9)
-    r:text(sidebarX+5,cy+50,unit.ability or "-",6,1,sw-9)
-   elseif selectedCity and selectedCity.owner==playerID then
-    local cy=my+76
-    r:fill(sidebarX+3,cy,sw-6,math.max(16,boardH-79),2)
-    r:text(sidebarX+5,cy+3,"CITY POP "..(selectedCity.population or 2),7,1,sw-9)
-    local jobs=selectedCity.jobs or {food=1,wood=1,science=0}
-    r:text(sidebarX+5,cy+15,"F"..jobs.food.." W"..jobs.wood.." S"..jobs.science,8,1,sw-9)
-    local y=cy+28
-    for _,id in ipairs({"farm","mine","library","walls","workshop","academy","market","fortress","university","bazaar","observatory","bank","grandacademy"})do
-     if selectedCity.buildings and selectedCity.buildings[id] and y<my+boardH-12 then
-      r:text(sidebarX+5,y,id:upper(),11,1,sw-9);y=y+10
+ end
+ self.panX=math.max(0,math.min(maxPanX,self.panX or 0))
+ self.panY=math.max(0,math.min(maxPanY,self.panY or 0))
+ self.mapViewport={x=vx,y=vy,w=vw,h=vh,tile=tile,
+  maxX=maxPanX,maxY=maxPanY}
+ self.hexTargets={}
+ r:fill(vx-2,vy-2,vw+4,vh+4,1)
+ r:outline(vx-2,vy-2,vw+4,vh+4,3)
+ local function tilePos(x,y)
+  return math.floor(vx+(x-1)*tile+((y-1)%2)*tile/2-self.panX),
+   math.floor(vy+(y-1)*stepY-self.panY)
+ end
+ local owners=World.territory(state,Hex)
+ for y=1,MAP_H do for x=1,MAP_W do
+  local px,py=tilePos(x,y)
+  if px+tile>vx and px<vx+vw and py+tile>vy and py<vy+vh then
+   local visibility=World.known(mine,x,y)
+   local hidden=visibility=="hidden"
+   local t=terrain(x,y,state)
+   local c=not hidden and where(state.cities,x,y)
+   local u=visibility=="visible" and where(state.units,x,y)
+   if c and c.owner~=playerID and visibility~="visible" then c=nil end
+   local base=hidden and 15 or
+     visibility=="explored" and 14 or
+     t=="water" and 19 or t=="mountain" and 4 or
+     t=="forest" and 12 or t=="hills" and 9 or 2
+   local half=math.floor(tile/2)
+   local bevel=math.max(2,math.floor(tile*.24))
+   for dy=0,tile-1 do
+    local inset=dy<bevel and math.floor((bevel-dy)*half/bevel) or
+      dy>=tile-bevel and math.floor((dy-(tile-bevel)+1)*half/bevel) or 0
+    r:fill(px+inset,py+dy,math.max(1,tile-inset*2-1),1,base)
+   end
+   local deposit=not hidden and World.deposit(world,x,y) or nil
+   if self.mapMode=="resources" and deposit and tile>=14 then
+    local color=deposit=="iron" and 17 or deposit=="horses" and 8 or
+      deposit=="grain" and 11 or deposit=="fish" and 13 or 16
+    r:fill(px+half-3,py+half-3,6,6,color)
+   elseif tile>=13 and not hidden and visibility=="visible" and
+      (t=="forest" or t=="mountain" or t=="water")then
+    Icons.draw(r,t,px+half-4,py+half-4,9,7)
+   end
+   local owner=owners[World.key(x,y)]
+   if owner and not hidden then
+    local borderColor=P[ownerIndex(state,owner)] or 8
+    if self.mapMode=="territory"then r:fill(px+half-2,py+half-2,4,4,borderColor)end
+    local edge={
+     {x=px+half,y=py},{x=px+tile-1,y=py+bevel},
+     {x=px+tile-1,y=py+tile-bevel},
+     {x=px+half,y=py+tile-1},
+     {x=px,y=py+tile-bevel},{x=px,y=py+bevel}
+    }
+    -- Border only the edges facing territory of another owner or no owner.
+    -- Neighbor order comes from the same pointy-top odd-row coordinates.
+    local dirs=(y%2==1) and
+      {{-1,-1},{0,-1},{1,0},{0,1},{-1,1},{-1,0}} or
+      {{0,-1},{1,-1},{1,0},{1,1},{0,1},{-1,0}}
+    for side=1,6 do
+     local n=dirs[side]
+     if owners[World.key(x+n[1],y+n[2])]~=owner then
+      local a1=edge[side];local b1=edge[side%6+1]
+      if a1.x>=vx and a1.x<vx+vw and a1.y>=vy and a1.y<vy+vh and
+          b1.x>=vx and b1.x<vx+vw and b1.y>=vy and b1.y<vy+vh then
+       r:line(a1.x,a1.y,b1.x,b1.y,borderColor)
+      end
      end
     end
    end
-  end
-  for i,p in ipairs(state.players)do
-   local iy=my+79+(i-1)*11
-   if iy+10<my+boardH and
-    not ((where(state.cities,self.selected.x,self.selected.y) and
-      where(state.cities,self.selected.x,self.selected.y).owner==playerID) or
-      (where(state.units,self.selected.x,self.selected.y) and
-       where(state.units,self.selected.x,self.selected.y).owner==playerID)) then
-    r:fill(sidebarX+4,iy,3,9,P[i]or 8)
-    r:text(sidebarX+11,iy+2,clip(p.name,math.floor((sw-14)/4))..
-      (p.ready and " DONE" or ""),6,1,sw-13)
+   local reach
+   for _,p in ipairs(self.reachable or {})do
+    if p.x==x and p.y==y then reach=p;break end
+   end
+   if reach and px>=vx and px+tile<=vx+vw and py>=vy and py+tile<=vy+vh then
+    local color=reach.attack and 10 or 11
+    r:fill(px+bevel,py+tile-3,math.max(2,tile-2*bevel),2,color)
+    r:text(px+half-2,py+tile-10,reach.ranged and "R" or
+      tostring(reach.cost),7,1,8)
+   end
+   if c and px>=vx and px+tile<=vx+vw and py>=vy and py+tile<=vy+vh then
+    Icons.draw(r,"city",px+half-5,py+half-5,11,P[ownerIndex(state,c.owner)]or 8)
+   end
+   if u and px>=vx and px+tile<=vx+vw and py>=vy and py+tile<=vy+vh then
+    Icons.draw(r,u.kind,px+half-5,py+half-5,11,P[ownerIndex(state,u.owner)]or 8)
+   end
+   if self.selected.x==x and self.selected.y==y and px>=vx and
+      px+tile<=vx+vw and py>=vy and py+tile<=vy+vh then
+    r:outline(px+bevel,py,math.max(2,tile-2*bevel),tile,8)
+   end
+   if px>=vx and py>=vy and px+tile<=vx+vw and py+tile<=vy+vh then
+    self.hexTargets[#self.hexTargets+1]={x=px,y=py,w=tile,h=tile,tx=x,ty=y}
    end
   end
+ end end
+ -- Overlay the two side bars after painting the world, never as map children.
+ r:fill(0,top,leftW,contentBottom-top,1)
+ r:fill(w-rightW-1,top,rightW+1,contentBottom-top,1)
+ r:fill(leftW,top,2,contentBottom-top,3)
+ r:fill(w-rightW-2,top,2,contentBottom-top,3)
+ local bx=3;local bw=math.max(28,leftW-6)
+ r:text(bx+2,top+3,"MAP",8,1,bw-4)
+ local mapModes={{"TERRAIN","map"},{"TERRITORY","station"},{"RESOURCES","ore"}}
+ for i,entry in ipairs(mapModes)do
+  local py=top+15+(i-1)*18
+  r:button(bx,py,bw,16,entry[1],function()
+   self.mapMode=entry[1]:lower()
+  end,{icon=entry[2],selected=(self.mapMode or "terrain")==entry[1]:lower()})
+ end
+ local navY=top+76
+ r:button(bx,navY,bw,13,"UP",function()self:pan(0,-tile*3)end,{icon="map"})
+ r:button(bx,navY+15,bw,13,"LEFT",function()self:pan(-tile*3,0)end,{icon="back"})
+ r:button(bx,navY+30,bw,13,"RIGHT",function()self:pan(tile*3,0)end,{icon="right"})
+ r:button(bx,navY+45,bw,13,"DOWN",function()self:pan(0,tile*3)end,{icon="map"})
+ r:button(bx,navY+60,bw,13,"CENTER",function()
+  local px,py=tilePos(self.selected.x,self.selected.y)
+  self:pan(px-(vx+vw/2),py-(vy+vh/2))
+ end,{icon="map"})
+ local sidebarX=w-rightW+1
+ local sw=rightW-5
+ local selectedCity=where(state.cities,self.selected.x,self.selected.y)
+ local selectedUnit=where(state.units,self.selected.x,self.selected.y)
+ r:text(sidebarX+3,top+3,"INSPECTOR",8,1,sw-7)
+ if selectedCity and selectedCity.owner==playerID then
+  r:icon("station",sidebarX+3,top+17,1)
+  r:text(sidebarX+16,top+19,"CITY POP "..(selectedCity.population or 2),7,1,sw-19)
+  local yields=Systems.yields(mine,selectedCity,state,Hex,owners)
+  r:text(sidebarX+3,top+31,"F"..yields.food.." I"..yields.industry..
+    " S"..yields.science.."/TURN",11,1,sw-6)
+  if selectedCity.project then
+   local pr=selectedCity.project
+   local cost=Systems.projectCost(pr.kind,pr.id) or 1
+   local remain=math.ceil((cost-pr.progress)/math.max(1,yields.industry))
+   r:text(sidebarX+3,top+42,pr.id:upper().." "..math.max(0,remain).." TURNS",8,1,sw-6)
+  else r:text(sidebarX+3,top+42,"NO PRODUCTION",5,1,sw-6)end
+  local cy=top+56
+  for i,job in ipairs(Systems.jobs)do
+   local iy=cy+(i-1)*19
+   local count=selectedCity.jobs[job] or 0
+   r:text(sidebarX+3,iy+3,job:upper().." "..count,7,1,sw-47)
+   r:button(sidebarX+sw-44,iy,20,15,"-",function()
+    for _,from in ipairs(Systems.jobs)do
+     if from==job and count>0 then
+      local to=job=="food" and "wood" or "food"
+      self:command("assign",{x=selectedCity.x,y=selectedCity.y,from=job,to=to})
+     end
+    end
+   end)
+   r:button(sidebarX+sw-22,iy,20,15,"+",function()
+    for _,from in ipairs(Systems.jobs)do
+     if from~=job and selectedCity.jobs[from]>0 then
+      self:command("assign",{x=selectedCity.x,y=selectedCity.y,from=from,to=job})
+      break
+     end
+    end
+   end)
+  end
+  local py=cy+62
+  r:button(sidebarX+3,py,sw-6,15,"BUILD UNITS",function()
+   self.panel="units";self.actionPage=1
+  end,{icon="train"})
+  r:button(sidebarX+3,py+17,sw-6,15,"BUILDINGS",function()
+   self.panel="buildings";self.actionPage=1
+  end,{icon="foundry"})
+  local source=self.panel=="units" and Systems.units or
+    self.panel=="buildings" and Systems.buildings or nil
+  if source then
+   local list={}
+   for id,record in pairs(source)do list[#list+1]=id end
+   table.sort(list)
+   local first=self.actionPage or 1
+   local startY=py+37
+   local visibleRows=math.max(1,math.floor((contentBottom-startY-25)/15))
+   self.actionPage=math.max(1,math.min(first,math.max(1,#list-visibleRows+1)))
+   for n=self.actionPage,math.min(#list,self.actionPage+visibleRows-1)do
+    local id=list[n]
+    local kind=self.panel=="units" and "unit" or "building"
+    local eligible=kind=="unit" and Systems.canRecruit(mine,id,state,Hex) or
+      Systems.canBuild(mine,selectedCity,id)
+    local cost=Systems.projectCost(kind,id)
+    local turns=math.ceil(cost/math.max(1,yields.industry))
+    r:button(sidebarX+3,startY+(n-self.actionPage)*15,sw-6,13,
+      id:upper().." "..turns.."T",function()
+       if eligible then self:command("queue",{x=selectedCity.x,y=selectedCity.y,
+        kind=kind,id=id})else self.notice="LOCKED / REQUIREMENTS MISSING"end
+      end,{icon=kind=="unit" and "train" or "foundry",selected=selectedCity.project and
+        selectedCity.project.id==id})
+   end
+   if #list>visibleRows then
+    r:button(sidebarX+3,contentBottom-18,math.floor((sw-8)/2),15,"PREV",
+     function()self.actionPage=math.max(1,(self.actionPage or 1)-visibleRows)end)
+    r:button(sidebarX+5+math.floor((sw-8)/2),contentBottom-18,math.floor((sw-8)/2),15,"NEXT",
+     function()self.actionPage=math.min(#list,(self.actionPage or 1)+visibleRows)end)
+   end
+  end
+ elseif selectedUnit and selectedUnit.owner==playerID then
+  local unit=Systems.units[selectedUnit.kind] or Systems.units.warrior
+  r:icon("train",sidebarX+3,top+17,1)
+  r:text(sidebarX+16,top+19,selectedUnit.kind:upper(),7,1,sw-20)
+  r:text(sidebarX+3,top+37,"ATTACK "..(unit.strength or 0).." DEF "..(unit.defense or 0),7,1,sw-6)
+  r:text(sidebarX+3,top+49,"MOVE "..(selectedUnit.movesLeft or 0)..
+    " / "..(unit.move or 1),7,1,sw-6)
+  r:text(sidebarX+3,top+61,"RANGE "..(unit.range or 1)..
+    "  VISION "..(unit.vision or 2),7,1,sw-6)
+  r:text(sidebarX+3,top+75,unit.ability or "",6,1,sw-6)
+  r:button(sidebarX+3,top+94,sw-6,17,"MOVE / ATTACK",function()
+   self.source={x=selectedUnit.x,y=selectedUnit.y}
+   self.reachable=Hex.reachable(state,selectedUnit,playerID,Systems)
+  end,{icon="right"})
+  if selectedUnit.kind=="settler"then
+   r:button(sidebarX+3,top+114,sw-6,17,"FOUND CITY",function()
+    self:command("found",{x=selectedUnit.x,y=selectedUnit.y})
+   end,{icon="station"})
+  end
  else
-  if mine then
-   r:text(9,my+boardH+3,("F"..mine.food.." W"..mine.wood..
-     " S"..mine.science.." T"..mine.tech),7)
+  r:text(sidebarX+3,top+22,"TILE "..self.selected.x..","..self.selected.y,7,1,sw-6)
+  r:text(sidebarX+3,top+35,terrain(self.selected.x,self.selected.y,state),6,1,sw-6)
+  if World.known(mine,self.selected.x,self.selected.y)~="hidden"then
+   r:text(sidebarX+3,top+47,World.deposit(world,self.selected.x,self.selected.y) or
+     "NO DEPOSIT",8,1,sw-6)
   end
  end
  local barY=h-footer+1
