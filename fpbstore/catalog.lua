@@ -3,7 +3,7 @@
 -- Never include save files or data folders in managedFiles.
 return {
  schema=1,
- storeVersion="1.1.0",
+ storeVersion="1.1.1",
  apps={
   {
    version="1.0.0",id="cogworks",name="COGWORKS",subtitle="KINETIC LAB",
@@ -15,7 +15,7 @@ return {
    saves={"/cogworks/saves","/cogworks/save.dat","/cogworks/settings.dat"},
   },
   {
-   version="2.0.6",id="railbreak",name="RAILBREAK",subtitle="KINETIC FRONTIER",
+   version="2.0.7",id="railbreak",name="RAILBREAK",subtitle="KINETIC FRONTIER",
    description="Run a railway, manage cargo and improve your trains.",
    icon="R",genre="STRATEGY",root="/railbreak",
    entry="/railbreak/main.lua",installer="install-railbreak.lua",
@@ -29,7 +29,7 @@ return {
    saves={"/railbreak/data"},
   },
   {
-   version="5.1",id="tidebound",name="TIDEBOUND",subtitle="SHATTERED EXPANSE",
+   version="5.2",id="tidebound",name="TIDEBOUND",subtitle="SHATTERED EXPANSE",
    description="A space 4X with exploration, diplomacy and events.",
    icon="T",genre="4X / RPG",root="/tidebound",
    entry="/tidebound/tidebound.lua",installer="install-tidebound.lua",
