@@ -1,7 +1,7 @@
--- TIDEBOUND: KINGDOMS v2.1 offline integration and regression tests
+-- SHATTERED: KINGDOMS v2.1 offline integration and regression tests
 -- Usage: texlua tests.lua  (requires no CC:Tweaked runtime)
 local path = (arg and arg[0] or "tests.lua"):match("^(.*[/\\])") or "./"
-local A=assert(loadfile(path.."tidebound.lua"))("--test-api")
+local A=assert(loadfile(path.."shattered.lua"))("--test-api")
 local checks=0
 local function ck(cond, why)
   checks=checks+1
@@ -155,4 +155,4 @@ for _,sz in ipairs(sizes) do
   ck(ui.size[1]==w+6 and ui.size[2]==h+4,"resize not reflected")
   ck(A.validSave(ui.game),"resize damaged game state")
 end
-print("TIDEBOUND KINGDOMS v2.1: "..checks.." independent checks passed")
+print("SHATTERED KINGDOMS v2.1: "..checks.." independent checks passed")

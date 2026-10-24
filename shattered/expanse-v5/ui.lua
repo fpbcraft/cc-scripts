@@ -1,6 +1,6 @@
--- TIDEBOUND v5: single-focus touch interface. Screen geometry is expressed in
+-- SHATTERED v5: single-focus touch interface. Screen geometry is expressed in
 -- character cells; the render adapter maps it to 256-colour CC: Graphics pixels.
-local root=_G.EXPANSE_V5_ROOT or '/tidebound/expanse-v5'
+local root=_G.EXPANSE_V5_ROOT or '/shattered/expanse-v5'
 local Sim=dofile(root..'/sim.lua')
 local Renderer=dofile(root..'/render.lua')
 local C=Sim.content
@@ -36,7 +36,7 @@ function UI.new(monitor,forceText)
 end
 function UI:save()
  if not self.g or not fs or not textutils then return end
- local path='/tidebound/v5-save.dat';if not fs.exists('/tidebound')then path='v5-save.dat'end
+ local path='/shattered/v5-save.dat';if not fs.exists('/shattered')then path='v5-save.dat'end
  local tmp=path..'.new';local h=fs.open(tmp,'w');if not h then return end
  h.write(textutils.serialize(self.g));h.close()
  if fs.exists(path..'.bak')then fs.delete(path..'.bak')end
@@ -45,7 +45,7 @@ function UI:save()
 end
 function UI:load()
  if not fs or not textutils then return false end
- for _,path in ipairs({'/tidebound/v5-save.dat','/tidebound/v5-save.dat.bak','v5-save.dat','v5-save.dat.bak'})do
+ for _,path in ipairs({'/shattered/v5-save.dat','/shattered/v5-save.dat.bak','v5-save.dat','v5-save.dat.bak'})do
   if fs.exists(path)then local h=fs.open(path,'r')
    if h then local value=h.readAll();h.close();local ok,g=pcall(textutils.unserialize,value)
     if ok and Sim.validState(g)then self.g=g;Sim.advanceAI(g);self.screen=g.ended and 'results' or 'handoff';self.selected=nil;self.selectedShip=nil;self.shipID=nil;return true end

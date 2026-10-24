@@ -1,17 +1,13 @@
 -- CIVCRAFT local/network UI built on the RAILBREAK pixel canvas.
 -- Never mutate simulation here: all commands flow through dispatch().
 local Renderer=dofile("/civcraft/render.lua")
+local Hex=dofile("/civcraft/hex.lua")
+local Icons=dofile("/civcraft/icons.lua")
 local UI={};UI.__index=UI
 local P={8,13,11,21}
-local MAP_W,MAP_H=12,8
+local MAP_W,MAP_H=Hex.width,Hex.height
 local function clip(s,n)return tostring(s or ""):upper():sub(1,math.max(0,n))end
-local function terrain(x,y)
- local v=(x*37+y*61+x*y*13)%19
- if v<=1 then return "water" end
- if v<=3 then return "mountain" end
- if v<9 then return "forest" end
- return "plains"
-end
+local terrain=Hex.terrain
 local function where(list,x,y)
  for _,thing in ipairs(list or {})do
   if thing.x==x and thing.y==y then return thing end
@@ -32,13 +28,28 @@ function UI:command(action,params)
 end
 function UI:tile(x,y)
  if self.source then
-  self:command("move",{sx=self.source.x,sy=self.source.y,x=x,y=y})
-  self.source=nil
- else self.selected={x=x,y=y}end
+  local legal=false
+  for _,p in ipairs(self.reachable or {})do if p.x==x and p.y==y then legal=true end end
+  if legal then
+   self:command("move",{sx=self.source.x,sy=self.source.y,x=x,y=y})
+   self.source=nil;self.reachable={}
+  else
+   self.notice="OUT OF RANGE - SELECT HIGHLIGHTED HEX"
+  end
+ else
+  self.selected={x=x,y=y}
+  local unit=where(self.state and self.state.units,x,y)
+  if unit and unit.owner==self.playerID and not unit.moved then
+   self.source={x=x,y=y}
+   self.reachable=Hex.reachable(self.state,unit,self.playerID)
+   self.notice="SELECT A GREEN HEX TO MOVE"
+  else self.reachable={};self.source=nil end
+ end
 end
 function UI:draw(state,playerID,opts)
  local r=self.r;local w,h=r.w,r.h;opts=opts or {}
  r:begin()
+ self.hexTargets={}
  r:fill(0,0,w,h,0)
  local header=math.min(27,math.max(16,math.floor(h*.16)))
  local footer=math.max(22,math.floor(h*.20))
@@ -92,55 +103,67 @@ function UI:draw(state,playerID,opts)
    "EXIT",function()self:command("exit")end)
   r:finish();return
  end
+ self.state=state;self.playerID=playerID
  local mine
  for _,p in ipairs(state.players)do if p.id==playerID then mine=p end end
  local compact=w<150 or h<110
  local top=header+7
  local contentBottom=h-footer-3
- local tile=math.max(3,math.min(
-  math.floor((contentBottom-top-4)/MAP_H),
-  math.floor((w-(compact and 8 or math.max(68,math.floor(w*.29)))-18)/MAP_W)))
+ -- Pointy odd-row hexes: centres are half a cell apart horizontally between
+ -- adjacent rows; 3/4 cell vertically, matching the same Hex distance rules.
+ local reserved=compact and 14 or math.max(75,math.floor(w*.29))
+ local tile=math.max(10,math.min(
+  math.floor((contentBottom-top-7)/(1+(MAP_H-1)*.75)),
+  math.floor((w-reserved-17)/(MAP_W+.5))))
+ local stepY=tile*.75
  local mx,my=8,top+2
- local boardW,boardH=MAP_W*tile,MAP_H*tile
+ self.hexTargets={}
+ local boardW,boardH=math.ceil((MAP_W+.5)*tile),math.ceil((MAP_H-1)*stepY+tile)
  r:fill(mx-3,my-3,boardW+6,boardH+6,1)
  r:outline(mx-3,my-3,boardW+6,boardH+6,3)
+ local function tilePos(x,y)
+  return math.floor(mx+(x-1)*tile+((y-1)%2)*tile/2),
+   math.floor(my+(y-1)*stepY)
+ end
  for y=1,MAP_H do for x=1,MAP_W do
-  local px=mx+(x-1)*tile;local py=my+(y-1)*tile
+  local px,py=tilePos(x,y)
   local t=terrain(x,y)
   local c=where(state.cities,x,y)
   local u=where(state.units,x,y)
   local base=t=="water" and 19 or t=="mountain" and 4 or
     t=="forest" and 12 or 2
-  r:fill(px,py,tile-1,tile-1,base)
-  if t=="water"then
-   r:fill(px+2,py+math.floor(tile/2),math.max(1,tile-5),1,13)
-  elseif t=="mountain"then
-   r:fill(px+math.floor(tile/2),py+1,2,math.max(1,tile-3),5)
-  elseif t=="forest"then
-   r:fill(px+math.floor(tile/3),py+2,math.max(1,math.floor(tile/3)),
-    math.max(1,tile-4),11)
+  local half=math.floor(tile/2)
+  local bevel=math.max(2,math.floor(tile*.24))
+  -- Filled pointy hex silhouette (top/bottom caps and vertical body).
+  for dy=0,tile-1 do
+   local inset=dy<bevel and math.floor((bevel-dy)*half/bevel) or
+    dy>=tile-bevel and math.floor((dy-(tile-bevel)+1)*half/bevel) or 0
+   r:fill(px+inset,py+dy,math.max(1,tile-inset*2-1),1,base)
+  end
+  r:outline(px+bevel,py,math.max(1,tile-2*bevel),1,3)
+  if t=="water" or t=="forest" or t=="mountain"then
+   Icons.draw(r,t,px+half-4,py+half-4,9,7)
+  end
+  local highlighted=false
+  for _,p in ipairs(self.reachable or {})do
+   if p.x==x and p.y==y then highlighted=true;break end
+  end
+  if highlighted then
+   r:fill(px+bevel,py+tile-3,math.max(2,tile-2*bevel),2,11)
+   r:fill(px+1,py+half,2,2,11)
   end
   if c then
-   local pc=P[ownerIndex(state,c.owner)]or 8
-   r:fill(px+1,py+math.floor(tile*.35),math.max(1,tile-3),
-     math.max(2,math.floor(tile*.55)),pc)
-   r:fill(px+2,py+1,math.max(1,tile-5),2,7)
+   Icons.draw(r,"city",px+half-5,py+half-5,11,P[ownerIndex(state,c.owner)]or 8)
   end
   if u then
-   local pc=P[ownerIndex(state,u.owner)]or 8
-   if u.kind=="warrior"then
-    r:fill(px+math.floor(tile/3),py+1,math.max(2,math.floor(tile/3)),
-      math.max(2,tile-3),pc)
-    r:fill(px+1,py+math.floor(tile/2),tile-2,2,7)
-   else
-    r:fill(px+1,py+math.floor(tile/2),tile-2,math.max(2,math.floor(tile/3)),pc)
-    r:fill(px+math.floor(tile/3),py+2,math.max(2,math.floor(tile/3)),2,7)
-   end
+   Icons.draw(r,u.kind,px+half-5,py+half-5,11,P[ownerIndex(state,u.owner)]or 8)
+   if u.moved then r:fill(px+tile-4,py+half,2,2,4)end
   end
   if self.selected.x==x and self.selected.y==y then
-   r:outline(px,py,tile-1,tile-1,8)
+   r:outline(px+bevel,py,math.max(2,tile-2*bevel),tile,8)
   end
-  r.buttons[#r.buttons+1]={x=px,y=py,w=tile,h=tile,fn=function()self:tile(x,y)end}
+  self.hexTargets[#self.hexTargets+1]={x=px,y=py,w=tile,h=tile,
+   tx=x,ty=y}
  end end
  local sidebarX=mx+boardW+9
  if not compact and sidebarX<w-48 then
@@ -179,13 +202,35 @@ function UI:draw(state,playerID,opts)
  if selectedCity then description=description.." CITY" end
  if selectedUnit then description=description.." "..selectedUnit.kind end
  r:text(8,barY,clip(description,math.floor((w-10)/4)),7)
- local actions={{"MOVE",function()self.source={x=self.selected.x,y=self.selected.y};self.notice="SELECT DESTINATION"end},
-  {"FOUND",function()self:command("found",{x=self.selected.x,y=self.selected.y})end},
-  {"WARRIOR",function()self:command("warrior",{x=self.selected.x,y=self.selected.y})end},
-  {"SETTLER",function()self:command("settler",{x=self.selected.x,y=self.selected.y})end},
-  {"RESEARCH",function()self:command("research",{x=self.selected.x,y=self.selected.y})end},
-  {"END TURN",function()self:command("end")end}}
- local cols=3;local gap=3;local buttonW=math.floor((w-18-(cols-1)*gap)/cols)
+ local actions={}
+ if selectedUnit and selectedUnit.owner==playerID then
+  if selectedUnit.kind=="settler"then
+   actions[#actions+1]={"FOUND CITY",function()
+    self:command("found",{x=self.selected.x,y=self.selected.y})
+   end}
+  end
+  actions[#actions+1]={"MOVE UNIT",function()
+   if selectedUnit.moved then self.notice="UNIT HAS ALREADY MOVED";return end
+   self.source={x=self.selected.x,y=self.selected.y}
+   self.reachable=Hex.reachable(state,selectedUnit,playerID)
+  end}
+ elseif selectedCity and selectedCity.owner==playerID then
+  actions[#actions+1]={"WARRIOR",function()
+   self:command("warrior",{x=self.selected.x,y=self.selected.y})end}
+  actions[#actions+1]={"SETTLER",function()
+   self:command("settler",{x=self.selected.x,y=self.selected.y})end}
+  actions[#actions+1]={"RESEARCH",function()
+   self:command("research",{x=self.selected.x,y=self.selected.y})end}
+ else
+  actions[#actions+1]={"INSPECT",function()
+   self.notice=terrain(self.selected.x,self.selected.y):upper().." HEX"
+  end}
+ end
+ actions[#actions+1]={"CANCEL",function()
+  self.source=nil;self.reachable={}
+ end}
+ actions[#actions+1]={"END TURN",function()self:command("end")end}
+ local cols=math.min(3,#actions);local gap=3;local buttonW=math.floor((w-18-(cols-1)*gap)/cols)
  local buttonH=math.max(10,math.floor((footer-20)/2))
  for i,action in ipairs(actions)do
   local col=(i-1)%cols;local row=math.floor((i-1)/cols)
@@ -200,8 +245,24 @@ function UI:draw(state,playerID,opts)
 end
 function UI:tap(x,y)
  local rx,ry=self.r:touch(x,y)
- if rx then return self.r:hit(rx,ry)end
- return false
+ if not rx then return false end
+ -- Hexes occupy overlapping bounding rectangles. Resolve actual polygon
+ -- containment and prefer the closest centre (never the first bounding box).
+ local best,distance
+ for _,hex in ipairs(self.hexTargets or {})do
+  local dx=rx-hex.x;local dy=ry-hex.y
+  if dx>=0 and dx<hex.w and dy>=0 and dy<hex.h then
+   local bevel=math.max(2,math.floor(hex.w*.24))
+   local inset=dy<bevel and (bevel-dy)*hex.w/(2*bevel) or
+    dy>=hex.h-bevel and (dy-(hex.h-bevel)+1)*hex.w/(2*bevel) or 0
+   if dx>=inset and dx<hex.w-inset then
+    local d=(dx-hex.w/2)^2+(dy-hex.h/2)^2
+    if not distance or d<distance then best=hex;distance=d end
+   end
+  end
+ end
+ if best then self:tile(best.tx,best.ty);return true end
+ return self.r:hit(rx,ry)
 end
 function UI:resize()self.r:resize()end
 function UI:close()self.r:close()end
