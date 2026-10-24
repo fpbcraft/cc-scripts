@@ -10,6 +10,7 @@ local selected=1
 local confirmation=nil
 local banner="SELECT AN APP"
 local busy=false
+local restartAfterUpdate=false
 local versionNotice="Versions not checked"
 local buttons={}
 local function centered(s,w)
@@ -146,7 +147,8 @@ local function perform(action,arg)
   busy=false
   if ok and action=="store-update" then
    -- Reload new catalog and logic on next launch.
-   banner="STORE UPDATED - RESTART TO LOAD NEW CATALOG"
+   banner="STORE UPDATED - RELOADING"
+   restartAfterUpdate=true
   elseif ok then banner=action=="remove" and "APP REMOVED - SAVES PRESERVED"
     or (action=="store-update" and "STORE UPDATED" or "INSTALL/UPDATE COMPLETE")
   else banner="ERROR: "..tostring(result)end
@@ -157,6 +159,7 @@ local function run()
  local ok=Manager.refreshVersions()
  versionNotice=ok and "Latest catalog checked" or "Offline: showing cached catalog"
  while true do
+  if restartAfterUpdate then return end
   draw()
   local ev,a,b,c=os.pullEvent()
   if ev=="term_resize"then
@@ -198,3 +201,10 @@ end)
 screen.setBackgroundColor(colors.black);screen.setTextColor(colors.white)
 screen.clear();screen.setCursorPos(1,1)
 if not ok then error(err,0)end
+if restartAfterUpdate then
+ -- This call runs the updated code from disk. Clear stale required modules
+ -- before loading so the new catalog and manager take effect immediately.
+ package.loaded["fpbstore.catalog"]=nil
+ package.loaded["fpbstore.manager"]=nil
+ assert(shell.run("/fpbstore/main.lua"),"Updated Store failed to launch")
+end
