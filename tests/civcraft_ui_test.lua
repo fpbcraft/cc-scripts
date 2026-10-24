@@ -28,7 +28,7 @@ end)
 assert(ui.r.mode=="graphics","Native pixel mode enabled")
 local state={phase="lobby",round=1,players={{id=11,name="P1"},{id=12,name="P2"}},
  cities={},units={}}
-ui:draw(state,11,{localMode=true})
+ui:draw(state,11,{localMode=true,screen="game"})
 local function touchLabel(label)
  for _,b in ipairs(ui.r.buttons)do
   if b.label==label then
@@ -46,8 +46,11 @@ touchLabel("START GAME")
 assert(calls[#calls].action=="start")
 state.phase="game"
 state.players[1].food=12;state.players[1].wood=12
-state.players[1].science=0;state.players[1].tech=0
-state.cities={{x=2,y=2,owner=11}}
+state.players[1].science=0;state.players[1].tech=0;state.players[1].techs={}
+state.players[1].civ="verdant"
+state.cities={}
+state.units={}
+state.cities={{x=2,y=2,owner=11,jobs={food=1,wood=1,science=0},buildings={}}}
 state.units={{x=3,y=2,owner=11,kind="warrior"}}
 ui:draw(state,11,{localMode=true})
 local tile=ui.hexTargets[1]
@@ -79,7 +82,7 @@ assert(tapHex(2,2),"Select owned city")
 ui:draw(state,11,{localMode=true})
 local actions={}
 for _,btn in ipairs(ui.r.buttons)do actions[btn.label]=true end
-assert(actions.WARRIOR and actions.SETTLER and actions.RESEARCH,
+assert(actions.UNITS and actions.BUILDINGS and actions.POPULATION and actions["TECH TREE"],
  "City contextual action menu")
 assert(not actions["MOVE UNIT"],"City should not expose unit movement")
 touchLabel("END TURN")

@@ -11,6 +11,29 @@ function I.draw(r,kind,x,y,size,color)
   rect(r,cx+2*a,y, a,6*a,6)
   rect(r,cx+a,y+2*a,3*a,a,8)
   rect(r,cx+2*a,y+6*a,a,2*a,8)
+ elseif kind=="scout"then
+  -- Hooded explorer, walking staff and small pack.
+  rect(r,cx-2*a,y+a,4*a,3*a,12)
+  rect(r,cx-a,y+2*a,2*a,a,7)
+  rect(r,cx-2*a,y+4*a,4*a,3*a,color)
+  rect(r,cx-2*a,y+7*a,a,a,4)
+  rect(r,cx+a,y+7*a,a,a,4)
+  rect(r,cx+3*a,y+a,a,7*a,9)
+ elseif kind=="spearman"then
+  -- Upright long spear and round shield.
+  rect(r,cx+2*a,y,a,8*a,7)
+  rect(r,cx+a,y+a,3*a,a,9)
+  rect(r,cx-2*a,y+2*a,3*a,5*a,color)
+  rect(r,cx-3*a,y+3*a,3*a,3*a,8)
+  rect(r,cx-2*a,y+7*a,a,a,4)
+ elseif kind=="horseman"then
+  -- Mounted rider and four-legged horse silhouette.
+  rect(r,cx-3*a,y+4*a,7*a,3*a,16)
+  rect(r,cx+2*a,y+2*a,2*a,3*a,16)
+  rect(r,cx-2*a,y+7*a,a,a,4)
+  rect(r,cx+2*a,y+7*a,a,a,4)
+  rect(r,cx-a,y+2*a,3*a,3*a,color)
+  rect(r,cx,y+a,a,a,7)
  elseif kind=="settler"then
   -- Wagon with canvas roof, axle, wheels.
   rect(r,cx-3*a,y+3*a,6*a,3*a,9)

@@ -1,4 +1,4 @@
--- CIVCRAFT v0.2.0: Railbreak-style 4X with local hotseat or rednet networking
+-- CIVCRAFT v0.4.0: Railbreak-style 4X with local hotseat or rednet networking
 -- Host: /civcraft/game.lua host [--new]  Join: /civcraft/game.lua join [host ID]
 local args={...}
 local MODE=args[1] or 'local'
@@ -27,6 +27,7 @@ local function screen()
 end
 local display=screen()
 local Hex=dofile('/civcraft/hex.lua')
+local Systems=dofile('/civcraft/systems.lua')
 local W,H=Hex.width,Hex.height
 local function key(x,y)return y*W+x end
 local function terrain(x,y)
@@ -38,6 +39,7 @@ local function newGame()
  return {version=1,phase='lobby',round=1,turn=1,players={},cities={},units={},nextId=1,logs={'Welcome to CIVCRAFT'},winner=nil}
 end
 local state=newGame()
+local hasHumanSave=false
 local function log(s)
  table.insert(state.logs,1,s)
  while #state.logs>5 do table.remove(state.logs) end
@@ -49,7 +51,7 @@ local function unitAt(x,y)
  for _,u in ipairs(state.units)do if u.x==x and u.y==y then return u end end
 end
 local function addUnit(owner,x,y,kind)
- local u={id=state.nextId,owner=owner,x=x,y=y,kind=kind,moved=false}
+ local u={id=state.nextId,owner=owner,x=x,y=y,kind=kind,moved=false,movesLeft=Systems.units[kind].move}
  state.nextId=state.nextId+1;table.insert(state.units,u);return u
 end
 local function player(id)
@@ -66,10 +68,10 @@ end
 local function initMap()
  for i,p in ipairs(state.players)do
   local x,y=starts[i][1],starts[i][2]
-  table.insert(state.cities,{id=state.nextId,x=x,y=y,owner=p.id,level=1})
+  table.insert(state.cities,{id=state.nextId,x=x,y=y,owner=p.id,level=1,population=2,foodStore=0,jobs={food=1,wood=1,science=0},buildings={}})
   state.nextId=state.nextId+1
   addUnit(p.id,x+((x<W/2) and 1 or -1),y,'warrior')
-  p.food=12;p.wood=12;p.science=0;p.tech=0;p.ready=false
+  p.food=12;p.wood=12;p.science=0;p.tech=0;p.ready=false;p.techs=p.techs or {};p.civ=p.civ or Systems.civs[i].id
  end
  state.phase='game';state.round=1;state.turn=1
  log('Game started: '..#state.players..' civilizations')
@@ -87,16 +89,14 @@ local function winner()
 end
 local function nextTurn()
  state.round=state.round+1
- for _,p in ipairs(state.players)do
-  p.ready=false
-  for _,c in ipairs(state.cities)do
-   if c.owner==p.id then
-    p.food=p.food+2+p.tech;p.wood=p.wood+2
-    p.science=p.science+1+p.tech
-   end
-  end
+ Systems.production(state)
+ for _,p in ipairs(state.players)do p.ready=false end
+ for _,u in ipairs(state.units)do
+  local owner=player(u.owner)
+  local base=Systems.units[u.kind] or Systems.units.warrior
+  u.movesLeft=base.move+(owner and owner.civ=="nomad" and u.kind=="scout" and 1 or 0)
+  u.moved=false
  end
- for _,u in ipairs(state.units)do u.moved=false end
  winner();log('Round '..state.round);save()
 end
 local function apply(id,req)
@@ -109,6 +109,31 @@ local function apply(id,req)
  end
  if state.phase~='game' then return false,'Game not running' end
  if p.ready then return false,'Already ended turn' end
+ if req.action=='assign' or req.action=='build' or req.action=='recruit'
+    or req.action=='researchTech' then
+  local x,y=tonumber(req.x),tonumber(req.y)
+  local c=x and y and cityAt(x,y)
+  if req.action=='researchTech' then
+   local ok,why=Systems.research(p,req.id)
+   if ok then save()end
+   return ok,why
+  end
+  if not c or c.owner~=id then return false,'Select your city' end
+  local ok,why
+  if req.action=='assign' then ok,why=Systems.assign(c,req.from,req.to)
+  elseif req.action=='build' then ok,why=Systems.build(p,c,req.id)
+  elseif req.action=='recruit' then
+   local template=Systems.units[req.id]
+   if not template or not Systems.canRecruit(p,req.id) then
+    return false,'Unit locked or too expensive'
+   end
+   if unitAt(x,y)then return false,'City occupied' end
+   p.food=p.food-template.food;p.wood=p.wood-template.wood
+   addUnit(id,x,y,req.id);ok=true
+  end
+  if ok then save()end
+  return ok,why
+ end
  if req.action=='end' then
   p.ready=true;log(p.name..' is ready')
   local all=true;for _,q in ipairs(state.players)do if not q.ready then all=false end end
@@ -132,26 +157,38 @@ local function apply(id,req)
  elseif req.action=='move' then
   local sx,sy=tonumber(req.sx),tonumber(req.sy)
   local moving=sx and sy and unitAt(sx,sy)
-  if not moving or moving.owner~=id or moving.moved then return false,'Select an unmoved unit' end
-  if Hex.distance(sx,sy,x,y)~=1 then return false,'Move only 1 hex' end
+  if not moving or moving.owner~=id or (moving.movesLeft or (moving.moved and 0 or 1))<=0 then return false,'Unit cannot move' end
+  if Hex.distance(sx,sy,x,y)~=1 then return false,'Move only to an adjacent hex' end
   if terrain(x,y)=='~' or terrain(x,y)=='^' then return false,'Impassable terrain' end
   if u then
    if u.owner==id then return false,'Occupied by ally' end
-   if moving.kind~='warrior' then return false,'Settlers cannot fight' end
+   if (Systems.units[moving.kind] or {}).strength<=0 then return false,'Civilian units cannot fight' end
+   local offense=(Systems.units[moving.kind] or Systems.units.warrior).strength
+   local defense=(Systems.units[u.kind] or Systems.units.warrior).strength
+   if c and c.owner==u.owner and c.buildings and c.buildings.walls then
+    defense=defense+1
+   end
+   if offense<defense then
+    for i,v in ipairs(state.units)do
+     if v==moving then table.remove(state.units,i);break end
+    end
+    log(p.name..' lost a battle')
+    save();return true
+   end
    for i,v in ipairs(state.units)do if v==u then table.remove(state.units,i);break end end
    log(p.name..' defeated an enemy unit')
   end
   if c and c.owner~=id then
-   if moving.kind~='warrior' then return false,'Warrior needed to capture city' end
+   if (Systems.units[moving.kind] or {}).strength<=0 then return false,'Military unit needed' end
    c.owner=id;log(p.name..' captured a city!')
   end
-  moving.x=x;moving.y=y;moving.moved=true
+  moving.x=x;moving.y=y;moving.movesLeft=(moving.movesLeft or 1)-1;moving.moved=moving.movesLeft<=0
  elseif req.action=='found' then
   if not u or u.owner~=id or u.kind~='settler' then return false,'Choose a settler' end
   if c then return false,'Tile has a city' end
   for _,v in ipairs(state.cities)do if Hex.distance(v.x,v.y,x,y)<3 then return false,'Cities need 3 hex spacing' end end
   for i,v in ipairs(state.units)do if v==u then table.remove(state.units,i);break end end
-  table.insert(state.cities,{id=state.nextId,x=x,y=y,owner=id,level=1})
+  table.insert(state.cities,{id=state.nextId,x=x,y=y,owner=id,level=1,population=2,foodStore=0,jobs={food=1,wood=1,science=0},buildings={}})
   state.nextId=state.nextId+1;log(p.name..' founded a city')
  else return false,'Unknown action' end
  winner();save();return true
@@ -163,7 +200,7 @@ if localHost then
  if fs.exists(SAVE) and args[2]~='--new' then
   local h=fs.open(SAVE,'r')
   if h then local loaded=textutils.unserialize(h.readAll());h.close()
-   if type(loaded)=='table' and loaded.version==1 then state=loaded end
+   if type(loaded)=='table' and (loaded.version==1 or loaded.version==2) then state=Systems.migrate(loaded);hasHumanSave=true end
   end
  elseif args[2]=='--new' and fs.exists(SAVE)then fs.delete(SAVE) end
  if localMode then
@@ -192,10 +229,13 @@ else
  assert(hostId,'No game found; use join <host computer ID>')
  rednet.send(hostId,{action='join',name=os.getComputerLabel() or ('Computer '..myId)},PROTOCOL)
 end
+Systems.migrate(state)
 local snapshot=localHost and state or nil
 local message='Tap a tile, then choose an action'
 local handoff=false
 local exitRequested=false
+local appScreen=hasHumanSave and 'title' or 'title'
+local gamePaused=false
 local UI=dofile('/civcraft/ui.lua')
 local view
 local function activeID()
@@ -209,10 +249,47 @@ local function draw()
  local s=localHost and state or snapshot
  view:message(message)
  view:draw(s,localMode and activeID() or myId,{
-  handoff=handoff,localMode=localMode,hostID=hostId})
+  handoff=handoff,localMode=localMode,hostID=hostId,screen=appScreen,paused=gamePaused,hasSave=hasHumanSave})
 end
 local function dispatch(action,params)
  if action=='exit' then exitRequested=true;return end
+ if action=='newGame' then
+  if localHost then
+   state=newGame();Systems.migrate(state);hasHumanSave=false
+   if localMode then
+    for i=1,2 do table.insert(state.players,{
+     id=myId*16+i,name='PLAYER '..i,ready=false,
+     civ=Systems.civs[i].id,ai=false,techs={}})end
+    state.activeIndex=1
+   else table.insert(state.players,{id=myId,name='P1',ready=false,
+     civ=Systems.civs[1].id,ai=false,techs={}})end
+  end
+  appScreen='game';gamePaused=false;return
+ end
+ if action=='continue' then appScreen='game';gamePaused=false;return end
+ if action=='pause' then gamePaused=true;return end
+ if action=='resume' then gamePaused=false;return end
+ if action=='title' then appScreen='title';gamePaused=false;save();return end
+ if action=='save' then save();message='GAME SAVED';return end
+ if action=='civ' and state.phase=='lobby' then
+  local p=state.players[params and params.player or 1]
+  if p then
+   local current=1
+   for i,c in ipairs(Systems.civs)do if c.id==p.civ then current=i end end
+   p.civ=Systems.civs[current%#Systems.civs+1].id;save()
+  end
+  return
+ end
+ if action=='toggleAI' and state.phase=='lobby' and localMode then
+  local p=state.players[params and params.player or 1]
+  if p then
+   local humans=0
+   for _,q in ipairs(state.players)do if not q.ai then humans=humans+1 end end
+   if p.ai or humans>1 then p.ai=not p.ai;save()
+   else message='KEEP AT LEAST ONE HUMAN PLAYER'end
+  end
+  return
+ end
  if action=='reveal' then handoff=false;return end
  if localMode and state.phase=='lobby' and
     (action=='addPlayer' or action=='removePlayer')then
@@ -230,16 +307,27 @@ local function dispatch(action,params)
   local id=activeID()
   local ok,reason=apply(id,req)
   message=ok and 'ORDER ACCEPTED' or tostring(reason)
+  if ok then hasHumanSave=true end
   if localMode and ok and action=='end' then
+   for _,q in ipairs(state.players)do
+    if q.ai and not q.ready then Systems.aiTurn(state,q,Hex)end
+   end
+   local complete=true
+   for _,q in ipairs(state.players)do if not q.ready then complete=false end end
+   if complete and state.phase=='game' then nextTurn()end
    -- The existing rules advance the round when everyone ends their turn.
    -- Only one local participant is shown at a time.
    local nextIndex=(state.activeIndex or 1)%#state.players+1
    for _=1,#state.players do
-    if not state.players[nextIndex].ready then break end
+    if not state.players[nextIndex].ready and not state.players[nextIndex].ai then break end
     nextIndex=nextIndex%#state.players+1
    end
+   -- AIs never own the screen even immediately after nextTurn clears ready.
+   if state.players[nextIndex].ai then
+    nextIndex=state.activeIndex or 1
+   end
    state.activeIndex=nextIndex
-   handoff=state.phase=='game'
+   handoff=state.phase=='game' and not state.players[nextIndex].ai
    save()
   end
  else rednet.send(hostId,req,PROTOCOL)end
@@ -291,7 +379,7 @@ local function ui()
   elseif e=='term_resize' or e=='monitor_resize' then
    view:resize();draw()
   elseif e=='key' and keys and (a==keys.q or a==keys.escape)then
-   return
+   gamePaused=not gamePaused;draw()
   end
   if localHost and hasModem then publish()end
  end

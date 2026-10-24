@@ -33,18 +33,18 @@ end
 function H.passable(x,y)return H.terrain(x,y)~="water"and H.terrain(x,y)~="mountain"end
 function H.reachable(state,unit,owner)
  local out={}
- if not unit or unit.owner~=owner or unit.moved then return out end
+ if not unit or unit.owner~=owner or unit.moved or (unit.movesLeft and unit.movesLeft<=0) then return out end
  for _,p in ipairs(H.neighbours(unit.x,unit.y))do
   if H.passable(p.x,p.y)then
    local occupied
    for _,other in ipairs(state.units or {})do
     if other.x==p.x and other.y==p.y then occupied=other;break end
    end
-   if not occupied or (occupied.owner~=owner and unit.kind=="warrior")then
+   if not occupied or (occupied.owner~=owner and unit.kind~="settler" and unit.kind~="scout")then
     local blocked=false
     for _,city in ipairs(state.cities or {})do
      if city.x==p.x and city.y==p.y and city.owner~=owner
-       and unit.kind~="warrior"then blocked=true end
+       and (unit.kind=="settler" or unit.kind=="scout")then blocked=true end
     end
     if not blocked then
      out[#out+1]={x=p.x,y=p.y,attack=occupied~=nil}
