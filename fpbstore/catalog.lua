@@ -5,7 +5,7 @@ return {
  schema=1,
  apps={
   {
-   id="cogworks",name="COGWORKS",subtitle="KINETIC LAB",
+   version="1.0.0",id="cogworks",name="COGWORKS",subtitle="KINETIC LAB",
    description="30 tactile Create-inspired machinery puzzles.",
    icon="C",genre="PUZZLE",root="/cogworks",
    entry="/cogworks/main.lua",installer="install-cogworks.lua",
