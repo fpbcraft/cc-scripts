@@ -139,7 +139,9 @@ local function draw()
     ("v"..(status.installedVersion or "?")) or "NOT INSTALLED"
    local latestLabel=status.latestVersion and ("v"..status.latestVersion) or "?"
    local flag=status.updateAvailable and " [UPDATE AVAILABLE]" or ""
-   local name=app.name.."  "..installedLabel.." / latest "..latestLabel..flag
+   local sha=Manager.installedRevision(app)
+   local revision=sha and (" #"..sha:sub(1,7)) or ""
+   local name=app.name.."  "..installedLabel..revision.." / latest "..latestLabel..flag
    put(2,y,(active and "> " or "  ")..name,
     active and colors.yellow or colors.white,nil,w-3)
    if not compact then
