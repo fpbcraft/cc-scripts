@@ -207,17 +207,26 @@ function R:piece(x,y,size,tile,light)
    end
   end
  end
- -- Redraw terminal labels above shaft outlets so +1 / -2 stays readable.
+ -- Machines state rotation in plain CW / CCW text instead of relying
+ -- on cryptic plus/minus symbols. The lower line is required RPM.
  if tile.kind=="M"then
-  local active=light and light.correct
-  self:rect(x+2,y+2,size-4,size-4,active and 9 or 8)
-  self:rect(x+3,y+3,size-6,size-6,1)
-  self:font(x+1,y+math.floor(size/2)-2,
-   (tile.sign<0 and "-" or "+")..tostring(tile.speed),active and 9 or 15)
+  local ready=light and light.correct
+  local text=tile.sign<0 and "CCW" or "CW"
+  local accent=ready and 9 or (tile.sign<0 and 14 or 11)
+  self:rect(x+1,y+1,size-2,size-2,accent)
+  self:rect(x+2,y+2,size-4,size-4,1)
+  self:font(x+(text=="CW" and 3 or 0),y+1,text,accent)
+  local rpm=tostring(tile.speed)
+  if #rpm<=2 then
+   self:font(x+math.floor((size-#rpm*4)/2),y+7,rpm,15)
+  else
+   self:font(x,y+7,rpm,15)
+  end
  elseif tile.kind=="S"then
-  self:rect(x+3,y+3,size-6,size-6,6)
-  self:font(x+4,y+math.floor(size/2)-2,"S",0)
- elseif tile.kind=="B"then
+  self:rect(x+1,y+1,size-2,size-2,10)
+  self:font(x+3,y+1,"CW",15)
+  self:font(x+3,y+7,"1X",6)
+ elseif tile.kind=="B" or tile.kind=="O"then
   self:rect(cx+DX[tile.r+1]*4,cy+DY[tile.r+1]*4,2,2,9)
  end
 end
