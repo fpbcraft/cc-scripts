@@ -73,7 +73,10 @@ function tideScreen.drawPixels(x,y,color,w,h)
 end
 local tr=TideRender.new(tideScreen,false)
 assert(tr.kind=="gfx" and tr.px==tr.py,"Tidebound must preserve pixel proportions")
-assert(tr.oy>0,"Tidebound should center the game within its letterbox")
+assert(tr.oy<=tr.py and tr.ox<=tr.px,
+ "Full-screen native graphics should not leave large unused margins")
+assert(tr.h>38,"Portrait-aspect iOS viewport adds usable logical rows")
+assert(tr.oy>=0,"Tidebound graphics offsets must be nonnegative")
 tr:beginFrame()
 tr:rect(5,5,6,6,7)
 tr:text(6,7,"SPACE",7)

@@ -195,7 +195,7 @@ for _,size in ipairs(sizes) do for _,gfx in ipairs({true,false}) do
  test(ui.selected==1 and not ui.selectedShip,'planet target selects directly')
  ui:draw()
  local menu=ui.contextBounds
- test(menu~=nil and menu.w<=30 and menu.h<=18,'compact context menu')
+ test(menu~=nil and (menu.sidebar and menu.w<=math.floor(ui.r.w*.30)+2 or (menu.w<=30 and menu.h<=18)),'responsive context inspector')
  test(menu.x>=0 and menu.y>=7 and menu.x+menu.w<=ui.r.w and menu.y+menu.h<=ui.r.h-9,'context menu out of map')
  test(ui.mapMarkers.systems[1].x==original.x and ui.mapMarkers.systems[1].y==original.y,'galaxy shifted on selection')
  local foundWorld=false

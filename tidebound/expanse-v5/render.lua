@@ -77,7 +77,8 @@ local Renderer={};Renderer.__index=Renderer
 function Renderer.new(mon,forceText)
  local self=setmetatable({m=mon,kind="text",buttons={},frame=0},Renderer)
  if mon.setTextScale then pcall(mon.setTextScale,0.5) end
- self.w,self.h=mon.getSize();self.px,self.py=1,1
+ self.textW,self.textH=mon.getSize()
+ self.w,self.h=self.textW,self.textH;self.px,self.py=1,1
  if not forceText and type(mon.setGraphicsMode)=="function" and type(mon.drawPixels)=="function" then
   local ok=pcall(mon.setGraphicsMode,2)
   if ok then
@@ -93,13 +94,27 @@ end
 -- Fit the game in a proportion-preserving centered viewport.
 function Renderer:fitGraphics(pw,ph)
  self.gw,self.gh=pw,ph
+ -- Native graphics has its OWN viewport geometry. Text-cell aspect ratios
+ -- differ across emulators; letterboxing a character grid wastes screen
+ -- height on iPad and squeezes controls into the middle third.
+ -- Preserve logical cell density while adding responsive rows/columns to
+ -- cover the available graphics area, with isotropic pixel scaling.
+ local tw,th=self.textW,self.textH
+ if ph*tw>=pw*th then
+  self.w=tw
+  self.h=math.max(th,math.floor(ph*tw/pw+0.5))
+ else
+  self.h=th
+  self.w=math.max(tw,math.floor(pw*th/ph+0.5))
+ end
  local scale=math.min(pw/self.w,ph/self.h)
  self.px,self.py=scale,scale
  self.ox=math.floor((pw-self.w*scale)/2)
  self.oy=math.floor((ph-self.h*scale)/2)
 end
 function Renderer:resize()
- self.w,self.h=self.m.getSize()
+ self.textW,self.textH=self.m.getSize()
+ self.w,self.h=self.textW,self.textH
  if self.kind=="gfx" then
   local ok,pw,ph=pcall(self.m.getSize,2)
   if ok and pw and ph then self:fitGraphics(pw,ph)end

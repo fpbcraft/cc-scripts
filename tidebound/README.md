@@ -113,3 +113,7 @@ a separate follow-up rather than a dependency of this native-graphics update.
 ## Visual overhaul
 
 The interface now follows the same design system as RAILBREAK: weathered-metal panels, dark teal framing, gold accents, readable full-cell bitmap lettering, opaque buttons and segmented navigation. The galaxy view uses a framed tactical chart with visible star markers and nearby system names on sufficiently large screens. Title, status, buttons, navigation, and information panels share this style, while all existing v5 simulation rules, campaigns, choices and saved-game paths remain compatible.
+
+## Full-screen responsive galaxy interface (5.5)
+
+Graphics-mode layouts now use the native pixel viewport rather than a fixed text-row grid. On wide tablets, the galaxy occupies the left workspace and a persistent right inspector displays a selected system/ship's actions without covering map markers. Compact terminals retain a contextual menu. This addresses excessive empty bars and misaligned content on CraftOS iOS; touch hitboxes use the same geometry as rendering. Existing V5 saves are preserved.
