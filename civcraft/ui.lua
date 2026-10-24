@@ -51,6 +51,29 @@ function UI:tile(x,y)
 end
 function UI:draw(state,playerID,opts)
  local r=self.r;local w,h=r.w,r.h;opts=opts or {}
+ -- Never carry a previous hotseat player's selection or movement overlay
+ -- into the next player's screen (including the concealed handoff).
+ if self.lastPlayer~=nil and self.lastPlayer~=playerID then
+  self.source=nil;self.reachable={};self.panel="context"
+  self.actionPage=1;self.techModel=nil
+  self.selected={x=2,y=2}
+  for _,city in ipairs(state.cities or {})do
+   if city.owner==playerID then
+    self.selected={x=city.x,y=city.y};break
+   end
+  end
+ end
+ self.lastPlayer=playerID
+ if opts.handoff or
+    (self.state and self.source and not (function()
+      for _,u in ipairs(state.units or {})do
+       if u.x==self.source.x and u.y==self.source.y and
+         u.owner==playerID and not u.moved then return true end
+      end
+      return false
+     end)())then
+  self.source=nil;self.reachable={}
+ end
  r:begin()
  self.hexTargets={}
  self.modalBounds=nil
@@ -164,7 +187,7 @@ function UI:draw(state,playerID,opts)
  -- Pointy odd-row hexes: centres are half a cell apart horizontally between
  -- adjacent rows; 3/4 cell vertically, matching the same Hex distance rules.
  local reserved=compact and 14 or math.max(75,math.floor(w*.29))
- local tile=math.max(7,math.min(
+ local tile=math.max(5,math.min(
   math.floor((contentBottom-top-7)/(1+(MAP_H-1)*.75)),
   math.floor((w-reserved-17)/(MAP_W+.5))))
  local stepY=tile*.75
@@ -198,7 +221,8 @@ function UI:draw(state,playerID,opts)
    r:fill(px+inset,py+dy,math.max(1,tile-inset*2-1),1,base)
   end
   r:outline(px+bevel,py,math.max(1,tile-2*bevel),1,3)
-  if not hidden and (t=="water" or t=="forest" or t=="mountain" or t=="hills")then
+  if tile>=9 and not hidden and
+     (t=="water" or t=="forest" or t=="mountain" or t=="hills")then
    Icons.draw(r,t,px+half-4,py+half-4,9,7)
   end
   local highlighted=false
@@ -210,10 +234,12 @@ function UI:draw(state,playerID,opts)
    r:fill(px+1,py+half,2,2,11)
   end
   if c then
-   Icons.draw(r,"city",px+half-5,py+half-5,11,P[ownerIndex(state,c.owner)]or 8)
+   if tile>=11 then Icons.draw(r,"city",px+half-5,py+half-5,11,P[ownerIndex(state,c.owner)]or 8)
+   else r:fill(px+half-2,py+half-2,4,4,P[ownerIndex(state,c.owner)]or 8)end
   end
   if u then
-   Icons.draw(r,u.kind,px+half-5,py+half-5,11,P[ownerIndex(state,u.owner)]or 8)
+   if tile>=11 then Icons.draw(r,u.kind,px+half-5,py+half-5,11,P[ownerIndex(state,u.owner)]or 8)
+   else r:fill(px+half-1,py+half-1,3,3,P[ownerIndex(state,u.owner)]or 8)end
    if u.moved then r:fill(px+tile-4,py+half,2,2,4)end
   end
   if visibility=="explored"then r:fill(px+half-1,py+half-1,2,2,4)end
