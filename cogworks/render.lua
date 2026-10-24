@@ -463,7 +463,7 @@ function R:drawText(m)
    label(px,py+2,slots[3] and "  v  " or "     ",fg,color,5)
    self:add(px,py,5,3,"cell",x,y)
   end end
-  label(2,22,"GOALS "..result.correct.."/"..result.goals.."  MOVE "..g.moves,colors.lightBlue)
+  label(2,22,"GOALS "..result.correct.."/"..result.goals.."  CW=+ CCW=-  MV "..g.moves,colors.lightBlue)
   local bonuses=E.challenges(g,result)
   local awards=m.progress.awards[g.number]or{}
   for i,bonus in ipairs(bonuses)do
@@ -472,16 +472,18 @@ function R:drawText(m)
    label(2,22+i,(awards[bonus.id] and "[X] " or "[ ] ")..name,
     awards[bonus.id] and colors.lime or colors.white)
   end
-  local row=h-6
   local size=math.floor(w/5)
   for i,kind in ipairs(E.order)do
-   btn(1+(i-1)*size,row,size,
+   local row=h-8+math.floor((i-1)/5)
+   local col=(i-1)%5
+   btn(1+col*size,row,size,
     (m.selected==kind and ">" or " ")..kind.." "..(g.remaining[kind]or 0),"tool",kind)
   end
-  btn(1,h-4,12,"REMOVE","tool","erase")
-  btn(15,h-4,10,"SAVE","save")
-  btn(28,h-4,12,"PAUSE","pause")
-  if result.win then btn(42,h-4,math.min(12,w-41),"NEXT","next")end
+  btn(1,h-5,12,"REMOVE","tool","erase")
+  btn(15,h-5,12,"SWITCH","tool","switch")
+  btn(1,h-4,12,"SAVE","save")
+  btn(15,h-4,12,"PAUSE","pause")
+  if result.win then btn(29,h-4,12,"NEXT","next")end
   label(1,h-2,m.message~=""and m.message or g.name,colors.orange)
  elseif m.scene=="title"then
   label(3,4,"KINETIC WORKSHOP  /  30 PUZZLES",colors.lightBlue)
@@ -522,7 +524,8 @@ function R:drawText(m)
   else
    label(2,4,"S: SOURCE  M: TARGET   I: SHAFT")
    label(2,6,"L: ELBOW   T: SPLITTER   G: GEAR")
-   label(2,8,"2: DOUBLE RPM; ALL BONUS OPTIONAL")
+   label(2,8,"2: DOUBLE RPM; C: CLUTCH ON/OFF")
+   label(2,9,"Q: BOX   O: LARGE COG  V: BELT  D: CHAIN")
    choices={{"BACK","back"}}
   end
   for i,item in ipairs(choices)do btn(5,10+(i-1)*2,math.min(w-8,38),item[1],item[2])end
