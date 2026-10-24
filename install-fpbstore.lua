@@ -20,7 +20,8 @@ local function write(path,data)
  f.write(data);f.close()
 end
 local function fetch(path)
- local response,err=http.get(base..path,nil,true)
+ local nonce=os.epoch and os.epoch("utc") or math.floor(os.clock()*1000)
+ local response,err=http.get(base..path.."?fpbstore_cb="..tostring(nonce),nil,true)
  assert(response,"Download error: "..path.." "..tostring(err))
  local code=response.getResponseCode and response.getResponseCode() or 200
  local data=response.readAll();response.close()
