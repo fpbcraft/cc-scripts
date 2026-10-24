@@ -95,10 +95,14 @@ function UI:title()
  if r.h<45 then
   -- Text-only computers and shorter tablets need a real compact layout.
   -- Avoid overlapping the title artwork and offscreen menu items.
-  r:bigText(cx-23,3,'SHATTERED',9,1)
-  r:bigText(cx-18,11,'EXPANSE',7,1)
-  r:text(math.max(2,cx-12),20,'FOUR EMPIRES',6)
-  local y=math.max(22,r.h-21)
+  if r.h<35 then
+   r:text(math.max(2,cx-9),3,'SHATTERED EXPANSE',9)
+   r:text(math.max(2,cx-12),6,'A FOUR EMPIRE SPACE SAGA',6)
+  else
+   r:bigText(cx-23,2,'SHATTERED',9,1)
+   r:bigText(cx-18,10,'EXPANSE',7,1)
+  end
+  local y=math.max(12,r.h-17)
   self:button(cx-19,y,38,5,'NEW CAMPAIGN','star',function()self.screen='setup'end)
   self:button(cx-19,y+6,38,5,'CONTINUE','next',function()if not self:load()then self.notice='NO V5 SAVE FOUND'end end)
   self:button(cx-19,y+12,38,5,'HOW TO PLAY','help',function()self.screen='help'end)
