@@ -3,7 +3,7 @@ local E=require("cogworks.engine")
 local function eq(actual,expected,msg)
  assert(actual==expected,(msg or "Mismatch")..": expected "..tostring(expected)..", got "..tostring(actual))
 end
-eq(#E.levels,12,"Puzzle campaign size")
+eq(#E.levels,30,"Puzzle campaign size")
 local totalGoals=0
 for index,data in ipairs(E.levels)do
  local game=E.new(index)
@@ -14,7 +14,7 @@ for index,data in ipairs(E.levels)do
  assert(not E.remove(game,data.source.x,data.source.y),"Cannot remove source")
  assert(not E.place(game,data.source.x,data.source.y,"I"),"Cannot replace source")
  assert(not E.place(game,0,1,"I"),"Cannot build out of bounds")
- assert(not E.place(game,7,2,"I"),"Cannot build out of bounds")
+ assert(not E.place(game,8,2,"I"),"Cannot build out of bounds")
  assert(not E.place(game,2,2,"banana"),"Unknown part rejected")
  for _,wall in ipairs(data.blocks)do
   local t=E.get(game,wall[1],wall[2])
@@ -26,6 +26,18 @@ for index,data in ipairs(E.levels)do
  assert(result.win,"Reference solution invalid for level "..index..
   " (goals "..result.correct.."/"..result.goals..", jam="..tostring(result.jam)..")")
  totalGoals=totalGoals+result.goals
+ if index<=3 then assert(not data.fullNetwork,"Tutorial stages should stay relaxed")end
+ if index>=4 then
+  assert(data.fullNetwork,"Advanced levels must demand fully connected machinery")
+  eq(result.openPorts,0,"Solved level has no dangling ports: "..index)
+  eq(result.unpowered,0,"Solved level has no unpowered parts: "..index)
+  eq(result.remaining,0,"Solved level has no unused stock: "..index)
+  if index>=11 then assert(result.goals>=3,"Intermediate levels have three outputs")end
+  if index>=19 then assert(result.goals>=4,"Advanced levels have four outputs")end
+  if index>=27 then assert(result.goals>=5,"Final levels have five outputs")end
+  if index>=12 or (index>=8 and index<=10) then assert((data.stock.G or 0)>0 or (data.stock.B or 0)>0,
+   "Level "..index.." has power transformation")end
+ end
  local total=0
  for kind,stock in pairs(data.stock)do
   eq(stock,solved.stock[kind],"Reference stock for "..kind)
@@ -73,14 +85,35 @@ assert(E.place(g,2,3,"I",0),"Place a new shaft")
 assert(E.rotate(g,2,3),"Rotate constructed part")
 eq(E.get(g,2,3).r,1,"Rotation 90 degrees")
 assert(not E.rotate(g,1,3),"Generator orientation locked")
--- Rotation reversal and RPM multiplication are still operational.
-local reverse=E.new(5,true)
-for _,v in ipairs(reverse.tiles)do if v.kind=="M"then
- eq(E.evaluate(reverse).lights[v.id].ports[v.r].sign,-1,"Gear reversal")
-end end
-local double=E.new(6,true)
-for _,v in ipairs(double.tiles)do if v.kind=="M"then
- eq(E.evaluate(double).lights[v.id].ports[v.r].rate,2,"RPM multiplier")
-end end
-print("COGWORKS: "..#E.levels.." construction puzzles and "..totalGoals..
- " goals passed stock, placement, hint, restore and kinetic tests.")
+-- A solved advanced stage is incomplete if any allocated stock remains unused.
+local advanced=E.new(20,true)
+local complete=E.evaluate(advanced)
+assert(complete.win and complete.complete,"Reference advanced board complete")
+advanced.remaining.I=(advanced.remaining.I or 0)+1
+local incomplete=E.evaluate(advanced)
+eq(incomplete.correct,incomplete.goals,"Power still reaches every machine")
+assert(not incomplete.win and not incomplete.complete,
+ "Unused stock invalidates a seemingly finished workshop")
+eq(incomplete.remaining,1,"Leftover piece identified")
+-- Verify requirements derive from reversing gears and speed controllers.
+local hadReverse,hadBoost=false,false
+for i=8,#E.levels do
+ local solved=E.new(i,true)
+ local lights=E.evaluate(solved).lights
+ for _,p in ipairs(solved.tiles)do
+  if p.kind=="M"then
+   local actual=lights[p.id].ports[p.r]
+   if p.sign==-1 then
+    eq(actual.sign,-1,"Gear direction at target")
+    hadReverse=true
+   end
+   if p.speed>1 then
+    eq(actual.rate,p.speed,"Controller RPM at target")
+    hadBoost=true
+   end
+  end
+ end
+end
+assert(hadReverse and hadBoost,"Advanced campaign exercises gears and RPM")
+print("COGWORKS: "..#E.levels.." levels and "..totalGoals..
+ " goals validated for inventory, full networks, construction and kinetics.")
