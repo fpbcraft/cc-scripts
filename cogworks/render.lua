@@ -353,11 +353,11 @@ function R:drawGame(m)
   "tool","erase",m.selected=="erase" and 8 or 3)
  -- Persistent bonus objectives are visible while building, not buried in
  -- a modal screen. Labels are deliberately short enough for this pane.
- self:font(117,89,"BONUS GOALS",6)
+ self:font(117,87,"BONUS GOALS",6)
  local bonuses=E.challenges(g,result)
  local awarded=(m.progress.awards and m.progress.awards[g.number])or{}
  for i,bonus in ipairs(bonuses)do
-  local y=96+(i-1)*5
+  local y=93+(i-1)*5
   local done=awarded[bonus.id] or false
   local label=bonus.id=="sealed" and "NO OPEN PORTS" or
    (bonus.id=="master" and "ALL STOCK USED" or
@@ -365,7 +365,7 @@ function R:drawGame(m)
   self:rect(117,y,4,4,done and 9 or (bonus.earned and 6 or 3))
   self:fontFit(124,y,label,done and 9 or (bonus.earned and 6 or 5),70)
  end
- if #bonuses==0 then self:font(124,99,"FROM LEVEL 2",4)end
+ if #bonuses==0 then self:font(124,94,"FROM LEVEL 2",4)end
  self:drawSpans(g,result)
  self:rect(0,109,200,11,1)
  self:rect(0,109,200,1,7)
