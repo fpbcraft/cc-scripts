@@ -10,6 +10,7 @@ local selected=1
 local confirmation=nil
 local banner="SELECT AN APP"
 local busy=false
+local versionNotice="Versions not checked"
 local buttons={}
 local function centered(s,w)
  s=tostring(s)
@@ -62,7 +63,11 @@ local function draw()
    local y=listTop+(i-1)*(compact and 2 or 3)
    local status=Manager.status(app)
    local active=selected==i
-   local name=app.name.."  "..(status.installed and "[INSTALLED]" or "[NOT INSTALLED]")
+   local installedLabel=status.installed and
+    ("v"..(status.installedVersion or "?")) or "NOT INSTALLED"
+   local latestLabel=status.latestVersion and ("v"..status.latestVersion) or "?"
+   local flag=status.updateAvailable and " [UPDATE AVAILABLE]" or ""
+   local name=app.name.."  "..installedLabel.." / latest "..latestLabel..flag
    put(2,y,(active and "> " or "  ")..name,
     active and colors.yellow or colors.white,nil,w-3)
    if not compact then
@@ -76,16 +81,21 @@ local function draw()
   local detailY=listTop+#catalog.apps*(compact and 2 or 3)+1
   if detailY<h-7 then
    put(2,detailY,app.description,colors.lightBlue,nil,w-3)
+   if detailY+1<h-7 then
+    local note=status.versionUnknown and "Installed version unknown; reinstall to start tracking" or
+     (status.updateAvailable and "A newer version is available" or versionNotice)
+    put(2,detailY+1,note,colors.yellow,nil,w-3)
+   end
   end
   local row=h-5
   if w>=58 then
-   button(2,row,17,status.installed and "UPDATE" or "INSTALL","install")
+   button(2,row,17,status.installed and (status.updateAvailable and "UPDATE AVAILABLE" or "REINSTALL") or "INSTALL","install")
    button(20,row,13,"PLAY","play",nil,status.installed)
    button(34,row,16,"REMOVE","remove",nil,status.installed)
    button(51,row,math.min(14,w-51),"STORE UPDATE","store-update")
   else
    local cw=math.floor((w-4)/3)
-   button(2,row,cw,status.installed and "UPDATE" or "INSTALL","install")
+   button(2,row,cw,status.installed and (status.updateAvailable and "UPDATE" or "REINSTALL") or "INSTALL","install")
    button(3+cw,row,cw,"PLAY","play",nil,status.installed)
    button(4+cw*2,row,cw,"REMOVE","remove",nil,status.installed)
    button(2,row+2,math.min(22,w-3),"UPDATE STORE","store-update")
@@ -134,13 +144,18 @@ local function perform(action,arg)
    else return Manager.updateStore()end
   end)
   busy=false
-  if ok then banner=action=="remove" and "APP REMOVED - SAVES PRESERVED"
+  if ok and action=="store-update" then
+   -- Reload new catalog and logic on next launch.
+   banner="STORE UPDATED - RESTART TO LOAD NEW CATALOG"
+  elseif ok then banner=action=="remove" and "APP REMOVED - SAVES PRESERVED"
     or (action=="store-update" and "STORE UPDATED" or "INSTALL/UPDATE COMPLETE")
   else banner="ERROR: "..tostring(result)end
   screen=term.current()
  end
 end
 local function run()
+ local ok=Manager.refreshVersions()
+ versionNotice=ok and "Latest catalog checked" or "Offline: showing cached catalog"
  while true do
   draw()
   local ev,a,b,c=os.pullEvent()
@@ -165,7 +180,9 @@ local function run()
    elseif a==keys.backspace and confirmation then
     confirmation=nil
    elseif a==keys.r then
-    banner="CATALOG REFRESHED"
+    local ok=Manager.refreshVersions()
+    versionNotice=ok and "Latest catalog checked" or "Version check unavailable"
+    banner=versionNotice
    elseif a==keys.space and not confirmation then
     perform("play")
    end
