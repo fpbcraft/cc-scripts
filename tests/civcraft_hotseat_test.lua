@@ -40,8 +40,9 @@ keys={q=16,escape=1}
 local frames,stage=0,0
 local originalDofile=dofile
 dofile=function(path)
- if path=="/civcraft/systems.lua"then return originalDofile("civcraft/systems.lua")end
- if path=="/civcraft/hex.lua"then return originalDofile("civcraft/hex.lua")end
+ if path:sub(1,10)=="/civcraft/" and path~="/civcraft/ui.lua"then
+  return originalDofile(path:sub(2))
+ end
  if path~="/civcraft/ui.lua"then return originalDofile(path)end
  return {new=function(_,callback)
   return {
