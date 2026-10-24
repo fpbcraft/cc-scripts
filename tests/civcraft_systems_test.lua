@@ -21,6 +21,8 @@ assert(not S.canRecruit(p,"horseman"),"Units require tech")
 assert(S.research(p,"horseback"))
 assert(S.canRecruit(p,"horseman"))
 local ai=state.players[2]
+state.cities[#state.cities+1]={id=2,owner=2,x=9,y=6,
+ population=2,foodStore=0,jobs={food=1,wood=1,science=0},buildings={}}
 ai.ready=false
 S.aiTurn(state,ai)
 assert(ai.ready and next(ai.techs)~=nil,"AI researches and ends turn")
