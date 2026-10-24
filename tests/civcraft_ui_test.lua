@@ -50,8 +50,8 @@ state.players[1].science=0;state.players[1].tech=0
 state.cities={{x=2,y=2,owner=11}}
 state.units={{x=3,y=2,owner=11,kind="warrior"}}
 ui:draw(state,11,{localMode=true})
-local tile=ui.r.buttons[1]
-assert(tile,"A tile hitbox is available")
+local tile=ui.hexTargets[1]
+assert(tile,"A hexagonal tile hitbox is available")
 local tx=math.floor(ui.r.ox+(tile.x+tile.w/2)*ui.r.sx)
 local ty=math.floor(ui.r.oy+(tile.y+tile.h/2)*ui.r.sy)
 assert(ui:tap(tx,ty),"Map accepts touch")
