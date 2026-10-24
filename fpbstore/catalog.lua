@@ -40,11 +40,11 @@ return {
    saves={"/shattered/v5-save.dat","/shattered/v5-save.dat.bak"},
   },
   {
-   version="0.1.0",id="ironspire",name="IRONSPIRE",subtitle="CLOCKWORK ASCENT",
+   version="0.2.0",id="ironspire",name="IRONSPIRE",subtitle="CLOCKWORK ASCENT",
    description="Solo deckbuilding roguelike with card battles and branching routes.",
    icon="I",genre="DECKBUILDER",root="/ironspire",
    entry="/ironspire/main.lua",installer="install-ironspire.lua",
-   managedFiles={"main.lua","render.lua","README.md"},
+   managedFiles={"main.lua","render.lua","map.lua","README.md"},
    saves={"/ironspire/data"},
   },
   {
