@@ -46,6 +46,24 @@ Belt and chain endpoints visibly connect across empty or stone cells, including 
 
 Clutches have been removed because the authored puzzles only used them as ordinary shafts. **Existing saved clutch placements automatically migrate to shafts** when loading, preserving saved level progress.
 
+### Animated level briefings
+
+Every time you enter a level (Continue, NEXT, or Select Level), a full-screen
+**mission briefing** appears before the machinery board. It displays the
+level's number and name, instructional tip, each press's required CW/CCW
+rotation, speed in X, board coordinates, and the exact inventory of available
+mechanisms. Optional bonus categories are identified separately.
+
+In pixel graphics mode, large title lettering slides into place, the
+workshop conveyor and cogwheels move, and target objectives and parts
+appear in sequence. Animations never delay play: **tap anywhere or press
+START / Enter / Space** to start immediately. The Settings animation toggle
+shows a fully populated briefing without transitions. The ordinary text
+fallback offers the same objectives, inventory and START action.
+
+The sequence is **briefing → first-time Ponder (when applicable) → game**.
+Briefings repeat on level entry; Ponder lessons do not.
+
 ### Mechanic lessons (Ponder)
 
 When a level first introduces a mechanic, a **Ponder** overlay appears with a short explanation and animated mechanism diagram. Use **NEXT / GOT IT** to read the slides or **SKIP** to dismiss. Lessons are saved per campaign slot, so returning to an already-introduced level does not repeat them, even after restarting the computer. Use the **?** help screen and **REPLAY PONDER** to view the current level's lesson again.
@@ -77,6 +95,7 @@ Earned bonuses remain unlocked when you revisit a stage. They never block normal
 ```bash
 lua5.3 tests/cogworks_test.lua
 lua5.3 tests/cogworks_mechanics_test.lua
+lua5.3 tests/cogworks_briefing_test.lua
 lua5.3 tests/cogworks_tutorials_test.lua
 lua5.3 tests/cogworks_storage_test.lua
 lua5.3 tests/cogworks_renderer_test.lua
