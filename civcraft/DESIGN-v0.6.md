@@ -29,6 +29,46 @@ This is the implementation contract for the next release. Existing v0.5 generate
 - Each civilization has a mechanically distinct passive bonus or **unique unit**. Examples: Verdant (farm yields), Iron Dominion (industrial bonuses), Nomads (scout move), Mariner (ships), Highland (hill combat), Stone Wardens (city defenses), Wildborn (forest mobility), etc. Display these in the setup lobby.
 - Units retain attack, defense, movement points, range, vision and role. Pathfinding respects terrain cost and ability. Show reachable hexes, projected movement cost and attack targets.
 
+## Map-screen layout and touch controls (required)
+
+The map must remain the dominant **central view**; fixed control **bars on both sides of the map** should replace the large bottom action grid:
+
+- **Left bar — navigation and world views:** map-mode controls (Terrain, Territory, Resources), zoom where practical, camera pan arrows (up/down/left/right) for simple monitor touch, and a recenter control. Each control uses a distinct icon **and** a short text label or tooltip. Map navigation must never move the fixed sidebars.
+- **Center — interactive hex map:** large scrollable viewport, visible owner-colored city territory outlines, fog/discovery shading, deposits, recognizable city/unit icons, highlighted reachable movement and attack cells. Finger/mouse dragging pans the map when supported; tapping a cell selects it, not a neighboring hex. Camera offset is clamped, retained between frames, and reset sensibly when a new campaign/world is loaded.
+- **Right bar — selection inspector and actions:** selecting a unit shows its icon, attack/defense/movement/range/vision, unique ability, movement remaining and available actions. Selecting a city shows population, current yields, project/progress and production options. Selecting a resource hex shows its deposit and tile yield. A persistent **production list** appears when a city is selected, with unit/building icons, locked state, turns-to-complete and requirements, like the provided Civilization screenshot.
+- **City staffing interaction:** three prominent Food/Industry/Science allocation rows with direct large +/- touch targets, citizen counts and per-turn yield previews. This should not require repeatedly opening small text menus. Workers cannot become negative or exceed population.
+- **Tech tree layout:** use pixel/canvas primitives for icon + name graph nodes, visible prerequisites/branch connectors, drag or directional pan, and a dedicated details side panel. Do not crowd every node with lengthy descriptions; put unlocks, effects, time estimate and Start Research in the side panel.
+- **Actions:** use consistent custom pixel-art icons on **most** buttons: move, attack, found city, units, buildings, production, workers, research, map modes, zoom/pan, pause, resume, save, next turn, back, confirm. Preserve text labels and adequate target sizes, particularly on CraftOS iOS.
+- **Responsive behavior:** large monitors and iPad use both bars alongside the map. On narrower computers, bars become compact or switchable while retaining map visibility and working keyboard controls. Never assume a fixed pixel resolution, and never let canvas art or buttons overlap the hot-seat privacy handoff.
+
+## Delivery tracker
+
+Check boxes indicate **verified end-to-end behavior**, not just files or partial rules existing on a development branch.
+
+- [x] Define gameplay/UX scope and map/sidebar interaction contract in repository documentation.
+- [ ] Save compatibility regression test for existing 3 slots and legacy worlds.
+- [ ] Larger seeded generation with map-size and map-type selection and stable starting positions.
+- [ ] Pannable centered map, touch drag and accessible arrow controls in the left fixed bar.
+- [ ] Three fog-safe map view modes, visible resources and owner-colored territory edges.
+- [ ] Unit movement range previews, terrain-dependent cost, full stats and civilization abilities.
+- [ ] City's per-turn food/industry/science yields, growth, direct worker allocation controls.
+- [ ] City production list in the right fixed bar; per-turn unit/building progress, not instant purchases.
+- [ ] Strategic deposit prerequisites and distinctive units/civilization bonuses.
+- [ ] True turn-based technology research, persisted progress and unlock effects.
+- [ ] Graphical, pannable technology DAG with compact nodes and side detail panel.
+- [ ] Icons + readable text on most actions, including pause/save and next-turn.
+- [ ] AI participation under the same economics, production and research rules.
+- [ ] Regression coverage for touch coordinates, fog privacy, maps, economy, AI, saves and installer.
+- [ ] Passing CI, merged PR and iPad runtime verification (hardware testing remains separate).
+
+### Project phases
+1. **World model:** deterministic terrain/resource presets, territory, saves and exploration.
+2. **Turn economy:** jobs/yields/growth, queue projects, research progress, abilities and AI.
+3. **Map and city UI:** central pannable map, fixed sidebars, production inspector and action icons.
+4. **Tech canvas, integration and QA:** connected technology graph, responsive fallback, regression tests, release manifest and version bump.
+
+**Implementation note:** Code on `feat/civcraft-strategy-depth-tech-canvas` is in progress and is not yet a released version. Existing v0.5 functionality must remain usable throughout migration.
+
 ## UX, persistence and testing
 - Title screen -> save slot -> lobby (map size, map type, seed, civilization/AI assignments) -> world. Pause menu allows SAVE, RESUME, MAIN MENU, EXIT.
 - City inspector contains population worker controls and build queue; tech graph has compact nodes + right-hand details. World has a persistent turn summary and distinct map views.
