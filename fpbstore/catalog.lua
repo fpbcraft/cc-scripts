@@ -29,14 +29,14 @@ return {
    saves={"/railbreak/data"},
   },
   {
-   version="5.3",id="tidebound",name="SHATTERED EXPANSE",subtitle="FOUR EMPIRES",
+   version="5.4",id="tidebound",name="SHATTERED EXPANSE",subtitle="FOUR EMPIRES",
    description="A space 4X with exploration, diplomacy and events.",
    icon="T",genre="4X / RPG",root="/tidebound",
    entry="/tidebound/tidebound.lua",installer="install-tidebound.lua",
    managedFiles={"tidebound.lua","display.lua","terminal_view.lua",
 "expanse-v5/content.lua",
     "expanse-v5/events.lua","expanse-v5/sim.lua",
-    "expanse-v5/render.lua","expanse-v5/ui.lua"},
+    "expanse-v5/render.lua","expanse-v5/theme.lua","expanse-v5/ui.lua"},
    saves={"/tidebound/v5-save.dat","/tidebound/v5-save.dat.bak"},
   },
   {
