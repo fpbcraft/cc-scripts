@@ -61,7 +61,7 @@ local function statsFor(unit,Systems)
     settler={move=1,strength=0},horseman={move=2,strength=4},
     spearman={move=1,strength=3}})[unit.kind] or {move=1,strength=2}
 end
-function H.moveCost(x,y,state,unit,Systems)
+function H.moveCost(x,y,state,unit,Systems,fromX,fromY)
  local t=H.terrain(x,y,state)
  local stats=statsFor(unit,Systems)
  if stats.naval then return t=="water" and 1 or nil end
@@ -70,6 +70,12 @@ function H.moveCost(x,y,state,unit,Systems)
   return nil
  end
  if t=='mountain'then return nil end
+ local rails=state and state.world and state.world.rails or {}
+ if fromX and rails[x..':'..y] and rails[fromX..':'..fromY] and Systems and Systems.territoryCity then
+  local a=Systems.territoryCity(state,x,y);local b=Systems.territoryCity(state,fromX,fromY)
+  if a and b and a.owner==unit.owner and b.owner==unit.owner then return .25 end
+ end
+ if t=='forest' and stats.forest then return 1 end
  if t=="forest" and (unit.kind=="scout" or unit.kind=="ranger") then return 1 end
  if t=="forest" and Systems and state and state.players then
   for _,p in ipairs(state.players)do
@@ -120,7 +126,7 @@ function H.reachable(state,unit,owner,Systems)
   if cur.cost==distance[cur.y*w+cur.x] then
    for _,nextHex in ipairs(H.neighbours(cur.x,cur.y,state))do
     local nx,ny=nextHex.x,nextHex.y
-    local moveCost=H.moveCost(nx,ny,state,unit,Systems)
+    local moveCost=H.moveCost(nx,ny,state,unit,Systems,cur.x,cur.y)
     local total=moveCost and cur.cost+moveCost
     local u=occupant(state,nx,ny)
     local c=settlement(state,nx,ny)
@@ -165,6 +171,7 @@ function H.reachable(state,unit,owner,Systems)
     for _,player in ipairs(p)do
      if player.id==owner and player.visible and player.visible[u.x..":"..u.y] then visible=true end
     end
+    if stats.hostile or unit.villageGuard then visible=true end
     if visible then
      local idx=u.y*w+u.x
      if not attacks[idx]then

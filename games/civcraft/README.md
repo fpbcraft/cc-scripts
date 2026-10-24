@@ -1,4 +1,4 @@
-# CIVCRAFT v0.7.0 — Territorial Hex Civilization
+# CIVCRAFT v0.8.0 — Territorial Hex Civilization
 
 A Civilization-inspired, turn-based hex 4X for **CC:Tweaked**, supporting local hot-seat (2–4 human/AI slots) or multiplayer over rednet. Local games use one computer or an Advanced Monitor; networked games use an authoritative host. Computers communicate through **rednet modems**, either wireless (within range) or wired (via the same wired modem network). It also works over interdimensional wireless modems. No HTTP or external web server is needed after installation.
 
@@ -24,7 +24,104 @@ The join command discovers a hosted game automatically. If discovery fails or mu
 
 For a clean new match, explicitly run `/games/civcraft/game.lua host --new`. This deletes the existing match save. Simply reinstalling will **not** delete saves. To opt into host autostart for a dedicated computer, add `--startup` to the installer command; it will not overwrite an existing startup script.
 
-## Gameplay (v0.7)
+## Minecraft & Create campaigns (v0.8)
+
+New campaigns progress through **Survival**, **Iron**, **Redstone & Diamond**,
+**Rotation**, **Brass**, and **Steam & Rail**. Each empire advances independently
+by researching milestone technologies. The roster includes 45 technologies,
+25 recruitable units, 38 buildings/projects, five hostile mobs, six natural
+landmarks and six constructed wonders. The ten civilizations now represent
+Minecraft villagers, miners, enchanters, engineers and explorers.
+
+**Production chains:** develop wheat farms, libraries and furnaces, then deep
+mines and diamond equipment. Andesite engineering and redstone lead to water
+wheels, presses, crushing wheels and belts. Nether portals provide access to
+blaze burners. A heated mixer needs a mechanical press and blaze burner; after
+Brassworking, each mixer consumes one copper and one zinc to produce two brass
+per round. Deployers, assembly workshops and mechanical crafters lead to steam
+plants and industrial complexes. These are turn-based city buildings: fuel and
+intermediate parts are included in industry costs.
+
+**Materials:** claimed deposits provide iron, copper, zinc, redstone and diamonds
+once their associated technology is researched. Specialized units consume two
+stock on completion. The resource ledger shows stocks and projected net rates,
+and offers purchases at 20 gold per stock once the material technology and a
+trading hall are available. Friendly independent villages offer the same trade
+access at 20 influence. This is the fallback when a rare deposit is inaccessible.
+
+**Railways:** research Railways, select an engineer, and choose **BUILD RAIL**.
+Choose a highlighted current or adjacent friendly land hex and confirm. Each
+segment costs two iron and the engineer's remaining movement. Both ends of an
+edge must have friendly rail to reduce movement cost to one-quarter point.
+Stations require rail on the city-center hex. Connecting two or more stations
+grants each linked city +2 industry and +2 gold; loops do not multiply bonuses.
+Water, mountains, foreign land and landmark tiles cannot receive rails. Rail
+ownership follows current territory, so captures can break or transfer networks.
+
+**Special tiles:** Lush Caverns, Amethyst Geodes, Mushroom Islands, Ice Spikes,
+Dripstone Caves and Ancient Cities provide additional food, industry or science
+when worked by a citizen. Inspect the tile or open **CODEX → SITES** for its
+bonus. In city production, **WONDER** offers the Great Oak Sanctuary, Beacon
+Pyramid, Prismarine Monument, Enchanted Vault, Great Clockwork and Grand Terminal.
+Choose an empty owned land hex and confirm its placement. Wonders finish through
+city industry and are unique across the world. A competing completion releases
+your queue while retaining invested progress. Their city bonuses follow control
+of the landmark tile; they cannot overlap cities, other landmarks or rails.
+
+**Hostile mobs:** choose **Off / Standard / Dangerous** in the lobby. Spawners
+and pillager outposts appear outside a five-hex starting safety zone. After round
+five, Standard spawns every five rounds and Dangerous every three. Each camp
+supports at most three living mobs, with a global cap of one mob per twenty map
+hexes. Zombies, skeletons and spiders appear first, creepers after round 25 and
+pillagers later. Mobs pursue local targets and raid cities for limited loot;
+they cannot capture a city or reduce it below one HP. Surviving melee infantry
+occupying a camp clear it permanently for 25 gold. Creepers die after exploding.
+
+**Villager city-states:** independent farmer, librarian and toolsmith villages
+have their own guards and face mob raids. They do not use player slots or count
+as rival capitals. Inspect a discovered village to send an envoy: 25 gold grants
+10 influence, once per five rounds. Defeating a mob within three hexes grants
+another 10 influence. Trade opens at 20 influence. The highest influence at or
+above 40 earns the alliance, with player ID breaking ties. Its bonus goes once
+to the ally's oldest remaining city: +2 food, science or industry according to
+village type. Villages can be conquered; their diplomatic benefits then end.
+
+**Victory:** new campaigns offer four routes, checked at the round boundary:
+
+- Conquest: control every original rival capital as well as your own.
+- Industry: maintain three industrial complexes in cities on the same station
+  network for ten consecutive rounds. A disconnected network resets the counter.
+- End expedition: research End Expedition and complete an End Staging Ground,
+  Eyes of Ender, Expedition Equipment and Dragon Expedition in the same city.
+- Score: at round 180, lead in cities, population, completed buildings and
+  technologies. Unspent science is excluded. Simultaneous qualifiers share victory.
+
+The resource ledger exposes victory progress. The Codex describes all content
+and requirements; turn reports include Age changes, wonders, raids, influence
+and victory progress. Nether and End exploration use city research/projects on
+the existing map rather than additional dimension maps.
+
+### Updating existing campaigns
+
+Saves migrate to version 6 without rerolling terrain, replacing cities, deleting
+units, clearing research/production progress, or changing campaign slots. Stable
+content identifiers resolve to their new Minecraft names. Existing campaigns
+retain the eight-city / round-90 victory rules and default to mobs off; they do
+not receive newly generated landmarks, spawners or villages. New prerequisites
+and balance apply to the updated content, so an unfinished project may need
+additional research or a local prerequisite building before it resumes.
+
+Network players must all update to v0.8; the new protocol separates incompatible
+older clients. The installer preserves `/games/civcraft/data`. To test this branch:
+
+```sh
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/codex/expand-civcraft-content/installers/civcraft.lua codex/expand-civcraft-content
+```
+
+Create a new campaign in an empty slot to get the full expansion. Do not use
+`host --new` on a network save you want to retain.
+
+## Shared gameplay and controls
 
 CIVCRAFT is a turn-based 4X game on a **seeded hexagonal world**. In the lobby,
 choose a map size (**Compact 18×12**, **Standard 28×18**, or **Large 40×26**),
@@ -58,8 +155,8 @@ Names appear above cities and in city navigation, and remain stable in saves.
   research canvas to pan, or drag compact details to scroll.
 - **Turns and victory:** Each human player issues orders independently and ends
   their turn. AI players use the same production and research rules. A round
-  advances after everyone finishes; the match ends upon reaching the city
-  victory condition or the round limit.
+  advances after everyone finishes; the match ends upon reaching a
+  campaign victory condition or the round limit.
 
 The map stays central with a permanent, scrollable inspector. The left controls
 always use square icons. **PREV/NEXT**, the scrollbar, and mouse wheel scrolling
@@ -158,7 +255,7 @@ input or disabling its watchdog.
 
 The host maintains the only authoritative world state, checks unit ownership and resource costs, and broadcasts snapshots. Clients display those snapshots and submit commands; they never directly modify the host state. This is a cooperative local network game, not an adversarial or cryptographically secure network protocol. Local hot-seat supports human and AI seats; networked games currently require at least two registered computers to start.
 
-Earlier release notes below document the incremental development of CIVCRAFT. For current gameplay rules, see **Gameplay (v0.7)** above.
+Earlier release notes below document the incremental development of CIVCRAFT. For current gameplay rules, see **Minecraft & Create campaigns** above.
 
 ## Local hot-seat mode (2–4 players, one computer)
 

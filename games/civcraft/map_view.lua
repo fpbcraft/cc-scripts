@@ -11,7 +11,7 @@ local function at(list,x,y)
 end
 local function ownerColor(state,id)
  for i,p in ipairs(state.players)do if p.id==id then return colors[i] or 8 end end
- return 8
+ return id<0 and (id==-2147483647 and 31 or 9) or 8
 end
 function V.draw(ui,state,player,rect)
  local frame=rect
@@ -75,7 +75,7 @@ function V.draw(ui,state,player,rect)
     local city=cityIndex[World.key(x,y)]
     if city and (city.owner==ui.playerID or visibility=='visible')then
      for _,owner in ipairs(state.players or {})do if owner.id==city.owner then
-      yields=Systems.centerYields(owner,city);break
+      yields=Systems.centerYields(owner,city,state);break
      end end
     end
     local base=hidden and 15 or Terrain.color(land,visibility=='explored')
@@ -127,11 +127,27 @@ function V.draw(ui,state,player,rect)
      else r:fill(px+size/2-1,py+2,3,2,8)end
     end
    end
+   local k=World.key(x,y)
+   if t.visibility~='hidden'then
+    if (world.rails or {})[k]then
+     r:line(px+size*.25,py+size*.35,px+size*.75,py+size*.65,7)
+     r:line(px+size*.25,py+size*.45,px+size*.75,py+size*.75,9)
+    end
+    local landmark=(world.landmarks or {})[k]
+    if landmark then
+     local colors={lushcavern=11,amethyst=10,mushroom=31,ice_spikes=13,dripstone=9,ancientcity=4}
+     if landmark.natural then
+      r:fill(px+size*.4,py+size*.3,math.max(3,size*.2),math.max(4,size*.4),colors[landmark.kind]or 8)
+      r:fill(px+size*.35,py+size*.55,math.max(4,size*.3),2,7)
+     else Icons.draw(r,'wonder',px+size/2-4,py+size/2-4,9)end
+    end
+    for _,spawner in ipairs(state.spawners or {})do if spawner.x==x and spawner.y==y and not spawner.cleared then Icons.draw(r,'spawner',px+size/2-4,py+size/2-4,9)end end
+   end
    local city=t.visibility~='hidden' and cityIndex[World.key(x,y)]
    if city and (city.owner==ui.playerID or t.visibility=='visible')then
     cityLabels[#cityLabels+1]={city=city,x=px+size/2,y=py-6}
     if size<16 then r:fill(px+size/2-1,py+size/2-1,3,3,ownerColor(state,city.owner))
-    else Icons.draw(r,'city',px+size/2-5,py+size/2-5,11,ownerColor(state,city.owner))end
+    else Icons.draw(r,city.village and city.owner==city.villageOwner and 'village' or 'city',px+size/2-5,py+size/2-5,11,ownerColor(state,city.owner))end
    end
    local unit=t.visibility=='visible' and unitIndex[World.key(x,y)]
    if unit then

@@ -1,6 +1,7 @@
 -- Deterministic strength-difference combat with separate city and wall health.
 local Hex=dofile('/games/civcraft/hex.lua')
 local World=dofile('/games/civcraft/world.lua')
+local Villages=dofile('/games/civcraft/villages.lua')
 local C={}
 local function at(list,x,y)for _,v in ipairs(list or {})do if v.x==x and v.y==y then return v end end end
 local function remove(state,unit)for i=#state.units,1,-1 do if state.units[i]==unit then table.remove(state.units,i);return end end end
@@ -22,6 +23,7 @@ function C.power(unit,systems,defending,state)
  local base=(defending and stats.defense or stats.strength)or 0
  local result=10+base*5+(unit.level-1)*2-math.floor((100-unit.hp)/10)
  if defending then
+  for _,p in ipairs(state and state.players or {})do if p.id==unit.owner and p.civ=='highland' and Hex.terrain(unit.x,unit.y,state)=='hills'then result=result+3 end end
   local terrain=Hex.terrain(unit.x,unit.y,state)
   if terrain=='hills' or terrain=='forest'then result=result+3 end
   if unit.standby or unit.healing then result=result+3 end
@@ -32,7 +34,8 @@ function C.cityPower(state,city,systems)
  C.city(city)
  local strongest=20
  for _,u in ipairs(state.units)do if u.owner==city.owner then strongest=math.max(strongest,C.power(u,systems,true,state))end end
- return math.max(1,10+math.floor(strongest/2)+city.population*2+(city.maxWalls>0 and 8 or 0)-math.floor((200-city.hp)/20))
+ local bonus=0;for _,p in ipairs(state.players or {})do if p.id==city.owner and p.civ=='sentinel'then bonus=3 end end
+ return math.max(1,bonus+10+math.floor(strongest/2)+city.population*2+(city.maxWalls>0 and 8 or 0)-math.floor((200-city.hp)/20))
 end
 function C.damage(attack,defense)
  return math.max(8,math.min(80,math.floor(30*math.exp((attack-defense)/25)+.5)))
@@ -64,6 +67,9 @@ function C.round(state,systems)
    local amount=claim and claim.owner==u.owner and 20 or claim and 5 or 10
    u.hp=math.min(100,u.hp+amount)
   end
+  if (systems.units[u.kind]or {}).healer then
+   for _,ally in ipairs(state.units)do if ally.owner==u.owner and Hex.distance(u.x,u.y,ally.x,ally.y)<=1 then ally.hp=math.min(100,(ally.hp or 100)+10)end end
+  end
   u.actedThisRound=false
  end
  for _,city in ipairs(state.cities)do
@@ -81,7 +87,7 @@ function C.attack(state,unit,target,systems)
  local ranged=(stats.range or 1)>1
  local offense=C.power(unit,systems,false,state)
  local defense=city and C.cityPower(state,city,systems)or C.power(defender,systems,true,state)
- if defender and defender.kind=='horseman'and unit.kind=='spearman'then offense=offense+10 end
+ if defender and ((systems.units[defender.kind]or {}).mounted or defender.kind=='horseman')and unit.kind=='spearman'then offense=offense+10 end
  local damage=C.damage(offense,defense);local retaliation=0;local captured=false
  if city then
   city.lastAttackRound=state.round
@@ -91,7 +97,11 @@ function C.attack(state,unit,target,systems)
    local used=math.min(city.wallHP,wallDamage);city.wallHP=city.wallHP-used
    damage=math.max(0,wallDamage-used)
   end
-  city.hp=math.max(ranged and 1 or 0,city.hp-damage)
+  city.hp=math.max((ranged or stats.hostile) and 1 or 0,city.hp-damage)
+  if stats.hostile then
+   city.foodStore=math.max(0,(city.foodStore or 0)-5)
+   for _,p in ipairs(state.players)do if p.id==city.owner then p.gold=math.max(0,(p.gold or 0)-math.min(5,damage));p.raids=(p.raids or 0)+1 end end
+  end
   if not ranged then retaliation=C.damage(defense,C.power(unit,systems,true,state));unit.hp=math.max(0,unit.hp-retaliation)end
   if city.hp<=0 and not ranged and unit.hp>0 then
    local previousOwner=city.owner;city.owner=unit.owner;city.hp=100;city.wallHP=0
@@ -104,10 +114,12 @@ function C.attack(state,unit,target,systems)
   defender.hp=math.max(0,defender.hp-damage);C.experience(defender,2)
   if not ranged then retaliation=C.damage(defense,C.power(unit,systems,true,state));unit.hp=math.max(0,unit.hp-retaliation)end
   if defender.hp<=0 then
+   if (systems.units[defender.kind]or {}).hostile and not stats.hostile then Villages.defended(state,unit.owner,defender.x,defender.y)end
    remove(state,defender);C.experience(unit,5)
    if not ranged and unit.hp>0 then unit.x=target.x;unit.y=target.y end
   end
  end
+ if stats.explosive then unit.hp=0 end
  C.experience(unit,city and 4 or 3);unit.attackedRound=state.round;unit.actedThisRound=true
  unit.healing=false;unit.autoExplore=false
  if unit.hp<=0 then remove(state,unit)end
@@ -124,7 +136,10 @@ function C.strike(state,city,x,y,systems)
  if owner and not (owner.visible or {})[World.key(x,y)]then return false,'Target is not visible'end
  local damage=C.damage(C.cityPower(state,city,systems),C.power(enemy,systems,true,state))
  enemy.hp=math.max(0,enemy.hp-damage);C.experience(enemy,2);city.struckRound=state.round
- if enemy.hp<=0 then remove(state,enemy)end
+ if enemy.hp<=0 then
+  if (systems.units[enemy.kind]or {}).hostile then Villages.defended(state,city.owner,enemy.x,enemy.y)end
+  remove(state,enemy)
+ end
  return true,'City strike dealt '..damage..' HP'
 end
 return C

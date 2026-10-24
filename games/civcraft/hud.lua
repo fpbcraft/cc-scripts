@@ -17,9 +17,9 @@ function H.resources(ui,state,player)
    local width=Icons.yieldValue(r,entry[1],value,x,15)
    x=x+width+3
   end
-  for _,kind in ipairs({'iron','horses','saltpeter'})do
+  for _,kind in ipairs(Systems.resourceOrder)do
    Icons.resource(r,kind,x,15)
-   local value=compact((player.stockpile or {})[kind])..'+'..economy.strategic[kind];r:text(x+6,15,value,7)
+   local value=compact((player.stockpile or {})[kind])..((economy.strategic[kind]or 0)>=0 and '+'or '')..(economy.strategic[kind]or 0);r:text(x+6,15,value,7)
    x=x+7+r:textWidth(value)+3
   end
  end)
@@ -36,7 +36,17 @@ function H.ledger(ui,rect,player)
   {'GOLD INCOME',e.income,0},{'UNIT UPKEEP',e.upkeep,0}})do
   for _,line in ipairs(Panels.wrap(r,entry[1]..' '..entry[2]..' ('..(entry[3]>=0 and '+'or '')..entry[3]..'/TURN)',rect.w-20))do rows[#rows+1]={text=line}end
  end
- for _,kind in ipairs({'iron','horses','saltpeter'})do rows[#rows+1]={text=kind:upper()..' '..((player.stockpile or {})[kind]or 0)..' (+'..e.strategic[kind]..'/TURN)'}end
+ for _,kind in ipairs(Systems.resourceOrder)do
+  local rate=e.strategic[kind]or 0
+  rows[#rows+1]={text=kind:upper()..' '..((player.stockpile or {})[kind]or 0)..' ('..(rate>=0 and '+'or '')..rate..'/TURN)'}
+  rows[#rows+1]={buttons={{label='TRADE 20 GOLD FOR 1 '..kind:upper(),run=function()ui:command('exchange',{resource=kind})end}}}
+ end
+ rows[#rows+1]={text='AGE: '..Systems.ages[Systems.age(player)].name}
+ local victory=dofile('/games/civcraft/victory.lua').status(ui.state,player)
+ rows[#rows+1]={text='INDUSTRIAL: '..victory.industryTurns..'/10 ROUNDS; '..victory.connected..' LINKED CITIES'}
+ rows[#rows+1]={text='END EXPEDITION: '..(player.endStage or 0)..'/3 PROJECTS'}
+ rows[#rows+1]={text='SCORE '..victory.score..' / DEADLINE ROUND '..(ui.state.roundLimit or 90)}
+ for _,rival in ipairs(ui.state.players)do if rival.id~=player.id then rows[#rows+1]={text=rival.name..': AGE '..(rival.age or Systems.age(rival))..', INDUSTRY '..(rival.industryTurns or 0)..'/10, END '..(rival.endStage or 0)..'/3'}end end
  rows[#rows+1]={text='Gold pays unit upkeep each round.'}
  rows[#rows+1]={text='Unpaid units are disbanded.'}
  Panels.rows(r,{x=rect.x+4,y=rect.y+16,w=rect.w-8,h=rect.h-21},rows,ui,'resourceOffset')

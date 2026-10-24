@@ -15,16 +15,21 @@ local function prerequisites(player,tech)
  return missing
 end
 local Panels=dofile('/games/civcraft/panels.lua')
+local function extent(systems,field)
+ local maximum=1;for _,id in ipairs(systems.techOrder)do maximum=math.max(maximum,systems.techs[id][field]or 1)end;return maximum
+end
+local function ageName(systems,tier)return systems.ages and systems.ages[tier] and systems.ages[tier].name or ('TIER '..tier)end
 local function compact(r,systems,player,rect,model,research,onClose)
  local x,y,w,h=rect.x,rect.y,rect.w,rect.h
  r:fill(x,y,w,h,1);r:outline(x,y,w,h,8)
  r:text(x+3,y+3,'TECHNOLOGY',8,1,w-42)
  r:button(x+w-37,y+1,35,11,'CLOSE',onClose)
- local rows={};local tier=clamp(model.tier or 1,1,6)
+ local rows={};local tier=clamp(model.tier or 1,1,extent(systems,'tier'))
+ rows[#rows+1]={text=ageName(systems,tier)}
  if model.detail then
   local chosen=systems.techs[model.selected]
   rows[#rows+1]={buttons={{label='BACK TO TREE',run=function()model.detail=false;model.offset=0 end}}}
-  local paragraphs={chosen.name,'UNLOCK: '..chosen.unlock,
+  local paragraphs={ageName(systems,chosen.tier),chosen.name,'UNLOCK: '..chosen.unlock,
    'SCIENCE '..((player.researchProgress or {})[model.selected]or 0)..'/'..chosen.cost,
    'REQUIRES: '..(#chosen.requires>0 and table.concat(chosen.requires,', ') or 'NONE')}
   for _,paragraph in ipairs(paragraphs)do
@@ -35,11 +40,11 @@ local function compact(r,systems,player,rect,model,research,onClose)
    run=function()if allowed then research(model.selected)end end,style={primary=allowed}}}}
  else
   rows[#rows+1]={buttons={
-   {label='PREV TIER',run=function()model.tier=clamp(tier-1,1,6);model.offset=0 end},
-   {label='NEXT TIER',run=function()model.tier=clamp(tier+1,1,6);model.offset=0 end}}}
+   {label='PREV TIER',run=function()model.tier=clamp(tier-1,1,extent(systems,'tier'));model.offset=0 end},
+   {label='NEXT TIER',run=function()model.tier=clamp(tier+1,1,extent(systems,'tier'));model.offset=0 end}}}
   for _,id in ipairs(systems.techOrder)do
    if systems.techs[id].tier==tier then
-    rows[#rows+1]={buttons={{label=id,run=function()model.selected=id;model.detail=true;model.offset=0 end,
+    rows[#rows+1]={buttons={{label=systems.techs[id].name,run=function()model.selected=id;model.detail=true;model.offset=0 end,
      style={selected=player.techs[id],primary=player.researchTarget==id}}}}
    end
   end
@@ -53,20 +58,25 @@ function T.draw(r,systems,player,rect,model,research,onClose)
  model=model or {};model.zoom=model.zoom or 1
  model.dragArea=nil
  model.panX=model.panX or 0;model.panY=model.panY or 0
- model.selected=model.selected or systems.techOrder[1]
+ model.tier=model.tier or (systems.age and systems.age(player)) or 1
+ if not model.selected then
+  model.selected=player.researchTarget
+  if not model.selected then for _,id in ipairs(systems.techOrder)do if systems.techs[id].tier==model.tier then model.selected=id;break end end end
+  model.selected=model.selected or systems.techOrder[1]
+ end
  local x,y,w,h=rect.x,rect.y,rect.w,rect.h
  if r.mode=='text' or w<300 or h<210 then return compact(r,systems,player,rect,model,research,onClose)end
  r:fill(x,y,w,h,1);r:outline(x,y,w,h,8)
  local header=math.max(15,math.min(21,math.floor(h*.13)))
  r:fill(x+1,y+1,w-2,header,2)
- r:text(x+6,y+6,"TECHNOLOGY",8,1,w-52)
+ r:text(x+6,y+6,"TECHNOLOGY / "..ageName(systems,(systems.techs[model.selected]or {}).tier or 1),8,1,w-52)
  r:button(x+w-40,y+3,35,14,"CLOSE",onClose)
  local graphX,graphY=x+5,y+header+6
  local graphH=math.max(26,h-header-29)
  local wide=w>=155
  local inspectorW=wide and math.max(62,math.floor(w*.34)) or 0
  local graphW=w-10-inspectorW-(wide and 6 or 0)
- local tier=math.max(1,math.min(6,model.tier or 1))
+ local tier=math.max(1,math.min(extent(systems,'tier'),model.tier or 1))
  local chosen=systems.techs[model.selected]
  if r.mode=="text"then
   graphW=w-10;graphH=math.max(20,h-header-65)
@@ -87,9 +97,9 @@ function T.draw(r,systems,player,rect,model,research,onClose)
   r:text(x+7,graphY+graphH+10,"COST "..systems.techCost(model.selected)..
    " / "..((player.researchProgress or {})[model.selected] or 0),6)
   r:button(x+4,y+h-15,math.floor(w/4)-4,12,"PREV",
-   function()model.tier=clamp(tier-1,1,6)end)
+   function()model.tier=clamp(tier-1,1,extent(systems,'tier'))end)
   r:button(x+math.floor(w/4),y+h-15,math.floor(w/4)-4,12,"NEXT",
-   function()model.tier=clamp(tier+1,1,6)end)
+   function()model.tier=clamp(tier+1,1,extent(systems,'tier'))end)
   r:button(x+math.floor(w/2),y+h-15,math.floor(w/4)-4,12,"RESEARCH",
    function()research(model.selected)end)
   r:button(x+math.floor(3*w/4),y+h-15,math.floor(w/4)-4,12,"CLOSE",onClose)
@@ -99,8 +109,8 @@ function T.draw(r,systems,player,rect,model,research,onClose)
  local zoom=clamp(model.zoom,.65,1.5)
  local nw,nh=math.floor(76*zoom),math.floor(23*zoom)
  local sx,sy=math.floor(96*zoom),math.floor(37*zoom)
- local maxX=math.max(0,6*sx+nw-graphW+8)
- local maxY=math.max(0,5*sy+nh-graphH+10)
+ local maxX=math.max(0,(extent(systems,'tier')-1)*sx+nw-graphW+8)
+ local maxY=math.max(0,(extent(systems,'lane')-1)*sy+nh-graphH+10)
  model.dragArea={x=graphX,y=graphY,w=graphW,h=graphH}
  model.dragMode='graph';model.maxPanX=maxX;model.maxPanY=maxY
  model.panX=clamp(model.panX,0,maxX)

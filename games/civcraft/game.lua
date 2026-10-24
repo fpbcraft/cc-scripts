@@ -3,11 +3,11 @@ local bootstrap=loadfile("/games/civcraft/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot~="/games/civcraft"then
  return bootstrap().run("/games/civcraft","game.lua",_ENV,...)
 end
--- CIVCRAFT v0.7.0: Railbreak-style 4X with local hotseat or rednet networking
+-- CIVCRAFT v0.8.0: Railbreak-style 4X with local hotseat or rednet networking
 -- Host: /games/civcraft/game.lua host [--new]  Join: /games/civcraft/game.lua join [host ID]
 local args={...}
 local MODE=args[1] or 'local'
-local PROTOCOL='fpbcraft.civcraft.v1'
+local PROTOCOL='fpbcraft.civcraft.v2'
 local localMode=MODE=='local'
 local SAVE='/games/civcraft/data/save.dat'
 local slot=1
@@ -47,12 +47,16 @@ local Saves=dofile('/games/civcraft/saves.lua')
 local Reports=dofile('/games/civcraft/reports.lua')
 local Audio=dofile('/games/civcraft/audio.lua')
 local Combat=dofile('/games/civcraft/combat.lua')
+local Hostiles=dofile('/games/civcraft/hostiles.lua')
+local Rails=dofile('/games/civcraft/railways.lua')
+local Villages=dofile('/games/civcraft/villages.lua')
+local Victory=dofile('/games/civcraft/victory.lua')
 local audio=Audio.new()
 local W,H=Hex.width,Hex.height
 local state
 local function terrain(x,y)return Hex.terrain(x,y,state)end
 local function newGame()
- return {version=5,phase='lobby',round=1,turn=1,players={},cities={},units={},nextId=1,logs={'Welcome to CIVCRAFT'},winner=nil,mapSize='standard',mapType='continents',mapSeed=12345,name='NEW EMPIRE'}
+ return {version=6,ruleset='create',roundLimit=180,hostileMode='standard',phase='lobby',round=1,turn=1,players={},cities={},units={},nextId=1,logs={'Welcome to CIVCRAFT'},winner=nil,mapSize='standard',mapType='continents',mapSeed=12345,name='NEW EMPIRE'}
 end
 state=newGame()
 local hasHumanSave=false
@@ -89,17 +93,19 @@ local function initMap()
  for i,p in ipairs(state.players)do
   local pos=state.world.starts[i]
   local x,y=pos.x,pos.y
-  table.insert(state.cities,{id=state.nextId,x=x,y=y,owner=p.id,level=1,population=2,foodStore=0,jobs={food=1,wood=1,science=0},buildings={}})
+  table.insert(state.cities,{id=state.nextId,x=x,y=y,owner=p.id,capitalOf=p.id,level=1,population=2,foodStore=0,jobs={food=1,wood=1,science=0},buildings={}})
   state.nextId=state.nextId+1
   addUnit(p.id,x+((x<W/2) and 1 or -1),y,'warrior')
   p.food=12;p.wood=12;p.science=0;p.tech=0;p.ready=false;p.techs=p.techs or {};p.civ=p.civ or Systems.civs[i].id
  end
  state.phase='game';state.round=1;state.turn=1
+ Hostiles.generate(state);Villages.generate(state)
  Systems.migrate(state)
  log('Game started: '..#state.players..' civilizations')
  save()
 end
-local function winner()
+local function winner(advance)
+ if state.ruleset=='create'then Victory.check(state,advance);return end
  local lead,best=nil,-1
  for _,p in ipairs(state.players)do
   local cities=0;for _,c in ipairs(state.cities)do if c.owner==p.id then cities=cities+1 end end
@@ -114,24 +120,32 @@ local function nextTurn()
  state.round=state.round+1
  Combat.round(state,Systems)
  Systems.production(state,Hex)
+ Villages.round(state,Systems,Combat)
+ Hostiles.round(state,Systems)
  for _,p in ipairs(state.players)do p.ready=false end
  for _,u in ipairs(state.units)do
   local owner=player(u.owner)
   local base=Systems.units[u.kind] or Systems.units.warrior
-  u.movesLeft=base.move+(owner and owner.civ=='nomad' and u.kind=='scout' and 1 or 0)+
+  u.movesLeft=(base.hostile or u.villageGuard) and 0 or base.move+(owner and owner.civ=='nomad' and u.kind=='scout' and 1 or 0)+
    (owner and owner.civ=='mariner' and base.naval and 1 or 0)
-  u.moved=false
+  u.moved=base.hostile==true or u.villageGuard~=nil
  end
  World.reveal(state,Hex,Systems)
  for _,unit in ipairs(state.units)do if unit.autoExplore and not unit.standby then Systems.autoExplore(state,unit,Hex)end end
  for _,p in ipairs(state.players)do
+  p.age=Systems.age(p)
+  p.endStage=0;for _,city in ipairs(state.cities)do if city.owner==p.id then for i,id in ipairs({'eyes','equipment','dragon'})do if city.buildings[id]then p.endStage=math.max(p.endStage,i)end end end end
   p.turnReport=Reports.build(state,p,p.turnBaseline);p.reportRound=state.round
  end
- winner();log('Round '..state.round);save()
+ winner(true);log('Round '..state.round);save()
 end
 local function apply(id,req)
  local p=player(id)
  if not p then return false,'You are not registered' end
+ if req.action=='hostileMode' and state.phase=='lobby' then
+  if id~=state.players[1].id then return false,'Host only'end
+  state.hostileMode=({off='standard',standard='dangerous',dangerous='off'})[state.hostileMode]or 'standard';return true
+ end
  if req.action=='start' then
   if id~=state.players[1].id or state.phase~='lobby' then return false,'Host only' end
   if #state.players<2 then return false,'Need 2 players' end
@@ -139,6 +153,7 @@ local function apply(id,req)
  end
  if state.phase~='game' then return false,'Game not running' end
  if p.ready then return false,'Already ended turn' end
+ if req.action=='exchange'then local ok,why=Systems.exchange(state,p,req.resource);if ok then save()end;return ok,why end
  if req.action=='assign' or req.action=='workTile' or req.action=='build' or req.action=='recruit'
     or req.action=='researchTech' or req.action=='queue' then
   local ok,why
@@ -153,7 +168,7 @@ local function apply(id,req)
    elseif req.action=='assign' then
     ok,why=Systems.assign(c,req.from,req.to,state)
    elseif req.action=='queue' then
-    ok,why=Systems.queue(p,c,req.kind,req.id,state,Hex)
+    ok,why=Systems.queue(p,c,req.kind,req.id,state,Hex,tonumber(req.tileX),tonumber(req.tileY))
    elseif req.action=='build' then
     ok,why=Systems.build(p,c,req.id,state,Hex)
    elseif req.action=='recruit' then
@@ -209,6 +224,11 @@ local function apply(id,req)
  elseif req.action=='disband'then
   if not u or u.owner~=id or (req.unitID and req.unitID~=u.id)then return false,'Select an owned unit'end
   for i=#state.units,1,-1 do if state.units[i]==u then table.remove(state.units,i);break end end
+ elseif req.action=='buildRail'then
+  local moving=unitAt(tonumber(req.sx),tonumber(req.sy))
+  local ok,why=Rails.build(state,p,moving,x,y,Systems);if not ok then return false,why end
+ elseif req.action=='envoy'then
+  local ok,why=Villages.envoy(state,p,c);if not ok then return false,why end
  elseif req.action=='heal'then
   if not u or u.owner~=id then return false,'Select an owned unit'end
   u.healing=true;u.standby=true;u.autoExplore=false;u.movesLeft=0;u.moved=true
@@ -219,6 +239,8 @@ local function apply(id,req)
  elseif req.action=='found' then
   if not u or u.owner~=id or u.kind~='settler' then return false,'Choose a settler' end
   if c then return false,'Tile has a city' end
+  if (state.world.landmarks or {})[x..':'..y]then return false,'Cannot settle on a landmark'end
+  for _,camp in ipairs(state.spawners or {})do if not camp.cleared and camp.x==x and camp.y==y then return false,'Clear the hostile camp first'end end
   if terrain(x,y)=='water' or not Hex.passable(x,y,state,u,Systems)then return false,'Unsettleable terrain' end
   for _,v in ipairs(state.cities)do if Hex.distance(v.x,v.y,x,y)<3 then return false,'Cities need 3 hex spacing' end end
   for i,v in ipairs(state.units)do if v==u then table.remove(state.units,i);break end end
@@ -226,7 +248,9 @@ local function apply(id,req)
   local founded=state.cities[#state.cities];Systems.nameCity(state,founded)
   state.nextId=state.nextId+1;World.ensureTerritories(state,Hex,false);log(p.name..' founded '..founded.name)
  else return false,'Unknown action' end
- winner();save();return true
+ Hostiles.clear(state,Systems)
+ if state.ruleset~='create'then winner()end
+ save();return true
 end
 local hasModem=not localMode and modem() or false
 local myId=os.getComputerID and os.getComputerID() or 0
@@ -321,6 +345,9 @@ local function dispatch(action,params)
    deleteConfirm=slot;message='TAP DELETE AGAIN TO CONFIRM'
   end
   return
+ end
+ if action=='hostileMode' and state.phase=='lobby' and localHost then
+  state.hostileMode=({off='standard',standard='dangerous',dangerous='off'})[state.hostileMode] or 'standard';save();return
  end
  if action=='mapSize' and state.phase=='lobby' then
   local current=1
