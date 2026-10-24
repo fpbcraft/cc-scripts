@@ -1,4 +1,4 @@
-# CIVCRAFT — Hexagonal Pocket Civilization
+# CIVCRAFT v0.5 — Hexagonal Pocket Civilization
 
 A small Civilization-inspired, turn-based 4X game for **CC:Tweaked**. One computer hosts the authoritative match; **2–4 human players** each use their own computer and optionally an Advanced Monitor. Computers communicate through **rednet modems**, either wireless (within range) or wired (via the same wired modem network). It also works over interdimensional wireless modems. No HTTP or external web server is needed after installation.
 
@@ -80,3 +80,23 @@ Eight technologies form a prerequisite-based tree: Agriculture, Mining, Writing,
 Cities contain a population of citizens assigned to **food**, **wood**, and **science** jobs. The **POPULATION** menu reallocates workers between sectors, with their sum constrained to the city's population. Food surplus accumulates and grows the city, adding another worker. Different buildings can be constructed inside each city: Farms, Mines, Libraries, Walls, Workshops and Academies. They cost wood, require technology, and modify production or defense. Select a city to see its population, assignments and completed improvements in the inspector.
 
 The economic system uses per-turn resource yields and does not require continuous redstone input or external peripherals.
+
+## Generated campaigns and discovery (v0.5)
+
+Each local game now has **three independent campaign slots**, selectable from the title screen. The selected slot shows its campaign name and current round; you can create a new game, continue, or delete a slot (with a second-tap confirmation). The original `/civcraft/data/local-save.dat` is still importable into an untouched first slot. Previous campaign files are preserved as backups during save replacement, and removing a migrated slot does not resurrect a deleted game.
+
+From the local lobby, choose **MAP SIZE** (compact 12×8, standard 16×10, large 20×12) and **REROLL SEED**. Worlds are generated deterministically, and the seed, map dimensions, terrain and starting locations are serialized in each campaign. A seed always regenerates the same map. Loading an older map preserves its original 12×8 terrain instead of silently changing geography.
+
+**Fog of war** is owned independently by each civilization. Capitals initially reveal nearby terrain; scouts, explorers and ships extend the field of view according to their own vision stat. Moving away leaves discovered hexes dimmed while still-unexplored hexes remain dark. Enemy units appear only when in current sight. Hot-seat changes remove the previous player's selection and movement preview, preventing accidental map leaks.
+
+## Strategy depth
+
+There are **24 connected technologies**, spanning navigation, astronomy, cavalry, fortification, commerce and late-game advances. The **TECH TREE** in a city opens a connected graphical research canvas. Prerequisite links are drawn behind nodes, researched/available/locked states are visually distinct, nodes can be tapped for details, and the view can be panned and zoomed. On text-only computers, the game uses an efficient era-by-era technology list instead.
+
+The game now offers **10 civilizations**, **13 units**, and **13 city improvements**. Units have separate attack, defense, sight, attack range, and movement-point budgets. Pathfinding considers movement costs: hills and forest slow most land units, scouts travel through forest efficiently, cavalry is faster on open ground, and ships navigate water. Ranged units can strike visible enemy targets without occupying the target's hex. The unit inspector describes each unit's distinctive ability and statistics; valid movement is highlighted in green and attacks in red.
+
+City management retains production, workforce assignment and population growth. Opponents have lightweight AI for research, development, exploration, recruitment and warfare. These mechanics are designed to run without requiring a dedicated monitor or external dependency; pixel graphics are used automatically when available.
+
+### Version and compatibility
+
+This edition is **v0.5.0**. Run the existing `install-civcraft.lua` installer or update through FPB Store. Game code is updated without deleting `/civcraft/data`. Network-host sessions continue using their existing dedicated save, while local hot-seat campaigns use the three-slot manager.

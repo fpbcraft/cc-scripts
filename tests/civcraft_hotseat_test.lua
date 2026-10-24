@@ -40,8 +40,9 @@ keys={q=16,escape=1}
 local frames,stage=0,0
 local originalDofile=dofile
 dofile=function(path)
- if path=="/civcraft/systems.lua"then return originalDofile("civcraft/systems.lua")end
- if path=="/civcraft/hex.lua"then return originalDofile("civcraft/hex.lua")end
+ if path:sub(1,10)=="/civcraft/" and path~="/civcraft/ui.lua"then
+  return originalDofile(path:sub(2))
+ end
  if path~="/civcraft/ui.lua"then return originalDofile(path)end
  return {new=function(_,callback)
   return {
@@ -96,6 +97,6 @@ assert(ok,err)
 assert(frames==8,"Should render through complete hotseat sequence")
 assert(last.round==2 and #last.players==2,"Round persists with correct player count")
 assert(last.activeIndex==1,"Current player persisted")
-assert(files["/civcraft/data/local-save.dat"],"Separate local save exists")
+assert(files["/civcraft/data/slot-1.dat"],"Separate local save exists")
 assert(not files["/civcraft/data/save.dat"],"Network save untouched")
 print("CIVCRAFT: hotseat lobby, turn ownership, privacy handoff, 2nd round and save passed.")

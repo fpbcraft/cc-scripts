@@ -1,9 +1,14 @@
+local nativeDofile=dofile
+dofile=function(p)
+ if p:sub(1,10)=="/civcraft/"then return nativeDofile(p:sub(2))end
+ return nativeDofile(p)
+end
 local S=assert(loadfile("civcraft/systems.lua"))()
 local H=assert(loadfile("civcraft/hex.lua"))()
 local state={version=1,nextId=3,players={{id=1,name="P1",civ="verdant",food=30,wood=60,science=50},{id=2,name="P2",ai=true,food=30,wood=60,science=50}},cities={{id=1,owner=1,x=2,y=2}},units={}}
 S.migrate(state)
 local city=state.cities[1];local p=state.players[1]
-assert(state.version==2 and city.population==2 and city.jobs.food==1)
+assert(state.version==3 and city.population==2 and city.jobs.food==1)
 assert(not S.canResearch(p,"writing"),"Prerequisites required")
 assert(S.research(p,"agriculture"))
 assert(S.canResearch(p,"writing"))

@@ -1,10 +1,12 @@
--- CIVCRAFT v0.4.0: Railbreak-style 4X with local hotseat or rednet networking
+-- CIVCRAFT v0.5.0: Railbreak-style 4X with local hotseat or rednet networking
 -- Host: /civcraft/game.lua host [--new]  Join: /civcraft/game.lua join [host ID]
 local args={...}
 local MODE=args[1] or 'local'
 local PROTOCOL='fpbcraft.civcraft.v1'
 local localMode=MODE=='local'
-local SAVE=localMode and '/civcraft/data/local-save.dat' or '/civcraft/data/save.dat'
+local SAVE='/civcraft/data/save.dat'
+local slot=1
+local mapSizes={'compact','standard','large'}
 local function modem()
  for _,side in ipairs(peripheral.getNames()) do
   if peripheral.getType(side)=='modem' then
@@ -28,17 +30,15 @@ end
 local display=screen()
 local Hex=dofile('/civcraft/hex.lua')
 local Systems=dofile('/civcraft/systems.lua')
+local World=dofile('/civcraft/world.lua')
+local Saves=dofile('/civcraft/saves.lua')
 local W,H=Hex.width,Hex.height
-local function key(x,y)return y*W+x end
-local function terrain(x,y)
- local t=Hex.terrain(x,y)
- return ({water='~',mountain='^',forest='f',plains='.'})[t]
-end
-local starts={{2,2},{11,7},{11,2},{2,7}}
+local state
+local function terrain(x,y)return Hex.terrain(x,y,state)end
 local function newGame()
- return {version=1,phase='lobby',round=1,turn=1,players={},cities={},units={},nextId=1,logs={'Welcome to CIVCRAFT'},winner=nil}
+ return {version=3,phase='lobby',round=1,turn=1,players={},cities={},units={},nextId=1,logs={'Welcome to CIVCRAFT'},winner=nil,mapSize='standard',mapSeed=12345,name='NEW EMPIRE'}
 end
-local state=newGame()
+state=newGame()
 local hasHumanSave=false
 local function log(s)
  table.insert(state.logs,1,s)
@@ -58,16 +58,21 @@ local function player(id)
  for i,p in ipairs(state.players)do if p.id==id then return p,i end end
 end
 local function save()
+ World.reveal(state,Hex,Systems)
+ if localMode then Saves.save(slot,state);return end
  local dir=fs.getDir(SAVE);if not fs.exists(dir)then fs.makeDir(dir)end
- local h=fs.open(SAVE..'.tmp','w')
- if not h then return end
+ local h=assert(fs.open(SAVE..'.tmp','w'))
  h.write(textutils.serialize(state));h.close()
  if fs.exists(SAVE)then fs.delete(SAVE)end
  fs.move(SAVE..'.tmp',SAVE)
 end
 local function initMap()
+ state.world=World.generate(state.mapSeed,state.mapSize,#state.players)
+ W,H=state.world.width,state.world.height
+ state.name='EMPIRE '..state.world.seed
  for i,p in ipairs(state.players)do
-  local x,y=starts[i][1],starts[i][2]
+  local pos=state.world.starts[i]
+  local x,y=pos.x,pos.y
   table.insert(state.cities,{id=state.nextId,x=x,y=y,owner=p.id,level=1,population=2,foodStore=0,jobs={food=1,wood=1,science=0},buildings={}})
   state.nextId=state.nextId+1
   addUnit(p.id,x+((x<W/2) and 1 or -1),y,'warrior')
@@ -94,7 +99,8 @@ local function nextTurn()
  for _,u in ipairs(state.units)do
   local owner=player(u.owner)
   local base=Systems.units[u.kind] or Systems.units.warrior
-  u.movesLeft=base.move+(owner and owner.civ=="nomad" and u.kind=="scout" and 1 or 0)
+  u.movesLeft=base.move+(owner and owner.civ=='nomad' and u.kind=='scout' and 1 or 0)+
+   (owner and owner.civ=='mariner' and base.naval and 1 or 0)
   u.moved=false
  end
  winner();log('Round '..state.round);save()
@@ -127,9 +133,18 @@ local function apply(id,req)
    if not template or not Systems.canRecruit(p,req.id) then
     return false,'Unit locked or too expensive'
    end
-   if unitAt(x,y)then return false,'City occupied' end
+   local spawnX,spawnY=x,y
+   if template.naval then
+    spawnX=nil
+    for _,hex in ipairs(Hex.neighbours(x,y,state))do
+     if terrain(hex.x,hex.y)=='water' and not unitAt(hex.x,hex.y)then
+      spawnX,spawnY=hex.x,hex.y;break
+     end
+    end
+    if not spawnX then return false,'Requires an open coastal hex' end
+   elseif unitAt(x,y)then return false,'City occupied' end
    p.food=p.food-template.food;p.wood=p.wood-template.wood
-   addUnit(id,x,y,req.id);ok=true
+   addUnit(id,spawnX,spawnY,req.id);ok=true
   end
   if ok then save()end
   return ok,why
@@ -141,7 +156,7 @@ local function apply(id,req)
   return true
  end
  local x,y=tonumber(req.x),tonumber(req.y)
- if not x or not y or x<1 or x>W or y<1 or y>H then return false,'Select a tile' end
+ if not x or not y or not Hex.inBounds(x,y,state) then return false,'Select a tile' end
  local c,u=cityAt(x,y),unitAt(x,y)
  if req.action=='research' then
   local cost=8+p.tech*6
@@ -158,34 +173,46 @@ local function apply(id,req)
   local sx,sy=tonumber(req.sx),tonumber(req.sy)
   local moving=sx and sy and unitAt(sx,sy)
   if not moving or moving.owner~=id or (moving.movesLeft or (moving.moved and 0 or 1))<=0 then return false,'Unit cannot move' end
-  if Hex.distance(sx,sy,x,y)~=1 then return false,'Move only to an adjacent hex' end
-  if terrain(x,y)=='~' or terrain(x,y)=='^' then return false,'Impassable terrain' end
-  if u then
-   if u.owner==id then return false,'Occupied by ally' end
-   if (Systems.units[moving.kind] or {}).strength<=0 then return false,'Civilian units cannot fight' end
-   local offense=(Systems.units[moving.kind] or Systems.units.warrior).strength
-   local defense=(Systems.units[u.kind] or Systems.units.warrior).strength
-   if c and c.owner==u.owner and c.buildings and c.buildings.walls then
-    defense=defense+1
+  local legal
+  for _,dest in ipairs(Hex.reachable(state,moving,id,Systems))do
+   if dest.x==x and dest.y==y then legal=dest;break end
+  end
+  if not legal then return false,'Destination out of range or blocked' end
+  local stats=Systems.units[moving.kind] or Systems.units.warrior
+  if u and u.owner~=id then
+   local enemy=Systems.units[u.kind] or Systems.units.warrior
+   local offense=stats.strength or 0
+   local defense=enemy.defense or enemy.strength or 1
+   if u.kind=='horseman' and moving.kind=='spearman' then offense=offense+2 end
+   if terrain(x,y)=='hills' then defense=defense+1 end
+   if p.civ=='highland' and terrain(sx,sy)=='hills' then offense=offense+1 end
+   if c and c.owner==u.owner and c.buildings then
+    if c.buildings.walls then defense=defense+1 end
+    if c.buildings.fortress then defense=defense+2 end
+   end
+   for _,defender in ipairs(state.players)do
+    if defender.id==u.owner and defender.civ=='sentinel' and c then defense=defense+1 end
    end
    if offense<defense then
     for i,v in ipairs(state.units)do
      if v==moving then table.remove(state.units,i);break end
     end
-    log(p.name..' lost a battle')
-    save();return true
+    log(p.name..' lost an attack');save();return true
    end
    for i,v in ipairs(state.units)do if v==u then table.remove(state.units,i);break end end
-   log(p.name..' defeated an enemy unit')
+   log(p.name..' won a battle')
   end
-  if c and c.owner~=id then
-   if (Systems.units[moving.kind] or {}).strength<=0 then return false,'Military unit needed' end
+  if c and c.owner~=id and not legal.ranged then
+   if (stats.strength or 0)<=0 then return false,'Military unit needed' end
    c.owner=id;log(p.name..' captured a city!')
   end
-  moving.x=x;moving.y=y;moving.movesLeft=(moving.movesLeft or 1)-1;moving.moved=moving.movesLeft<=0
+  if not legal.ranged then moving.x=x;moving.y=y end
+  moving.movesLeft=legal.ranged and 0 or math.max(0,moving.movesLeft-legal.cost)
+  moving.moved=moving.movesLeft<=0
  elseif req.action=='found' then
   if not u or u.owner~=id or u.kind~='settler' then return false,'Choose a settler' end
   if c then return false,'Tile has a city' end
+  if not Hex.passable(x,y,state,u,Systems)then return false,'Unsettleable terrain' end
   for _,v in ipairs(state.cities)do if Hex.distance(v.x,v.y,x,y)<3 then return false,'Cities need 3 hex spacing' end end
   for i,v in ipairs(state.units)do if v==u then table.remove(state.units,i);break end end
   table.insert(state.cities,{id=state.nextId,x=x,y=y,owner=id,level=1,population=2,foodStore=0,jobs={food=1,wood=1,science=0},buildings={}})
@@ -197,12 +224,18 @@ local hasModem=not localMode and modem() or false
 local myId=os.getComputerID and os.getComputerID() or 0
 local hostId,localHost=nil,(MODE=='host' or localMode)
 if localHost then
- if fs.exists(SAVE) and args[2]~='--new' then
+ if localMode then
+  local loaded=args[2]~='--new' and Saves.load(slot)
+  if type(loaded)=='table'then state=World.migrate(Systems.migrate(loaded));hasHumanSave=true end
+ elseif fs.exists(SAVE) and args[2]~='--new' then
   local h=fs.open(SAVE,'r')
   if h then local loaded=textutils.unserialize(h.readAll());h.close()
-   if type(loaded)=='table' and (loaded.version==1 or loaded.version==2) then state=Systems.migrate(loaded);hasHumanSave=true end
+   if type(loaded)=='table' and loaded.version then
+    state=Systems.migrate(loaded);hasHumanSave=true
+   end
   end
- elseif args[2]=='--new' and fs.exists(SAVE)then fs.delete(SAVE) end
+ elseif args[2]=='--new' and fs.exists(SAVE)then fs.delete(SAVE)end
+ if state.world then W,H=state.world.width,state.world.height end
  if localMode then
   -- Local players receive distinct persistent IDs on a single computer.
   if #state.players==0 then
@@ -230,11 +263,13 @@ else
  rednet.send(hostId,{action='join',name=os.getComputerLabel() or ('Computer '..myId)},PROTOCOL)
 end
 Systems.migrate(state)
+World.reveal(state,Hex,Systems)
 local snapshot=localHost and state or nil
 local message='Tap a tile, then choose an action'
 local handoff=false
 local exitRequested=false
-local appScreen=hasHumanSave and 'title' or 'title'
+local appScreen='title'
+local deleteConfirm=nil
 local gamePaused=false
 local UI=dofile('/civcraft/ui.lua')
 local view
@@ -249,13 +284,50 @@ local function draw()
  local s=localHost and state or snapshot
  view:message(message)
  view:draw(s,localMode and activeID() or myId,{
-  handoff=handoff,localMode=localMode,hostID=hostId,screen=appScreen,paused=gamePaused,hasSave=hasHumanSave})
+  handoff=handoff,localMode=localMode,hostID=hostId,screen=appScreen,
+   paused=gamePaused,hasSave=hasHumanSave,slot=slot,
+   slots=localMode and Saves.list() or nil,deleteConfirm=deleteConfirm})
 end
 local function dispatch(action,params)
  if action=='exit' then exitRequested=true;return end
+ if action=='selectSlot' and localMode then
+  local choice=tonumber(params and params.slot)
+  if choice and choice>=1 and choice<=Saves.count then
+   slot=choice;deleteConfirm=nil
+   local loaded=Saves.load(slot)
+   hasHumanSave=type(loaded)=='table'
+   if hasHumanSave then
+    state=World.migrate(Systems.migrate(loaded))
+    if state.world then W,H=state.world.width,state.world.height end
+   else state=newGame();Systems.migrate(state)end
+   World.reveal(state,Hex,Systems)
+   message='SLOT '..slot..' SELECTED'
+  end
+  return
+ end
+ if action=='deleteSlot' and localMode then
+  if deleteConfirm==slot then
+   Saves.delete(slot);state=newGame();hasHumanSave=false;deleteConfirm=nil
+   message='SLOT CLEARED'
+  else
+   deleteConfirm=slot;message='TAP DELETE AGAIN TO CONFIRM'
+  end
+  return
+ end
+ if action=='mapSize' and state.phase=='lobby' then
+  local current=1
+  for i,n in ipairs(mapSizes)do if n==state.mapSize then current=i end end
+  state.mapSize=mapSizes[current%#mapSizes+1]
+  return
+ end
+ if action=='mapSeed' and state.phase=='lobby' then
+  state.mapSeed=(tonumber(state.mapSeed) or 12345)+997
+  return
+ end
  if action=='newGame' then
   if localHost then
    state=newGame();Systems.migrate(state);hasHumanSave=false
+    state.mapSeed=((os.epoch and os.epoch('utc') or math.floor(os.clock()*1000))%999999)+1
    if localMode then
     for i=1,2 do table.insert(state.players,{
      id=myId*16+i,name='PLAYER '..i,ready=false,
@@ -266,7 +338,10 @@ local function dispatch(action,params)
   end
   appScreen='game';gamePaused=false;return
  end
- if action=='continue' then appScreen='game';gamePaused=false;return end
+ if action=='continue' then
+  if not hasHumanSave then message='NO CAMPAIGN IN THIS SLOT';return end
+  appScreen='game';gamePaused=false;return
+ end
  if action=='pause' then gamePaused=true;return end
  if action=='resume' then gamePaused=false;return end
  if action=='title' then appScreen='title';gamePaused=false;save();return end

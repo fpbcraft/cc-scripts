@@ -3,12 +3,14 @@
 local Renderer=dofile("/civcraft/render.lua")
 local Hex=dofile("/civcraft/hex.lua")
 local Systems=dofile("/civcraft/systems.lua")
+local World=dofile("/civcraft/world.lua")
+local TechTree=dofile("/civcraft/tech_tree.lua")
 local Icons=dofile("/civcraft/icons.lua")
 local UI={};UI.__index=UI
 local P={8,13,11,21}
 local MAP_W,MAP_H=Hex.width,Hex.height
 local function clip(s,n)return tostring(s or ""):upper():sub(1,math.max(0,n))end
-local terrain=Hex.terrain
+local function terrain(x,y,state)return Hex.terrain(x,y,state)end
 local function where(list,x,y)
  for _,thing in ipairs(list or {})do
   if thing.x==x and thing.y==y then return thing end
@@ -38,17 +40,40 @@ function UI:tile(x,y)
    self.notice="OUT OF RANGE - SELECT HIGHLIGHTED HEX"
   end
  else
-  self.selected={x=x,y=y};self.panel="context"
+  self.selected={x=x,y=y};self.panel="context";self.actionPage=1
   local unit=where(self.state and self.state.units,x,y)
   if unit and unit.owner==self.playerID and not unit.moved then
    self.source={x=x,y=y}
-   self.reachable=Hex.reachable(self.state,unit,self.playerID)
+   self.reachable=Hex.reachable(self.state,unit,self.playerID,Systems)
    self.notice="SELECT A GREEN HEX TO MOVE"
   else self.reachable={};self.source=nil end
  end
 end
 function UI:draw(state,playerID,opts)
  local r=self.r;local w,h=r.w,r.h;opts=opts or {}
+ -- Never carry a previous hotseat player's selection or movement overlay
+ -- into the next player's screen (including the concealed handoff).
+ if self.lastPlayer~=nil and self.lastPlayer~=playerID then
+  self.source=nil;self.reachable={};self.panel="context"
+  self.actionPage=1;self.techModel=nil
+  self.selected={x=2,y=2}
+  for _,city in ipairs(state.cities or {})do
+   if city.owner==playerID then
+    self.selected={x=city.x,y=city.y};break
+   end
+  end
+ end
+ self.lastPlayer=playerID
+ if opts.handoff or
+    (self.state and self.source and not (function()
+      for _,u in ipairs(state.units or {})do
+       if u.x==self.source.x and u.y==self.source.y and
+         u.owner==playerID and not u.moved then return true end
+      end
+      return false
+     end)())then
+  self.source=nil;self.reachable={}
+ end
  r:begin()
  self.hexTargets={}
  self.modalBounds=nil
@@ -66,15 +91,52 @@ function UI:draw(state,playerID,opts)
   r:finish();return
  end
  if opts.screen=="title" then
-  r:center(math.floor(h*.20),"CIVCRAFT",8,w>=155 and 3 or 2)
-  r:center(math.floor(h*.34),"AN EMPIRE IN YOUR HANDS",7)
-  local bw=math.min(105,w-30)
-  r:button(math.floor((w-bw)/2),math.floor(h*.49),bw,19,
-   "NEW CAMPAIGN",function()self:command("newGame")end,{primary=true})
-  r:button(math.floor((w-bw)/2),math.floor(h*.49)+23,bw,17,
-   "CONTINUE",function()self:command("continue")end,{primary=opts.hasSave})
-  r:button(math.floor((w-bw)/2),math.floor(h*.49)+44,bw,15,
-   "EXIT",function()self:command("exit")end)
+  if h<115 then
+   r:center(3,"CIVCRAFT",8,1)
+   r:center(11,"SELECT A SAVE SLOT",6)
+   if opts.slots then
+    local size=math.floor((w-8)/3)
+    for i,record in ipairs(opts.slots)do
+     local label="SLOT "..i..(record.occupied and " R"..(record.round or 1) or " FREE")
+     r:button(3+(i-1)*size,16,size-2,10,label,function()
+      self:command("selectSlot",{slot=i})
+     end,{primary=opts.slot==i})
+    end
+   end
+   local by=math.max(26,h-31)
+   local bx,bw=math.max(4,math.floor(w*.12)),math.max(33,math.floor(w*.76))
+   r:button(bx,by,bw,10,"NEW CAMPAIGN",function()self:command("newGame")end,{primary=true})
+   r:button(bx,by+10,bw,10,"CONTINUE",function()self:command("continue")end)
+   r:button(bx,by+20,bw,10,"EXIT",function()self:command("exit")end)
+   r:finish();return
+  end
+  r:center(math.floor(h*.10),"CIVCRAFT",8,w>=155 and 3 or 2)
+  r:center(math.floor(h*.23),"HEX EMPIRES / EXPLORE / CONQUER",7)
+  local bw=math.min(w-20,math.max(100,math.floor(w*.72)))
+  local bx=math.floor((w-bw)/2)
+  if opts.slots then
+   local sy=math.floor(h*.32)
+   for i,record in ipairs(opts.slots)do
+    local active=i==opts.slot
+    local title=record.occupied and
+     ("SLOT "..i.."  "..(record.name or "CAMPAIGN").."  R"..(record.round or 1)) or
+     ("SLOT "..i.."  EMPTY")
+    r:button(bx,sy+(i-1)*21,bw-35,17,title,function()
+     self:command("selectSlot",{slot=i})
+    end,{primary=active})
+   end
+   r:button(bx+bw-31,sy,31,17,
+    opts.deleteConfirm==opts.slot and "SURE?" or "DELETE",
+    function()self:command("deleteSlot")end)
+  end
+  local by=math.min(h-53,math.max(math.floor(h*.55),math.floor(h*.32)+65))
+  r:button(bx,by,bw,16,"NEW CAMPAIGN",
+   function()self:command("newGame")end,{primary=true})
+  r:button(bx,by+19,bw,16,
+   opts.hasSave and "CONTINUE CAMPAIGN" or "NO SAVED CAMPAIGN",
+   function()self:command("continue")end)
+  r:button(bx,by+38,bw,14,"EXIT",
+   function()self:command("exit")end)
   r:finish();return
  end
  if opts.paused then
@@ -116,6 +178,10 @@ function UI:draw(state,playerID,opts)
    end
   end
   local y=h-37
+  r:text(13,y-27,"MAP "..tostring(state.mapSize or "STANDARD"):upper()..
+   " / SEED "..tostring(state.mapSeed or 12345),8,1,w-25)
+  r:button(12,y-15,52,12,"MAP SIZE",function()self:command("mapSize")end)
+  r:button(68,y-15,58,12,"REROLL SEED",function()self:command("mapSeed")end)
   if opts.localMode then
    r:button(12,y,40,15,"- PLAYER",function()self:command("removePlayer")end)
    r:button(56,y,40,15,"+ PLAYER",function()self:command("addPlayer")end)
@@ -137,12 +203,14 @@ function UI:draw(state,playerID,opts)
  local mine
  for _,p in ipairs(state.players)do if p.id==playerID then mine=p end end
  local compact=w<150 or h<110
+ local MAP_W,MAP_H=state.world and state.world.width or Hex.width,
+  state.world and state.world.height or Hex.height
  local top=header+7
  local contentBottom=h-footer-3
  -- Pointy odd-row hexes: centres are half a cell apart horizontally between
  -- adjacent rows; 3/4 cell vertically, matching the same Hex distance rules.
  local reserved=compact and 14 or math.max(75,math.floor(w*.29))
- local tile=math.max(10,math.min(
+ local tile=math.max(5,math.min(
   math.floor((contentBottom-top-7)/(1+(MAP_H-1)*.75)),
   math.floor((w-reserved-17)/(MAP_W+.5))))
  local stepY=tile*.75
@@ -157,11 +225,16 @@ function UI:draw(state,playerID,opts)
  end
  for y=1,MAP_H do for x=1,MAP_W do
   local px,py=tilePos(x,y)
-  local t=terrain(x,y)
-  local c=where(state.cities,x,y)
-  local u=where(state.units,x,y)
-  local base=t=="water" and 19 or t=="mountain" and 4 or
-    t=="forest" and 12 or 2
+  local t=terrain(x,y,state)
+  local visibility=World.known(mine,x,y)
+  local hidden=visibility=="hidden"
+  local c=not hidden and where(state.cities,x,y)
+  local u=visibility=="visible" and where(state.units,x,y)
+  if c and c.owner~=playerID and visibility~="visible"then c=nil end
+  local base=hidden and 15 or
+    visibility=="explored" and 14 or
+    t=="water" and 19 or t=="mountain" and 4 or
+    t=="forest" and 12 or t=="hills" and 9 or 2
   local half=math.floor(tile/2)
   local bevel=math.max(2,math.floor(tile*.24))
   -- Filled pointy hex silhouette (top/bottom caps and vertical body).
@@ -171,24 +244,33 @@ function UI:draw(state,playerID,opts)
    r:fill(px+inset,py+dy,math.max(1,tile-inset*2-1),1,base)
   end
   r:outline(px+bevel,py,math.max(1,tile-2*bevel),1,3)
-  if t=="water" or t=="forest" or t=="mountain"then
+  if tile>=9 and not hidden and
+     (t=="water" or t=="forest" or t=="mountain" or t=="hills")then
    Icons.draw(r,t,px+half-4,py+half-4,9,7)
   end
-  local highlighted=false
+  local reachable
   for _,p in ipairs(self.reachable or {})do
-   if p.x==x and p.y==y then highlighted=true;break end
+   if p.x==x and p.y==y then reachable=p;break end
   end
-  if highlighted then
-   r:fill(px+bevel,py+tile-3,math.max(2,tile-2*bevel),2,11)
-   r:fill(px+1,py+half,2,2,11)
+  if reachable then
+   local tint=reachable.attack and 10 or 11
+   r:fill(px+bevel,py+tile-3,math.max(2,tile-2*bevel),2,tint)
+   r:fill(px+1,py+half,2,2,tint)
+   if tile>=13 then
+    r:text(px+half-2,py+tile-10,
+     reachable.ranged and "R" or tostring(reachable.cost),7,1,6)
+   end
   end
   if c then
-   Icons.draw(r,"city",px+half-5,py+half-5,11,P[ownerIndex(state,c.owner)]or 8)
+   if tile>=11 then Icons.draw(r,"city",px+half-5,py+half-5,11,P[ownerIndex(state,c.owner)]or 8)
+   else r:fill(px+half-2,py+half-2,4,4,P[ownerIndex(state,c.owner)]or 8)end
   end
   if u then
-   Icons.draw(r,u.kind,px+half-5,py+half-5,11,P[ownerIndex(state,u.owner)]or 8)
+   if tile>=11 then Icons.draw(r,u.kind,px+half-5,py+half-5,11,P[ownerIndex(state,u.owner)]or 8)
+   else r:fill(px+half-1,py+half-1,3,3,P[ownerIndex(state,u.owner)]or 8)end
    if u.moved then r:fill(px+tile-4,py+half,2,2,4)end
   end
+  if visibility=="explored"then r:fill(px+half-1,py+half-1,2,2,4)end
   if self.selected.x==x and self.selected.y==y then
    r:outline(px+bevel,py,math.max(2,tile-2*bevel),tile,8)
   end
@@ -212,14 +294,27 @@ function UI:draw(state,playerID,opts)
     return n
    end)(),6,1,sw-8)
    local selectedCity=where(state.cities,self.selected.x,self.selected.y)
-   if selectedCity and selectedCity.owner==playerID then
+   local selectedUnit=where(state.units,self.selected.x,self.selected.y)
+   if selectedUnit and selectedUnit.owner==playerID then
+    local unit=Systems.units[selectedUnit.kind] or Systems.units.warrior
+    local cy=my+76
+    r:fill(sidebarX+3,cy,sw-6,math.max(16,boardH-79),2)
+    r:text(sidebarX+5,cy+3,selectedUnit.kind:upper(),8,1,sw-9)
+    r:text(sidebarX+5,cy+15,
+     "ATK "..(unit.strength or 0).." / DEF "..(unit.defense or 0),7,1,sw-9)
+    r:text(sidebarX+5,cy+27,
+     "MOVE "..(selectedUnit.movesLeft or 0).."/"..(unit.move or 1)..
+     "  SIGHT "..(unit.vision or 2),7,1,sw-9)
+    r:text(sidebarX+5,cy+39,"ABILITY",9,1,sw-9)
+    r:text(sidebarX+5,cy+50,unit.ability or "-",6,1,sw-9)
+   elseif selectedCity and selectedCity.owner==playerID then
     local cy=my+76
     r:fill(sidebarX+3,cy,sw-6,math.max(16,boardH-79),2)
     r:text(sidebarX+5,cy+3,"CITY POP "..(selectedCity.population or 2),7,1,sw-9)
     local jobs=selectedCity.jobs or {food=1,wood=1,science=0}
     r:text(sidebarX+5,cy+15,"F"..jobs.food.." W"..jobs.wood.." S"..jobs.science,8,1,sw-9)
     local y=cy+28
-    for _,id in ipairs({"farm","mine","library","walls","workshop","academy"})do
+    for _,id in ipairs({"farm","mine","library","walls","workshop","academy","market","fortress","university","bazaar","observatory","bank","grandacademy"})do
      if selectedCity.buildings and selectedCity.buildings[id] and y<my+boardH-12 then
       r:text(sidebarX+5,y,id:upper(),11,1,sw-9);y=y+10
      end
@@ -229,8 +324,10 @@ function UI:draw(state,playerID,opts)
   for i,p in ipairs(state.players)do
    local iy=my+79+(i-1)*11
    if iy+10<my+boardH and
-    not (where(state.cities,self.selected.x,self.selected.y) and
-      where(state.cities,self.selected.x,self.selected.y).owner==playerID) then
+    not ((where(state.cities,self.selected.x,self.selected.y) and
+      where(state.cities,self.selected.x,self.selected.y).owner==playerID) or
+      (where(state.units,self.selected.x,self.selected.y) and
+       where(state.units,self.selected.x,self.selected.y).owner==playerID)) then
     r:fill(sidebarX+4,iy,3,9,P[i]or 8)
     r:text(sidebarX+11,iy+2,clip(p.name,math.floor((sw-14)/4))..
       (p.ready and " DONE" or ""),6,1,sw-13)
@@ -247,9 +344,17 @@ function UI:draw(state,playerID,opts)
  r:fill(0,barY-4,w,2,8)
  local selectedCity=where(state.cities,self.selected.x,self.selected.y)
  local selectedUnit=where(state.units,self.selected.x,self.selected.y)
- local description="TILE "..self.selected.x..","..self.selected.y.." "..terrain(self.selected.x,self.selected.y)
- if selectedCity then description=description.." CITY" end
- if selectedUnit then description=description.." "..selectedUnit.kind end
+ local known=World.known(mine,self.selected.x,self.selected.y)
+ local description=known=="hidden" and "UNCHARTED TERRITORY" or
+  ("HEX "..self.selected.x..","..self.selected.y.." "..terrain(self.selected.x,self.selected.y,state))
+ if selectedCity and known~="hidden" then description=description.." CITY" end
+ if selectedUnit and known=="visible" then
+  local stats=Systems.units[selectedUnit.kind]or{}
+  description=description.." "..selectedUnit.kind..
+   " ATK"..(stats.strength or 0).." DEF"..(stats.defense or 0)..
+   " MOV"..(selectedUnit.movesLeft or 0).."/"..(stats.move or 1)..
+   " RNG"..(stats.range or 1)
+ end
  r:text(8,barY,clip(description,math.floor((w-10)/4)),7)
  local actions={}
  local x,y=self.selected.x,self.selected.y
@@ -263,16 +368,16 @@ function UI:draw(state,playerID,opts)
   actions[#actions+1]={"MOVE",function()
    if selectedUnit.moved then self.notice="ALREADY MOVED";return end
    self.source={x=x,y=y}
-   self.reachable=Hex.reachable(state,selectedUnit,playerID)
+   self.reachable=Hex.reachable(state,selectedUnit,playerID,Systems)
   end}
  elseif selectedCity and selectedCity.owner==playerID then
   if self.panel=="context" then
-   actions[#actions+1]={"UNITS",function()self.panel="units"end}
-   actions[#actions+1]={"BUILDINGS",function()self.panel="buildings"end}
-   actions[#actions+1]={"POPULATION",function()self.panel="population"end}
-   actions[#actions+1]={"TECH TREE",function()self.panel="tech"end}
+   actions[#actions+1]={"UNITS",function()self.panel="units";self.actionPage=1 end}
+   actions[#actions+1]={"BUILDINGS",function()self.panel="buildings";self.actionPage=1 end}
+   actions[#actions+1]={"POPULATION",function()self.panel="population";self.actionPage=1 end}
+   actions[#actions+1]={"TECH TREE",function()self.panel="tech";self.actionPage=1 end}
   elseif self.panel=="units"then
-   for _,id in ipairs({"warrior","settler","scout","spearman","horseman"})do
+   for _,id in ipairs({"warrior","settler","scout","spearman","horseman","archer","explorer","ranger","swordsman","galley","navigator","frigate","flagship"})do
     if Systems.canRecruit(mine,id) then
      act(id:upper(),"recruit",{x=x,y=y,id=id})
     end
@@ -293,12 +398,30 @@ function UI:draw(state,playerID,opts)
     end
    end
   elseif self.panel=="tech"then
-   for _,id in ipairs(Systems.techOrder)do
-    if Systems.canResearch(mine,id)then act(id:upper(),"researchTech",{id=id})end
-   end
+   -- Research options live in the connected canvas, not the footer.
   end
  else
-  actions[#actions+1]={"INSPECT",function()self.notice=terrain(x,y):upper()end}
+  actions[#actions+1]={"INSPECT",function()self.notice=terrain(x,y,state):upper()end}
+ end
+ -- Context lists can be much larger than the narrow bottom action bar.
+ -- Paginate rather than drawing buttons over the map or beyond the screen.
+ if #actions>4 then
+  self.actionPage=self.actionPage or 1
+  local itemsPerPage=3
+  local pages=math.ceil(#actions/itemsPerPage)
+  self.actionPage=math.max(1,math.min(self.actionPage,pages))
+  local page={}
+  for i=(self.actionPage-1)*itemsPerPage+1,
+     math.min(#actions,self.actionPage*itemsPerPage)do
+   page[#page+1]=actions[i]
+  end
+  if self.actionPage>1 then
+   page[#page+1]={"PREV",function()self.actionPage=self.actionPage-1 end}
+  end
+  if self.actionPage<pages then
+   page[#page+1]={"NEXT",function()self.actionPage=self.actionPage+1 end}
+  end
+  actions=page
  end
  actions[#actions+1]={"BACK",function()
   self.panel="context";self.source=nil;self.reachable={}
@@ -313,36 +436,14 @@ function UI:draw(state,playerID,opts)
    buttonW,buttonH,action[1],action[2],
    {primary=i==6,selected=(i==1 and self.source~=nil)})
  end
- -- Research is presented as a tree, including locked branches and costs.
  if self.panel=="tech" and selectedCity and selectedCity.owner==playerID then
-  local ox,oy=math.max(6,math.floor(w*.12)),header+6
-  local ow,oh=w-2*ox,math.max(50,barY-oy-5)
+  local ox,oy=math.max(5,math.floor(w*.06)),header+3
+  local ow,oh=w-2*ox,math.max(70,barY-oy-3)
   self.modalBounds={x=ox,y=oy,w=ow,h=oh}
-  r:fill(ox,oy,ow,oh,1);r:outline(ox,oy,ow,oh,8)
-  r:text(ox+5,oy+4,"TECHNOLOGY TREE",8,1,ow-10)
-  local gap=4
-  local tw=math.floor((ow-16-gap)/2)
-  local th=math.max(10,math.floor((oh-25)/4)-2)
-  for i,id in ipairs(Systems.techOrder)do
-   local tech=Systems.techs[id]
-   local px=ox+6+((i-1)%2)*(tw+gap)
-   local py=oy+16+math.floor((i-1)/2)*(th+2)
-   local complete=mine.techs[id]
-   local available=Systems.canResearch(mine,id)
-   local label=tech.name.." "..(complete and "DONE" or tech.cost.." SCI")
-   r:button(px,py,tw,th,label,function()
-    if available then
-     self:command("researchTech",{id=id})
-    else
-     local req=table.concat(tech.requires," + ")
-     self.notice=complete and "ALREADY RESEARCHED" or
-       ((req~="" and "REQUIRES "..req.." / " or "").."NEED "..tech.cost.." SCIENCE")
-    end
-   end,{primary=available})
-  end
-  r:button(ox+ow-33,oy+2,28,12,"CLOSE",function()
-   self.panel="context"
-  end)
+  self.techModel=self.techModel or {}
+  TechTree.draw(r,Systems,mine,self.modalBounds,self.techModel,
+   function(id)self:command("researchTech",{id=id})end,
+   function()self.panel="context"end)
  end
  if self.notice~="" and barY>=10 then
   r:text(8,barY-10,clip(self.notice,math.floor((w-12)/4)),8)
