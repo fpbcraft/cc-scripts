@@ -144,6 +144,11 @@ local function apply(id,req)
  end
  if req.action=='end' then
   p.ready=true;log(p.name..' is ready')
+  if localMode then
+   for _,q in ipairs(state.players)do
+    if q.ai and not q.ready then Systems.aiTurn(state,q,Hex)end
+   end
+  end
   local all=true;for _,q in ipairs(state.players)do if not q.ready then all=false end end
   if all then nextTurn() else save() end
   return true
@@ -304,6 +309,12 @@ local function dispatch(action,params)
   state.mapSize=mapSizes[current%#mapSizes+1]
   return
  end
+ if action=='mapType' and state.phase=='lobby' then
+  local current=1
+  for i,k in ipairs(mapTypes)do if k==state.mapType then current=i end end
+  state.mapType=mapTypes[current%#mapTypes+1]
+  return
+ end
  if action=='mapSeed' and state.phase=='lobby' then
   state.mapSeed=(tonumber(state.mapSeed) or 12345)+997
   return
@@ -368,15 +379,9 @@ local function dispatch(action,params)
   message=ok and 'ORDER ACCEPTED' or tostring(reason)
   if ok then hasHumanSave=true end
   if localMode and ok and action=='end' then
-   for _,q in ipairs(state.players)do
-    if q.ai and not q.ready then Systems.aiTurn(state,q,Hex)end
-   end
-   local complete=true
-   for _,q in ipairs(state.players)do if not q.ready then complete=false end end
-   if complete and state.phase=='game' then nextTurn()end
-   -- The existing rules advance the round when everyone ends their turn.
-   -- Only one local participant is shown at a time.
-   local nextIndex=(state.activeIndex or 1)%#state.players+1
+   -- AI orders ran before the full-round check in apply().
+   local previousIndex=state.activeIndex or 1
+   local nextIndex=previousIndex%#state.players+1
    for _=1,#state.players do
     if not state.players[nextIndex].ready and not state.players[nextIndex].ai then break end
     nextIndex=nextIndex%#state.players+1
@@ -386,7 +391,8 @@ local function dispatch(action,params)
     nextIndex=state.activeIndex or 1
    end
    state.activeIndex=nextIndex
-   handoff=state.phase=='game' and not state.players[nextIndex].ai
+   handoff=state.phase=='game' and nextIndex~=previousIndex and
+    not state.players[nextIndex].ai
    save()
   end
  else rednet.send(hostId,req,PROTOCOL)end
@@ -395,7 +401,9 @@ view=UI.new(display,dispatch)
 local function publish()
  if not hasModem then return end
  for _,p in ipairs(state.players)do
-  if p.id~=myId then rednet.send(p.id,{type='state',state=state},PROTOCOL)end
+  if p.id~=myId then
+   rednet.send(p.id,{type='state',state=World.forPlayer(state,p.id)},PROTOCOL)
+  end
  end
 end
 local function server()
@@ -408,7 +416,8 @@ local function server()
      table.insert(state.players,{id=id,name=tostring(req.name or ('P'..(#state.players+1))):sub(1,10),ready=false})
      log('Player joined: '..id)
     end
-    rednet.send(id,{type='state',state=state},PROTOCOL)
+    local view=World.forPlayer(state,id)
+    if view then rednet.send(id,{type='state',state=view},PROTOCOL)end
    elseif player(id) then
     local ok,why=apply(id,req)
     rednet.send(id,{type='result',ok=ok,message=why or (ok and 'Order accepted')},PROTOCOL)

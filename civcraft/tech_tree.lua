@@ -134,13 +134,13 @@ function T.draw(r,systems,player,rect,model,research,onClose)
   r:text(dx+7,graphY+78,clip(chosen.unlock,math.floor((dw-14)/4)),7,1,dw-13)
   local cost=systems.techCost(model.selected)
   local progress=(player.researchProgress or {})[model.selected] or 0
-  local rate=player.scienceRate or 1
+  local rate=player.scienceRate or 0
   r:text(dx+7,graphY+97,"PROGRESS "..progress.."/"..cost,7,1,dw-13)
   local bar=math.max(8,dw-16)
   r:fill(dx+7,graphY+108,bar,5,4)
   r:fill(dx+7,graphY+108,bar*clamp(progress/cost,0,1),5,8)
-  r:text(dx+7,graphY+119,"EST "..math.max(1,math.ceil((cost-progress)/math.max(1,rate)))..
-   " TURNS",6,1,dw-13)
+  local estimate=rate>0 and (math.max(1,math.ceil((cost-progress)/rate)).." TURNS") or "NO SCIENCE"
+  r:text(dx+7,graphY+119,"EST "..estimate,6,1,dw-13)
   if not researched then
    r:button(dx+5,graphY+graphH-20,dw-10,16,
     active and "IN PROGRESS" or #req==0 and "RESEARCH" or "LOCKED",

@@ -199,6 +199,13 @@ function M.yields(p,c,state,hex,owned)
  end
  return {food=food,industry=industry,science=science}
 end
+-- Stable city yield entry point for UI, AI and regression tests.
+function M.cityYield(state,city)
+ for _,p in ipairs(state.players or {})do
+  if p.id==city.owner then return M.yields(p,city,state,Hex) end
+ end
+ return nil
+end
 local function spawn(state,p,c,id,hex)
  local stats=M.units[id]
  if not stats then return false end
