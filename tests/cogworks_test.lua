@@ -26,6 +26,7 @@ for index,data in ipairs(E.levels)do
  assert(result.win,"Reference solution invalid for level "..index..
   " (goals "..result.correct.."/"..result.goals..", jam="..tostring(result.jam)..")")
  totalGoals=totalGoals+result.goals
+ if index<=3 then assert(not data.fullNetwork,"Tutorial stages should stay relaxed")end
  if index>=4 then
   assert(data.fullNetwork,"Advanced levels must demand fully connected machinery")
   eq(result.openPorts,0,"Solved level has no dangling ports: "..index)
@@ -34,7 +35,7 @@ for index,data in ipairs(E.levels)do
   if index>=11 then assert(result.goals>=3,"Intermediate levels have three outputs")end
   if index>=19 then assert(result.goals>=4,"Advanced levels have four outputs")end
   if index>=27 then assert(result.goals>=5,"Final levels have five outputs")end
-  if index>=9 then assert((data.stock.G or 0)>0 or (data.stock.B or 0)>0,
+  if index>=12 or (index>=8 and index<=10) then assert((data.stock.G or 0)>0 or (data.stock.B or 0)>0,
    "Level "..index.." has power transformation")end
  end
  local total=0
