@@ -26,7 +26,7 @@ local function monitor(preferred)
 end
 local SAVE="/cogworks/save.dat"
 local function loadSave()
- local fallback={unlocked=1,level=1,best={},sessions={},campaignVersion=2}
+ local fallback={unlocked=1,level=1,best={},sessions={},awards={},campaignVersion=2}
  if not fs.exists(SAVE)then return fallback end
  local f=fs.open(SAVE,"r")
  if not f then return fallback end
@@ -44,7 +44,7 @@ local function loadSave()
   for n=4,12 do sessions[n]=nil;best[n]=nil end
  end
  return {unlocked=unlocked,level=level,best=best,sessions=sessions,
-  campaignVersion=2}
+  awards=type(data.awards)=="table" and data.awards or {},campaignVersion=2}
 end
 local function save(data)
  local nextPath=SAVE..".tmp"
@@ -76,7 +76,7 @@ local function start()
   renderer=R.new(mon)
   local progress=loadSave()
   local selected="I"
-  local help=false
+  local screen=nil
   local message=""
   local game,result
   local function openLevel(index)
@@ -97,13 +97,17 @@ local function start()
    }
    save(progress)
   end
-  local function redraw()renderer:draw(game,result,progress.unlocked,selected,message,help)end
+  local function redraw()
+   renderer:draw(game,result,progress.unlocked,selected,message,screen,
+    progress.awards[game.number] or {})
+  end
   openLevel(progress.level)
   local function operate(action,x,y)
-   if action=="back"then help=false;redraw();return true end
-   if action=="help"then help=true;redraw();return true end
+   if action=="back"then screen=nil;redraw();return true end
+   if action=="help"then screen="help";redraw();return true end
+   if action=="bonuses"then screen=screen=="bonuses" and nil or "bonuses";redraw();return true end
    if action=="quit"then return false end
-   if help then help=false;redraw();return true end
+   if screen then screen=nil;redraw();return true end
    local changed=false
    message=""
    if action=="tool"then
@@ -113,9 +117,9 @@ local function start()
       message="EMPTY STOCK: REMOVE A PART"
      end
     end
-   elseif action=="cell"then
+   elseif action=="cell" or action=="remove"then
     local tile=E.get(game,x,y)
-    if selected=="erase"then
+    if selected=="erase" or action=="remove"then
      changed=E.remove(game,x,y)
      if not changed then message="CANNOT REMOVE LOCKED MACHINERY"end
     elseif tile then
@@ -151,7 +155,16 @@ local function start()
       local best=progress.best[game.number]
       if not best or game.moves<best then progress.best[game.number]=game.moves end
      end
-     message="SUCCESS! ALL MACHINES POWERED"
+     local awards=progress.awards[game.number] or {}
+     progress.awards[game.number]=awards
+     local justEarned=0
+     for _,bonus in ipairs(E.challenges(game,result))do
+      if bonus.earned and not awards[bonus.id]then
+       awards[bonus.id]=true;justEarned=justEarned+1
+      end
+     end
+     message=justEarned>0 and ("SOLVED! "..justEarned.." BONUS EARNED") or
+      "SUCCESS! ALL MACHINES POWERED"
     elseif result.jam then message="JAM! CONFLICTING SPEED OR SPIN"end
     persist()
    end
@@ -161,10 +174,14 @@ local function start()
   redraw()
   local timer=os.startTimer(0.2)
   while true do
-   local event,a,b,c=os.pullEventRaw()
+   local event,a,b,c,d=os.pullEventRaw()
    if event=="terminate"then break
    elseif event=="monitor_touch" and a==name then
-    local action,x,y=renderer:hit(b,c,help)
+    local action,x,y=renderer:hit(b,c,screen)
+    -- Vanilla CC:Tweaked exposes only right-click taps, with no button field.
+    -- Some monitor-input addons may supply a fifth button value; only then
+    -- can the game distinguish right-click removal from left-click placement.
+    if action=="cell" and (d==2 or d=="right")then action="remove"end
     if action and not operate(action,x,y)then break end
    elseif event=="monitor_resize" and a==name then
     renderer:resize();redraw()
@@ -178,7 +195,7 @@ local function start()
      operate("tool",E.order[n])
     elseif key=="6"then operate("tool","erase")
     else
-     local shortcuts={h="hint",r="reset",p="prev",n="next",q="quit",["?"]="help"}
+     local shortcuts={h="hint",r="reset",p="prev",n="next",q="quit",c="bonuses",["?"]="help"}
      local action=shortcuts[key]
      if action and not operate(action)then break end
     end
