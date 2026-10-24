@@ -8,7 +8,7 @@ CC:Tweaked's Advanced Monitor sends `monitor_touch` for right-clicks only. This 
 
 - Right-click: standard CC:Tweaked `monitor_touch(side, x, y)` (CC: Graphics emits pixel coordinates).
 - Left-click: `monitor_left_click(side, normalizedX, normalizedY)` with `0 <= normalizedX,Y < 1`. Multiply by `monitor.getSize()` character dimensions and `floor + 1` to resolve the cell. Coordinates are independent of rendering mode, text scale, and multi-block monitor size.
-- Only the **display-facing side** of an Advanced Monitor is a touchscreen. You can still break it normally by attacking its sides/back. The mod prevents mining the screen front while attached.
+- Only the **display-facing side** of an Advanced Monitor is a touchscreen. You can still break it normally by attacking its sides/back or **sneak + left-click** on its face. The mod prevents mining the screen front while attached.
 - Requires this mod on **both client and server**. Compatibility target NeoForge 1.21.1 + CC:Tweaked, optionally CC: Graphics.
 
 ## Build
