@@ -71,7 +71,8 @@ function E.evaluate(g)
   end
   -- Adjacent connected ports have the same physical rotation and RPM.
   local delta=DIR[port+1]
-  local neighbour=g.map[id(tile.x+delta[1],tile.y+delta[2])]
+  local nx,ny=tile.x+delta[1],tile.y+delta[2]
+  local neighbour=nx>=1 and nx<=5 and ny>=1 and ny<=4 and g.map[id(nx,ny)] or nil
   local opposite=(port+2)%4
   if neighbour and E.hasPort(neighbour,opposite)then
    assign(neighbour,opposite,info.rate,info.sign)
