@@ -1,9 +1,10 @@
--- CIVCRAFT: compact networked 4X for CC:Tweaked
+-- CIVCRAFT v0.2.0: Railbreak-style 4X with local hotseat or rednet networking
 -- Host: /civcraft/game.lua host [--new]  Join: /civcraft/game.lua join [host ID]
 local args={...}
 local MODE=args[1] or 'host'
 local PROTOCOL='fpbcraft.civcraft.v1'
-local SAVE='/civcraft/data/save.dat'
+local localMode=MODE=='local'
+local SAVE=localMode and '/civcraft/data/local-save.dat' or '/civcraft/data/save.dat'
 local function modem()
  for _,side in ipairs(peripheral.getNames()) do
   if peripheral.getType(side)=='modem' then
@@ -157,9 +158,9 @@ local function apply(id,req)
  else return false,'Unknown action' end
  winner();save();return true
 end
-local hasModem=modem()
-local myId=os.getComputerID()
-local hostId,localHost=nil,MODE=='host'
+local hasModem=not localMode and modem() or false
+local myId=os.getComputerID and os.getComputerID() or 0
+local hostId,localHost=nil,(MODE=='host' or localMode)
 if localHost then
  if fs.exists(SAVE) and args[2]~='--new' then
   local h=fs.open(SAVE,'r')
@@ -167,9 +168,19 @@ if localHost then
    if type(loaded)=='table' and loaded.version==1 then state=loaded end
   end
  elseif args[2]=='--new' and fs.exists(SAVE)then fs.delete(SAVE) end
- if not player(myId) then
-  if state.phase~='lobby' then error('Save belongs to another host. Run host --new for a new match') end
-  table.insert(state.players,{id=myId,name='P1',ready=false})
+ if localMode then
+  -- Local players receive distinct persistent IDs on a single computer.
+  if #state.players==0 then
+   for i=1,2 do
+    table.insert(state.players,{id=myId*16+i,name='PLAYER '..i,ready=false})
+   end
+  end
+  state.activeIndex=math.max(1,math.min(#state.players,state.activeIndex or 1))
+ else
+  if not player(myId) then
+   if state.phase~='lobby' then error('Save belongs to another host. Run host --new for a new match') end
+   table.insert(state.players,{id=myId,name='P1',ready=false})
+  end
  end
  hostId=myId
  if hasModem then rednet.host(PROTOCOL,'CIVCRAFT-'..myId) end
@@ -185,111 +196,57 @@ else
 end
 local snapshot=localHost and state or nil
 local message='Tap a tile, then choose an action'
-local selected={x=2,y=2};local source=nil
-local buttons={}
-local factionColors={colors.red,colors.cyan,colors.lime,colors.orange}
+local handoff=false
+local exitRequested=false
+local UI=dofile('/civcraft/ui.lua')
+local view
+local function activeID()
+ if localMode then
+  local index=math.max(1,math.min(#state.players,state.activeIndex or 1))
+  return state.players[index] and state.players[index].id
+ end
+ return myId
+end
 local function draw()
  local s=localHost and state or snapshot
- if not s then display.setBackgroundColor(colors.black);display.clear();display.setCursorPos(1,1);display.write('Connecting to '..hostId..'...');return end
- local me=player(myId)
- if not localHost then
-  me=nil;for _,v in ipairs(s.players)do if v.id==myId then me=v end end
- end
- display.setBackgroundColor(colors.black);display.setTextColor(colors.white);display.clear()
- local w,h=display.getSize()
- buttons={}
- local function line(x,y,text,color)
-  if y<1 or y>h or x>w then return end
-  display.setCursorPos(x,y);display.setTextColor(color or colors.white)
-  display.write(tostring(text):sub(1,math.max(0,w-x+1)))
- end
- local function button(x,y,label,action,params)
-  if y>h or x>w then return end
-  line(x,y,'['..label..']',colors.yellow)
-  table.insert(buttons,{x=x,y=y,w=#label+2,action=action,params=params})
- end
- line(1,1,'CIVCRAFT  '..(s.phase=='game' and ('ROUND '..s.round) or s.phase:upper()),colors.yellow)
- if s.phase=='lobby' then
-  line(1,3,'Players connected: '..#s.players..'/4')
-  for i,p in ipairs(s.players)do line(1,4+i,i..'. '..p.name) end
-  line(1,11,'Host ID: '..hostId)
-  if localHost then button(1,13,'START GAME','start')end
-  line(1,15,'Players join with: game.lua join '..hostId)
-  line(1,17,message,colors.lightGray)
-  return
- end
- if s.phase=='over' then
-  line(1,4,'WINNER: '..tostring(s.winner),colors.lime)
-  line(1,6,'Game finished after '..s.round..' rounds')
-  return
- end
- for y=1,H do
-  for x=1,W do
-   local t=terrain(x,y)
-   local c,u=nil,nil
-   for _,v in ipairs(s.cities)do if v.x==x and v.y==y then c=v;break end end
-   for _,v in ipairs(s.units)do if v.x==x and v.y==y then u=v;break end end
-   local mark=t;local color=t=='~' and colors.blue or (t=='^' and colors.gray or (t=='f' and colors.green or colors.lightGray))
-   if c then mark='C';for i,p in ipairs(s.players)do if p.id==c.owner then color=factionColors[i] end end end
-   if u then mark=u.kind=='warrior' and 'W' or 'S';for i,p in ipairs(s.players)do if p.id==u.owner then color=factionColors[i] end end end
-   if selected.x==x and selected.y==y then display.setBackgroundColor(colors.white);color=colors.black
-   else display.setBackgroundColor(colors.black) end
-   line((x-1)*2+1,y+2,mark..' ',color)
-  end
- end
- display.setBackgroundColor(colors.black)
- local x0=math.min(27,w)
- line(x0,3,'PLAYERS')
- for i,p in ipairs(s.players)do
-  local mine=p.id==myId
-  line(x0,3+i,(mine and '>' or ' ')..i..' '..p.name:sub(1,6)..(p.ready and '*' or ''),factionColors[i])
- end
- if me then
-  line(x0,10,'Food '..me.food..' Wood '..me.wood)
-  line(x0,11,'Science '..me.science..' Tech '..me.tech)
- end
- local c,u=nil,nil
- for _,v in ipairs(s.cities)do if v.x==selected.x and v.y==selected.y then c=v end end
- for _,v in ipairs(s.units)do if v.x==selected.x and v.y==selected.y then u=v end end
- line(1,12,'Tile '..selected.x..','..selected.y..' '..terrain(selected.x,selected.y)..' '..(c and 'CITY' or '')..' '..(u and u.kind or ''))
- line(1,13,'Tap your unit -> MOVE -> adjacent tile')
- if source then line(1,14,'Moving from '..source.x..','..source.y,colors.yellow) end
- button(1,16,'MOVE','selectMove')
- button(9,16,'FOUND','found')
- button(19,16,'WARRIOR','warrior')
- button(30,16,'SETTLER','settler')
- button(1,18,'RESEARCH','research')
- button(13,18,'END TURN','end')
- line(1,20,message,colors.lightGray)
- line(1,22,'C city W warrior S settler | ~ water ^ mountain',colors.lightGray)
- line(1,23,'Win: 5 cities or highest score after 25 rounds',colors.lightGray)
+ view:message(message)
+ view:draw(s,localMode and activeID() or myId,{
+  handoff=handoff,localMode=localMode,hostID=hostId})
 end
-local function send(action,params)
+local function dispatch(action,params)
+ if action=='exit' then exitRequested=true;return end
+ if action=='reveal' then handoff=false;return end
+ if localMode and state.phase=='lobby' and
+    (action=='addPlayer' or action=='removePlayer')then
+  if action=='addPlayer' and #state.players<4 then
+   local i=#state.players+1
+   table.insert(state.players,{id=myId*16+i,name='PLAYER '..i,ready=false})
+   message='PLAYER '..i..' ADDED';save()
+  elseif action=='removePlayer' and #state.players>2 then
+   table.remove(state.players);message='PLAYER REMOVED';save()
+  else message='CHOOSE TWO TO FOUR PLAYERS'end
+  return
+ end
  local req=params or {};req.action=action
  if localHost then
-  local ok,reason=apply(myId,req);message=ok and 'Order accepted' or reason
- else
-  rednet.send(hostId,req,PROTOCOL)
- end
-end
-local function tap(tx,ty)
- local s=localHost and state or snapshot
- if not s then return end
- if s.phase=='game' and ty>=3 and ty<=H+2 and tx>=1 and tx<=W*2 then
-  local x=math.floor((tx-1)/2)+1;local y=ty-2
-  if source then
-   send('move',{sx=source.x,sy=source.y,x=x,y=y});source=nil
-  else selected={x=x,y=y} end
-  return
- end
- for _,b in ipairs(buttons)do
-  if ty==b.y and tx>=b.x and tx<b.x+b.w then
-   if b.action=='selectMove' then source={x=selected.x,y=selected.y};message='Select adjacent destination'
-   else send(b.action,{x=selected.x,y=selected.y}) end
-   return
+  local id=activeID()
+  local ok,reason=apply(id,req)
+  message=ok and 'ORDER ACCEPTED' or tostring(reason)
+  if localMode and ok and action=='end' then
+   -- The existing rules advance the round when everyone ends their turn.
+   -- Only one local participant is shown at a time.
+   local nextIndex=(state.activeIndex or 1)%#state.players+1
+   for _=1,#state.players do
+    if not state.players[nextIndex].ready then break end
+    nextIndex=nextIndex%#state.players+1
+   end
+   state.activeIndex=nextIndex
+   handoff=state.phase=='game'
+   save()
   end
- end
+ else rednet.send(hostId,req,PROTOCOL)end
 end
+view=UI.new(display,dispatch)
 local function publish()
  if not hasModem then return end
  for _,p in ipairs(state.players)do
@@ -327,15 +284,18 @@ local function clientListener()
 end
 local function ui()
  draw()
- while true do
+ while not exitRequested do
   local e,a,b,c=os.pullEvent()
-  if e=='monitor_touch' and display~=term.current() then tap(b,c);draw()
-  elseif e=='mouse_click' and display==term.current() then tap(b,c);draw()
-  elseif e=='term_resize' or e=='monitor_resize' then draw()
-  elseif e=='timer' then draw()
-  elseif e=='key' and a==keys.q then return end
-  if localHost then publish() end
-  os.startTimer(1)
+  if e=='monitor_touch' and display~=term.current()then
+   view:tap(b,c);draw()
+  elseif e=='mouse_click' and display==term.current()then
+   view:tap(b,c);draw()
+  elseif e=='term_resize' or e=='monitor_resize' then
+   view:resize();draw()
+  elseif e=='key' and keys and (a==keys.q or a==keys.escape)then
+   return
+  end
+  if localHost and hasModem then publish()end
  end
 end
 if localHost and hasModem then
@@ -343,3 +303,4 @@ if localHost and hasModem then
 elseif localHost then ui()
 else parallel.waitForAny(clientListener,ui)end
 if localHost and hasModem then pcall(rednet.unhost,PROTOCOL)end
+view:close()
