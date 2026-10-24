@@ -119,6 +119,18 @@ function R:font(x,y,str,color)
   end end
  end
 end
+-- Double-sized bitmap lettering for cinematic level cards.
+function R:fontLarge(x,y,str,color)
+ str=tostring(str):upper()
+ for n=1,#str do
+  local glyph=F[str:sub(n,n)] or F["?"]
+  for row=1,5 do for col=1,3 do
+   if glyph[row]:sub(col,col)=="1"then
+    self:rect(x+(n-1)*8+(col-1)*2,y+(row-1)*2,2,2,color)
+   end
+  end end
+ end
+end
 function R:line(x1,y1,x2,y2,color)
  local count=math.ceil(math.max(math.abs(x2-x1),math.abs(y2-y1)))
  for i=0,math.max(1,count)do
@@ -398,6 +410,98 @@ function R:drawGame(m)
  if result.win then
   self:button(166,114,32,6,"NEXT","next")
  end
+end
+-- All briefings use the authored mission targets and inventory, never
+-- independently maintained objective text.  Animation is non-blocking.
+function R:drawBriefing(m)
+ local b=m.briefing
+ if self.lastBriefing~=b then
+  self.lastBriefing=b
+  self.briefingFrame=0
+ end
+ local motion=m.settings.animations~=false
+ local tick=motion and self.briefingFrame or 1000
+ self.briefingFrame=math.min(self.briefingFrame+1,100000)
+ self:rect(0,0,200,120,0)
+ self:rect(0,0,200,15,1)
+ self:font(8,5,"COGWORKS / MISSION BRIEF",6)
+ self:font(168,5,string.format("%02d/30",b.number),15)
+ self:rect(0,14,200,1,7)
+ for x=0,199,9 do
+  local offset=motion and (tick*2)%9 or 0
+  self:rect((x+offset)%200,13,4,1,6)
+ end
+ self:rect(7,18,186,32,3)
+ self:rect(9,20,182,28,1)
+ self:rect(10,20,2,28,6)
+ self:rect(12,47,178,1,4)
+ self:rect(11+(motion and tick*5%177 or 177),19,7,2,9)
+ local titleX=14-math.max(0,12-tick)*2
+ if tick>=2 then self:fontFit(15,22,"LEVEL "..string.format("%02d",b.number),11,95)end
+ if tick>=5 then
+  self:fontLarge(titleX,29,b.name,15)
+  self:rect(15,41,math.min(172,(tick-5)*10),1,6)
+ end
+ if tick>=9 then self:fontFit(15,43,b.tip,4,170)end
+ -- Coupled cogwheel decoration lives clear of the mission title.
+ for _,gear in ipairs({{177,32,4,1},{187,39,3,-1}})do
+  local gx,gy,r,reverse=gear[1],gear[2],gear[3],gear[4]
+  for tooth=0,7 do
+   local a=(tooth/4)*math.pi+(motion and tick*.16*reverse or 0)
+   self:rect(math.floor(gx+math.cos(a)*r),
+    math.floor(gy+math.sin(a)*r),2,2,7)
+  end
+  self:rect(gx-1,gy-1,3,3,6)
+  self:rect(gx,gy,1,1,1)
+ end
+ self:rect(7,53,108,52,3)
+ self:rect(9,55,104,48,1)
+ self:rect(119,53,74,52,3)
+ self:rect(121,55,70,48,1)
+ self:rect(12,57,98,1,11)
+ self:rect(124,57,64,1,11)
+ self:font(13,58,"TARGETS "..#b.targets,6)
+ self:font(124,58,"PARTS "..b.stockTotal,6)
+ for i,goal in ipairs(b.targets)do
+  local y=65+(i-1)*7
+  if tick>=10+i*2 then
+   self:rect(13,y-1,96,7,i%2==0 and 2 or 1)
+   self:rect(15,y,4,4,goal.spin=="CCW" and 14 or 9)
+   local caption=string.format("%d  %s %sX  @%d,%d",
+    goal.number,goal.spin,tostring(goal.rpm),goal.x,goal.y)
+   self:fontFit(22,y,caption,15,86)
+  else
+   self:rect(15,y,math.min(85,math.max(0,tick-5-i)*7),2,3)
+  end
+ end
+ for i,part in ipairs(b.stock)do
+  if tick>=8+i then
+   local col=(i-1)%2
+   local row=math.floor((i-1)/2)
+   local x=124+col*33
+   local y=65+row*8
+   self:rect(x,y-1,31,8,2)
+   self:rect(x+1,y,6,6,E.parts[part.kind].color)
+   self:font(x+2,y,part.kind,0)
+   local labels={I="SHFT",L="ELBW",T="SPLT",G="GEAR",
+    B="2X",Q="BOX",O="COG",V="BELT",D="CHN"}
+   self:fontFit(x+9,y,labels[part.kind],15,16)
+   self:font(x+26,y,tostring(part.count),6)
+  end
+ end
+ self:rect(0,107,200,13,1)
+ self:rect(0,107,200,1,7)
+ local extras={}
+ if b.bonus.sealed then extras[#extras+1]="SEAL"end
+ if b.bonus.fullFactory then extras[#extras+1]="STOCK"end
+ if b.bonus.precision then extras[#extras+1]="PAR"end
+ local bonus=#extras>0 and ("BONUS "..table.concat(extras,"/")) or
+  "BUILD TO BEGIN"
+ self:fontFit(9,111,bonus,11,121)
+ self:rect(131,112,4,4,motion and tick%8<4 and 9 or 6)
+ -- Entire screen is a usable tap target, with a prominent START button.
+ self:add(0,0,200,120,"beginLevel")
+ self:button(141,109,54,10,"START","beginLevel",nil,6)
 end
 function R:drawTutorial(m)
  self:drawGame(m)
