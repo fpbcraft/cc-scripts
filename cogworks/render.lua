@@ -2,6 +2,7 @@
 -- Coordinates in the pixel renderer are 128x88 logical units. Touch events
 -- from Graphics mode 2 are zero-based PIXELS; vanilla monitor touch is 1-based.
 local E=require("cogworks.engine")
+local T=require("cogworks.tutorials")
 local R={};R.__index=R
 local palette={
  [0]=0x0E1A23,[1]=0x172B37,[2]=0x284250,[3]=0x355866,
@@ -163,10 +164,6 @@ function R:piece(x,y,size,tile,light)
    end
    self:rect(cx-2,cy-2,5,5,tile.kind=="O" and 7 or 14)
    self:rect(cx-1,cy-1,3,3,1)
-  elseif tile.kind=="C"then
-   self:rect(cx-3,cy-2,2,5,tile.enabled and 9 or 8)
-   self:rect(cx+1,cy-2,2,5,tile.enabled and 9 or 8)
-   if tile.enabled then self:rect(cx-1,cy,3,1,9)end
   elseif tile.kind=="Q"then
    self:rect(cx-3,cy-3,7,7,13)
    self:rect(cx-1,cy-1,3,3,1)
@@ -292,8 +289,7 @@ function R:drawGame(m)
  self:font(117,19,"PARTS",11)
  self:font(163,19,result.correct.."/"..result.goals,
    result.win and 9 or 15)
- -- Two columns instead of the oversized five-row list: all ten parts
- -- remain simultaneously visible, including the new Create mechanics.
+ -- Two columns keep all nine mechanisms visible at once.
  for n,kind in ipairs(E.order)do
   local col=(n-1)%2
   local row=math.floor((n-1)/2)
@@ -306,17 +302,14 @@ function R:drawGame(m)
   self:rect(x+2,y+1,7,7,count>0 and E.parts[kind].color or 4)
   self:font(x+4,y+2,kind=="B" and "2" or kind,0)
   local alias=({I="SHAFT",L="ELBOW",T="SPLIT",G="GEAR",
-    B="2X",C="CLTCH",Q="BOX",O="COG",V="BELT",D="CHAIN"})[kind]
+    B="2X",Q="BOX",O="COG",V="BELT",D="CHAIN"})[kind]
   self:fontFit(x+11,y+2,alias,count>0 and 15 or 4,20)
   self:font(x+32,y+2,tostring(count),count>0 and 9 or 4)
   self:add(x,y,38,9,"tool",kind)
  end
- self:button(117,77,37,9,
+ self:button(117,77,77,9,
   m.selected=="erase" and "ERASING" or "REMOVE",
   "tool","erase",m.selected=="erase" and 8 or 3)
- self:button(156,77,38,9,
-  m.selected=="switch" and "SWITCH ON" or "SWITCH",
-  "tool","switch",m.selected=="switch" and 9 or 3)
  -- Persistent bonus objectives are visible while building, not buried in
  -- a modal screen. Labels are deliberately short enough for this pane.
  self:font(117,89,"BONUS GOALS",6)
@@ -332,7 +325,13 @@ function R:drawGame(m)
   self:fontFit(124,y,label,done and 9 or (bonus.earned and 6 or 5),70)
  end
  if #bonuses==0 then self:font(124,99,"FROM LEVEL 2",4)end
- self:rect(0,113,200,7,1)
+ self:drawSpans(g,result)
+ self:rect(0,109,200,11,1)
+ self:rect(0,109,200,1,7)
+ local selected=E.parts[m.selected]
+ local info=selected and (selected.name.." - "..T.descriptions[m.selected]) or
+  (T.descriptions[m.selected] or "SELECT A PART TO PLACE")
+ self:fontFit(3,110,info,11,194)
  local status=m.message
  if status==""then
   if result.win then status="CLEARED! BONUS TASKS ARE OPTIONAL"
@@ -340,9 +339,9 @@ function R:drawGame(m)
   elseif m.hasLeftInput then status="LEFT: PLACE/TURN   RIGHT: REMOVE"
   else status="CW = CLOCKWISE  /  CCW = COUNTERCLOCKWISE"end
  end
- self:fontFit(3,114,status,result.win and 9 or 5,160)
+ self:fontFit(3,115,status,result.win and 9 or 5,160)
  if result.win then
-  self:button(166,113,32,7,"NEXT","next")
+  self:button(166,114,32,6,"NEXT","next")
  end
 end
 function R:drawTitle(m)
@@ -422,15 +421,15 @@ function R:drawHelp(m)
   "S: ENGINE CW 1X","M: PRESS NEEDS CW/CCW",
   "I: STRAIGHT SHAFT","L: 90 DEG ELBOW",
   "T: THREE WAY SPLIT","G: FLIPS CW / CCW",
-  "B: DOUBLES SPEED","C: CLUTCH ON / OFF",
-  "Q: FOUR WAY BOX","O: 2X + SPIN REVERSE",
+  "B: DOUBLES SPEED","Q: FOUR WAY BOX",
+  "O: 2X + SPIN REVERSE",
   "V: SHORT SPAN BELT","D: LONG SPAN CHAIN"
  }
  local right={
   "CW = CLOCKWISE","CCW = COUNTERCW",
   "GOAL: MATCH SPIN + RPM","TAP EMPTY TO BUILD",
   "TAP A PART TO ROTATE","REMOVE TO RECLAIM",
-  "SWITCH TO TOGGLE C","PAIR BELT ENDS",
+  "PAIR BELT ENDS","CHECK SELECTED INFO",
   "CHAIN BRIDGES 2 CELLS","GEAR FLIPS ROTATION",
   "BONUSES ARE OPTIONAL","AUTO SAVES PER SLOT"
  }
@@ -439,7 +438,10 @@ function R:drawHelp(m)
   self:fontFit(8,y,left[i],i<3 and 6 or 15,91)
   self:fontFit(105,y,right[i],11,90)
  end
- self:button(68,109,64,10,"BACK","back")
+ self:button(52,109,58,10,"BACK","back")
+ if m.game and #T.forLevel(m.game.number)>0 then
+  self:button(113,109,83,10,"REPLAY PONDER","replayTutorial")
+ end
 end
 function R:drawText(m)
  local t=self.m;local w,h=t.getSize()
@@ -490,11 +492,21 @@ function R:drawText(m)
     (m.selected==kind and ">" or " ")..kind.." "..(g.remaining[kind]or 0),"tool",kind)
   end
   btn(1,h-5,12,"REMOVE","tool","erase")
-  btn(15,h-5,12,"SWITCH","tool","switch")
   btn(1,h-4,12,"SAVE","save")
   btn(15,h-4,12,"PAUSE","pause")
   if result.win then btn(29,h-4,12,"NEXT","next")end
+  local part=E.parts[m.selected]
+  label(1,h-3,(part and part.name.." - " or "")..
+   (T.descriptions[m.selected]or""),colors.lightBlue)
   label(1,h-2,m.message~=""and m.message or g.name,colors.orange)
+ elseif m.scene=="tutorial"then
+  local current=m.tutorial.steps[m.tutorial.index]
+  label(3,4,"PONDER  "..m.tutorial.index.."/"..#m.tutorial.steps,colors.orange)
+  label(3,7,current.title,colors.lightBlue)
+  label(3,11,current.lines[1],colors.white)
+  label(3,13,current.lines[2],colors.white)
+  btn(3,18,18,"SKIP","tutorialSkip")
+  btn(23,18,18,m.tutorial.index==#m.tutorial.steps and "GOT IT"or"NEXT","tutorialNext")
  elseif m.scene=="title"then
   label(3,4,"KINETIC WORKSHOP  /  30 PUZZLES",colors.lightBlue)
   local choices={{"CONTINUE","continue"},{"SAVE SLOTS","slots"},
@@ -537,6 +549,9 @@ function R:drawText(m)
    label(2,8,"2: DOUBLE RPM; C: CLUTCH ON/OFF")
    label(2,9,"Q: BOX   O: LARGE COG  V: BELT  D: CHAIN")
    choices={{"BACK","back"}}
+   if m.scene=="help" and m.game and #T.forLevel(m.game.number)>0 then
+    table.insert(choices,1,{"REPLAY PONDER","replayTutorial"})
+   end
   end
   for i,item in ipairs(choices)do btn(5,10+(i-1)*2,math.min(w-8,38),item[1],item[2])end
  end
@@ -548,6 +563,7 @@ function R:draw(m)
  if mon.setFrozen then pcall(mon.setFrozen,true)end
  mon.drawPixels(0,0,0,self.pw,self.ph)
  if m.scene=="game"then self:drawGame(m)
+ elseif m.scene=="tutorial"then self:drawTutorial(m)
  elseif m.scene=="title"then self:drawTitle(m)
  elseif m.scene=="slots"then self:drawSlots(m)
  elseif m.scene=="pause"then self:drawPause(m)
