@@ -16,7 +16,8 @@ Then open it any time with `store` (or `/fpbstore/main.lua`). The installer inst
 
 - Browse **COGWORKS**, **RAILBREAK**, **TIDEBOUND**, and **CIVCRAFT**. Games already installed through their own installers are detected automatically.
 - Install a missing game with its existing, tested, one-command installer.
-- Update any installed game by running the current repository installer again, without changing its save data.
+- Show the installed version and latest catalog version, with **UPDATE AVAILABLE** when a newer version is found. Press **R** to refresh the online version catalog. Existing installations with no identifiable version show `v?` until reinstalled through the Store.
+- Update or reinstall any installed game with the existing installer, without changing its save data.
 - Launch a game and return to the store after the game exits.
 - Remove an installed game's known application code without deleting its saved progress.
 - Update the store itself to fetch new catalog entries and fixes.
@@ -35,7 +36,7 @@ Then open it any time with `store` (or `/fpbstore/main.lua`). The installer inst
 
 Edit `fpbstore/catalog.lua` and append a catalog item containing a unique id, display name, installed entry point, installer filename, and an **explicit list of managed application files**. Never include save files or data directories in the managed list. The store UI automatically renders new catalog items without hard-coded additional buttons.
 
-An update is an on-demand reinstall from the latest configured repository revision; the store currently does not query remote commit hashes for version comparisons. The **UPDATE** action is available for every installed game.
+The Store reads version declarations from the latest remote `fpbstore/catalog.lua` (and uses its bundled catalog if offline). The installed version is recorded in the Store metadata after a successful install, or inferred from the game entry-point header for some legacy installations. It never guesses unknown versions. App versions must be updated in the catalog when publishing a new game release; unversioned apps cannot show a reliable update indicator. Checking versions needs HTTP; installs still use the existing safe app installers. **REINSTALL** remains available for installed games even if no newer version is detected.
 
 ## Files
 
