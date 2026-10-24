@@ -9,6 +9,7 @@ package.path='/railbreak/?.lua;/railbreak/?/init.lua;'..package.path
 local UI=require('train.ui')
 local State=require('train.state')
 local Rules=require('train.rules')
+local Display=require('display')
 if argv[1]=='--test-api' then
  -- Installer health check: exercise actual screen layouts without touching saves
  -- or requiring a peripheral. Import-only checks missed a crash in map rendering.
@@ -58,10 +59,11 @@ if peripheral then
  end
  if not monitor and peripheral.find then monitor=peripheral.find('monitor')end
 end
-local computerMode=not monitor
-if computerMode then
- monitor=require('terminal_view').new(term.current(),80,54)
-end
+local mode
+local native=nil
+if not monitor then native=term.current()end
+monitor,mode=Display.select(monitor,native,require('terminal_view'),80,54)
+local computerMode=Display.isComputer(mode)
 assert(monitor and monitor.getSize,'Attach an Advanced Monitor or run on an Advanced Computer')
 local oldScale=monitor.getTextScale and monitor.getTextScale() or nil
 -- CC:Tweaked's smallest supported text scale is 0.5. Set this *before*
@@ -88,30 +90,30 @@ local function run()
    if monitorName and a~=monitorName then
     -- Touch on another monitor; ignore.
    else
-    app:touch(b,c);if computerMode then monitor.present()end;animate()
+    app:touch(b,c);Display.present(monitor,mode);animate()
    end
   elseif computerMode and event=='mouse_click' then
-   local x,y=monitor.mouse(b,c)
-   if x then app:touch(x,y);monitor.present();animate()end
-  elseif computerMode and event=='mouse_scroll' then monitor.pan(0,a*4)
-  elseif computerMode and event=='term_resize' then monitor.present()
-  elseif computerMode and event=='key' and keys and
+   local x,y=Display.click(monitor,mode,b,c)
+   if x then app:touch(x,y);Display.present(monitor,mode);animate()end
+  elseif mode=='virtual-text' and event=='mouse_scroll' then monitor.pan(0,a*4)
+  elseif computerMode and event=='term_resize' then app:resize();Display.present(monitor,mode)
+  elseif mode=='virtual-text' and event=='key' and keys and
     (a==keys.left or a==keys.right or a==keys.up or a==keys.down) then
    monitor.pan(a==keys.left and -8 or (a==keys.right and 8 or 0),
     a==keys.up and -5 or (a==keys.down and 5 or 0))
-  elseif event=='monitor_resize' then app:resize();if computerMode then monitor.present()end;animate()
+  elseif event=='monitor_resize' then app:resize();Display.present(monitor,mode);animate()
   elseif event=='char' and app.scene=='setup' and app.editing then
    local U=require('core.util')
    local name=app.names[app.editing]
-   app.names[app.editing]=U.name(name..a);app:draw();if computerMode then monitor.present()end
+   app.names[app.editing]=U.name(name..a);app:draw();Display.present(monitor,mode)
   elseif event=='key' and app.scene=='setup' and app.editing and keys and a==keys.backspace then
-   app.names[app.editing]=app.names[app.editing]:sub(1,-2);app:draw();if computerMode then monitor.present()end
+   app.names[app.editing]=app.names[app.editing]:sub(1,-2);app:draw();Display.present(monitor,mode)
   elseif event=='timer' and a==timer then
-   timer=nil;app.frame=app.frame+1;app:draw();if computerMode then monitor.present()end;animate()
+   timer=nil;app.frame=app.frame+1;app:draw();Display.present(monitor,mode);animate()
   end
  end
 end
 local success,why=xpcall(run,function(s)return tostring(s)..'\n'..(debug and debug.traceback and debug.traceback()or'')end)
-app:close();if computerMode then monitor.close()end
+app:close();Display.close(monitor,mode)
 if oldScale and monitor.setTextScale then pcall(monitor.setTextScale,oldScale)end
 if not success then error(why,0)end
