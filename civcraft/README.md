@@ -1,6 +1,6 @@
-# CIVCRAFT v0.5 — Hexagonal Pocket Civilization
+# CIVCRAFT v0.6 — Territorial Hex Civilization
 
-A small Civilization-inspired, turn-based 4X game for **CC:Tweaked**. One computer hosts the authoritative match; **2–4 human players** each use their own computer and optionally an Advanced Monitor. Computers communicate through **rednet modems**, either wireless (within range) or wired (via the same wired modem network). It also works over interdimensional wireless modems. No HTTP or external web server is needed after installation.
+A Civilization-inspired, turn-based hex 4X for **CC:Tweaked**, supporting local hot-seat (2–4 human/AI slots) or multiplayer over rednet. Local games use one computer or an Advanced Monitor; networked games use an authoritative host. Computers communicate through **rednet modems**, either wireless (within range) or wired (via the same wired modem network). It also works over interdimensional wireless modems. No HTTP or external web server is needed after installation.
 
 ## Install on every participating computer
 
@@ -99,4 +99,21 @@ City management retains production, workforce assignment and population growth. 
 
 ### Version and compatibility
 
-This edition is **v0.5.0**. Run the existing `install-civcraft.lua` installer or update through FPB Store. Game code is updated without deleting `/civcraft/data`. Network-host sessions continue using their existing dedicated save, while local hot-seat campaigns use the three-slot manager.
+This edition is **v0.6.0**. Run the existing `install-civcraft.lua` installer or update through FPB Store. Game code is updated without deleting `/civcraft/data`. Network-host sessions continue using their existing dedicated save, while local hot-seat campaigns use the three-slot manager.
+
+## v0.6: Game systems and UX redesign
+
+The authoritative implementation objectives, touch layout, world generation, turn-based city projects, tech graph, diplomacy-ready civilization abilities, fog of war and QA checklist are tracked in [DESIGN-v0.6.md](DESIGN-v0.6.md). Do not treat a checked task as complete until integration and regression tests pass.
+
+## v0.6: Worked hexes, production, and research
+
+[Read the full v0.6 design and acceptance specification](DESIGN_4X.md).
+
+- **Territory:** each city controls a contiguous radius-two hex region (radius three at population six). Distinct owners have visible six-edge borders. Contested hexes belong to the nearest city, with a stable city-ID tie break.
+- **Resource deposits:** worlds generate food/production resources and strategic iron, horses, and saltpeter. Change the left map-mode panel between **Terrain, Territory, Resources, and Yields**; unrevealed deposits stay hidden by fog of war.
+- **Assign citizens by tapping:** select a city, choose **WORK HEXES**, and tap highlighted owned hexes to work/unwork them. Workers cannot exceed city population. The city center is always worked, and each staffed hex contributes its displayed food/industry/science yields. Choose **DONE WORK** to resume ordinary selection.
+- **Production:** a city's right sidebar lists units and buildings with estimated **turns**, project selection and page controls. Production accumulates at each round boundary. Ordinary production does **not** consume stockpiled food or wood. Certain advanced units require an eligible strategic deposit inside your territory.
+- **Research:** selecting a technology in the connected canvas assigns a research target. The graph nodes show an icon and name; the adjacent detail inspector describes its prerequisites, unlock and expected completion time. The civilization's per-turn science advances research without an upfront science purchase.
+- **Campaign safety:** named three-slot saves, deterministic world seeds and separate civilization discovery histories remain supported, including on single-terminal CraftOS environments. Older campaign saves migrate without deleting existing slot data.
+
+The game is designed for touch input but also supports keyboards and text terminals. Automated test coverage includes deferred construction and research, strategic eligibility, worked-tile yields, deterministic geography, hot-seat privacy and graphics navigation.
