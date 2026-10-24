@@ -105,12 +105,12 @@ local function play(s,index)
  s.discard[#s.discard+1]=key
  drawCards(s,card.draw or 0)
  s.log=card.name.." played."
- if e.hp<=0 then winFight(s)end
+ if e.hp<=0 then winFight(s)else save(s)end
 end
 local function endTurn(s)
  if s.screen~="combat" then return end
  local e=s.enemy;local a=intent(s)
- local raw=a[2];local blocked=math.min(raw,e.block or 0)
+ local raw=a[2]
  -- Enemy block protects from player attacks, not enemy's own attack.
  local taken=math.max(0,raw-s.block)
  s.hp=s.hp-taken
@@ -120,7 +120,7 @@ local function endTurn(s)
  s.log=a[1]..": "..taken.." damage taken."
  if s.hp<=0 then s.hp=0;s.screen="defeat";save(s);return end
  for _,key in ipairs(s.hand)do s.discard[#s.discard+1]=key end
- s.turn=s.turn+1;beginTurn(s);save(s)
+ beginTurn(s);save(s)
 end
 local function advance(s,kind)
  s.floor=s.floor+1
@@ -214,11 +214,11 @@ function UI:draw()
  elseif s.screen=="shop"then
   r:center(top,"TRAVELLING MERCHANT",8)
   local bw=math.floor((w-24)/3)
-  for i=1,3 do local key=s.shop[i];local c=C[key];local x=7+(i-1)*(bw+5)
-   tile(x,top+20,bw,78,c.name,"50 GOLD",function()
-    if s.gold>=50 then s.gold=s.gold-50;s.deck[#s.deck+1]=key;s.shop[i]=nil;s.log="Card purchased.";save(s)
+  for i=1,3 do local key=s.shop[i];local c=key and C[key];local x=7+(i-1)*(bw+5)
+   if c then tile(x,top+20,bw,78,c.name,"50 GOLD",function()
+    if s.gold>=50 then s.gold=s.gold-50;s.deck[#s.deck+1]=key;s.shop[i]=false;s.log="Card purchased.";save(s)
     else s.log="Not enough gold."end
-   end)
+   end) else tile(x,top+20,bw,78,"SOLD OUT","")end
   end
   button(7,bottom-32,math.floor((w-19)/2),14,"HEAL 12 / 30G",function()
    if s.gold>=30 then s.gold=s.gold-30;s.hp=math.min(s.maxhp,s.hp+12);save(s)else s.log="Not enough gold."end
