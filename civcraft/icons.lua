@@ -34,6 +34,27 @@ function I.draw(r,kind,x,y,size,color)
   rect(r,cx+2*a,y+7*a,a,a,4)
   rect(r,cx-a,y+2*a,3*a,3*a,color)
   rect(r,cx,y+a,a,a,7)
+ elseif kind=="archer" or kind=="ranger"then
+  rect(r,cx-2*a,y+3*a,3*a,4*a,color)
+  rect(r,cx+a,y+a,a,7*a,7)
+  rect(r,cx+2*a,y+2*a,a,5*a,9)
+  rect(r,cx-2*a,y+a,2*a,2*a,6)
+ elseif kind=="swordsman"then
+  rect(r,cx-2*a,y+3*a,4*a,5*a,color)
+  rect(r,cx+2*a,y,2*a,6*a,7)
+  rect(r,cx+a,y+3*a,4*a,a,8)
+  rect(r,cx-2*a,y+a,3*a,2*a,6)
+ elseif kind=="explorer"then
+  rect(r,cx-2*a,y+3*a,4*a,4*a,color)
+  rect(r,cx-3*a,y+a,6*a,2*a,9)
+  rect(r,cx+a,y+6*a,3*a,a,8)
+ elseif kind=="galley" or kind=="navigator" or kind=="frigate" or kind=="flagship"then
+  rect(r,cx-4*a,y+5*a,8*a,2*a,16)
+  rect(r,cx-2*a,y+2*a,5*a,3*a,color)
+  rect(r,cx,y,1*a,6*a,7)
+  if kind=="frigate" or kind=="flagship"then
+   rect(r,cx-4*a,y+4*a,8*a,1*a,8)
+  end
  elseif kind=="settler"then
   -- Wagon with canvas roof, axle, wheels.
   rect(r,cx-3*a,y+3*a,6*a,3*a,9)
