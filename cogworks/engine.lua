@@ -220,7 +220,7 @@ function E.challenges(g,result)
  add("sealed","SEALED LINES","NO OPEN PORTS OR IDLE PARTS",
   result.openPorts==0 and result.unpowered==0)
  if g.number>=3 then
-  add("master","FULL FACTORY","USE ALL STOCK, SEAL AND POWER IT",
+  add("master","FULL FACTORY","STOCK USED, POWERED, SEALED",
    result.remaining==0 and result.openPorts==0 and result.unpowered==0)
  end
  if g.number>=5 then
