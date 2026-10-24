@@ -1,7 +1,7 @@
 local H=assert(loadfile("games/civcraft/hex.lua"))()
 local oldDofile=dofile
 dofile=function(p)
- if p=="/games/civcraft/content.lua"then return oldDofile("games/civcraft/content.lua")end
+ if p:sub(1,16)=="/games/civcraft/"then return oldDofile(p:sub(2))end
  return oldDofile(p)
 end
 local S=assert(loadfile("games/civcraft/systems.lua"))()

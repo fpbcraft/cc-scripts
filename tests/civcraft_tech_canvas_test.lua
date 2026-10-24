@@ -1,6 +1,6 @@
 local nativeDofile=dofile
 dofile=function(path)
- if path=="/games/civcraft/content.lua"then return nativeDofile("games/civcraft/content.lua")end
+ if path:sub(1,16)=="/games/civcraft/"then return nativeDofile(path:sub(2))end
  return nativeDofile(path)
 end
 local S=assert(loadfile("games/civcraft/systems.lua"))()
@@ -10,6 +10,7 @@ local buttons,strokes={},0
 local r={buttons=buttons}
 function r:fill(...)strokes=strokes+1 end
 function r:outline(...)strokes=strokes+1 end
+function r:icon(...)strokes=strokes+1 end
 function r:text(...)end
 function r:button(x,y,w,h,label,fn)
  buttons[#buttons+1]={x=x,y=y,w=w,h=h,label=label,fn=fn}

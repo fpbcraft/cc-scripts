@@ -2,7 +2,7 @@
 local P={schema=2,storeVersion="2.0.0",packages={}}
 P.packages.cogworks={
  id="cogworks",source="games/cogworks",root="/games/cogworks",legacy="/cogworks",entry="main.lua",
- files={"README.md","app.lua","display.lua","engine.lua","expansion.lua","levels.lua","main.lua","render.lua","storage.lua","terminal_view.lua"},
+ files={"README.md","app.lua","briefing.lua","display.lua","engine.lua","expansion.lua","levels.lua","main.lua","render.lua","storage.lua","terminal_view.lua","tutorials.lua"},
  libraries={"loader","display","terminal_view"},
  data={"saves","save.dat","settings.dat"},
  startup=false,lowDisk=false,basalt=false,
@@ -85,7 +85,7 @@ P.apps={
    icon="I",genre="DECKBUILDER",
   },
   {
-   version="0.5.0",id="civcraft",name="CIVCRAFT",subtitle="POCKET CIVILIZATION",
+   version="0.6.0",id="civcraft",name="CIVCRAFT",subtitle="POCKET CIVILIZATION",
    description="Local hotseat or networked 2-4 player civilization-building 4X.",
    icon="V",genre="4X / STRATEGY",
   },

@@ -23,13 +23,12 @@ The **Pause Menu** offers Resume, Save Game, Select Level (from your unlocked st
 
 - Tap a part in the compact two-column inventory, then tap an empty board cell to **place** it.
 - Tap a placed part to **rotate** it clockwise 90 degrees. Tap a fixed machine to inspect its needed **CW / CCW** and the current spin. Tap **REMOVE** to reclaim parts.
-- Select **SWITCH**, then tap a **clutch** to engage/disengage it. Switch mode is different from rotating a part.
 - **Hint has been removed.** You can solve using as little or as much stock as necessary.
-- Keyboard: `1`–`9`, `0` choose the 10 part types; `X` removes, `T` selects clutch switch, `S` saves, `P` or `Q` pauses, `N` next, `B` back. Ctrl+T exits safely and saves.
+- Keyboard: `1`–`9`, `0` choose the 10 part types; `X` removes, `S` saves, `P` or `Q` pauses, `N` next, `B` back. Ctrl+T exits safely and saves.
 
 **Rotation clarity:** The green engine always generates **CW / 1×** power. Presses display **CW** or **CCW** on their face with their RPM underneath. Tapping a press displays what it **needs** and what it's **currently receiving**. A **gear** reverses CW ↔ CCW; a **large cog** reverses direction **and** doubles RPM. RPM and direction are independent of the physical orientation of the port.
 
-### Ten available parts
+### Nine available parts
 
 | Icon | Part | Mechanical behavior |
 |---|---|---|
@@ -38,13 +37,40 @@ The **Pause Menu** offers Resume, Save Game, Select Level (from your unlocked st
 | T | Splitter | Three connected ports |
 | G | Gear | Reverses spin (1:1 RPM) |
 | B / 2 | Speed Drive | Doubles RPM from marked input to output; reverse flow halves |
-| C | Clutch | Straight shaft you can engage or disengage using SWITCH |
 | Q | Gearbox | Distributes power to four directions; unused outlets are capped |
 | O | Large Cog | Reverses spin and doubles RPM across the input/output; reverse flow halves |
 | V | Belt | Two aligned endpoints can transmit across **up to two** empty/stone cells |
 | D | Chain Drive | Two aligned endpoints transmit across **up to three** empty/stone cells |
 
-The game provides actual gap-spanning belt and chain puzzles in later levels (e.g. levels 6 and 23). The later stages also introduce the other parts, while the tutorials stay simple.
+Belt and chain endpoints visibly connect across empty or stone cells, including the gap on level 6 and the longer span on level 23. A moving highlight indicates live power flow. Open ports can be highlighted separately in Settings.
+
+Clutches have been removed because the authored puzzles only used them as ordinary shafts. **Existing saved clutch placements automatically migrate to shafts** when loading, preserving saved level progress.
+
+### Animated level briefings
+
+Every time you enter a level (Continue, NEXT, or Select Level), a full-screen
+**mission briefing** appears before the machinery board. It displays the
+level's number and name, instructional tip, each press's required CW/CCW
+rotation, speed in X, board coordinates, and the exact inventory of available
+mechanisms. Optional bonus categories are identified separately.
+
+In pixel graphics mode, large title lettering slides into place, the
+workshop conveyor and cogwheels move, and target objectives and parts
+appear in sequence. Animations never delay play: **tap anywhere or press
+START / Enter / Space** to start immediately. The Settings animation toggle
+shows a fully populated briefing without transitions. The ordinary text
+fallback offers the same objectives, inventory and START action.
+
+The sequence is **briefing → first-time Ponder (when applicable) → game**.
+Briefings repeat on level entry; Ponder lessons do not.
+
+### Mechanic lessons (Ponder)
+
+When a level first introduces a mechanic, a **Ponder** overlay appears with a short explanation and animated mechanism diagram. Use **NEXT / GOT IT** to read the slides or **SKIP** to dismiss. Lessons are saved per campaign slot, so returning to an already-introduced level does not repeat them, even after restarting the computer. Use the **?** help screen and **REPLAY PONDER** to view the current level's lesson again.
+
+Introductions include shafts (1), elbows (2), splitters (4), belts (6), gears (8), speed drives and gearboxes (9), large cogs (16), and chains (23). Ponder is available in both pixel graphics mode and the text fallback.
+
+A persistent strip below the board explains the selected construction part, including speed/spin and transmission range. A separate status line reports jams, current press requirements and level progress. Bonus goal spacing has been adjusted to avoid text collisions.
 
 ### Optional challenges are always visible
 
@@ -69,6 +95,8 @@ Earned bonuses remain unlocked when you revisit a stage. They never block normal
 ```bash
 lua5.3 tests/cogworks_test.lua
 lua5.3 tests/cogworks_mechanics_test.lua
+lua5.3 tests/cogworks_briefing_test.lua
+lua5.3 tests/cogworks_tutorials_test.lua
 lua5.3 tests/cogworks_storage_test.lua
 lua5.3 tests/cogworks_renderer_test.lua
 lua5.3 tests/cogworks_main_test.lua

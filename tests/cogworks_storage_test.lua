@@ -36,12 +36,17 @@ files[S.LEGACY]=textutils.serialize(old)
 local imported=S.load(1)
 assert(imported and imported.unlocked==14 and imported.level==7)
 assert(imported.awards[7].sealed,"Legacy trophies preserved")
+assert(imported.sessions[7]and imported.best[7]==12,
+ "Version 2 upgrade does not erase existing solutions")
+assert(type(imported.tutorials)=="table","Older saves gain tutorial flags")
 assert(S.save(1,imported),"Legacy save migrated to slot 1")
 assert(files[S.LEGACY],"Legacy backup untouched")
 local second=S.newProgress()
-second.unlocked=5;second.level=4
+second.unlocked=5;second.level=4;second.tutorials.I=true
 assert(S.save(2,second),"Second save")
 assert(S.load(1).level==7 and S.load(2).level==4,"Slots independent")
+assert(S.load(2).tutorials.I and not S.load(1).tutorials.I,
+ "Ponder completion is per slot and survives reload")
 local third=S.newProgress()
 third.unlocked=30;third.level=30
 assert(S.save(3,third),"Third save")

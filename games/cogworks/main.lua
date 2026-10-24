@@ -96,8 +96,9 @@ local function start()
     renderer:resize();redraw()
    elseif event=="timer" and a==timer then
     if renderer.mode=="graphics" and app.settings.animations and
-      app.scene=="game"then redraw()end
-    timer=os.startTimer(0.2)
+      (app.scene=="game" or app.scene=="briefing" or
+       app.scene=="tutorial")then redraw()end
+    timer=os.startTimer(app.scene=="briefing" and 0.1 or 0.2)
    elseif event=="char"then
     local char=tostring(a):lower()
     local n=tonumber(char)
@@ -105,9 +106,10 @@ local function start()
      if not act("tool",E.order[n])then break end
     elseif char=="0"then act("tool",E.order[10])
     elseif char=="x"then act("tool","erase")
-    elseif char=="t"then act("tool","switch")
     elseif char=="s"then act("save")
-    elseif char=="n"then act("next")
+    elseif char=="n"then
+     act(app.scene=="briefing" and "beginLevel" or "next")
+    elseif char==" " and app.scene=="briefing"then act("beginLevel")
     elseif char=="p" or char=="q"then
      if app.scene=="game"then act("pause")
      elseif app.scene=="pause"then act("resume")
@@ -122,6 +124,8 @@ local function start()
      local dx=a==keys.left and -8 or (a==keys.right and 8 or 0)
      local dy=a==keys.up and -5 or (a==keys.down and 5 or 0)
      monitor.pan(dx,dy)
+    elseif (a==keys.enter or a==keys.numPadEnter or a==keys.space) and
+      app.scene=="briefing"then act("beginLevel")
     elseif a==keys.escape or a==keys.backspace then
      local state=app.scene
      if state=="game"then act("pause")

@@ -57,6 +57,8 @@ state.mapSize="standard";state.mapSeed=137
 ui:draw(state,11,{localMode=true,screen="game"})
 touchLabel("MAP SIZE")
 assert(calls[#calls].action=="mapSize","Map size control works by touch")
+touchLabel("MAP TYPE")
+assert(calls[#calls].action=="mapType","Map type chooser by touch")
 touchLabel("REROLL SEED")
 assert(calls[#calls].action=="mapSeed","Map reroll control works by touch")
 touchLabel("+ PLAYER")
@@ -101,9 +103,14 @@ assert(tapHex(2,2),"Select owned city")
 ui:draw(state,11,{localMode=true})
 local actions={}
 for _,btn in ipairs(ui.r.buttons)do actions[btn.label]=true end
-assert(actions.UNITS and actions.BUILDINGS and actions.POPULATION and actions["TECH TREE"],
- "City contextual action menu")
+assert((actions.UNITS or actions["BUILD UNITS"]) and
+ (actions.BUILDS or actions.BUILDINGS) and actions["TECH TREE"],
+ "Fixed city production and technology side controls")
 assert(not actions["MOVE UNIT"],"City should not expose unit movement")
+assert(ui.mapViewport and ui.mapViewport.w>0,"Central map viewport")
+local oldPan=ui.panX
+ui:pan(45,0)
+assert(ui.panX>=oldPan,"Pan control clamps within world")
 touchLabel("TECH TREE")
 ui:draw(state,11,{localMode=true})
 local techNode=false

@@ -1,0 +1,36 @@
+name: COGWORKS Lua tests
+
+on:
+  push:
+    paths:
+      - "lib/**"
+      - "tests/support/**"
+      - "games/cogworks/**"
+      - "installers/cogworks.lua"
+      - "tests/cogworks*_test.lua"
+      - ".github/workflows/cogworks-tests.yml"
+  pull_request:
+    paths:
+      - "lib/**"
+      - "tests/support/**"
+      - "games/cogworks/**"
+      - "installers/cogworks.lua"
+      - "tests/cogworks*_test.lua"
+      - ".github/workflows/cogworks-tests.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua 5.3
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.3
+      - name: Run COGWORKS tests
+        run: |
+          set -eu
+          for script in tests/cogworks*_test.lua; do
+            echo "Running $script"
+            lua5.3 "$script"
+          done

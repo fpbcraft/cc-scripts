@@ -80,6 +80,33 @@ function I.draw(r,kind,x,y,size,color)
   rect(r,cx-a,y+2*a,2*a,a,7)
  elseif kind=="water"then
   for k=0,2 do rect(r,cx-3*a,y+(2+k*2)*a,6*a,a,13)end
+ elseif kind=="grain"then
+  rect(r,cx-a,y+3*a,2*a,5*a,9)
+  rect(r,cx-3*a,y+3*a,2*a,3*a,11)
+  rect(r,cx+a,y+a,2*a,4*a,11)
+ elseif kind=="timber"then
+  rect(r,cx-2*a,y+3*a,4*a,5*a,16)
+  rect(r,cx-3*a,y+a,6*a,3*a,12)
+ elseif kind=="stone"then
+  rect(r,cx-3*a,y+4*a,6*a,3*a,4)
+  rect(r,cx-a,y+2*a,3*a,2*a,7)
+ elseif kind=="iron"then
+  rect(r,cx-3*a,y+3*a,6*a,4*a,5)
+  rect(r,cx-2*a,y+4*a,4*a,a,8)
+  rect(r,cx-a,y+2*a,2*a,a,9)
+ elseif kind=="horses"then
+  rect(r,cx-3*a,y+4*a,6*a,3*a,16)
+  rect(r,cx+a,y+2*a,2*a,3*a,16)
+  rect(r,cx-2*a,y+7*a,a,a,7)
+  rect(r,cx+2*a,y+7*a,a,a,7)
+ elseif kind=="saltpeter"then
+  rect(r,cx-3*a,y+4*a,6*a,3*a,7)
+  rect(r,cx-a,y+a,2*a,4*a,8)
+  rect(r,cx+2*a,y+3*a,a,2*a,9)
+ elseif kind=="fish"then
+  rect(r,cx-3*a,y+4*a,6*a,2*a,13)
+  rect(r,cx+2*a,y+2*a,2*a,5*a,11)
+  rect(r,cx-2*a,y+3*a,a,a,7)
  elseif kind=="food"then
   rect(r,cx-a,y+2*a,2*a,6*a,11)
   rect(r,cx-3*a,y+a,2*a,3*a,11)

@@ -5,7 +5,7 @@ S.ROOT="/games/cogworks"
 S.DIR=S.ROOT.."/saves"
 S.SETTINGS=S.ROOT.."/settings.dat"
 S.LEGACY=S.ROOT.."/save.dat"
-S.VERSION=2
+S.VERSION=3
 local function ensure(path)
  if not fs.exists(path)then fs.makeDir(path)end
 end
@@ -52,7 +52,7 @@ function S.path(slot)
  return S.DIR.."/slot-"..slot..".dat"
 end
 function S.newProgress()
- return {campaignVersion=S.VERSION,unlocked=1,level=1,best={},sessions={},awards={}}
+ return {campaignVersion=S.VERSION,unlocked=1,level=1,best={},sessions={},awards={},tutorials={}}
 end
 function S.normalize(data)
  local p=S.newProgress()
@@ -62,8 +62,13 @@ function S.normalize(data)
  p.best=type(data.best)=="table" and data.best or {}
  p.sessions=type(data.sessions)=="table" and data.sessions or {}
  p.awards=type(data.awards)=="table" and data.awards or {}
+ if type(data.tutorials)=="table"then
+  for key,value in pairs(data.tutorials)do
+   if type(key)=="string" and value==true then p.tutorials[key]=true end
+  end
+ end
  -- Pre-construction saves may contain incompatible level-4+ layouts.
- if data.campaignVersion~=S.VERSION then
+ if data.campaignVersion~=2 and data.campaignVersion~=S.VERSION then
   for i=4,12 do p.sessions[i]=nil;p.best[i]=nil end
  end
  return p

@@ -80,10 +80,10 @@ for index,data in ipairs(E.levels)do
 
 end
 -- Check inventory includes the ten distinct construction tools.
-eq(#E.order,10,"Expanded construction inventory")
+eq(#E.order,9,"Construction inventory excludes nonessential clutch")
 local actual={}
 for _,kind in ipairs(E.order)do actual[kind]=true;assert(E.parts[kind])end
-for _,kind in ipairs({"C","Q","O","V","D"})do
+for _,kind in ipairs({"Q","O","V","D"})do
  assert(actual[kind],"New mechanism is selectable: "..kind)
 end
 local g=E.new(1)
