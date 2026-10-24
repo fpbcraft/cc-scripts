@@ -149,7 +149,7 @@ function R:piece(x,y,size,tile,light)
   self:rect(x+2,y+2,size-4,size-4,active and 9 or 8)
   self:rect(x+3,y+3,size-6,size-6,1)
   local requirement=(tile.sign<0 and "-" or "+")..tostring(tile.speed)
-  self:font(x+2,y+math.floor(size/2)-2,requirement,active and 9 or 15)
+  self:font(x+1,y+math.floor(size/2)-2,requirement,active and 9 or 15)
  elseif tile.kind=="S"then
   self:rect(x+3,y+3,size-6,size-6,6)
   self:font(x+4,y+math.floor(size/2)-2,"S",0)
@@ -195,7 +195,7 @@ function R:piece(x,y,size,tile,light)
   local active=light and light.correct
   self:rect(x+2,y+2,size-4,size-4,active and 9 or 8)
   self:rect(x+3,y+3,size-6,size-6,1)
-  self:font(x+2,y+math.floor(size/2)-2,
+  self:font(x+1,y+math.floor(size/2)-2,
    (tile.sign<0 and "-" or "+")..tostring(tile.speed),active and 9 or 15)
  elseif tile.kind=="S"then
   self:rect(x+3,y+3,size-6,size-6,6)
