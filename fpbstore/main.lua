@@ -93,7 +93,8 @@ local function draw()
  screen.clear()
  local compact=w<52 or h<23
  local first=math.min(w,math.max(1,w))
- put(1,1,centered(" FPB STORE  /  CC APPS ",first),colors.orange,colors.gray,first)
+ local storeVersion=Manager.storeStatus()
+ put(1,1,centered(" FPB STORE v"..(storeVersion.installedVersion or "?").." / CC APPS ",first),colors.orange,colors.gray,first)
  put(2,2,"INSTALL  |  UPDATE  |  PLAY  |  REMOVE",colors.lightBlue,nil,w-2)
  if confirmation then
   put(2,4,"CONFIRM: "..confirmation.name,colors.yellow,nil,w-2)
@@ -135,18 +136,20 @@ local function draw()
    end
   end
   local row=h-6
+  local storeInfo=Manager.storeStatus()
+  local storeLabel=storeInfo.updateAvailable and "UPDATE STORE!" or "STORE UPDATE"
   if w>=58 then
    button(2,row,17,status.installed and (status.updateAvailable and "UPDATE AVAILABLE" or "REINSTALL") or "INSTALL","install")
    button(20,row,13,"PLAY","play",nil,status.installed)
    button(34,row,16,"REMOVE","remove",nil,status.installed)
-   button(51,row,math.min(14,w-51),"STORE UPDATE","store-update")
+   button(51,row,math.min(14,w-51),storeLabel,"store-update")
    button(math.max(2,w-11),row+2,10,"EXIT","exit")
   else
    local cw=math.floor((w-4)/3)
    button(2,row,cw,status.installed and (status.updateAvailable and "UPDATE" or "REINSTALL") or "INSTALL","install")
    button(3+cw,row,cw,"PLAY","play",nil,status.installed)
    button(4+cw*2,row,cw,"REMOVE","remove",nil,status.installed)
-   button(2,row+2,math.min(22,w-3),"UPDATE STORE","store-update")
+   button(2,row+2,math.min(22,w-3),storeLabel,"store-update")
    button(math.max(2,w-12),row+2,10,"EXIT","exit")
   end
  end
