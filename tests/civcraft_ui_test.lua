@@ -40,6 +40,25 @@ local function touchLabel(label)
  end
  error("Button not found: "..label)
 end
+ui:draw(state,11,{localMode=true,screen="title",slot=2,slots={
+ {occupied=true,name="EMPIRE ALPHA",round=4},
+ {occupied=false,name="EMPTY SLOT 2"},
+ {occupied=true,name="EMPIRE BETA",round=9}
+}})
+touchLabel("SLOT 3  EMPIRE BETA  R9")
+assert(calls[#calls].action=="selectSlot" and calls[#calls].data.slot==3,
+ "Touchscreen title must switch between saved campaigns")
+ui:draw(state,11,{localMode=true,screen="title",slot=2,slots={
+ {occupied=true,name="A",round=1},{occupied=false,name="B"},{occupied=false,name="C"}
+}})
+touchLabel("NEW CAMPAIGN")
+assert(calls[#calls].action=="newGame","Main menu starts a new game")
+state.mapSize="standard";state.mapSeed=137
+ui:draw(state,11,{localMode=true,screen="game"})
+touchLabel("MAP SIZE")
+assert(calls[#calls].action=="mapSize","Map size control works by touch")
+touchLabel("REROLL SEED")
+assert(calls[#calls].action=="mapSeed","Map reroll control works by touch")
 touchLabel("+ PLAYER")
 assert(calls[#calls].action=="addPlayer")
 touchLabel("START GAME")
@@ -85,6 +104,15 @@ for _,btn in ipairs(ui.r.buttons)do actions[btn.label]=true end
 assert(actions.UNITS and actions.BUILDINGS and actions.POPULATION and actions["TECH TREE"],
  "City contextual action menu")
 assert(not actions["MOVE UNIT"],"City should not expose unit movement")
+touchLabel("TECH TREE")
+ui:draw(state,11,{localMode=true})
+local techNode=false
+for _,button in ipairs(ui.r.buttons)do
+ if button.label=="agriculture" then techNode=true end
+end
+assert(techNode,"City tech tab opens connected technology graph canvas")
+touchLabel("CLOSE")
+ui:draw(state,11,{localMode=true})
 touchLabel("END TURN")
 assert(calls[#calls].action=="end","End-turn handler wired")
 ui:draw(state,12,{handoff=true,localMode=true})
