@@ -65,6 +65,7 @@ textutils={
 local events={
  {"monitor_touch","monitor_1",6,13},  -- title: save slots
  {"monitor_touch","monitor_1",5,5},   -- new game slot 1
+ {"monitor_touch","monitor_1",6,18},  -- dismiss one-time Ponder tutorial
  {"monitor_touch","monitor_1",10,10}, -- vanilla right click places a shaft
  {"monitor_touch","monitor_1",10,10,2}, -- button-aware addon removes
  {"monitor_left_click","monitor_1",9.5/70,9.5/40}, -- optional left-click: build
