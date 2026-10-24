@@ -38,7 +38,7 @@ for _,tile in ipairs(workable)do if city.worked[tile.key]then target=tile;break 
 assert(target,"Expected a staffed hex")
 local oldYield=Systems.yields(player,city,state,Hex,World.territory(state,Hex))
 assert(Systems.workTile(state,city,target.x,target.y),"Click to unwork a hex")
-local yieldAfter=Systems.cityYield(state,city)
+local yieldAfter=Systems.yields(player,city,state,Hex,borders)
 assert(yieldAfter.food==oldYield.food-target.yield.food and
  yieldAfter.industry==oldYield.industry-target.yield.industry and
  yieldAfter.science==oldYield.science-target.yield.science,
@@ -47,7 +47,7 @@ assert(Systems.workTile(state,city,target.x,target.y),"Click again to work the h
 assert(not Systems.workTile(state,city,world.width,world.height),
  "Citizens cannot be assigned beyond the city boundary")
 local oldWood=player.wood
-assert(Systems.queue(player,city,"building","farm",state))
+assert(Systems.queue(player,city,"building","farm",state,Hex))
 assert(not city.buildings.farm,"Queueing production may not instantly finish a building")
 assert(player.wood==oldWood,"Standard projects never spend stored industry")
 local cost=Systems.projectCost("building","farm")
@@ -62,7 +62,7 @@ assert(not player.techs.mining and player.researchTarget=="mining",
  "Research selection must not instantly award technology")
 local progress
 for i=1,30 do
- Systems.production(state)
+ Systems.production(state,Hex)
  if not player.techs.mining and player.researchTarget then
   progress=player.researchProgress.mining
   assert(progress>=0,"Research progress accumulates across turns")
