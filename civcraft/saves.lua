@@ -6,6 +6,7 @@ local function path(slot)
  return S.root.."/slot-"..slot..".dat"
 end
 S.path=path
+local migrationMarker=S.root.."/slots-migrated"
 local function read(p)
  if not fs.exists(p)then return nil end
  local h=fs.open(p,"r")
@@ -19,7 +20,9 @@ end
 function S.load(slot)
  local state=read(path(slot))
  if state then return state end
- if tonumber(slot)==1 then return read(S.root.."/local-save.dat")end
+ if tonumber(slot)==1 and not fs.exists(migrationMarker) then
+  return read(S.root.."/local-save.dat")
+ end
 end
 function S.list()
  local out={}
@@ -52,10 +55,19 @@ function S.save(slot,state)
   if fs.exists(backup)then fs.move(backup,dest)end
   error("Save not committed: "..tostring(why))
  end
+ if not fs.exists(migrationMarker)then
+  local marker=fs.open(migrationMarker,"w")
+  if marker then marker.write("v3");marker.close()end
+ end
  return true
 end
 function S.delete(slot)
  local dest=path(slot)
+ if tonumber(slot)==1 and not fs.exists(migrationMarker)then
+  if not fs.exists(S.root)then fs.makeDir(S.root)end
+  local marker=fs.open(migrationMarker,"w")
+  if marker then marker.write("v3");marker.close()end
+ end
  if fs.exists(dest)then fs.delete(dest)end
  if fs.exists(dest..".bak")then fs.delete(dest..".bak")end
  return true
