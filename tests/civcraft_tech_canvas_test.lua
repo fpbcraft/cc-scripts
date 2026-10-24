@@ -1,6 +1,6 @@
 local nativeDofile=dofile
 dofile=function(path)
- if path=="/civcraft/content.lua"then return nativeDofile("civcraft/content.lua")end
+ if path:sub(1,10)=="/civcraft/"then return nativeDofile(path:sub(2))end
  return nativeDofile(path)
 end
 local S=assert(loadfile("civcraft/systems.lua"))()
