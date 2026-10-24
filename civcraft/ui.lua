@@ -116,6 +116,7 @@ function UI:draw(state,playerID,opts)
   math.floor((w-reserved-17)/(MAP_W+.5))))
  local stepY=tile*.75
  local mx,my=8,top+2
+ self.hexTargets={}
  local boardW,boardH=math.ceil((MAP_W+.5)*tile),math.ceil((MAP_H-1)*stepY+tile)
  r:fill(mx-3,my-3,boardW+6,boardH+6,1)
  r:outline(mx-3,my-3,boardW+6,boardH+6,3)
@@ -160,8 +161,8 @@ function UI:draw(state,playerID,opts)
   if self.selected.x==x and self.selected.y==y then
    r:outline(px+bevel,py,math.max(2,tile-2*bevel),tile,8)
   end
-  r.buttons[#r.buttons+1]={x=px,y=py,w=tile,h=tile,
-   fn=function()self:tile(x,y)end}
+  self.hexTargets[#self.hexTargets+1]={x=px,y=py,w=tile,h=tile,
+   tx=x,ty=y}
  end end
  local sidebarX=mx+boardW+9
  if not compact and sidebarX<w-48 then
@@ -243,8 +244,24 @@ function UI:draw(state,playerID,opts)
 end
 function UI:tap(x,y)
  local rx,ry=self.r:touch(x,y)
- if rx then return self.r:hit(rx,ry)end
- return false
+ if not rx then return false end
+ -- Hexes occupy overlapping bounding rectangles. Resolve actual polygon
+ -- containment and prefer the closest centre (never the first bounding box).
+ local best,distance
+ for _,hex in ipairs(self.hexTargets or {})do
+  local dx=rx-hex.x;local dy=ry-hex.y
+  if dx>=0 and dx<hex.w and dy>=0 and dy<hex.h then
+   local bevel=math.max(2,math.floor(hex.w*.24))
+   local inset=dy<bevel and (bevel-dy)*hex.w/(2*bevel) or
+    dy>=hex.h-bevel and (dy-(hex.h-bevel)+1)*hex.w/(2*bevel) or 0
+   if dx>=inset and dx<hex.w-inset then
+    local d=(dx-hex.w/2)^2+(dy-hex.h/2)^2
+    if not distance or d<distance then best=hex;distance=d end
+   end
+  end
+ end
+ if best then self:tile(best.tx,best.ty);return true end
+ return self.r:hit(rx,ry)
 end
 function UI:resize()self.r:resize()end
 function UI:close()self.r:close()end
