@@ -22,7 +22,8 @@ if not fs.exists(root)then fs.makeDir(root)end
 remove(nextDir);fs.makeDir(nextDir)
 local ok,err=pcall(function()
  for _,file in ipairs(files)do
-  local response,e=http.get(url..file,nil,true)
+  local nonce=os.epoch and os.epoch('utc') or math.floor(os.clock()*1000)
+  local response,e=http.get(url..file..'?civcraft_cb='..tostring(nonce),nil,true)
   assert(response,'Download failed: '..file..' '..tostring(e))
   local status=response.getResponseCode and response.getResponseCode() or 200
   local body=response.readAll();response.close()
