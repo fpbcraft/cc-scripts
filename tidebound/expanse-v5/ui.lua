@@ -228,35 +228,57 @@ function UI:navigate(name)
 end
 function UI:status()
  local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
- r:rect(0,0,r.w,7,1);r:rect(0,6,r.w,1,3)
- r:rect(1,1,2,4,factionColor(p));r:text(5,1,clip(f.name,math.max(6,math.floor(r.w*.27))),7)
- r:text(5,3,'YEAR '..g.round..'/'..g.limit,5)
- local sx=math.max(math.floor(r.w*.35),25)
- local gap=math.floor((r.w-sx-2)/3)
- for i,d in ipairs({{'coin','credits','C',17},{'alloy','alloy','A',9},{'science','knowledge','K',13}})do
-  local x=sx+(i-1)*gap
-  r:icon(x,2,d[1],d[4]);r:text(x+4,3,d[3]..math.floor(f[d[2]]),7)
+ local w=r.w
+ r:rect(0,0,w,9,1);r:rect(0,8,w,1,9)
+ local titleW=math.max(22,math.floor(w*.30))
+ r:rect(1,1,3,6,factionColor(p))
+ r:text(6,1,clip(f.name,titleW-7),7)
+ r:text(6,5,'YEAR '..g.round..'/'..g.limit,5)
+ local values={{'coin','credits','CR',17},{'alloy','alloy','AL',9},
+  {'science','knowledge','KN',13}}
+ local col=math.floor((w-titleW-4)/3)
+ for i,d in ipairs(values)do
+  local x=titleW+(i-1)*col
+  if col>8 then
+   r:rect(x,1,col-1,7,2);r:rect(x,1,col-1,1,3)
+   r:icon(x+1,2,d[1],d[4])
+   r:text(x+4,4,d[3]..math.floor(f[d[2]]),7,col-5)
+  end
  end
 end
 function UI:dock()
- local r=self.r;local y=r.h-8;r:rect(0,y,r.w,8,1);r:rect(0,y,r.w,1,3)
- local nav={{'GALAXY','star','galaxy'},{'SHIPS','ship','ships'},{'WORLDS','colony','colony'},{'TECH','lab','research'},{'DIPLO','trade','diplomacy'},{'EMPIRE','flag','empire'}}
- local ew=math.max(13,math.floor(r.w*.13));local available=r.w-ew-2;local tabW=math.floor(available/6)
+ local r=self.r;local y=r.h-10;local w=r.w
+ r:rect(0,y,w,10,1);r:rect(0,y,w,1,9)
+ local nav={{'GALAXY','star','galaxy'},{'SHIPS','ship','ships'},
+  {'WORLDS','colony','colony'},{'TECH','lab','research'},
+  {'DIPLO','trade','diplomacy'},{'EMPIRE','flag','empire'}}
+ local endW=math.max(12,math.floor(w*.13))
+ local available=w-endW-2
+ local tabW=math.max(7,math.floor(available/#nav))
  for i,v in ipairs(nav)do
   local x=1+(i-1)*tabW
-  r:rect(x,y+1,tabW-1,6,self.screen==v[3] and 3 or 1)
-  r:icon(x+math.floor(tabW/2)-1,y+1,v[2],self.screen==v[3] and 9 or 5)
-  local label=clip(v[1],math.max(3,tabW-1));r:text(x+math.max(0,math.floor((tabW-#label)/2)),y+4,label,self.screen==v[3] and 7 or 5,tabW)
-  r.buttons[#r.buttons+1]={x=x,y=y+1,w=tabW-1,h=6,label=v[1],fn=function()self:navigate(v[3])end}
+  local current=self.screen==v[3]
+  r:rect(x,y+1,tabW-1,8,current and 2 or 1)
+  r:rect(x,y+1,tabW-1,1,current and 19 or 3)
+  if tabW>=12 then
+   r:icon(x+math.floor(tabW/2)-1,y+2,v[2],current and 9 or 5)
+  end
+  local label=clip(v[1],math.max(3,tabW-1))
+  r:text(x+math.max(0,math.floor((tabW-#label)/2)),y+6,label,
+   current and 7 or 5,tabW)
+  r.buttons[#r.buttons+1]={x=x,y=y+1,w=tabW-1,h=8,label=v[1],
+   fn=function()self:navigate(v[3])end}
  end
- self:button(r.w-ew,y+1,ew-1,6,'END','next',function()self:finishTurn()end,nil,19)
+ self:button(w-endW,y+1,endW-1,8,'END','next',function()
+  self:finishTurn()
+ end,nil,19)
 end
 function UI:frameScreen()
  self:space();self:status();self:dock()
 end
 function UI:noticeBar()
  if self.notice=='' then return end
- local r=self.r;local y=r.h-12
+ local r=self.r;local y=r.h-15
  r:rect(1,y,r.w-2,4,3);r:text(3,y+1,clip(self.notice,r.w-6),7)
 end
 -- Map coordinates never move when a context menu opens. This means ships and
@@ -515,8 +537,9 @@ function UI:confirm()
  end,nil,19)
 end
 function UI:contentPanel(title)
- local r=self.r;self:box(2,9,r.w-4,r.h-19,1)
- r:text(5,11,clip(title,r.w-12),9)
+ local r=self.r;self:box(2,10,r.w-4,r.h-22,1)
+ r:rect(4,11,math.min(3,r.w-8),4,9)
+ r:text(9,12,clip(title,r.w-15),7)
 end
 function UI:ships()
  local r=self.r;local p=Sim.current(self.g);local own=where(function(s)return s.owner==p end,self.g.ships)
