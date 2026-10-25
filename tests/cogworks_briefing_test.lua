@@ -23,12 +23,10 @@ for number, stage in ipairs(E.levels) do
     total = total + count
   end
   assert(brief.stockTotal == total, "Briefing inventory matches level")
-  assert(
-    brief.bonus.sealed == (number >= 2)
-      and brief.bonus.fullFactory == (number >= 3)
-      and brief.bonus.precision == (number >= 5),
-    "Bonus gates match simulator"
-  )
+  assert(#brief.bonus == 2, "Every mission has exactly two authored bonus objectives")
+  for slot, entry in ipairs(brief.bonus) do
+    assert(entry.id == "extra" .. slot and entry.name and entry.type, "Stable named objective " .. slot)
+  end
   local stockKinds = 0
   for _, kind in ipairs(E.order) do
     if (stage.stock[kind] or 0) > 0 then
