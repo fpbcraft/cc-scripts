@@ -192,3 +192,28 @@ campaign options and save reload; the hotseat session also exercises Surprise Wa
 Native contact fixtures put capitals in actual sight rather than bypassing contact
 validation. Graphics review captures the actual renderer with instrumented displays;
 it does not establish physical monitor or live modem behavior.
+
+### Compact inspectors and faction contrast
+
+Cities now separate Overview, Jobs, Tiles and Production. Population/growth,
+yields, health and city strikes appear in Overview rather than preceding every
+production or tile-management action. Narrow inspectors arrange the four tabs
+in two rows; extremely short sidebars open the existing full-screen inspector.
+Compact unit inspectors separate actions and secondary statistics. Status feedback
+occupies a dedicated strip below the map, and the removed header status row makes
+room above it. The turn footer still has its previous two controls; replacing
+those with the unified required-task button remains a separate follow-up.
+
+Four dedicated palette entries (amber, violet, pink and azure) are reserved for
+civilizations and are absent from all biome fills and terrain details. Their
+terminal fallback colors are also outside the terrain mappings. Borders have
+dark edging, and city/unit markers retain a dark backing during normal rendering
+and playback. Both graphics pixel lookup paths now cover the complete palette.
+
+Eight affected layout/rendering regression scripts pass, including eighteen
+monitor/mode control layouts, fog privacy, sprite tinting and all-biome palette
+checks. A fresh isolated CraftOS-PC full session passes contact, conversations,
+Surprise War, hotseat handoff, settings/research/campaign options and save reload.
+The actual graphics renderer was captured at 57x38 text cells for visual review.
+These remain instrumented graphics and native text checks, not physical-monitor
+or live remote-client validation.

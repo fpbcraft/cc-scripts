@@ -81,10 +81,10 @@ combat previews; these still need the final integrated interaction checks.
   Land-based melee units cannot initiate attacks against embarked units, but may
   retaliate when attacked; ranged units may attack them. Keep forecasts, AI,
   reachability and actual combat consistent.
-- Reserve faction colors separately from every terrain color. Borders, units and
+- [x] Reserve faction colors separately from every terrain color. Borders, units and
   city markers must remain legible on each biome, including text fallback;
   validate strong outlines/contrast as well as distinct palette entries.
-- Compact inspectors must separate city Overview, Jobs, Tiles and Production
+- [x] Compact inspectors must separate city Overview, Jobs, Tiles and Production
   into focused views, and unit actions from secondary details. Keep relevant
   actions accessible without paging through unrelated information. Move status
   feedback (for example Order Accepted) into the empty strip below the map.

@@ -42,6 +42,19 @@ function I.draw(ui, state, player, rect, modal)
 			rows[#rows + 1] = { text = line, color = color }
 		end
 	end
+	if not modal and h < 60 and (city or unit) then
+		local description = city and ui.selected.kind ~= "unit" and city.name
+			or unit and Systems.label("unit", unit.kind)
+			or "SELECTED TILE"
+		r:button(x + 2, y + (h < 30 and 2 or 14), w - 4, 11, "DETAILS", function()
+			ui.panel = "inspector"
+			ui.inspectorOffset = 0
+		end)
+		if h >= 40 then
+			r:text(x + 3, y + 28, description, 7, 1, w - 6)
+		end
+		return
+	end
 	local bodyY = y + 13
 	local controlsY = y + 13
 	local stacked = false
@@ -69,9 +82,10 @@ function I.draw(ui, state, player, rect, modal)
 		text("NO SELECTION", 7)
 		text("Click a hex to inspect it.")
 	elseif city and city.owner == ui.playerID then
-		local tabs = w < 80 and { "JOBS", "HEX", "PROD" } or { "JOBS", "TILES", "PROD" }
-		local values = { "jobs", "tiles", "production" }
-		local width = math.floor((w - 8) / 3)
+		local tabs = { "INFO", "JOBS", "TILES", "PROD" }
+		local values = { "overview", "jobs", "tiles", "production" }
+		local columns = w < 100 and 2 or 4
+		local width = math.floor((w - 4 - (columns - 1) * 2) / columns)
 		local tabButtons = {}
 		for i, label in ipairs(tabs) do
 			local mode = values[i]
@@ -93,18 +107,18 @@ function I.draw(ui, state, player, rect, modal)
 					label = label,
 					run = choose,
 					style = {
-						selected = (ui.cityPanel or "jobs") == mode,
+						selected = (ui.cityPanel or "overview") == mode,
 					},
 				}
 			else
 				r:button(
-					x + 2 + (i - 1) * (width + 2),
-					controlsY,
+					x + 2 + ((i - 1) % columns) * (width + 2),
+					controlsY + math.floor((i - 1) / columns) * 12,
 					width,
 					11,
 					label,
 					choose,
-					{ selected = (ui.cityPanel or "jobs") == mode }
+					{ selected = (ui.cityPanel or "overview") == mode }
 				)
 			end
 		end
@@ -112,44 +126,48 @@ function I.draw(ui, state, player, rect, modal)
 			rows[#rows + 1] = { buttons = tabButtons }
 			bodyY = controlsY
 		else
-			bodyY = controlsY + 11
+			bodyY = controlsY + math.ceil(#tabs / columns) * 12
 		end
 		Combat.city(city)
 		local yields = Systems.yields(player, city, state, Hex)
-		text("POP " .. (city.population or 2) .. "  IDLE " .. Systems.idle(city), 7)
-		rows[#rows + 1] = { yields = yields }
-		local growth = Systems.growth(player, city, state)
-		text(
-			growth.status == "GROWING" and ("POP +1 IN " .. growth.turns .. "T")
-				or growth.status == "STARVING" and (growth.canShrink and ("POP -1 IN " .. growth.turns .. "T") or "STARVING - MIN POP")
-				or "POP STAGNANT",
-			growth.status == "STARVING" and 31 or 13
-		)
-		text(
-			"FOOD "
-				.. math.floor(growth.stored)
-				.. "/"
-				.. growth.threshold
-				.. " ("
-				.. (growth.surplus >= 0 and "+" or "")
-				.. growth.surplus
-				.. ")"
-		)
-		text("CITY HP " .. city.hp .. "/200")
-		if city.maxWalls > 0 then
-			text("WALLS " .. city.wallHP .. "/" .. city.maxWalls, 13)
-		end
-		if city.wallHP > 0 and city.struckRound ~= state.round then
-			rows[#rows + 1] = {
-				buttons = {
-					{
-						label = "CITY STRIKE",
-						run = function()
-							ui:armCityStrike(city)
-						end,
+		if (ui.cityPanel or "overview") == "overview" then
+			text("POP " .. (city.population or 2) .. "  IDLE " .. Systems.idle(city), 7)
+			rows[#rows + 1] = { yields = yields }
+			local growth = Systems.growth(player, city, state)
+			text(
+				growth.status == "GROWING" and ("POP +1 IN " .. growth.turns .. "T")
+					or growth.status == "STARVING" and (growth.canShrink and ("POP -1 IN " .. growth.turns .. "T") or "STARVING - MIN POP")
+					or "POP STAGNANT",
+				growth.status == "STARVING" and 31 or 13
+			)
+			text(
+				"FOOD "
+					.. math.floor(growth.stored)
+					.. "/"
+					.. growth.threshold
+					.. " ("
+					.. (growth.surplus >= 0 and "+" or "")
+					.. growth.surplus
+					.. ")"
+			)
+			text("CITY HP " .. city.hp .. "/200")
+			if city.maxWalls > 0 then
+				text("WALLS " .. city.wallHP .. "/" .. city.maxWalls, 13)
+			end
+			if city.wallHP > 0 and city.struckRound ~= state.round then
+				rows[#rows + 1] = {
+					buttons = {
+						{
+							label = "CITY STRIKE",
+							run = function()
+								ui:armCityStrike(city)
+							end,
+						},
 					},
-				},
-			}
+				}
+			end
+		elseif ui.cityPanel == "jobs" then
+			text("POP " .. (city.population or 2) .. " / IDLE " .. Systems.idle(city), 7)
 		end
 		if ui.cityPanel == "production" then
 			local project = city.project
@@ -281,7 +299,7 @@ function I.draw(ui, state, player, rect, modal)
 					},
 				},
 			}
-		else
+		elseif ui.cityPanel == "jobs" then
 			for _, job in ipairs(Systems.jobs) do
 				rows[#rows + 1] = {
 					adjust = {
@@ -571,7 +589,39 @@ function I.draw(ui, state, player, rect, modal)
 				ordered[#ordered + 1] = row
 			end
 		end
-		rows = ordered
+		if h < 150 then
+			local primary, details = {}, {}
+			for _, row in ipairs(ordered) do
+				if
+					row.buttons
+					or row == ordered[1]
+					or row.text and (row.text:match("^HP ") or row.text:match("^MOVE "))
+				then
+					primary[#primary + 1] = row
+				else
+					details[#details + 1] = row
+				end
+			end
+			if ui.unitDetails then
+				rows = details
+			else
+				rows = primary
+			end
+			local toggle = {
+				buttons = {
+					{
+						label = ui.unitDetails and "ACTIONS" or "UNIT DETAILS",
+						run = function()
+							ui.unitDetails = not ui.unitDetails
+							ui.inspectorOffset = 0
+						end,
+					},
+				},
+			}
+			table.insert(rows, 1, toggle)
+		else
+			rows = ordered
+		end
 	end
 	Panels.rows(
 		r,

@@ -38,6 +38,11 @@ R.palette = {
 	[29] = 0xA5A09A,
 	[30] = 0xCCDCD5,
 	[31] = 0xE66D47,
+	-- Reserved faction colors: never used by terrain or terrain detail.
+	[32] = 0xFFA52F,
+	[33] = 0xAE8AFF,
+	[34] = 0xFF70D4,
+	[35] = 0x548BFF,
 }
 local terminalColors = {
 	[0] = 32768,
@@ -72,6 +77,11 @@ local terminalColors = {
 	[29] = 8,
 	[30] = 1,
 	[31] = 16384,
+	-- These four terminal colors are also absent from terrain painting.
+	[32] = 2,
+	[33] = 1024,
+	[34] = 4,
+	[35] = 2048,
 }
 local FONT = {
 	["&"] = { "01100", "10010", "10100", "01000", "10101", "10010", "01101" },
@@ -295,7 +305,7 @@ local function splice(value, x1, x2, replacement)
 	return value:sub(1, x1 - 1) .. replacement .. value:sub(x2 + 1)
 end
 local pixelColors = {}
-for color = 0, 31 do
+for color in pairs(R.palette) do
 	pixelColors[color] = string.char(color)
 end
 function R:cooperate(force)
@@ -1102,7 +1112,7 @@ function R:finish()
 		local integer = self.sx == math.floor(self.sx)
 		local lut = {}
 		if integer then
-			for c = 0, 31 do
+			for c in pairs(R.palette) do
 				lut[string.char(c)] = string.rep(string.char(c), self.sx)
 			end
 		end

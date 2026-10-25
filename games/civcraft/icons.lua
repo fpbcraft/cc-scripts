@@ -77,6 +77,10 @@ local function sprite(r, kind, x, y, size, color)
 	end
 	return true
 end
+function I.faction(r, kind, x, y, size, color)
+	r:fill(x - 1, y - 1, size + 2, size + 2, 0)
+	I.draw(r, kind, x, y, size, color)
+end
 function I.draw(r, kind, x, y, size, color)
 	local aliases = {
 		brassengineer = "engineer",

@@ -270,7 +270,7 @@ function UI:tile(x, y)
 			end
 		end
 		self.workCity = nil
-		self.cityPanel = "jobs"
+		self.cityPanel = "overview"
 	end
 	if self.source and not (x == self.source.x and y == self.source.y) then
 		for _, p in ipairs(self.reachable or {}) do
@@ -324,6 +324,7 @@ function UI:tile(x, y)
 	self.reachable = {}
 	self.pendingMove = nil
 	self.inspectorOffset = 0
+	self.unitDetails = false
 	if self.selected.x == x and self.selected.y == y and not self.selected.empty then
 		self:deselect()
 		return
@@ -336,7 +337,7 @@ function UI:tile(x, y)
 		unitID = unit and unit.id,
 	}
 	self.panel = "context"
-	self.cityPanel = "jobs"
+	self.cityPanel = "overview"
 	self.workCity = nil
 	self.localNotice = nil
 	self.notice = ""
@@ -374,6 +375,7 @@ function UI:draw(state, playerID, opts)
 		self.actionPage = 1
 		self.techModel = nil
 		Conversation.close(self)
+		self.unitDetails = false
 		self.conversationTarget = nil
 		self.conversationOffset = 0
 		self.trade = nil
@@ -894,6 +896,7 @@ function UI:draw(state, playerID, opts)
 	r:finish()
 end
 function UI:focus(kind, item)
+	self.unitDetails = false
 	self.cityStrikeSource = nil
 	self.source = nil
 	self.reachable = {}

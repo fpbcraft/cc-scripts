@@ -214,6 +214,16 @@ function V.draw(ui, state, player, rect)
 				for side, n in ipairs(Hex.edgeNeighbours(x, y)) do
 					if claims[World.key(n.x, n.y)] ~= t.claim then
 						local a, b = vertices[side], vertices[side % 6 + 1]
+						-- Dark edging keeps bright ownership lines distinct on every biome.
+						for _, offset in ipairs({ { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } }) do
+							r:line(
+								a.x + offset[1],
+								a.y + offset[2],
+								b.x + offset[1],
+								b.y + offset[2],
+								0
+							)
+						end
 						r:line(a.x, a.y, b.x, b.y, ownerColor(state, t.owner))
 					end
 				end
@@ -281,6 +291,7 @@ function V.draw(ui, state, player, rect)
 			then
 				cityLabels[#cityLabels + 1] = { city = city, x = px + size / 2, y = py - 6 }
 				if size < 16 then
+					r:fill(px + size / 2 - 2, py + size / 2 - 2, 5, 5, 0)
 					r:fill(
 						px + size / 2 - 1,
 						py + size / 2 - 1,
@@ -289,7 +300,7 @@ function V.draw(ui, state, player, rect)
 						ownerColor(state, city.owner)
 					)
 				else
-					Icons.draw(
+					Icons.faction(
 						r,
 						city.village and city.owner == city.villageOwner and "village" or "city",
 						px + size / 2 - 5,
@@ -308,9 +319,10 @@ function V.draw(ui, state, player, rect)
 			end
 			if unit then
 				if size < 16 then
+					r:fill(px + size / 2 - 1, py + size / 2 - 1, 4, 4, 0)
 					r:fill(px + size / 2, py + size / 2, 2, 2, ownerColor(state, unit.owner))
 				else
-					Icons.draw(
+					Icons.faction(
 						r,
 						unit.kind,
 						px + size / 2 - 5,

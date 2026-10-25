@@ -32,7 +32,7 @@ function G.draw(ui, state, player)
 	local r = ui.r
 	local w, h = r.w, r.h
 	local wide = w >= 220 and h >= 140
-	local header = 30
+	local header = 22
 	local bottom = h - 15
 	local sidebarColumns = h < 145 and 2 or 1
 	local left = sidebarColumns == 2 and 30 or 16
@@ -86,16 +86,6 @@ function G.draw(ui, state, player)
 			turnStatus = "WAR GROUP / WAITING: " .. name
 		end
 	end
-	r:text(
-		4,
-		header - 7,
-		ui.hoverLabel
-			or turnStatus
-			or (ui.notice ~= "" and ui.notice or "SELECT A HEX OR AN ACTION"),
-		6,
-		1,
-		w - 8
-	)
 	local function iconButton(x, y, width, label, icon, run, style)
 		r:button(x, y, width, 12, nil, run, style)
 		r:icon(icon, x + math.floor((width - 9) / 2), y + 1, 1)
@@ -160,8 +150,23 @@ function G.draw(ui, state, player)
 		ui,
 		state,
 		player,
-		{ x = left + 4, y = header + 2, w = w - left - right - 10, h = h - header - 4 }
+		{ x = left + 4, y = header + 2, w = w - left - right - 10, h = bottom - header - 2 }
 	)
+	local statusRect = { x = left + 4, y = bottom + 2, w = w - left - right - 10, h = 10 }
+	ui.statusBounds = statusRect
+	r:withClip(statusRect, function()
+		r:text(
+			statusRect.x,
+			statusRect.y + 1,
+			ui.hoverLabel
+				or turnStatus
+				or (ui.notice ~= "" and ui.notice or "SELECT A HEX OR AN ACTION"),
+			6,
+			1,
+			statusRect.w
+		)
+	end)
+
 	local y = header + 3
 	local modeStep = 14
 	for i, mode in ipairs(modes) do

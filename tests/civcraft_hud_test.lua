@@ -118,6 +118,30 @@ local canvas = {
 }
 Icons.draw(canvas, "scout", 0, 0, 9, Colors.players[3])
 assert(painted[Colors.players[3]], "Bitmap units honor their faction color")
+local Terrain = dofile("/games/civcraft/terrain_view.lua")
+local Biomes = dofile("/games/civcraft/biomes.lua")
+local terrainPaint = {}
+local terrainCanvas = {
+	fill = function(_, _, _, _, _, color)
+		terrainPaint[color] = true
+	end,
+}
+for biome in pairs(Biomes.names) do
+	for _, elevation in ipairs({ "flat", "hill", "mountain" }) do
+		for _, feature in ipairs({ "none", "woods", "dense", "marsh" }) do
+			local tile = { biome = biome, elevation = elevation, feature = feature }
+			terrainPaint[Terrain.color(tile)] = true
+			Terrain.draw(terrainCanvas, tile, 0, 0, 24, 3, 4)
+		end
+	end
+end
+for _, color in ipairs(Colors.players) do
+	assert(
+		not terrainPaint[color],
+		"Faction palette entries are reserved outside every biome and terrain detail"
+	)
+end
+
 -- Lobby selection exposes actual bonus text on both narrow and wide layouts.
 state.phase = "lobby"
 for _, size in ipairs({ { 57, 38 }, { 120, 90 } }) do

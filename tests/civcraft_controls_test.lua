@@ -454,8 +454,9 @@ for _, graphics in ipairs({ false, true }) do
 				"Next idle is beside End Turn"
 			)
 			assert(
-				ui.mapViewport.y + ui.mapViewport.h > endTurn.y,
-				"Map uses the vertical space beside the inspector footer"
+				ui.statusBounds.y >= ui.mapViewport.y + ui.mapViewport.h
+					and ui.statusBounds.x + ui.statusBounds.w <= endTurn.x,
+				"Status feedback occupies the strip below the map, beside the inspector footer"
 			)
 			assert(click("FACTIONS"))
 			draw()

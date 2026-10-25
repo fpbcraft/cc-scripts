@@ -35,7 +35,7 @@ function View.draw(ui, state, rect, size)
 			if size < 16 then
 				r:fill(x - 1, y - 1, 3, 3, ownerColor(state, actor.owner))
 			else
-				Icons.draw(r, actor.kind, x - 5, y - 5, 11, ownerColor(state, actor.owner))
+				Icons.faction(r, actor.kind, x - 5, y - 5, 11, ownerColor(state, actor.owner))
 			end
 			local maximum = actor.kind == "city" and 200 or 100
 			if sprite.hp then
