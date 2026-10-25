@@ -1406,14 +1406,7 @@ end
 -- viewport to letterbox/scalably fill the actual monitor.
 function R:hitTouch(charX, charY)
   local w, h = self.m.getSize()
-  if
-    type(charX) ~= "number"
-    or type(charY) ~= "number"
-    or charX < 1
-    or charY < 1
-    or charX > w
-    or charY > h
-  then
+  if type(charX) ~= "number" or type(charY) ~= "number" or charX < 1 or charY < 1 or charX > w or charY > h then
     return nil
   end
   if self.mode == "graphics" then
