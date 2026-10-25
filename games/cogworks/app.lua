@@ -609,8 +609,11 @@ function A:act(action, x, y)
         self.scene = "chapter"
       else
         local stats = Campaign.stats(self.progress, x - 1)
-        self.message = "NEED " .. math.max(0, 6 - stats.points) .. " POINTS / "
-          .. math.max(0, 4 - stats.main) .. " MAIN CLEARS"
+        self.message = "NEED "
+          .. math.max(0, 6 - stats.points)
+          .. " POINTS / "
+          .. math.max(0, 4 - stats.main)
+          .. " MAIN CLEARS"
       end
     end
   elseif scene == "chapter" then
