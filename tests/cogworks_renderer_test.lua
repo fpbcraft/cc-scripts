@@ -235,6 +235,7 @@ click("levels")
 click("settings")
 click("title")
 model.scene = "levels"
+model.devSession = true
 r:draw(model)
 click("chapter", 1)
 click("chapter", 8)
