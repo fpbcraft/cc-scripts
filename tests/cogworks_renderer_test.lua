@@ -168,6 +168,7 @@ r:draw(model)
 assert(#r.targets >= game.width * game.height + 12, "Game includes all variable-size board cells")
 -- Selecting a board piece draws a complete outline with small action glyphs
 -- and keeps rotate/remove hitboxes above the underlying grid hit target.
+local campaignGame, campaignResult = model.game, model.result
 model.game = E.sandbox(5, 5)
 assert(E.place(model.game, 3, 3, "G", 1))
 model.result = E.evaluate(model.game)
@@ -189,6 +190,9 @@ for _, target in ipairs(r.targets) do
   end
 end
 assert(foundActive, "Selected gear appears in palette")
+model.game, model.result = campaignGame, campaignResult
+model.selected = "I"
+r:draw(model)
 click("cell", 1)
 click("pause")
 click("save")
