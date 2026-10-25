@@ -28,6 +28,7 @@ function A.new(options)
     returnScene = "title",
     pending = nil,
     inspected = nil,
+    sandboxSize = 10,
     tutorial = nil,
     briefing = nil,
     dev = options and options.dev == true or false,
@@ -114,7 +115,7 @@ end
 function A:enterSandbox()
   self.slot = nil
   self.devSession = false
-  self.game = E.sandbox()
+  self.game = E.sandbox(self.sandboxSize)
   self.progress = self.store.newProgress()
   self.result = E.evaluate(self.game)
   self.selected = "I"
@@ -196,6 +197,7 @@ function A:model()
     hasLeftInput = self.hasLeftInput or false,
     dev = self.dev,
     devSession = self.devSession,
+    sandboxSize = self.sandboxSize,
   }
 end
 -- Return 'exit' only in direct response to player choosing Exit.
@@ -283,16 +285,26 @@ function A:act(action, x, y)
   elseif scene == "game" then
     local changed = false
     self.message = ""
-    if action == "cell" or action == "remove" then
+    if action == "move" then
+      changed = E.move(self.game, x, y, self.moveX, self.moveY)
+      self.inspected = nil
+    elseif action == "inspect" then
       local tile = E.get(self.game, x, y)
-      if action == "remove" or self.selected == "erase" then
+      if tile then
+        self.inspected = { x = x, y = y }
+        local light = self.result.lights[tile.id]
+        local spin = light and light.ports and (light.ports[tile.r] or light.ports[next(light.ports)])
+        self.message = spin and ((spin.sign > 0 and "CW " or "CCW ") .. spin.rate .. "X") or "IDLE"
+      else
+        self.inspected = nil
+        changed = E.place(self.game, x, y, self.selected)
+      end
+    elseif action == "cell" or action == "remove" or action == "rotate" then
+      local tile = E.get(self.game, x, y)
+      self.inspected = nil
+      if action == "remove" or self.selected == "erase" and action == "cell" then
         changed = E.remove(self.game, x, y)
-      elseif self.selected == "switch" then
-        changed = E.toggle(self.game, x, y)
-        if not changed then
-          self.message = "SELECT A CLUTCH OR GEARSHIFT"
-        end
-      elseif tile then
+      elseif tile and (action == "rotate" or action == "cell") then
         changed = E.rotate(self.game, x, y)
         if tile.kind == "M" then
           local current = self.result.lights[tile.id].ports[tile.r]
@@ -311,7 +323,8 @@ function A:act(action, x, y)
         end
       end
     elseif action == "tool" then
-      if x == "erase" or x == "switch" or E.parts[x] then
+      if x == "erase" or E.parts[x] then
+        self.inspected = nil
         self.selected = x
       end
     elseif action == "next" or action == "prev" then
@@ -328,7 +341,7 @@ function A:act(action, x, y)
         self.message = "LEVEL LOCKED"
       end
     elseif action == "clearSandbox" and self.game.sandbox then
-      self.game = E.sandbox()
+      self.game = E.sandbox(self.sandboxSize)
       changed = true
     elseif action == "save" then
       self.message = self:save() and "SAVED TO SLOT " .. self.slot or "THIS SESSION IS NOT SAVED"
@@ -338,8 +351,13 @@ function A:act(action, x, y)
     elseif action == "help" then
       self.returnScene = "game"
       self.scene = "help"
+    elseif action == "sandboxSize" and self.game.sandbox then
+      self.sandboxSize = math.max(5, math.min(10, tonumber(x) or self.sandboxSize))
+      self.game = E.sandbox(self.sandboxSize)
+      self.inspected = nil
+      changed = true
     elseif action == "reset" then
-      self.game = self.game.sandbox and E.sandbox() or E.new(self.game.number)
+      self.game = self.game.sandbox and E.sandbox(self.sandboxSize) or E.new(self.game.number)
       changed = true
     end
     if changed then
@@ -360,7 +378,7 @@ function A:act(action, x, y)
       self.levelReturn = "pause"
       self.scene = "levels"
     elseif action == "clearSandbox" and self.game.sandbox then
-      self.game = E.sandbox()
+      self.game = E.sandbox(self.sandboxSize)
       self.result = E.evaluate(self.game)
       self.message = "SANDBOX CLEARED"
       self.scene = "game"
