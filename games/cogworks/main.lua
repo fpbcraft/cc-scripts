@@ -148,7 +148,12 @@ local function start()
         -- CraftOS monitor windows can expose a mouse_click event instead of
         -- vanilla monitor_touch. Pixel graphics input uses pixel coordinates.
         if event == "mouse_click" or a == name then
-          local mx, my = event == "mouse_click" and b or c, event == "mouse_click" and c or d
+          local mx, my
+          if event == "mouse_click" or d == nil then
+            mx, my = b, c
+          else
+            mx, my = c, d
+          end
           local action, x, y = renderer:hit(mx, my)
           if not action then
             action, x, y = renderer:hitTouch(mx, my)
