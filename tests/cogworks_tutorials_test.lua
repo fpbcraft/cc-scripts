@@ -14,7 +14,7 @@ end
 local saved = {}
 local S = {}
 function S.newProgress()
-  return { campaignVersion = 5, unlocked = 8, level = 1, best = {}, sessions = {}, awards = {}, tutorials = {} }
+  return { campaignVersion = 6, unlocked = 8, level = 1, best = {}, sessions = {}, awards = {}, tutorials = {} }
 end
 function S.loadSettings()
   return { animations = true, showPorts = true, lastSlot = 1 }
