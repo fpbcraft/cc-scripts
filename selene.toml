@@ -1,0 +1,27 @@
+# Selene's Lua 5.3 standard plus CC:Tweaked's CraftOS APIs.
+std = "cc-tweaked"
+# Selene 0.32 cannot parse Lua 5.3 bitwise operators in this host-only test.
+# The file is still syntax-checked and run by the existing Lua CI workflow.
+exclude = ["tests/auth_test.lua"]
+
+[lints]
+# Existing code contains legitimately unused locals and intentional shadowing.
+# Enforce correctness while retaining those behaviours in the format-only migration.
+unused_variable = "allow"
+shadowing = "allow"
+unscoped_variables = "allow"
+global_usage = "allow"
+mixed_table = "allow"
+multiple_statements = "allow"
+high_cyclomatic_complexity = "allow"
+
+undefined_variable = "deny"
+# Stock Lua function signatures differ from CC:Tweaked, and tests replace some built-ins.
+incorrect_standard_library_use = "allow"
+# Intentional compatibility/placeholder branches in the existing code.
+if_same_then_else = "allow"
+empty_if = "allow"
+duplicate_keys = "deny"
+almost_swapped = "deny"
+divide_by_zero = "deny"
+bad_string_escape = "deny"

@@ -1,0 +1,31 @@
+name: Lua formatting and linting
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce StyLua formatting
+        uses: JohnnyMorganz/stylua-action@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: 2.6.0
+          args: --check .
+      - name: Install Selene 0.32.0
+        run: |
+          curl --fail --location --silent --show-error \
+            https://github.com/Kampfkarren/selene/releases/download/0.32.0/selene-0.32.0-linux.zip \
+            -o /tmp/selene.zip
+          mkdir -p /tmp/selene-dist
+          unzip -q /tmp/selene.zip -d /tmp/selene-dist
+          sudo install "$(find /tmp/selene-dist -type f -name selene -print -quit)" /usr/local/bin/selene
+      - name: Enforce Selene lint rules
+        run: selene .

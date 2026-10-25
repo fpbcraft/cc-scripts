@@ -1,0 +1,82 @@
+# The runtime is CC:Tweaked/CraftOS rather than stock Lua.
+# 'any' on APIs permits peripheral/mod-specific methods without misleading signatures.
+base: lua53
+lua_versions:
+  - lua53
+globals:
+  _G:
+    any: true
+  _ENV:
+    any: true
+  arg:
+    any: true
+  bit:
+    any: true
+  bit32:
+    any: true
+  basalt:
+    any: true
+  cc:
+    any: true
+  colors:
+    any: true
+  colours:
+    any: true
+  commands:
+    any: true
+  config:
+    any: true
+  disk:
+    any: true
+  fs:
+    any: true
+  gps:
+    any: true
+  help:
+    any: true
+  http:
+    any: true
+  keys:
+    any: true
+  multishell:
+    any: true
+  os:
+    any: true
+  paintutils:
+    any: true
+  parallel:
+    any: true
+  peripheral:
+    any: true
+  pocket:
+    any: true
+  printError:
+    any: true
+  read:
+    any: true
+  rednet:
+    any: true
+  redstone:
+    any: true
+  rs:
+    any: true
+  settings:
+    any: true
+  shell:
+    any: true
+  sleep:
+    any: true
+  speaker:
+    any: true
+  term:
+    any: true
+  textutils:
+    any: true
+  turtle:
+    any: true
+  vector:
+    any: true
+  window:
+    any: true
+  write:
+    any: true

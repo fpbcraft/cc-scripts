@@ -1,894 +1,1709 @@
 -- SHATTERED v5: single-focus touch interface. Screen geometry is expressed in
 -- character cells; the render adapter maps it to 256-colour CC: Graphics pixels.
-local root=_G.EXPANSE_V5_ROOT or '/games/shattered/expanse-v5'
-local Sim=dofile(root..'/sim.lua')
-local Renderer=dofile(root..'/render.lua')
-local C=Sim.content
-local UI={};UI.__index=UI
-local function clip(s,max) s=tostring(s or ''):upper();max=math.max(2,math.floor(max or 99));return #s<=max and s or s:sub(1,max-1)..'.' end
-local function wrap(s,n)
- local out,line={},''
- for word in tostring(s or ''):upper():gmatch('%S+')do
-  if #line+#word+1>math.max(10,n) and line~='' then out[#out+1]=line;line=word
-  else line=(line=='' and word or line..' '..word)end
- end
- if line~='' then out[#out+1]=line end
- return out
+local root = _G.EXPANSE_V5_ROOT or "/games/shattered/expanse-v5"
+local Sim = dofile(root .. "/sim.lua")
+local Renderer = dofile(root .. "/render.lua")
+local C = Sim.content
+local UI = {}
+UI.__index = UI
+local function clip(s, max)
+  s = tostring(s or ""):upper()
+  max = math.max(2, math.floor(max or 99))
+  return #s <= max and s or s:sub(1, max - 1) .. "."
 end
-local function where(f,arr)
- local result={};for _,v in ipairs(arr)do if f(v)then result[#result+1]=v end end;return result
+local function wrap(s, n)
+  local out, line = {}, ""
+  for word in tostring(s or ""):upper():gmatch("%S+") do
+    if #line + #word + 1 > math.max(10, n) and line ~= "" then
+      out[#out + 1] = line
+      line = word
+    else
+      line = (line == "" and word or line .. " " .. word)
+    end
+  end
+  if line ~= "" then
+    out[#out + 1] = line
+  end
+  return out
 end
-local function factionColor(p)return ({14,9,13,17})[p] or 5 end
-local function safeName(s)return tostring(s or ''):upper():gsub('[^A-Z0-9 %-]',''):sub(1,16)end
+local function where(f, arr)
+  local result = {}
+  for _, v in ipairs(arr) do
+    if f(v) then
+      result[#result + 1] = v
+    end
+  end
+  return result
+end
+local function factionColor(p)
+  return ({ 14, 9, 13, 17 })[p] or 5
+end
+local function safeName(s)
+  return tostring(s or ""):upper():gsub("[^A-Z0-9 %-]", ""):sub(1, 16)
+end
 local function costText(cost)
- local t={};for _,k in ipairs({'credits','alloy','knowledge'})do if cost[k] then t[#t+1]=({credits='C',alloy='A',knowledge='K'})[k]..cost[k]end end
- return table.concat(t,' ')
+  local t = {}
+  for _, k in ipairs({ "credits", "alloy", "knowledge" }) do
+    if cost[k] then
+      t[#t + 1] = ({ credits = "C", alloy = "A", knowledge = "K" })[k] .. cost[k]
+    end
+  end
+  return table.concat(t, " ")
 end
-function UI.new(monitor,forceText)
- local self=setmetatable({},UI)
- self.r=Renderer.new(monitor,forceText)
- self.screen='title';self.g=nil;self.humans=2;self.rounds=20;self.names={};self.arch={1,2,3,4}
- for i,a in ipairs(C.factions)do self.names[i]=a.name end
- self.selected=nil;self.selectedShip=nil;self.focusSystem=nil;self.shipID=nil;self.pending=nil;self.notice='';self.frame=0
- self.target=2;self.section='galaxy';self.page=1;self.edit=1;self.galaxyPage=1
- self.recentIncome=nil;self.returnTo='galaxy';self.activeAction=nil
- return self
+function UI.new(monitor, forceText)
+  local self = setmetatable({}, UI)
+  self.r = Renderer.new(monitor, forceText)
+  self.screen = "title"
+  self.g = nil
+  self.humans = 2
+  self.rounds = 20
+  self.names = {}
+  self.arch = { 1, 2, 3, 4 }
+  for i, a in ipairs(C.factions) do
+    self.names[i] = a.name
+  end
+  self.selected = nil
+  self.selectedShip = nil
+  self.focusSystem = nil
+  self.shipID = nil
+  self.pending = nil
+  self.notice = ""
+  self.frame = 0
+  self.target = 2
+  self.section = "galaxy"
+  self.page = 1
+  self.edit = 1
+  self.galaxyPage = 1
+  self.recentIncome = nil
+  self.returnTo = "galaxy"
+  self.activeAction = nil
+  return self
 end
 function UI:save()
- if not self.g or not fs or not textutils then return end
- local path='/games/shattered/v5-save.dat';if not fs.exists('/games/shattered')then path='v5-save.dat'end
- local tmp=path..'.new';local h=fs.open(tmp,'w');if not h then return end
- h.write(textutils.serialize(self.g));h.close()
- if fs.exists(path..'.bak')then fs.delete(path..'.bak')end
- if fs.exists(path)then fs.move(path,path..'.bak')end
- fs.move(tmp,path)
+  if not self.g or not fs or not textutils then
+    return
+  end
+  local path = "/games/shattered/v5-save.dat"
+  if not fs.exists("/games/shattered") then
+    path = "v5-save.dat"
+  end
+  local tmp = path .. ".new"
+  local h = fs.open(tmp, "w")
+  if not h then
+    return
+  end
+  h.write(textutils.serialize(self.g))
+  h.close()
+  if fs.exists(path .. ".bak") then
+    fs.delete(path .. ".bak")
+  end
+  if fs.exists(path) then
+    fs.move(path, path .. ".bak")
+  end
+  fs.move(tmp, path)
 end
 function UI:load()
- if not fs or not textutils then return false end
- for _,path in ipairs({'/games/shattered/v5-save.dat','/games/shattered/v5-save.dat.bak','v5-save.dat','v5-save.dat.bak'})do
-  if fs.exists(path)then local h=fs.open(path,'r')
-   if h then local value=h.readAll();h.close();local ok,g=pcall(textutils.unserialize,value)
-    if ok and Sim.validState(g)then self.g=g;Sim.advanceAI(g);self.screen=g.ended and 'results' or 'handoff';self.selected=nil;self.selectedShip=nil;self.shipID=nil;return true end
-   end
+  if not fs or not textutils then
+    return false
   end
- end
- return false
+  for _, path in ipairs({
+    "/games/shattered/v5-save.dat",
+    "/games/shattered/v5-save.dat.bak",
+    "v5-save.dat",
+    "v5-save.dat.bak",
+  }) do
+    if fs.exists(path) then
+      local h = fs.open(path, "r")
+      if h then
+        local value = h.readAll()
+        h.close()
+        local ok, g = pcall(textutils.unserialize, value)
+        if ok and Sim.validState(g) then
+          self.g = g
+          Sim.advanceAI(g)
+          self.screen = g.ended and "results" or "handoff"
+          self.selected = nil
+          self.selectedShip = nil
+          self.shipID = nil
+          return true
+        end
+      end
+    end
+  end
+  return false
 end
 function UI:start(seed)
- local h={};for i=1,4 do h[i]=i<=self.humans end
- seed=seed or math.floor(((os and os.epoch and os.epoch('utc'))or(os.clock()*100000))%2100000000)+1
- self.g=Sim.new({humans=h,names=self.names,archetypes=self.arch,rounds=self.rounds,seed=seed})
- self.screen='handoff';self.selected=nil;self.selectedShip=nil;self.notice='';self.shipID=nil;self:save()
+  local h = {}
+  for i = 1, 4 do
+    h[i] = i <= self.humans
+  end
+  seed = seed or math.floor(((os and os.epoch and os.epoch("utc")) or (os.clock() * 100000)) % 2100000000) + 1
+  self.g = Sim.new({ humans = h, names = self.names, archetypes = self.arch, rounds = self.rounds, seed = seed })
+  self.screen = "handoff"
+  self.selected = nil
+  self.selectedShip = nil
+  self.notice = ""
+  self.shipID = nil
+  self:save()
 end
 -- Railbreak-style opaque framed components. UI geometry stays in character
 -- cells; the rendering adapter chooses native pixel graphics or text.
-function UI:box(x,y,w,h,tint)
- local r=self.r
- r:rect(x,y,w,h,tint or 1)
- r:rect(x,y,w,1,3);r:rect(x,y+h-1,w,1,3)
- r:rect(x,y,1,h,3);r:rect(x+w-1,y,1,h,3)
+function UI:box(x, y, w, h, tint)
+  local r = self.r
+  r:rect(x, y, w, h, tint or 1)
+  r:rect(x, y, w, 1, 3)
+  r:rect(x, y + h - 1, w, 1, 3)
+  r:rect(x, y, 1, h, 3)
+  r:rect(x + w - 1, y, 1, h, 3)
 end
-function UI:button(x,y,w,h,label,icon,fn,detail,color)
- x=math.floor(x);y=math.floor(y);w=math.floor(w);h=math.floor(h)
- if w<5 or h<3 then return end
- local r=self.r
- local accent=color or 8
- local primary=accent==19
- r:rect(x,y,w,h,primary and 18 or 2)
- r:rect(x,y,w,1,primary and 19 or 3)
- r:rect(x,y+h-1,w,1,3)
- r:rect(x,y,1,h,accent)
- local start=x+2
- if icon and w>=14 then
-  r:icon(x+2,y+math.max(1,math.floor((h-2)/2)),icon,primary and 19 or 9)
-  start=x+6
- end
- local available=math.max(1,w-(start-x)-2)
- local text=clip(label,available)
- local tx=icon and start or x+math.max(2,math.floor((w-#text)/2))
- r:text(tx,y+math.max(1,math.floor((h-1)/2)),text,primary and 7 or 7,available)
- if detail and h>=6 then r:text(start,y+h-2,clip(detail,available),5,available)end
- if fn then r.buttons[#r.buttons+1]={x=x,y=y,w=w,h=h,fn=fn,label=label}end
+function UI:button(x, y, w, h, label, icon, fn, detail, color)
+  x = math.floor(x)
+  y = math.floor(y)
+  w = math.floor(w)
+  h = math.floor(h)
+  if w < 5 or h < 3 then
+    return
+  end
+  local r = self.r
+  local accent = color or 8
+  local primary = accent == 19
+  r:rect(x, y, w, h, primary and 18 or 2)
+  r:rect(x, y, w, 1, primary and 19 or 3)
+  r:rect(x, y + h - 1, w, 1, 3)
+  r:rect(x, y, 1, h, accent)
+  local start = x + 2
+  if icon and w >= 14 then
+    r:icon(x + 2, y + math.max(1, math.floor((h - 2) / 2)), icon, primary and 19 or 9)
+    start = x + 6
+  end
+  local available = math.max(1, w - (start - x) - 2)
+  local text = clip(label, available)
+  local tx = icon and start or x + math.max(2, math.floor((w - #text) / 2))
+  r:text(tx, y + math.max(1, math.floor((h - 1) / 2)), text, primary and 7 or 7, available)
+  if detail and h >= 6 then
+    r:text(start, y + h - 2, clip(detail, available), 5, available)
+  end
+  if fn then
+    r.buttons[#r.buttons + 1] = { x = x, y = y, w = w, h = h, fn = fn, label = label }
+  end
 end
-function UI:lines(x,y,w,text,color,max)
- local r=self.r;local rows=wrap(text,w);for i=1,math.min(#rows,max or 10)do r:text(x,y+i-1,rows[i],color or 6,w)end
- return math.min(#rows,max or 10)
+function UI:lines(x, y, w, text, color, max)
+  local r = self.r
+  local rows = wrap(text, w)
+  for i = 1, math.min(#rows, max or 10) do
+    r:text(x, y + i - 1, rows[i], color or 6, w)
+  end
+  return math.min(#rows, max or 10)
 end
 function UI:space()
- local r=self.r
- -- Fewer, deliberate light sources than the older dense random starfield.
- local count=math.max(12,math.floor(r.w*r.h/260))
- for i=1,count do
-  local x=(i*79+31)%r.w;local y=(i*47+19)%r.h
-  r:rect(x,y,i%9==0 and 2 or 1,1,i%7==0 and 8 or 3)
- end
+  local r = self.r
+  -- Fewer, deliberate light sources than the older dense random starfield.
+  local count = math.max(12, math.floor(r.w * r.h / 260))
+  for i = 1, count do
+    local x = (i * 79 + 31) % r.w
+    local y = (i * 47 + 19) % r.h
+    r:rect(x, y, i % 9 == 0 and 2 or 1, 1, i % 7 == 0 and 8 or 3)
+  end
 end
-function UI:headline(text,back)
- local r=self.r
- r:rect(0,0,r.w,8,1)
- r:rect(0,7,r.w,1,9)
- r:rect(2,2,2,4,9)
- r:text(7,3,clip(text,r.w-(back and 30 or 12)),7)
- if back then
-  self:button(r.w-17,1,15,6,'BACK','back',function()
-   self.screen=back;self.page=1
-  end)
- end
+function UI:headline(text, back)
+  local r = self.r
+  r:rect(0, 0, r.w, 8, 1)
+  r:rect(0, 7, r.w, 1, 9)
+  r:rect(2, 2, 2, 4, 9)
+  r:text(7, 3, clip(text, r.w - (back and 30 or 12)), 7)
+  if back then
+    self:button(r.w - 17, 1, 15, 6, "BACK", "back", function()
+      self.screen = back
+      self.page = 1
+    end)
+  end
 end
 function UI:title()
- local r=self.r;local w,h=r.w,r.h
- local cx=math.floor(w/2)
- -- A distinct railway-style illustrated hero, with a stable action footer.
- local compact=h<42 or w<75
- r:rect(0,0,w,math.max(12,math.floor(h*.60)),1)
- r:rect(0,math.max(12,math.floor(h*.60)),w,1,9)
- if not compact then
-  local centerY=math.floor(h*.28)
-  -- A ship silhouette against a ringed planet; all parts share the same
-  -- palette, and occupy the decorative area rather than the controls.
-  local radius=math.max(5,math.min(12,math.floor(h*.13)))
-  r:disc(cx+math.floor(w*.23),centerY,radius,3)
-  r:disc(cx+math.floor(w*.23)-2,centerY-2,math.max(3,radius-3),8)
-  local shipX=cx-math.floor(w*.26);local shipY=centerY-4
-  r:rect(shipX,shipY,math.floor(w*.26),5,3)
-  r:rect(shipX+4,shipY-3,math.floor(w*.18),4,9)
-  r:rect(shipX+math.floor(w*.1),shipY+5,math.floor(w*.11),3,8)
-  r:rect(shipX+math.floor(w*.19),shipY-2,6,3,7)
-  r:rect(shipX-3,shipY+1,5,2,15)
-  r:bigText(math.max(5,cx-20),math.max(9,math.floor(h*.46)-3),
-   'SHATTERED',9,2)
-  r:bigText(math.max(5,cx-18),math.max(18,math.floor(h*.46)+11),
-   'EXPANSE',7,2)
-  r:text(math.max(4,cx-20),math.max(27,math.floor(h*.61)-2),
-   'FOUR EMPIRES  |  A SPACE 4X SAGA',6)
- else
-  r:text(math.max(3,cx-13),5,'SHATTERED EXPANSE',9)
-  r:text(math.max(3,cx-11),8,'FOUR EMPIRES / 4X',6)
-  r:disc(math.floor(w*.80),math.floor(h*.30),3,8)
- end
- local wide=w>=115
- local bw=wide and math.floor((w-15)/3)or math.min(w-12,50)
- local y=wide and h-14 or math.max(7,h-17)
- if wide then
-  self:button(4,y,bw,10,'NEW CAMPAIGN','star',function()self.screen='setup'end,nil,19)
-  self:button(8+bw,y,bw,10,'CONTINUE','next',function()
-   if not self:load()then self.notice='NO SAVED CAMPAIGN' end
-  end)
-  self:button(12+2*bw,y,bw,10,'HOW TO PLAY','help',function()self.screen='help'end)
- else
-  self:button(cx-math.floor(bw/2),y,bw,5,'NEW CAMPAIGN','star',
-   function()self.screen='setup'end,nil,19)
-  self:button(cx-math.floor(bw/2),y+6,bw,5,'CONTINUE','next',function()
-   if not self:load()then self.notice='NO SAVED CAMPAIGN'end
-  end)
-  self:button(cx-math.floor(bw/2),y+12,bw,5,'HOW TO PLAY','help',
-   function()self.screen='help'end)
- end
- if self.notice~='' then
-  r:text(3,math.max(10,y-4),clip(self.notice,w-6),15)
- end
+  local r = self.r
+  local w, h = r.w, r.h
+  local cx = math.floor(w / 2)
+  -- A distinct railway-style illustrated hero, with a stable action footer.
+  local compact = h < 42 or w < 75
+  r:rect(0, 0, w, math.max(12, math.floor(h * 0.60)), 1)
+  r:rect(0, math.max(12, math.floor(h * 0.60)), w, 1, 9)
+  if not compact then
+    local centerY = math.floor(h * 0.28)
+    -- A ship silhouette against a ringed planet; all parts share the same
+    -- palette, and occupy the decorative area rather than the controls.
+    local radius = math.max(5, math.min(12, math.floor(h * 0.13)))
+    r:disc(cx + math.floor(w * 0.23), centerY, radius, 3)
+    r:disc(cx + math.floor(w * 0.23) - 2, centerY - 2, math.max(3, radius - 3), 8)
+    local shipX = cx - math.floor(w * 0.26)
+    local shipY = centerY - 4
+    r:rect(shipX, shipY, math.floor(w * 0.26), 5, 3)
+    r:rect(shipX + 4, shipY - 3, math.floor(w * 0.18), 4, 9)
+    r:rect(shipX + math.floor(w * 0.1), shipY + 5, math.floor(w * 0.11), 3, 8)
+    r:rect(shipX + math.floor(w * 0.19), shipY - 2, 6, 3, 7)
+    r:rect(shipX - 3, shipY + 1, 5, 2, 15)
+    r:bigText(math.max(5, cx - 20), math.max(9, math.floor(h * 0.46) - 3), "SHATTERED", 9, 2)
+    r:bigText(math.max(5, cx - 18), math.max(18, math.floor(h * 0.46) + 11), "EXPANSE", 7, 2)
+    r:text(math.max(4, cx - 20), math.max(27, math.floor(h * 0.61) - 2), "FOUR EMPIRES  |  A SPACE 4X SAGA", 6)
+  else
+    r:text(math.max(3, cx - 13), 5, "SHATTERED EXPANSE", 9)
+    r:text(math.max(3, cx - 11), 8, "FOUR EMPIRES / 4X", 6)
+    r:disc(math.floor(w * 0.80), math.floor(h * 0.30), 3, 8)
+  end
+  local wide = w >= 115
+  local bw = wide and math.floor((w - 15) / 3) or math.min(w - 12, 50)
+  local y = wide and h - 14 or math.max(7, h - 17)
+  if wide then
+    self:button(4, y, bw, 10, "NEW CAMPAIGN", "star", function()
+      self.screen = "setup"
+    end, nil, 19)
+    self:button(8 + bw, y, bw, 10, "CONTINUE", "next", function()
+      if not self:load() then
+        self.notice = "NO SAVED CAMPAIGN"
+      end
+    end)
+    self:button(12 + 2 * bw, y, bw, 10, "HOW TO PLAY", "help", function()
+      self.screen = "help"
+    end)
+  else
+    self:button(cx - math.floor(bw / 2), y, bw, 5, "NEW CAMPAIGN", "star", function()
+      self.screen = "setup"
+    end, nil, 19)
+    self:button(cx - math.floor(bw / 2), y + 6, bw, 5, "CONTINUE", "next", function()
+      if not self:load() then
+        self.notice = "NO SAVED CAMPAIGN"
+      end
+    end)
+    self:button(cx - math.floor(bw / 2), y + 12, bw, 5, "HOW TO PLAY", "help", function()
+      self.screen = "help"
+    end)
+  end
+  if self.notice ~= "" then
+    r:text(3, math.max(10, y - 4), clip(self.notice, w - 6), 15)
+  end
 end
 function UI:setup()
- local r=self.r;self:space();self:headline('NEW CAMPAIGN','title')
- r:text(3,9,'HUMAN COMMANDERS',6)
- self:button(23,8,8,4,'-','back',function()self.humans=math.max(1,self.humans-1)end)
- r:text(33,10,tostring(self.humans)..' / 4',9)
- self:button(42,8,8,4,'+','next',function()self.humans=math.min(4,self.humans+1)end)
- local y0=15;local rowH=math.min(9,math.max(4,math.floor((r.h-31)/4)))
- for p=1,4 do
-  local y=y0+(p-1)*rowH
-  r:rect(3,y,r.w-6,rowH-1,1);r:rect(3,y,2,rowH-1,factionColor(p))
-  r:text(6,y+1,p<=self.humans and 'HUMAN' or 'AI',p<=self.humans and 9 or 5)
-  local buttonX=math.max(15,math.floor(r.w*.20));local fw=math.max(13,math.floor(r.w*.38))
-  self:button(buttonX,y,fw,rowH-1,clip(self.names[p],fw-5),'flag',function()self.edit=p;self.screen='keyboard'end)
-  self:button(buttonX+fw+1,y,math.max(12,r.w-(buttonX+fw+5)),rowH-1,clip(C.factions[self.arch[p]].trait,14),'star',function()
-   self.arch[p]=self.arch[p]%4+1;self.names[p]=C.factions[self.arch[p]].name
+  local r = self.r
+  self:space()
+  self:headline("NEW CAMPAIGN", "title")
+  r:text(3, 9, "HUMAN COMMANDERS", 6)
+  self:button(23, 8, 8, 4, "-", "back", function()
+    self.humans = math.max(1, self.humans - 1)
   end)
- end
- local footer=r.h-12;r:text(4,footer,'GALACTIC YEARS: '..self.rounds,6)
- self:button(25,footer-2,8,5,'-','back',function()self.rounds=math.max(16,self.rounds-4)end)
- self:button(34,footer-2,8,5,'+','next',function()self.rounds=math.min(28,self.rounds+4)end)
- self:button(r.w-29,footer-2,26,6,'LAUNCH','next',function()self:start()end,nil,19)
- r:text(4,r.h-3,'TAP A NAME TO EDIT OR TRAIT TO CHANGE',5)
+  r:text(33, 10, tostring(self.humans) .. " / 4", 9)
+  self:button(42, 8, 8, 4, "+", "next", function()
+    self.humans = math.min(4, self.humans + 1)
+  end)
+  local y0 = 15
+  local rowH = math.min(9, math.max(4, math.floor((r.h - 31) / 4)))
+  for p = 1, 4 do
+    local y = y0 + (p - 1) * rowH
+    r:rect(3, y, r.w - 6, rowH - 1, 1)
+    r:rect(3, y, 2, rowH - 1, factionColor(p))
+    r:text(6, y + 1, p <= self.humans and "HUMAN" or "AI", p <= self.humans and 9 or 5)
+    local buttonX = math.max(15, math.floor(r.w * 0.20))
+    local fw = math.max(13, math.floor(r.w * 0.38))
+    self:button(buttonX, y, fw, rowH - 1, clip(self.names[p], fw - 5), "flag", function()
+      self.edit = p
+      self.screen = "keyboard"
+    end)
+    self:button(
+      buttonX + fw + 1,
+      y,
+      math.max(12, r.w - (buttonX + fw + 5)),
+      rowH - 1,
+      clip(C.factions[self.arch[p]].trait, 14),
+      "star",
+      function()
+        self.arch[p] = self.arch[p] % 4 + 1
+        self.names[p] = C.factions[self.arch[p]].name
+      end
+    )
+  end
+  local footer = r.h - 12
+  r:text(4, footer, "GALACTIC YEARS: " .. self.rounds, 6)
+  self:button(25, footer - 2, 8, 5, "-", "back", function()
+    self.rounds = math.max(16, self.rounds - 4)
+  end)
+  self:button(34, footer - 2, 8, 5, "+", "next", function()
+    self.rounds = math.min(28, self.rounds + 4)
+  end)
+  self:button(r.w - 29, footer - 2, 26, 6, "LAUNCH", "next", function()
+    self:start()
+  end, nil, 19)
+  r:text(4, r.h - 3, "TAP A NAME TO EDIT OR TRAIT TO CHANGE", 5)
 end
 function UI:keyboard()
- local r=self.r;self:space();self:headline('NAME YOUR EMPIRE','setup')
- r:text(5,9,'EMPIRE '..self.edit..': '..clip(self.names[self.edit],r.w-19),9)
- local letters={'QWERTYUIOP','ASDFGHJKL','ZXCVBNM'}
- local step=math.max(5,math.min(9,math.floor((r.w-9)/10)))
- local y0=math.max(13,math.floor(r.h*.32));local h=math.max(4,math.min(6,math.floor((r.h-y0-10)/4)))
- for row,s in ipairs(letters)do
-  local x=math.floor((r.w-#s*step)/2)
-  for i=1,#s do local key=s:sub(i,i)
-   self:button(x+(i-1)*step,y0+(row-1)*(h+1),step-1,h,key,nil,function()self.names[self.edit]=safeName(self.names[self.edit]..key)end)
+  local r = self.r
+  self:space()
+  self:headline("NAME YOUR EMPIRE", "setup")
+  r:text(5, 9, "EMPIRE " .. self.edit .. ": " .. clip(self.names[self.edit], r.w - 19), 9)
+  local letters = { "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM" }
+  local step = math.max(5, math.min(9, math.floor((r.w - 9) / 10)))
+  local y0 = math.max(13, math.floor(r.h * 0.32))
+  local h = math.max(4, math.min(6, math.floor((r.h - y0 - 10) / 4)))
+  for row, s in ipairs(letters) do
+    local x = math.floor((r.w - #s * step) / 2)
+    for i = 1, #s do
+      local key = s:sub(i, i)
+      self:button(x + (i - 1) * step, y0 + (row - 1) * (h + 1), step - 1, h, key, nil, function()
+        self.names[self.edit] = safeName(self.names[self.edit] .. key)
+      end)
+    end
   end
- end
- local lastY=y0+3*(h+1)
- self:button(4,lastY,math.floor((r.w-11)/3),5,'SPACE',nil,function()self.names[self.edit]=safeName(self.names[self.edit]..' ')end)
- self:button(5+math.floor((r.w-11)/3),lastY,math.floor((r.w-11)/3),5,'DELETE','close',function()self.names[self.edit]=self.names[self.edit]:sub(1,-2)end)
- self:button(r.w-math.floor((r.w-11)/3)-5,lastY,math.floor((r.w-11)/3),5,'DONE','check',function()
-  if self.names[self.edit]=='' then self.names[self.edit]='EMPIRE '..self.edit end;self.screen='setup'
- end)
+  local lastY = y0 + 3 * (h + 1)
+  self:button(4, lastY, math.floor((r.w - 11) / 3), 5, "SPACE", nil, function()
+    self.names[self.edit] = safeName(self.names[self.edit] .. " ")
+  end)
+  self:button(5 + math.floor((r.w - 11) / 3), lastY, math.floor((r.w - 11) / 3), 5, "DELETE", "close", function()
+    self.names[self.edit] = self.names[self.edit]:sub(1, -2)
+  end)
+  self:button(r.w - math.floor((r.w - 11) / 3) - 5, lastY, math.floor((r.w - 11) / 3), 5, "DONE", "check", function()
+    if self.names[self.edit] == "" then
+      self.names[self.edit] = "EMPIRE " .. self.edit
+    end
+    self.screen = "setup"
+  end)
 end
 function UI:handoff()
- local r=self.r;self:space();self:headline('NEW COMMAND PHASE')
- local g=self.g;local p=Sim.current(g);local f=g.factions[p];local cx=math.floor(r.w/2)
- r:icon(cx-3,math.floor(r.h*.25),'flag',factionColor(p))
- r:bigText(cx-math.min(#f.name,12),math.floor(r.h*.39),clip(f.name,12),factionColor(p),2)
- r:text(cx-12,math.floor(r.h*.55),'YEAR '..g.round..' OF '..g.limit,6)
- r:text(cx-17,math.floor(r.h*.61),'PASS MONITOR TO COMMANDER',5)
- self:button(cx-20,math.floor(r.h*.70),40,7,'BEGIN TURN','next',function()
-  self.screen=(#f.events>0 and 'event') or (f.offers and #f.offers>0 and 'diplomacy') or 'galaxy'
-  self.selected=nil;self.selectedShip=nil;self.shipID=nil;self.page=1
- end,nil,19)
+  local r = self.r
+  self:space()
+  self:headline("NEW COMMAND PHASE")
+  local g = self.g
+  local p = Sim.current(g)
+  local f = g.factions[p]
+  local cx = math.floor(r.w / 2)
+  r:icon(cx - 3, math.floor(r.h * 0.25), "flag", factionColor(p))
+  r:bigText(cx - math.min(#f.name, 12), math.floor(r.h * 0.39), clip(f.name, 12), factionColor(p), 2)
+  r:text(cx - 12, math.floor(r.h * 0.55), "YEAR " .. g.round .. " OF " .. g.limit, 6)
+  r:text(cx - 17, math.floor(r.h * 0.61), "PASS MONITOR TO COMMANDER", 5)
+  self:button(cx - 20, math.floor(r.h * 0.70), 40, 7, "BEGIN TURN", "next", function()
+    self.screen = (#f.events > 0 and "event") or (f.offers and #f.offers > 0 and "diplomacy") or "galaxy"
+    self.selected = nil
+    self.selectedShip = nil
+    self.shipID = nil
+    self.page = 1
+  end, nil, 19)
 end
 function UI:navigate(name)
- self.screen=name;self.page=1;self.notice=''
- if name~='galaxy' then self.selected=nil;self.selectedShip=nil;self.shipID=nil end
+  self.screen = name
+  self.page = 1
+  self.notice = ""
+  if name ~= "galaxy" then
+    self.selected = nil
+    self.selectedShip = nil
+    self.shipID = nil
+  end
 end
 function UI:status()
- local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
- local w=r.w
- r:rect(0,0,w,9,1);r:rect(0,8,w,1,9)
- local titleW=math.max(22,math.floor(w*.30))
- r:rect(1,1,3,6,factionColor(p))
- r:text(6,1,clip(f.name,titleW-7),7)
- r:text(6,5,'YEAR '..g.round..'/'..g.limit,5)
- local values={{'coin','credits','CR',17},{'alloy','alloy','AL',9},
-  {'science','knowledge','KN',13}}
- local col=math.floor((w-titleW-4)/3)
- for i,d in ipairs(values)do
-  local x=titleW+(i-1)*col
-  if col>8 then
-   r:rect(x,1,col-1,7,2);r:rect(x,1,col-1,1,3)
-   r:icon(x+1,2,d[1],d[4])
-   r:text(x+4,4,d[3]..math.floor(f[d[2]]),7,col-5)
+  local r = self.r
+  local g = self.g
+  local p = Sim.current(g)
+  local f = g.factions[p]
+  local w = r.w
+  r:rect(0, 0, w, 9, 1)
+  r:rect(0, 8, w, 1, 9)
+  local titleW = math.max(22, math.floor(w * 0.30))
+  r:rect(1, 1, 3, 6, factionColor(p))
+  r:text(6, 1, clip(f.name, titleW - 7), 7)
+  r:text(6, 5, "YEAR " .. g.round .. "/" .. g.limit, 5)
+  local values =
+    { { "coin", "credits", "CR", 17 }, { "alloy", "alloy", "AL", 9 }, { "science", "knowledge", "KN", 13 } }
+  local col = math.floor((w - titleW - 4) / 3)
+  for i, d in ipairs(values) do
+    local x = titleW + (i - 1) * col
+    if col > 8 then
+      r:rect(x, 1, col - 1, 7, 2)
+      r:rect(x, 1, col - 1, 1, 3)
+      r:icon(x + 1, 2, d[1], d[4])
+      r:text(x + 4, 4, d[3] .. math.floor(f[d[2]]), 7, col - 5)
+    end
   end
- end
 end
 function UI:dock()
- local r=self.r;local y=r.h-10;local w=r.w
- r:rect(0,y,w,10,1);r:rect(0,y,w,1,9)
- local nav={{'GALAXY','star','galaxy'},{'SHIPS','ship','ships'},
-  {'WORLDS','colony','colony'},{'TECH','lab','research'},
-  {'DIPLO','trade','diplomacy'},{'EMPIRE','flag','empire'}}
- local endW=math.max(12,math.floor(w*.13))
- local available=w-endW-2
- local tabW=math.max(7,math.floor(available/#nav))
- for i,v in ipairs(nav)do
-  local x=1+(i-1)*tabW
-  local current=self.screen==v[3]
-  r:rect(x,y+1,tabW-1,8,current and 2 or 1)
-  r:rect(x,y+1,tabW-1,1,current and 19 or 3)
-  if tabW>=12 then
-   r:icon(x+math.floor(tabW/2)-1,y+2,v[2],current and 9 or 5)
+  local r = self.r
+  local y = r.h - 10
+  local w = r.w
+  r:rect(0, y, w, 10, 1)
+  r:rect(0, y, w, 1, 9)
+  local nav = {
+    { "GALAXY", "star", "galaxy" },
+    { "SHIPS", "ship", "ships" },
+    { "WORLDS", "colony", "colony" },
+    { "TECH", "lab", "research" },
+    { "DIPLO", "trade", "diplomacy" },
+    { "EMPIRE", "flag", "empire" },
+  }
+  local endW = math.max(12, math.floor(w * 0.13))
+  local available = w - endW - 2
+  local tabW = math.max(7, math.floor(available / #nav))
+  for i, v in ipairs(nav) do
+    local x = 1 + (i - 1) * tabW
+    local current = self.screen == v[3]
+    r:rect(x, y + 1, tabW - 1, 8, current and 2 or 1)
+    r:rect(x, y + 1, tabW - 1, 1, current and 19 or 3)
+    if tabW >= 12 then
+      r:icon(x + math.floor(tabW / 2) - 1, y + 2, v[2], current and 9 or 5)
+    end
+    local label = clip(v[1], math.max(3, tabW - 1))
+    r:text(x + math.max(0, math.floor((tabW - #label) / 2)), y + 6, label, current and 7 or 5, tabW)
+    r.buttons[#r.buttons + 1] = {
+      x = x,
+      y = y + 1,
+      w = tabW - 1,
+      h = 8,
+      label = v[1],
+      fn = function()
+        self:navigate(v[3])
+      end,
+    }
   end
-  local label=clip(v[1],math.max(3,tabW-1))
-  r:text(x+math.max(0,math.floor((tabW-#label)/2)),y+6,label,
-   current and 7 or 5,tabW)
-  r.buttons[#r.buttons+1]={x=x,y=y+1,w=tabW-1,h=8,label=v[1],
-   fn=function()self:navigate(v[3])end}
- end
- self:button(w-endW,y+1,endW-1,8,'END','next',function()
-  self:finishTurn()
- end,nil,19)
+  self:button(w - endW, y + 1, endW - 1, 8, "END", "next", function()
+    self:finishTurn()
+  end, nil, 19)
 end
 function UI:frameScreen()
- self:space();self:status();self:dock()
+  self:space()
+  self:status()
+  self:dock()
 end
 function UI:noticeBar()
- if self.notice=='' then return end
- local r=self.r;local y=r.h-15
- r:rect(1,y,r.w-2,4,3);r:text(3,y+1,clip(self.notice,r.w-6),7)
+  if self.notice == "" then
+    return
+  end
+  local r = self.r
+  local y = r.h - 15
+  r:rect(1, y, r.w - 2, 4, 3)
+  r:text(3, y + 1, clip(self.notice, r.w - 6), 7)
 end
 -- Persistent split-view workspace. On tablet/wide monitors the sidebar
 -- is always reserved, so selecting a star never moves the star itself.
 function UI:galaxyLayout()
- local r=self.r
- local wide=r.w>=92 and r.h>=39
- local sidebar=wide and math.max(25,math.floor(r.w*.29)) or 0
- local map={x=2,y=11,w=r.w-4-sidebar,h=r.h-24}
- local inspector=wide and {x=map.x+map.w+1,y=11,
-  w=sidebar-1,h=map.h} or nil
- return map,inspector
+  local r = self.r
+  local wide = r.w >= 92 and r.h >= 39
+  local sidebar = wide and math.max(25, math.floor(r.w * 0.29)) or 0
+  local map = { x = 2, y = 11, w = r.w - 4 - sidebar, h = r.h - 24 }
+  local inspector = wide and { x = map.x + map.w + 1, y = 11, w = sidebar - 1, h = map.h } or nil
+  return map, inspector
 end
 -- Map coordinates never move when a context menu opens. This means ships and
 -- planets remain in the same place throughout an interaction.
 function UI:starPos(s)
- local r=self.r
- local map=self:galaxyLayout()
- return math.floor(map.x+4+s.x*math.max(1,map.w-8)),
-  math.floor(map.y+3+s.y*math.max(1,map.h-6))
+  local r = self.r
+  local map = self:galaxyLayout()
+  return math.floor(map.x + 4 + s.x * math.max(1, map.w - 8)), math.floor(map.y + 3 + s.y * math.max(1, map.h - 6))
 end
-local function overlaps(a,b)
- return a.x<b.x+b.w and a.x+a.w>b.x and a.y<b.y+b.h and a.y+a.h>b.y
+local function overlaps(a, b)
+  return a.x < b.x + b.w and a.x + a.w > b.x and a.y < b.y + b.h and a.y + a.h > b.y
 end
-local function insideMap(r,t,map)
- return t.x>=map.x+1 and t.y>=map.y+1 and
-  t.x+t.w<=map.x+map.w-1 and t.y+t.h<=map.y+map.h-1
+local function insideMap(r, t, map)
+  return t.x >= map.x + 1 and t.y >= map.y + 1 and t.x + t.w <= map.x + map.w - 1 and t.y + t.h <= map.y + map.h - 1
 end
 -- Layout is based on entity IDs and the galaxy seed, not the selected panel.
 -- There is a distinct, non-overlapping clickable marker for each visible ship.
 function UI:mapTargets()
- local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
- local map=self:galaxyLayout()
- local targets={};local systems={};local ships={}
- local cellW=(r.w>=100 and 6 or 4);local cellH=(r.h>=65 and 5 or 3)
- local function available(rect)
-  if not insideMap(r,rect,map) then return false end
-  for _,old in ipairs(targets)do if overlaps(old,rect)then return false end end
-  return true
- end
- local function place(preferred,w,h)
-  local best
-  -- Prefer the intended position. A nearby free slot is used when ships
-  -- congregate around the same planet; no overlapping click targets.
-  local offsets={{0,0},{0,-4},{0,4},{-5,0},{5,0},{-6,-4},{6,-4},{-6,4},{6,4},
-   {-10,0},{10,0},{-10,-6},{10,-6},{-10,6},{10,6},{0,-9},{0,9}}
-  for _,offset in ipairs(offsets)do
-   local rect={x=preferred.x+offset[1],y=preferred.y+offset[2],w=w,h=h}
-   if available(rect)then return rect end
-  end
-  -- Dense maps can still contain individually clickable ships. Find the
-  -- nearest free rectangle instead of silently dropping the ship's marker.
-  local limit=math.max(r.w,r.h)
-  for dist=1,limit do
-   for dx=-dist,dist do
-    local dy=dist-math.abs(dx)
-    for _,sign in ipairs({-1,1})do
-     local rect={x=preferred.x+dx,y=preferred.y+dy*sign,w=w,h=h}
-     if available(rect)then return rect end
+  local r = self.r
+  local g = self.g
+  local p = Sim.current(g)
+  local f = g.factions[p]
+  local map = self:galaxyLayout()
+  local targets = {}
+  local systems = {}
+  local ships = {}
+  local cellW = (r.w >= 100 and 6 or 4)
+  local cellH = (r.h >= 65 and 5 or 3)
+  local function available(rect)
+    if not insideMap(r, rect, map) then
+      return false
     end
-   end
+    for _, old in ipairs(targets) do
+      if overlaps(old, rect) then
+        return false
+      end
+    end
+    return true
   end
-  return best
- end
- for _,system in ipairs(g.systems)do
-  local x,y=self:starPos(system)
-  local rect=place({x=x-math.floor(cellW/2),y=y-math.floor(cellH/2)},cellW,cellH)
-  if rect then
-   rect.kind='system';rect.id=system.id;rect.system=system.id
-   rect.cx=rect.x+math.floor(rect.w/2);rect.cy=rect.y+math.floor(rect.h/2)
-   targets[#targets+1]=rect;systems[system.id]=rect
+  local function place(preferred, w, h)
+    local best
+    -- Prefer the intended position. A nearby free slot is used when ships
+    -- congregate around the same planet; no overlapping click targets.
+    local offsets = {
+      { 0, 0 },
+      { 0, -4 },
+      { 0, 4 },
+      { -5, 0 },
+      { 5, 0 },
+      { -6, -4 },
+      { 6, -4 },
+      { -6, 4 },
+      { 6, 4 },
+      { -10, 0 },
+      { 10, 0 },
+      { -10, -6 },
+      { 10, -6 },
+      { -10, 6 },
+      { 10, 6 },
+      { 0, -9 },
+      { 0, 9 },
+    }
+    for _, offset in ipairs(offsets) do
+      local rect = { x = preferred.x + offset[1], y = preferred.y + offset[2], w = w, h = h }
+      if available(rect) then
+        return rect
+      end
+    end
+    -- Dense maps can still contain individually clickable ships. Find the
+    -- nearest free rectangle instead of silently dropping the ship's marker.
+    local limit = math.max(r.w, r.h)
+    for dist = 1, limit do
+      for dx = -dist, dist do
+        local dy = dist - math.abs(dx)
+        for _, sign in ipairs({ -1, 1 }) do
+          local rect = { x = preferred.x + dx, y = preferred.y + dy * sign, w = w, h = h }
+          if available(rect) then
+            return rect
+          end
+        end
+      end
+    end
+    return best
   end
- end
- for _,sh in ipairs(g.ships)do
-  local system=g.systems[sh.location]
-  if sh.owner==p or f.seen[sh.location] or system.owner==p then
-   local origin=systems[sh.location]
-   if origin then
-    local w,h=(r.w>=100 and 5 or 4),(r.h>=65 and 4 or 3)
-    local rect=place({x=origin.x+origin.w+2,y=origin.y-2},w,h)
+  for _, system in ipairs(g.systems) do
+    local x, y = self:starPos(system)
+    local rect = place({ x = x - math.floor(cellW / 2), y = y - math.floor(cellH / 2) }, cellW, cellH)
     if rect then
-     rect.kind='ship';rect.id=sh.id;rect.system=sh.location
-     rect.cx=rect.x+math.floor(rect.w/2);rect.cy=rect.y+math.floor(rect.h/2)
-     targets[#targets+1]=rect;ships[sh.id]=rect
+      rect.kind = "system"
+      rect.id = system.id
+      rect.system = system.id
+      rect.cx = rect.x + math.floor(rect.w / 2)
+      rect.cy = rect.y + math.floor(rect.h / 2)
+      targets[#targets + 1] = rect
+      systems[system.id] = rect
     end
-   end
   end
- end
- return targets,systems,ships
+  for _, sh in ipairs(g.ships) do
+    local system = g.systems[sh.location]
+    if sh.owner == p or f.seen[sh.location] or system.owner == p then
+      local origin = systems[sh.location]
+      if origin then
+        local w, h = (r.w >= 100 and 5 or 4), (r.h >= 65 and 4 or 3)
+        local rect = place({ x = origin.x + origin.w + 2, y = origin.y - 2 }, w, h)
+        if rect then
+          rect.kind = "ship"
+          rect.id = sh.id
+          rect.system = sh.location
+          rect.cx = rect.x + math.floor(rect.w / 2)
+          rect.cy = rect.y + math.floor(rect.h / 2)
+          targets[#targets + 1] = rect
+          ships[sh.id] = rect
+        end
+      end
+    end
+  end
+  return targets, systems, ships
 end
 function UI:systemCommands(s)
- local g=self.g;local p=Sim.current(g);local f=g.factions[p]
- local visible=f.seen[s.id] or s.owner==p
- if not visible then
-  return {{'HOW TO EXPLORE','scan',function()self.notice='SELECT A SCOUT ICON, MOVE IT HERE TO SURVEY'end}}
- end
- if s.owner==p and s.colony then
+  local g = self.g
+  local p = Sim.current(g)
+  local f = g.factions[p]
+  local visible = f.seen[s.id] or s.owner == p
+  if not visible then
+    return {
+      {
+        "HOW TO EXPLORE",
+        "scan",
+        function()
+          self.notice = "SELECT A SCOUT ICON, MOVE IT HERE TO SURVEY"
+        end,
+      },
+    }
+  end
+  if s.owner == p and s.colony then
+    return {
+      {
+        "MANAGE WORLD",
+        "colony",
+        function()
+          self.focusSystem = s.id
+          self:navigate("colony")
+        end,
+      },
+      {
+        "BUILD SCOUT C3 A7",
+        "scan",
+        function()
+          self:ask(
+            "build_ship",
+            { system = s.id, kind = "scout" },
+            "BUILD SCOUT",
+            C.ships.scout.description,
+            C.ships.scout.cost
+          )
+        end,
+      },
+      {
+        "BUILD ARK C5 A12",
+        "colony",
+        function()
+          self:ask(
+            "build_ship",
+            { system = s.id, kind = "ark" },
+            "BUILD COLONY ARK",
+            C.ships.ark.description,
+            C.ships.ark.cost
+          )
+        end,
+      },
+      {
+        "BUILD FLEET C5 A10",
+        "ship",
+        function()
+          self:ask(
+            "build_ship",
+            { system = s.id, kind = "fleet" },
+            "BUILD FLEET",
+            C.ships.fleet.description,
+            C.ships.fleet.cost
+          )
+        end,
+      },
+    }
+  elseif s.owner == p then
+    return {
+      {
+        "YOUR OUTPOST",
+        "flag",
+        function()
+          self.notice = "OUTPOST: +1 ALLOY EACH YEAR"
+        end,
+      },
+    }
+  elseif s.owner == 0 then
+    local ark
+    for _, sh in ipairs(Sim.shipsAt(g, s.id, p)) do
+      if sh.kind == "ark" then
+        ark = sh.id
+        break
+      end
+    end
+    return {
+      {
+        ark and "FOUND COLONY" or "COLONIZATION HELP",
+        "colony",
+        function()
+          if ark then
+            self:ask(
+              "colonize",
+              { ship = ark },
+              "FOUND COLONY",
+              "Consumes a Colony Ark. Adds a new world.",
+              { credits = 8, alloy = 12 }
+            )
+          else
+            self.notice = "SELECT AN ARK ON THE MAP AND MOVE IT HERE"
+          end
+        end,
+      },
+    }
+  end
   return {
-   {'MANAGE WORLD','colony',function()self.focusSystem=s.id;self:navigate('colony')end},
-   {'BUILD SCOUT C3 A7','scan',function()self:ask('build_ship',{system=s.id,kind='scout'},'BUILD SCOUT',C.ships.scout.description,C.ships.scout.cost)end},
-   {'BUILD ARK C5 A12','colony',function()self:ask('build_ship',{system=s.id,kind='ark'},'BUILD COLONY ARK',C.ships.ark.description,C.ships.ark.cost)end},
-   {'BUILD FLEET C5 A10','ship',function()self:ask('build_ship',{system=s.id,kind='fleet'},'BUILD FLEET',C.ships.fleet.description,C.ships.fleet.cost)end},
+    {
+      "DIPLOMACY",
+      "trade",
+      function()
+        self.target = s.owner
+        self:navigate("diplomacy")
+      end,
+    },
+    {
+      "BORDER CONFLICT",
+      "war",
+      function()
+        self.notice = "SELECT A FLEET AND MOVE IT HERE WHILE AT WAR"
+      end,
+    },
   }
- elseif s.owner==p then
-  return {{'YOUR OUTPOST','flag',function()self.notice='OUTPOST: +1 ALLOY EACH YEAR'end}}
- elseif s.owner==0 then
-  local ark
-  for _,sh in ipairs(Sim.shipsAt(g,s.id,p))do if sh.kind=='ark' then ark=sh.id;break end end
-  return {{ark and 'FOUND COLONY' or 'COLONIZATION HELP','colony',function()
-   if ark then self:ask('colonize',{ship=ark},'FOUND COLONY','Consumes a Colony Ark. Adds a new world.',{credits=8,alloy=12})
-   else self.notice='SELECT AN ARK ON THE MAP AND MOVE IT HERE'end
-  end}}
- end
- return {{'DIPLOMACY','trade',function()self.target=s.owner;self:navigate('diplomacy')end},
-  {'BORDER CONFLICT','war',function()self.notice='SELECT A FLEET AND MOVE IT HERE WHILE AT WAR'end}}
 end
 function UI:shipCommands(sh)
- local p=Sim.current(self.g)
- if sh.owner~=p then
-  return {{'ENEMY SHIP','ship',function()self.notice='ONLY OWNED SHIPS CAN RECEIVE ORDERS'end},
-   {'VIEW SYSTEM','planet',function()self.selected=sh.location;self.selectedShip=nil end}}
- end
- local entries={{sh.kind=='fleet' and 'MOVE / ATTACK' or 'MOVE SHIP','move',function()
-  if sh.orders<1 then self.notice='NO SHIP ORDERS LEFT THIS YEAR';return end
-  self.shipID=sh.id;self.selectedShip=nil;self.selected=nil;self.notice='TAP A LINKED DESTINATION STAR'
- end}}
- if sh.kind=='ark' then
-  entries[#entries+1]={'FOUND COLONY','colony',function()
-   self:ask('colonize',{ship=sh.id},'FOUND COLONY','Settles the system occupied by this Colony Ark.',{credits=8,alloy=12})
-  end}
- end
- entries[#entries+1]={'VIEW SYSTEM','planet',function()self.selected=sh.location;self.selectedShip=nil end}
- return entries
-end
-function UI:contextGeometry(systems,ships,targets)
- if self.shipID then return nil end
- local target=self.selectedShip and ships[self.selectedShip] or self.selected and systems[self.selected]
- if not target then return nil end
- local sh=self.selectedShip and Sim.findShip(self.g,self.selectedShip)
- local sys=not sh and self.g.systems[self.selected]
- if not sh and not sys then return nil end
- local entries=sh and self:shipCommands(sh) or self:systemCommands(sys)
- local r=self.r;local w=math.min(r.w-6,r.w>=100 and 29 or 25)
- local header=5;local row=3;local h=header+#entries*row+1
- local map,inspector=self:galaxyLayout()
- if inspector then
-  return {x=inspector.x,y=inspector.y,w=inspector.w,
-   h=inspector.h,entries=entries,ship=sh,system=sys,sidebar=true}
- end
- local anchorX=target.x+target.w+2;local anchorY=target.y-1
- local candidates={{anchorX,anchorY},{target.x-w-2,anchorY},
-  {target.x,target.y+target.h+2},{target.x,target.y-h-2}}
- local best,bestScore
- for index,pair in ipairs(candidates)do
-  local x=math.max(2,math.min(r.w-w-2,pair[1]))
-  local y=math.max(9,math.min(r.h-h-10,pair[2]))
-  local rect={x=x,y=y,w=w,h=h}
-  local score=index*.1+math.abs(x-pair[1])*.35+math.abs(y-pair[2])*.35
-  for _,other in ipairs(targets or {})do
-   if overlaps(rect,other) then
-    local ownShip=other.kind=='ship' and Sim.findShip(self.g,other.id)
-    score=score+((ownShip and ownShip.owner==Sim.current(self.g)) and 15 or 5)
-    if other==target then score=score+30 end
-   end
+  local p = Sim.current(self.g)
+  if sh.owner ~= p then
+    return {
+      {
+        "ENEMY SHIP",
+        "ship",
+        function()
+          self.notice = "ONLY OWNED SHIPS CAN RECEIVE ORDERS"
+        end,
+      },
+      {
+        "VIEW SYSTEM",
+        "planet",
+        function()
+          self.selected = sh.location
+          self.selectedShip = nil
+        end,
+      },
+    }
   end
-  if not bestScore or score<bestScore then best=rect;bestScore=score end
- end
- best.entries=entries;best.ship=sh;best.system=sys
- return best
+  local entries = {
+    {
+      sh.kind == "fleet" and "MOVE / ATTACK" or "MOVE SHIP",
+      "move",
+      function()
+        if sh.orders < 1 then
+          self.notice = "NO SHIP ORDERS LEFT THIS YEAR"
+          return
+        end
+        self.shipID = sh.id
+        self.selectedShip = nil
+        self.selected = nil
+        self.notice = "TAP A LINKED DESTINATION STAR"
+      end,
+    },
+  }
+  if sh.kind == "ark" then
+    entries[#entries + 1] = {
+      "FOUND COLONY",
+      "colony",
+      function()
+        self:ask(
+          "colonize",
+          { ship = sh.id },
+          "FOUND COLONY",
+          "Settles the system occupied by this Colony Ark.",
+          { credits = 8, alloy = 12 }
+        )
+      end,
+    }
+  end
+  entries[#entries + 1] = {
+    "VIEW SYSTEM",
+    "planet",
+    function()
+      self.selected = sh.location
+      self.selectedShip = nil
+    end,
+  }
+  return entries
+end
+function UI:contextGeometry(systems, ships, targets)
+  if self.shipID then
+    return nil
+  end
+  local target = self.selectedShip and ships[self.selectedShip] or self.selected and systems[self.selected]
+  if not target then
+    return nil
+  end
+  local sh = self.selectedShip and Sim.findShip(self.g, self.selectedShip)
+  local sys = not sh and self.g.systems[self.selected]
+  if not sh and not sys then
+    return nil
+  end
+  local entries = sh and self:shipCommands(sh) or self:systemCommands(sys)
+  local r = self.r
+  local w = math.min(r.w - 6, r.w >= 100 and 29 or 25)
+  local header = 5
+  local row = 3
+  local h = header + #entries * row + 1
+  local map, inspector = self:galaxyLayout()
+  if inspector then
+    return {
+      x = inspector.x,
+      y = inspector.y,
+      w = inspector.w,
+      h = inspector.h,
+      entries = entries,
+      ship = sh,
+      system = sys,
+      sidebar = true,
+    }
+  end
+  local anchorX = target.x + target.w + 2
+  local anchorY = target.y - 1
+  local candidates = {
+    { anchorX, anchorY },
+    { target.x - w - 2, anchorY },
+    { target.x, target.y + target.h + 2 },
+    {
+      target.x,
+      target.y - h - 2,
+    },
+  }
+  local best, bestScore
+  for index, pair in ipairs(candidates) do
+    local x = math.max(2, math.min(r.w - w - 2, pair[1]))
+    local y = math.max(9, math.min(r.h - h - 10, pair[2]))
+    local rect = { x = x, y = y, w = w, h = h }
+    local score = index * 0.1 + math.abs(x - pair[1]) * 0.35 + math.abs(y - pair[2]) * 0.35
+    for _, other in ipairs(targets or {}) do
+      if overlaps(rect, other) then
+        local ownShip = other.kind == "ship" and Sim.findShip(self.g, other.id)
+        score = score + ((ownShip and ownShip.owner == Sim.current(self.g)) and 15 or 5)
+        if other == target then
+          score = score + 30
+        end
+      end
+    end
+    if not bestScore or score < bestScore then
+      best = rect
+      bestScore = score
+    end
+  end
+  best.entries = entries
+  best.ship = sh
+  best.system = sys
+  return best
 end
 function UI:starMap()
- local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
- -- Keep the galaxy in a calm, framed tactical plotting area, rather than
- -- mixing clickable map markers with a full-screen animated starfield.
- local map,inspector=self:galaxyLayout()
- r:rect(map.x,map.y,map.w,map.h,1)
- r:rect(map.x,map.y,map.w,1,3)
- r:rect(map.x,map.y+map.h-1,map.w,1,3)
- if inspector then
-  self:box(inspector.x,inspector.y,inspector.w,inspector.h,1)
-  r:rect(inspector.x+1,inspector.y+1,inspector.w-2,3,2)
-  r:text(inspector.x+3,inspector.y+2,'SYSTEM INSPECTOR',9,inspector.w-5)
- end
- if r.w>=90 then
-  for x=map.x+10,map.x+map.w-4,16 do
-   for y=map.y+6,map.y+map.h-4,10 do
-    r:rect(x,y,1,1,3)
-   end
+  local r = self.r
+  local g = self.g
+  local p = Sim.current(g)
+  local f = g.factions[p]
+  -- Keep the galaxy in a calm, framed tactical plotting area, rather than
+  -- mixing clickable map markers with a full-screen animated starfield.
+  local map, inspector = self:galaxyLayout()
+  r:rect(map.x, map.y, map.w, map.h, 1)
+  r:rect(map.x, map.y, map.w, 1, 3)
+  r:rect(map.x, map.y + map.h - 1, map.w, 1, 3)
+  if inspector then
+    self:box(inspector.x, inspector.y, inspector.w, inspector.h, 1)
+    r:rect(inspector.x + 1, inspector.y + 1, inspector.w - 2, 3, 2)
+    r:text(inspector.x + 3, inspector.y + 2, "SYSTEM INSPECTOR", 9, inspector.w - 5)
   end
- end
- local moving=self.shipID and Sim.findShip(g,self.shipID)
- local targets,systems,ships=self:mapTargets()
- self.mapMarkers={systems=systems,ships=ships}
- local menu=self:contextGeometry(systems,ships,targets)
- self.contextBounds=menu
- r:text(3,9,moving and 'SELECT LINKED DESTINATION' or 'EXPLORE / SELECT A SYSTEM OR SHIP',5,r.w-6)
- for _,edge in ipairs(g.links)do
-  local a,b=g.systems[edge[1]],g.systems[edge[2]]
-  if f.charted[a.id] or f.charted[b.id] or f.seen[a.id] or f.seen[b.id] then
-   local one,two=systems[a.id],systems[b.id]
-   if one and two then r:line(one.cx,one.cy,two.cx,two.cy,3)end
+  if r.w >= 90 then
+    for x = map.x + 10, map.x + map.w - 4, 16 do
+      for y = map.y + 6, map.y + map.h - 4, 10 do
+        r:rect(x, y, 1, 1, 3)
+      end
+    end
   end
- end
- for _,target in ipairs(targets)do
-  if target.kind=='system' then
-   local s=g.systems[target.id];local visible=f.seen[s.id] or s.owner==p
-   local col=s.owner==p and factionColor(p) or (s.owner>0 and visible and factionColor(s.owner)) or (visible and s.kind=='RELIC' and 13) or (visible and 7) or 4
-   r:disc(target.cx,target.cy,visible and 2 or 1,col)
-   if s.colony and visible then r:rect(target.cx,target.cy,1,1,7)end
-   if self.selected==s.id then r:rect(target.x,target.y,target.w,1,9)end
-   if moving and Sim.linked(g,moving.location,s.id) then r:rect(target.x,target.y+target.h-1,target.w,1,19)end
-  else
-   local sh=Sim.findShip(g,target.id)
-   if sh then
-    local colour=sh.owner==p and 11 or 15
-    r:rect(target.x,target.y,target.w,target.h,sh.owner==p and 2 or 28)
-    r:rect(target.x,target.y,1,target.h,factionColor(sh.owner))
-    r:icon(target.x+1,target.y, C.ships[sh.kind].icon,colour)
-    if self.selectedShip==sh.id then r:rect(target.x,target.y,target.w,1,9)end
-    if sh.owner==p and sh.orders<1 then r:rect(target.x,target.y+target.h-1,target.w,1,4)end
-   end
+  local moving = self.shipID and Sim.findShip(g, self.shipID)
+  local targets, systems, ships = self:mapTargets()
+  self.mapMarkers = { systems = systems, ships = ships }
+  local menu = self:contextGeometry(systems, ships, targets)
+  self.contextBounds = menu
+  r:text(3, 9, moving and "SELECT LINKED DESTINATION" or "EXPLORE / SELECT A SYSTEM OR SHIP", 5, r.w - 6)
+  for _, edge in ipairs(g.links) do
+    local a, b = g.systems[edge[1]], g.systems[edge[2]]
+    if f.charted[a.id] or f.charted[b.id] or f.seen[a.id] or f.seen[b.id] then
+      local one, two = systems[a.id], systems[b.id]
+      if one and two then
+        r:line(one.cx, one.cy, two.cx, two.cy, 3)
+      end
+    end
   end
-  -- Context popovers cover any controls behind them; their covered markers
-  -- are never registered, so the clickable geometry matches the picture.
-  local cancelArea=moving and {x=3,y=r.h-16,w=20,h=5}
-  if (not menu or not overlaps(target,menu)) and (not cancelArea or not overlaps(target,cancelArea)) then
-   local captured=target
-   r.buttons[#r.buttons+1]={x=target.x,y=target.y,w=target.w,h=target.h,
-    label=(target.kind=='system' and g.systems[target.id].name or Sim.findShip(g,target.id).name),fn=function()
-     if captured.kind=='system' then
-      if self.shipID then self:requestMove(captured.id)
-      else self.selected=captured.id;self.selectedShip=nil;self.notice=''end
-     else
-      self.shipID=nil;self.selectedShip=captured.id;self.selected=nil;self.notice=''
-     end
-    end}
+  for _, target in ipairs(targets) do
+    if target.kind == "system" then
+      local s = g.systems[target.id]
+      local visible = f.seen[s.id] or s.owner == p
+      local col = s.owner == p and factionColor(p)
+        or (s.owner > 0 and visible and factionColor(s.owner))
+        or (visible and s.kind == "RELIC" and 13)
+        or (visible and 7)
+        or 4
+      r:disc(target.cx, target.cy, visible and 2 or 1, col)
+      if s.colony and visible then
+        r:rect(target.cx, target.cy, 1, 1, 7)
+      end
+      if self.selected == s.id then
+        r:rect(target.x, target.y, target.w, 1, 9)
+      end
+      if moving and Sim.linked(g, moving.location, s.id) then
+        r:rect(target.x, target.y + target.h - 1, target.w, 1, 19)
+      end
+    else
+      local sh = Sim.findShip(g, target.id)
+      if sh then
+        local colour = sh.owner == p and 11 or 15
+        r:rect(target.x, target.y, target.w, target.h, sh.owner == p and 2 or 28)
+        r:rect(target.x, target.y, 1, target.h, factionColor(sh.owner))
+        r:icon(target.x + 1, target.y, C.ships[sh.kind].icon, colour)
+        if self.selectedShip == sh.id then
+          r:rect(target.x, target.y, target.w, 1, 9)
+        end
+        if sh.owner == p and sh.orders < 1 then
+          r:rect(target.x, target.y + target.h - 1, target.w, 1, 4)
+        end
+      end
+    end
+    -- Context popovers cover any controls behind them; their covered markers
+    -- are never registered, so the clickable geometry matches the picture.
+    local cancelArea = moving and { x = 3, y = r.h - 16, w = 20, h = 5 }
+    if (not menu or not overlaps(target, menu)) and (not cancelArea or not overlaps(target, cancelArea)) then
+      local captured = target
+      r.buttons[#r.buttons + 1] = {
+        x = target.x,
+        y = target.y,
+        w = target.w,
+        h = target.h,
+        label = (target.kind == "system" and g.systems[target.id].name or Sim.findShip(g, target.id).name),
+        fn = function()
+          if captured.kind == "system" then
+            if self.shipID then
+              self:requestMove(captured.id)
+            else
+              self.selected = captured.id
+              self.selectedShip = nil
+              self.notice = ""
+            end
+          else
+            self.shipID = nil
+            self.selectedShip = captured.id
+            self.selected = nil
+            self.notice = ""
+          end
+        end,
+      }
+    end
   end
- end
 end
 function UI:contextMenu()
- local m=self.contextBounds
- if not m then return end
- local r=self.r;local x,y,w=m.x,m.y,m.w
- if not m.sidebar then self:box(x,y,w,m.h,1)end
- r:rect(x+1,y+1,w-2,3,2)
- local title=m.ship and m.ship.name or m.system.name
- local subtitle=m.ship and ('ORDERS '..m.ship.orders..'/2 | '..self.g.systems[m.ship.location].name)
-  or (not self.g.factions[Sim.current(self.g)].seen[m.system.id] and 'UNSURVEYED')
-  or (m.system.owner==0 and 'NEUTRAL / '..m.system.kind)
-  or ((m.system.owner==Sim.current(self.g) and 'YOURS' or 'RIVAL')..' / '..m.system.kind)
- r:text(x+2,y+1,clip(title,w-10),9,w-10)
- r:text(x+2,y+3,clip(subtitle,w-4),5,w-4)
- self:button(x+w-6,y+1,5,3,'X',nil,function()self.selected=nil;self.selectedShip=nil end)
- for i,entry in ipairs(m.entries)do
-  self:button(x+1,y+5+(i-1)*(m.sidebar and 6 or 3),
-    w-2,m.sidebar and 5 or 3,entry[1],entry[2],entry[3])
- end
+  local m = self.contextBounds
+  if not m then
+    return
+  end
+  local r = self.r
+  local x, y, w = m.x, m.y, m.w
+  if not m.sidebar then
+    self:box(x, y, w, m.h, 1)
+  end
+  r:rect(x + 1, y + 1, w - 2, 3, 2)
+  local title = m.ship and m.ship.name or m.system.name
+  local subtitle = m.ship and ("ORDERS " .. m.ship.orders .. "/2 | " .. self.g.systems[m.ship.location].name)
+    or (not self.g.factions[Sim.current(self.g)].seen[m.system.id] and "UNSURVEYED")
+    or (m.system.owner == 0 and "NEUTRAL / " .. m.system.kind)
+    or ((m.system.owner == Sim.current(self.g) and "YOURS" or "RIVAL") .. " / " .. m.system.kind)
+  r:text(x + 2, y + 1, clip(title, w - 10), 9, w - 10)
+  r:text(x + 2, y + 3, clip(subtitle, w - 4), 5, w - 4)
+  self:button(x + w - 6, y + 1, 5, 3, "X", nil, function()
+    self.selected = nil
+    self.selectedShip = nil
+  end)
+  for i, entry in ipairs(m.entries) do
+    self:button(
+      x + 1,
+      y + 5 + (i - 1) * (m.sidebar and 6 or 3),
+      w - 2,
+      m.sidebar and 5 or 3,
+      entry[1],
+      entry[2],
+      entry[3]
+    )
+  end
 end
 function UI:galaxy()
- self:starMap()
- self:contextMenu()
- local _,inspector=self:galaxyLayout()
- if inspector and not self.contextBounds then
-  local r=self.r
-  r:text(inspector.x+3,inspector.y+9,'NO SYSTEM SELECTED',7,inspector.w-5)
-  self:lines(inspector.x+3,inspector.y+15,inspector.w-6,
-   'Tap any charted star or ship to inspect its resources, orders and possible actions.',5,13)
- end
- if self.shipID then self:button(3,self.r.h-16,20,5,'CANCEL MOVE','close',function()
-  self.shipID=nil;self.notice='MOVE CANCELLED'
- end)end
+  self:starMap()
+  self:contextMenu()
+  local _, inspector = self:galaxyLayout()
+  if inspector and not self.contextBounds then
+    local r = self.r
+    r:text(inspector.x + 3, inspector.y + 9, "NO SYSTEM SELECTED", 7, inspector.w - 5)
+    self:lines(
+      inspector.x + 3,
+      inspector.y + 15,
+      inspector.w - 6,
+      "Tap any charted star or ship to inspect its resources, orders and possible actions.",
+      5,
+      13
+    )
+  end
+  if self.shipID then
+    self:button(3, self.r.h - 16, 20, 5, "CANCEL MOVE", "close", function()
+      self.shipID = nil
+      self.notice = "MOVE CANCELLED"
+    end)
+  end
 end
-function UI:ask(kind,args,title,description,cost)
- local g=self.g;local p=Sim.current(g);local ok,why=Sim.can(g,p,kind,args)
- if not ok then self.notice=why;return false end
- self.pending={kind=kind,args=args,title=title,description=description,cost=cost,returnTo=self.screen}
- self.screen='confirm';self.notice='';return true
+function UI:ask(kind, args, title, description, cost)
+  local g = self.g
+  local p = Sim.current(g)
+  local ok, why = Sim.can(g, p, kind, args)
+  if not ok then
+    self.notice = why
+    return false
+  end
+  self.pending =
+    { kind = kind, args = args, title = title, description = description, cost = cost, returnTo = self.screen }
+  self.screen = "confirm"
+  self.notice = ""
+  return true
 end
 function UI:requestMove(id)
- local ship=self.shipID
- if not ship then return end
- local sh=Sim.findShip(self.g,ship)
- if sh and sh.location==id then self.notice='SHIP IS ALREADY HERE';return end
- self:ask('move',{ship=ship,system=id},'MOVE '..(sh and sh.name or 'SHIP'),
-  'Move to '..self.g.systems[id].name..'. Uses one of this ship\'s two yearly orders.')
+  local ship = self.shipID
+  if not ship then
+    return
+  end
+  local sh = Sim.findShip(self.g, ship)
+  if sh and sh.location == id then
+    self.notice = "SHIP IS ALREADY HERE"
+    return
+  end
+  self:ask(
+    "move",
+    { ship = ship, system = id },
+    "MOVE " .. (sh and sh.name or "SHIP"),
+    "Move to " .. self.g.systems[id].name .. ". Uses one of this ship's two yearly orders."
+  )
 end
 function UI:confirm()
- local r=self.r;local p=self.pending;if not p then self.screen='galaxy';return end
- self:space();self:headline('CONFIRM ORDER',p.returnTo)
- local x=math.max(3,math.floor(r.w*.14));local w=r.w-2*x;local top=math.floor(r.h*.21)
- self:box(x,top,w,math.max(23,math.floor(r.h*.55)),1)
- r:icon(x+3,top+3,'check',9);r:text(x+7,top+4,clip(p.title,w-10),7)
- self:lines(x+4,top+9,w-8,p.description,6,math.max(3,math.floor(r.h*.17)))
- if p.cost then r:text(x+4,top+15,'COST: '..costText(p.cost),17)end
- self:button(x+3,top+math.max(19,math.floor(r.h*.55)-7),math.floor((w-8)/2),6,'CANCEL','close',function()self.screen=p.returnTo;self.pending=nil end)
- self:button(x+5+math.floor((w-8)/2),top+math.max(19,math.floor(r.h*.55)-7),math.floor((w-8)/2),6,'CONFIRM','check',function()
-  local valid,reason=Sim.command(self.g,Sim.current(self.g),p.kind,p.args)
-  self.pending=nil;self.shipID=nil;self.selectedShip=nil;self.selected=nil;self.screen=p.returnTo
-  if valid then self.notice='ORDER COMPLETED';self:save()
-   if #self.g.factions[Sim.current(self.g)].events>0 then self.screen='event' end
-  else self.notice=reason end
- end,nil,19)
+  local r = self.r
+  local p = self.pending
+  if not p then
+    self.screen = "galaxy"
+    return
+  end
+  self:space()
+  self:headline("CONFIRM ORDER", p.returnTo)
+  local x = math.max(3, math.floor(r.w * 0.14))
+  local w = r.w - 2 * x
+  local top = math.floor(r.h * 0.21)
+  self:box(x, top, w, math.max(23, math.floor(r.h * 0.55)), 1)
+  r:icon(x + 3, top + 3, "check", 9)
+  r:text(x + 7, top + 4, clip(p.title, w - 10), 7)
+  self:lines(x + 4, top + 9, w - 8, p.description, 6, math.max(3, math.floor(r.h * 0.17)))
+  if p.cost then
+    r:text(x + 4, top + 15, "COST: " .. costText(p.cost), 17)
+  end
+  self:button(
+    x + 3,
+    top + math.max(19, math.floor(r.h * 0.55) - 7),
+    math.floor((w - 8) / 2),
+    6,
+    "CANCEL",
+    "close",
+    function()
+      self.screen = p.returnTo
+      self.pending = nil
+    end
+  )
+  self:button(
+    x + 5 + math.floor((w - 8) / 2),
+    top + math.max(19, math.floor(r.h * 0.55) - 7),
+    math.floor((w - 8) / 2),
+    6,
+    "CONFIRM",
+    "check",
+    function()
+      local valid, reason = Sim.command(self.g, Sim.current(self.g), p.kind, p.args)
+      self.pending = nil
+      self.shipID = nil
+      self.selectedShip = nil
+      self.selected = nil
+      self.screen = p.returnTo
+      if valid then
+        self.notice = "ORDER COMPLETED"
+        self:save()
+        if #self.g.factions[Sim.current(self.g)].events > 0 then
+          self.screen = "event"
+        end
+      else
+        self.notice = reason
+      end
+    end,
+    nil,
+    19
+  )
 end
 function UI:contentPanel(title)
- local r=self.r;self:box(2,10,r.w-4,r.h-22,1)
- r:rect(4,11,math.min(3,r.w-8),4,9)
- r:text(9,12,clip(title,r.w-15),7)
+  local r = self.r
+  self:box(2, 10, r.w - 4, r.h - 22, 1)
+  r:rect(4, 11, math.min(3, r.w - 8), 4, 9)
+  r:text(9, 12, clip(title, r.w - 15), 7)
 end
 function UI:ships()
- local r=self.r;local p=Sim.current(self.g);local own=where(function(s)return s.owner==p end,self.g.ships)
- table.sort(own,function(a,b)return a.id<b.id end)
- self:contentPanel('FLEET REGISTRY / TWO ORDERS PER SHIP')
- local top=15;local rowH=8;local rows=math.max(1,math.floor((r.h-34)/rowH));local pages=math.max(1,math.ceil(#own/rows))
- self.page=math.min(self.page,pages)
- for i=(self.page-1)*rows+1,math.min(#own,self.page*rows)do
-  local s=own[i];local y=top+((i-1)%rows)*rowH
-  r:rect(5,y,r.w-10,rowH-1,2);r:icon(7,y+2,C.ships[s.kind].icon,9)
-  r:text(12,y+1,clip(s.name,18),7)
-  r:text(12,y+4,clip(self.g.systems[s.location].name..' | '..s.orders..'/2 ORDERS',32),5)
-  self:button(r.w-23,y+1,16,rowH-3,'ORDER','move',function()
-   if s.orders<=0 then self.notice='SHIP HAS NO ORDERS THIS YEAR' else self.shipID=s.id;self.screen='galaxy';self.selected=nil end
+  local r = self.r
+  local p = Sim.current(self.g)
+  local own = where(function(s)
+    return s.owner == p
+  end, self.g.ships)
+  table.sort(own, function(a, b)
+    return a.id < b.id
   end)
-  if s.kind=='ark' then self:button(math.max(34,r.w-40),y+1,15,rowH-3,'FOUND','colony',function()
-   self:ask('colonize',{ship=s.id},'FOUND COLONY','Spend 8 Credits and 12 Alloy to settle the Ark\'s current system.',{credits=8,alloy=12})
-  end)end
- end
- self:paging(pages)
- if #own==0 then self:lines(7,18,r.w-14,'NO SHIPS REMAIN. BUILD NEW ONES FROM YOUR COLONIES.',6,4)end
+  self:contentPanel("FLEET REGISTRY / TWO ORDERS PER SHIP")
+  local top = 15
+  local rowH = 8
+  local rows = math.max(1, math.floor((r.h - 34) / rowH))
+  local pages = math.max(1, math.ceil(#own / rows))
+  self.page = math.min(self.page, pages)
+  for i = (self.page - 1) * rows + 1, math.min(#own, self.page * rows) do
+    local s = own[i]
+    local y = top + ((i - 1) % rows) * rowH
+    r:rect(5, y, r.w - 10, rowH - 1, 2)
+    r:icon(7, y + 2, C.ships[s.kind].icon, 9)
+    r:text(12, y + 1, clip(s.name, 18), 7)
+    r:text(12, y + 4, clip(self.g.systems[s.location].name .. " | " .. s.orders .. "/2 ORDERS", 32), 5)
+    self:button(r.w - 23, y + 1, 16, rowH - 3, "ORDER", "move", function()
+      if s.orders <= 0 then
+        self.notice = "SHIP HAS NO ORDERS THIS YEAR"
+      else
+        self.shipID = s.id
+        self.screen = "galaxy"
+        self.selected = nil
+      end
+    end)
+    if s.kind == "ark" then
+      self:button(math.max(34, r.w - 40), y + 1, 15, rowH - 3, "FOUND", "colony", function()
+        self:ask(
+          "colonize",
+          { ship = s.id },
+          "FOUND COLONY",
+          "Spend 8 Credits and 12 Alloy to settle the Ark's current system.",
+          { credits = 8, alloy = 12 }
+        )
+      end)
+    end
+  end
+  self:paging(pages)
+  if #own == 0 then
+    self:lines(7, 18, r.w - 14, "NO SHIPS REMAIN. BUILD NEW ONES FROM YOUR COLONIES.", 6, 4)
+  end
 end
 function UI:paging(pages)
- if pages<=1 then return end
- local r=self.r;local y=r.h-17
- self:button(5,y,17,5,'PREVIOUS','back',function()self.page=math.max(1,self.page-1)end)
- r:text(math.floor(r.w/2)-3,y+2,self.page..'/'..pages,6)
- self:button(r.w-22,y,17,5,'NEXT','next',function()self.page=math.min(pages,self.page+1)end)
+  if pages <= 1 then
+    return
+  end
+  local r = self.r
+  local y = r.h - 17
+  self:button(5, y, 17, 5, "PREVIOUS", "back", function()
+    self.page = math.max(1, self.page - 1)
+  end)
+  r:text(math.floor(r.w / 2) - 3, y + 2, self.page .. "/" .. pages, 6)
+  self:button(r.w - 22, y, 17, 5, "NEXT", "next", function()
+    self.page = math.min(pages, self.page + 1)
+  end)
 end
 function UI:colony()
- local r=self.r;local g=self.g;local p=Sim.current(g)
- local owned=where(function(s)return s.owner==p and s.colony end,g.systems)
- self:contentPanel('YOUR WORLDS / CHOOSE ONE SPECIALIZATION')
- if #owned==0 then return end
- local idx=1;for i,s in ipairs(owned)do if s.id==self.focusSystem then idx=i end end
- idx=math.min(#owned,math.max(1,idx));local s=owned[idx];self.focusSystem=s.id
- r:text(6,17,clip(s.name..' / '..s.kind,r.w-22),7)
- r:text(6,20,'FOCUS: '..(s.focus or 'NONE')..'  LEVEL '..s.level..'/3',9)
- self:button(r.w-29,16,11,5,'<','back',function()self.focusSystem=owned[(idx-2)%#owned+1].id end)
- self:button(r.w-16,16,11,5,'>','next',function()self.focusSystem=owned[idx%#owned+1].id end)
- if r.h<65 then
-  local tileW=math.floor((r.w-14)/3)
-  for i,type in ipairs({'industry','science','commerce'})do
-   local focus=C.focus[type]
-   self:button(5+(i-1)*(tileW+1),25,tileW,6,focus.name:sub(1,3),focus.icon,function()
-    self:ask('focus',{system=s.id,focus=type},'SPECIALIZE '..focus.name,focus.description,focus.cost)
-   end)
+  local r = self.r
+  local g = self.g
+  local p = Sim.current(g)
+  local owned = where(function(s)
+    return s.owner == p and s.colony
+  end, g.systems)
+  self:contentPanel("YOUR WORLDS / CHOOSE ONE SPECIALIZATION")
+  if #owned == 0 then
+    return
   end
- else
-  local y=25;local rowH=math.min(10,math.max(6,math.floor((r.h-52)/3)))
-  for i,type in ipairs({'industry','science','commerce'})do
-   local focus=C.focus[type];local yy=y+(i-1)*(rowH+1)
-   if yy+rowH>=r.h-10 then break end
-   r:rect(5,yy,r.w-10,rowH,2);r:rect(5,yy,2,rowH,s.focus==type and 9 or 4)
-   r:icon(8,yy+2,focus.icon,9)
-   r:text(13,yy+1,focus.name..(s.focus==type and ' [ACTIVE]' or ''),7)
-   r:text(13,yy+3,clip(focus.description,r.w-49),5)
-   self:button(r.w-25,yy+1,19,math.min(rowH-2,5),'CHOOSE','check',function()
-    self:ask('focus',{system=s.id,focus=type},'SPECIALIZE '..focus.name,focus.description,focus.cost)
-   end)
+  local idx = 1
+  for i, s in ipairs(owned) do
+    if s.id == self.focusSystem then
+      idx = i
+    end
   end
- end
- self:button(5,r.h-17,math.min(51,r.w-10),6,'UPGRADE COLONY C9 A8','forge',function()
-  self:ask('upgrade',{system=s.id},'DEVELOP '..s.name,'Increases specialty production by 2 per year. Maximum level is 3.',{credits=9,alloy=8})
- end)
+  idx = math.min(#owned, math.max(1, idx))
+  local s = owned[idx]
+  self.focusSystem = s.id
+  r:text(6, 17, clip(s.name .. " / " .. s.kind, r.w - 22), 7)
+  r:text(6, 20, "FOCUS: " .. (s.focus or "NONE") .. "  LEVEL " .. s.level .. "/3", 9)
+  self:button(r.w - 29, 16, 11, 5, "<", "back", function()
+    self.focusSystem = owned[(idx - 2) % #owned + 1].id
+  end)
+  self:button(r.w - 16, 16, 11, 5, ">", "next", function()
+    self.focusSystem = owned[idx % #owned + 1].id
+  end)
+  if r.h < 65 then
+    local tileW = math.floor((r.w - 14) / 3)
+    for i, type in ipairs({ "industry", "science", "commerce" }) do
+      local focus = C.focus[type]
+      self:button(5 + (i - 1) * (tileW + 1), 25, tileW, 6, focus.name:sub(1, 3), focus.icon, function()
+        self:ask("focus", { system = s.id, focus = type }, "SPECIALIZE " .. focus.name, focus.description, focus.cost)
+      end)
+    end
+  else
+    local y = 25
+    local rowH = math.min(10, math.max(6, math.floor((r.h - 52) / 3)))
+    for i, type in ipairs({ "industry", "science", "commerce" }) do
+      local focus = C.focus[type]
+      local yy = y + (i - 1) * (rowH + 1)
+      if yy + rowH >= r.h - 10 then
+        break
+      end
+      r:rect(5, yy, r.w - 10, rowH, 2)
+      r:rect(5, yy, 2, rowH, s.focus == type and 9 or 4)
+      r:icon(8, yy + 2, focus.icon, 9)
+      r:text(13, yy + 1, focus.name .. (s.focus == type and " [ACTIVE]" or ""), 7)
+      r:text(13, yy + 3, clip(focus.description, r.w - 49), 5)
+      self:button(r.w - 25, yy + 1, 19, math.min(rowH - 2, 5), "CHOOSE", "check", function()
+        self:ask("focus", { system = s.id, focus = type }, "SPECIALIZE " .. focus.name, focus.description, focus.cost)
+      end)
+    end
+  end
+  self:button(5, r.h - 17, math.min(51, r.w - 10), 6, "UPGRADE COLONY C9 A8", "forge", function()
+    self:ask(
+      "upgrade",
+      { system = s.id },
+      "DEVELOP " .. s.name,
+      "Increases specialty production by 2 per year. Maximum level is 3.",
+      { credits = 9, alloy = 8 }
+    )
+  end)
 end
 function UI:research()
- local r=self.r;local f=self.g.factions[Sim.current(self.g)]
- self:contentPanel('RESEARCH / THREE PATHS')
- local paths={{'exploration','scan'},{'prosperity','trade'},{'warfare','shield'}}
- local top=17;local spacing=math.floor((r.h-36)/3)
- for i,d in ipairs(paths)do
-  local path,icon=d[1],d[2];local level=f.tech[path];local tech=C.tech[path][level+1];local y=top+(i-1)*spacing
-  r:rect(5,y,r.w-10,spacing-2,2)
-  r:icon(7,y+2,icon,9);r:text(12,y+1,path:upper()..' '..level..'/3',7)
-  if tech then
-   r:text(12,y+3,clip(tech.name,r.w-42),9)
-   r:text(12,y+5,clip(tech.description,r.w-43),5)
-   self:button(r.w-26,y+1,20,math.max(4,math.min(7,spacing-4)),'LEARN K'..tech.cost,'science',function()
-    self:ask('research',{path=path},tech.name,tech.description,{knowledge=tech.cost})
-   end)
-  else r:text(12,y+3,'PATH COMPLETE',19)end
- end
+  local r = self.r
+  local f = self.g.factions[Sim.current(self.g)]
+  self:contentPanel("RESEARCH / THREE PATHS")
+  local paths = { { "exploration", "scan" }, { "prosperity", "trade" }, { "warfare", "shield" } }
+  local top = 17
+  local spacing = math.floor((r.h - 36) / 3)
+  for i, d in ipairs(paths) do
+    local path, icon = d[1], d[2]
+    local level = f.tech[path]
+    local tech = C.tech[path][level + 1]
+    local y = top + (i - 1) * spacing
+    r:rect(5, y, r.w - 10, spacing - 2, 2)
+    r:icon(7, y + 2, icon, 9)
+    r:text(12, y + 1, path:upper() .. " " .. level .. "/3", 7)
+    if tech then
+      r:text(12, y + 3, clip(tech.name, r.w - 42), 9)
+      r:text(12, y + 5, clip(tech.description, r.w - 43), 5)
+      self:button(
+        r.w - 26,
+        y + 1,
+        20,
+        math.max(4, math.min(7, spacing - 4)),
+        "LEARN K" .. tech.cost,
+        "science",
+        function()
+          self:ask("research", { path = path }, tech.name, tech.description, { knowledge = tech.cost })
+        end
+      )
+    else
+      r:text(12, y + 3, "PATH COMPLETE", 19)
+    end
+  end
 end
 function UI:diplomacy()
- local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
- self:contentPanel('DIPLOMACY / EVERY EMPIRE HAS AN AGENDA')
- if f.offers and #f.offers>0 then
-  local offer=f.offers[1];self:box(5,16,r.w-10,16,2)
-  r:text(8,18,clip('INCOMING: '..g.factions[offer.from].name,r.w-18),17)
-  r:text(8,21,clip('PROPOSES '..offer.kind,r.w-18),6)
-  self:button(8,25,20,5,'DECLINE','close',function()Sim.command(g,p,'reply',{accept=false});self:save()end)
-  self:button(30,25,20,5,'ACCEPT','check',function()Sim.command(g,p,'reply',{accept=true});self:save()end)
-  return
- end
- local other={};for i=1,4 do if i~=p then other[#other+1]=i end end
- local y=16;local colW=math.max(15,math.floor((r.w-16)/3))
- for i,q in ipairs(other)do
-  local x=5+(i-1)*(colW+3)
-  r:rect(x,y,colW,11,q==self.target and 3 or 2)
-  r:rect(x,y,colW,2,factionColor(q))
-  r:text(x+2,y+3,clip(g.factions[q].name,colW-4),7)
-  r:text(x+2,y+5,'TRUST '..Sim.relation(g,p,q),6)
-  self:button(x+2,y+7,colW-4,4,'OPEN','trade',function()self.target=q end)
- end
- if self.target==p then self.target=other[1]end
- local target=self.target;local targetF=g.factions[target]
- r:text(6,30,'NEGOTIATING WITH '..clip(targetF.name,r.w-23),9)
- local choices={
-  {'TRADE C3','trade','pact','trade',C.pacts.trade.desc},
-  {'NON-AGGRESSION C3','shield','pact','nonaggression',C.pacts.nonaggression.desc},
-  {'ALLIANCE C3','council','pact','alliance',C.pacts.alliance.desc},
-  {Sim.atWar(g,p,target) and 'PEACE OFFER' or 'DECLARE WAR C5','war',Sim.atWar(g,p,target)and'peace'or'war',nil,'War allows Fleet attacks on rival territory.'}
- }
- local row=math.max(5,math.min(9,math.floor((r.h-47)/4)))
- for i,c in ipairs(choices)do
-  local yy=34+(i-1)*row;if yy+5>=r.h-9 then break end
-  self:button(6,yy,math.min(r.w-12,math.max(39,math.floor(r.w*.48))),row-1,c[1],c[2],function()
-   local action=c[3];local args={to=target,kind=c[4]}
-   self:ask(action,args,c[1],c[5],action=='war' and {credits=5} or action=='peace' and nil or {credits=3})
-  end,c[5])
-  if r.w>92 then
-   local status=c[3]=='pact' and (Sim.hasPact(g,p,target,c[4]) and 'ACTIVE' or 'AVAILABLE') or ''
-   r:text(math.floor(r.w*.62),yy+2,status,5)
+  local r = self.r
+  local g = self.g
+  local p = Sim.current(g)
+  local f = g.factions[p]
+  self:contentPanel("DIPLOMACY / EVERY EMPIRE HAS AN AGENDA")
+  if f.offers and #f.offers > 0 then
+    local offer = f.offers[1]
+    self:box(5, 16, r.w - 10, 16, 2)
+    r:text(8, 18, clip("INCOMING: " .. g.factions[offer.from].name, r.w - 18), 17)
+    r:text(8, 21, clip("PROPOSES " .. offer.kind, r.w - 18), 6)
+    self:button(8, 25, 20, 5, "DECLINE", "close", function()
+      Sim.command(g, p, "reply", { accept = false })
+      self:save()
+    end)
+    self:button(30, 25, 20, 5, "ACCEPT", "check", function()
+      Sim.command(g, p, "reply", { accept = true })
+      self:save()
+    end)
+    return
   end
- end
+  local other = {}
+  for i = 1, 4 do
+    if i ~= p then
+      other[#other + 1] = i
+    end
+  end
+  local y = 16
+  local colW = math.max(15, math.floor((r.w - 16) / 3))
+  for i, q in ipairs(other) do
+    local x = 5 + (i - 1) * (colW + 3)
+    r:rect(x, y, colW, 11, q == self.target and 3 or 2)
+    r:rect(x, y, colW, 2, factionColor(q))
+    r:text(x + 2, y + 3, clip(g.factions[q].name, colW - 4), 7)
+    r:text(x + 2, y + 5, "TRUST " .. Sim.relation(g, p, q), 6)
+    self:button(x + 2, y + 7, colW - 4, 4, "OPEN", "trade", function()
+      self.target = q
+    end)
+  end
+  if self.target == p then
+    self.target = other[1]
+  end
+  local target = self.target
+  local targetF = g.factions[target]
+  r:text(6, 30, "NEGOTIATING WITH " .. clip(targetF.name, r.w - 23), 9)
+  local choices = {
+    { "TRADE C3", "trade", "pact", "trade", C.pacts.trade.desc },
+    { "NON-AGGRESSION C3", "shield", "pact", "nonaggression", C.pacts.nonaggression.desc },
+    { "ALLIANCE C3", "council", "pact", "alliance", C.pacts.alliance.desc },
+    {
+      Sim.atWar(g, p, target) and "PEACE OFFER" or "DECLARE WAR C5",
+      "war",
+      Sim.atWar(g, p, target) and "peace" or "war",
+      nil,
+      "War allows Fleet attacks on rival territory.",
+    },
+  }
+  local row = math.max(5, math.min(9, math.floor((r.h - 47) / 4)))
+  for i, c in ipairs(choices) do
+    local yy = 34 + (i - 1) * row
+    if yy + 5 >= r.h - 9 then
+      break
+    end
+    self:button(6, yy, math.min(r.w - 12, math.max(39, math.floor(r.w * 0.48))), row - 1, c[1], c[2], function()
+      local action = c[3]
+      local args = { to = target, kind = c[4] }
+      self:ask(
+        action,
+        args,
+        c[1],
+        c[5],
+        action == "war" and { credits = 5 } or action == "peace" and nil or { credits = 3 }
+      )
+    end, c[5])
+    if r.w > 92 then
+      local status = c[3] == "pact" and (Sim.hasPact(g, p, target, c[4]) and "ACTIVE" or "AVAILABLE") or ""
+      r:text(math.floor(r.w * 0.62), yy + 2, status, 5)
+    end
+  end
 end
 function UI:event()
- local r=self.r;local f=self.g.factions[Sim.current(self.g)];local ev=f.events[1]
- if not ev then self.screen='galaxy';return end
- self:space();self:headline('STORY EVENT')
- local panelX=4;local width=r.w-8;self:box(panelX,9,width,r.h-13,1)
- r:icon(7,13,'orbit',13);r:text(12,14,clip(ev.title,width-16),13)
- local bodyStart=19;local summaryRows=self:lines(8,bodyStart,width-10,ev.body,6,math.max(3,math.floor(r.h*.17)))
- local start=bodyStart+summaryRows+3;local choiceH=math.max(6,math.min(10,math.floor((r.h-7-start)/#ev.choices)))
- for i,choice in ipairs(ev.choices)do
-  local y=start+(i-1)*choiceH
-  if y+choiceH>r.h-3 then break end
-  self:button(7,y,width-6,choiceH-1,i..'. '..choice.title,'council',function()
-   local ok,why=Sim.command(self.g,Sim.current(self.g),'choose',{choice=i})
-   if ok then self:save();self.screen=(#f.events>0 and 'event')or'galaxy';self.notice='COUNCIL DECISION RECORDED'
-   else self.notice=why end
-  end,choice.detail,13)
- end
+  local r = self.r
+  local f = self.g.factions[Sim.current(self.g)]
+  local ev = f.events[1]
+  if not ev then
+    self.screen = "galaxy"
+    return
+  end
+  self:space()
+  self:headline("STORY EVENT")
+  local panelX = 4
+  local width = r.w - 8
+  self:box(panelX, 9, width, r.h - 13, 1)
+  r:icon(7, 13, "orbit", 13)
+  r:text(12, 14, clip(ev.title, width - 16), 13)
+  local bodyStart = 19
+  local summaryRows = self:lines(8, bodyStart, width - 10, ev.body, 6, math.max(3, math.floor(r.h * 0.17)))
+  local start = bodyStart + summaryRows + 3
+  local choiceH = math.max(6, math.min(10, math.floor((r.h - 7 - start) / #ev.choices)))
+  for i, choice in ipairs(ev.choices) do
+    local y = start + (i - 1) * choiceH
+    if y + choiceH > r.h - 3 then
+      break
+    end
+    self:button(7, y, width - 6, choiceH - 1, i .. ". " .. choice.title, "council", function()
+      local ok, why = Sim.command(self.g, Sim.current(self.g), "choose", { choice = i })
+      if ok then
+        self:save()
+        self.screen = (#f.events > 0 and "event") or "galaxy"
+        self.notice = "COUNCIL DECISION RECORDED"
+      else
+        self.notice = why
+      end
+    end, choice.detail, 13)
+  end
 end
 function UI:empire()
- local r=self.r;local g=self.g;local p=Sim.current(g);local f=g.factions[p]
- self:contentPanel('CIVILIZATION / YOUR LEGACY')
- local inc=Sim.income(g,p)
- r:text(6,16,clip(f.name..' / '..C.factions[f.archetype].trait,r.w-13),7)
- r:text(6,20,'SYSTEMS '..Sim.owned(g,p)..'/30  COLONIES '..Sim.colonies(g,p)..'  SCORE '..Sim.score(g,p),9)
- r:text(6,24,'ANNUAL INCOME',5)
- r:text(7,27,'C +'..inc.credits..'   A +'..inc.alloy..'   K +'..inc.knowledge,7)
- local progress=Sim.winProgress(g,p)
- if r.h<65 then
-  r:text(6,31,'DISCOVERY '..f.tech.exploration..'/3',6)
-  r:text(26,31,'UNITY '..progress.alliances..'/2',6)
-  r:text(45,31,'DOMINION '..progress.dominion..'/15',6)
-  self:button(6,37,math.floor((r.w-16)/2),5,'DISCOVERY','science',function()
-   self:ask('project',{kind='discovery'},'ANCIENT ARCHIVE','Requires Exploration III, 14 surveyed stars, 3 ancient clues, 3 colonies; then a three-year project.',{credits=25,alloy=15,knowledge=18})
-  end)
-  self:button(8+math.floor((r.w-16)/2),37,math.floor((r.w-16)/2),5,'UNITY','trade',function()
-   self:ask('project',{kind='unity'},'GALACTIC ACCORD','Requires Prosperity II, two alliances and 4 colonies; then a three-year project.',{credits=30,alloy=12,knowledge=12})
-  end)
- else
-  r:text(6,32,'THREE PATHS TO VICTORY',9)
-  r:text(7,36,'DISCOVERY '..f.tech.exploration..'/3 + '..(f.clues or 0)..' CLUES / 3',6)
-  r:text(7,40,'UNITY '..progress.alliances..'/2 ALLIANCES + PROJECT',6)
-  r:text(7,44,'DOMINION '..progress.dominion..'/15 SYSTEMS',6)
-  if f.project then r:text(7,48,'PROJECT '..f.project.type:upper()..' '..f.project.progress..'/2 YEARS',19)end
-  local y=math.min(r.h-18,54)
-  local bw=math.floor((r.w-16)/2)
-  self:button(6,y,bw,5,'DISCOVERY PROJECT','science',function()
-   self:ask('project',{kind='discovery'},'ANCIENT ARCHIVE','Requires Exploration III, 14 surveyed stars, 3 ancient clues, 3 colonies; then a three-year project.',{credits=25,alloy=15,knowledge=18})
-  end)
-  self:button(8+bw,y,bw,5,'UNITY PROJECT','trade',function()
-   self:ask('project',{kind='unity'},'GALACTIC ACCORD','Requires Prosperity II, two alliances and 4 colonies; then a three-year project.',{credits=30,alloy=12,knowledge=12})
-  end)
- end
- if r.h>78 then
-  r:text(6,r.h-24,'YOUR RECENT HISTORY',5)
-  for i=1,math.min(2,#g.log)do r:text(7,r.h-23+i*2,clip(g.log[i],r.w-14),6)end
- end
+  local r = self.r
+  local g = self.g
+  local p = Sim.current(g)
+  local f = g.factions[p]
+  self:contentPanel("CIVILIZATION / YOUR LEGACY")
+  local inc = Sim.income(g, p)
+  r:text(6, 16, clip(f.name .. " / " .. C.factions[f.archetype].trait, r.w - 13), 7)
+  r:text(
+    6,
+    20,
+    "SYSTEMS " .. Sim.owned(g, p) .. "/30  COLONIES " .. Sim.colonies(g, p) .. "  SCORE " .. Sim.score(g, p),
+    9
+  )
+  r:text(6, 24, "ANNUAL INCOME", 5)
+  r:text(7, 27, "C +" .. inc.credits .. "   A +" .. inc.alloy .. "   K +" .. inc.knowledge, 7)
+  local progress = Sim.winProgress(g, p)
+  if r.h < 65 then
+    r:text(6, 31, "DISCOVERY " .. f.tech.exploration .. "/3", 6)
+    r:text(26, 31, "UNITY " .. progress.alliances .. "/2", 6)
+    r:text(45, 31, "DOMINION " .. progress.dominion .. "/15", 6)
+    self:button(6, 37, math.floor((r.w - 16) / 2), 5, "DISCOVERY", "science", function()
+      self:ask(
+        "project",
+        { kind = "discovery" },
+        "ANCIENT ARCHIVE",
+        "Requires Exploration III, 14 surveyed stars, 3 ancient clues, 3 colonies; then a three-year project.",
+        { credits = 25, alloy = 15, knowledge = 18 }
+      )
+    end)
+    self:button(8 + math.floor((r.w - 16) / 2), 37, math.floor((r.w - 16) / 2), 5, "UNITY", "trade", function()
+      self:ask(
+        "project",
+        { kind = "unity" },
+        "GALACTIC ACCORD",
+        "Requires Prosperity II, two alliances and 4 colonies; then a three-year project.",
+        { credits = 30, alloy = 12, knowledge = 12 }
+      )
+    end)
+  else
+    r:text(6, 32, "THREE PATHS TO VICTORY", 9)
+    r:text(7, 36, "DISCOVERY " .. f.tech.exploration .. "/3 + " .. (f.clues or 0) .. " CLUES / 3", 6)
+    r:text(7, 40, "UNITY " .. progress.alliances .. "/2 ALLIANCES + PROJECT", 6)
+    r:text(7, 44, "DOMINION " .. progress.dominion .. "/15 SYSTEMS", 6)
+    if f.project then
+      r:text(7, 48, "PROJECT " .. f.project.type:upper() .. " " .. f.project.progress .. "/2 YEARS", 19)
+    end
+    local y = math.min(r.h - 18, 54)
+    local bw = math.floor((r.w - 16) / 2)
+    self:button(6, y, bw, 5, "DISCOVERY PROJECT", "science", function()
+      self:ask(
+        "project",
+        { kind = "discovery" },
+        "ANCIENT ARCHIVE",
+        "Requires Exploration III, 14 surveyed stars, 3 ancient clues, 3 colonies; then a three-year project.",
+        { credits = 25, alloy = 15, knowledge = 18 }
+      )
+    end)
+    self:button(8 + bw, y, bw, 5, "UNITY PROJECT", "trade", function()
+      self:ask(
+        "project",
+        { kind = "unity" },
+        "GALACTIC ACCORD",
+        "Requires Prosperity II, two alliances and 4 colonies; then a three-year project.",
+        { credits = 30, alloy = 12, knowledge = 12 }
+      )
+    end)
+  end
+  if r.h > 78 then
+    r:text(6, r.h - 24, "YOUR RECENT HISTORY", 5)
+    for i = 1, math.min(2, #g.log) do
+      r:text(7, r.h - 23 + i * 2, clip(g.log[i], r.w - 14), 6)
+    end
+  end
 end
 function UI:finishTurn()
- local g=self.g;local p=Sim.current(g);local f=g.factions[p]
- if #f.events>0 then self.screen='event';return end
- if f.offers and #f.offers>0 then self.screen='diplomacy';return end
- local income=Sim.income(g,p);local completed=g.round
- local success,reason=Sim.endTurn(g,p)
- if not success then self.notice=reason;return end
- Sim.advanceAI(g);self.recentIncome={credits=income.credits,alloy=income.alloy,knowledge=income.knowledge,year=completed}
- self.screen=g.ended and 'results' or 'summary';self.selected=nil;self.selectedShip=nil;self.shipID=nil;self:save()
+  local g = self.g
+  local p = Sim.current(g)
+  local f = g.factions[p]
+  if #f.events > 0 then
+    self.screen = "event"
+    return
+  end
+  if f.offers and #f.offers > 0 then
+    self.screen = "diplomacy"
+    return
+  end
+  local income = Sim.income(g, p)
+  local completed = g.round
+  local success, reason = Sim.endTurn(g, p)
+  if not success then
+    self.notice = reason
+    return
+  end
+  Sim.advanceAI(g)
+  self.recentIncome = { credits = income.credits, alloy = income.alloy, knowledge = income.knowledge, year = completed }
+  self.screen = g.ended and "results" or "summary"
+  self.selected = nil
+  self.selectedShip = nil
+  self.shipID = nil
+  self:save()
 end
 function UI:summary()
- local r=self.r;self:space();self:headline('COUNCIL REPORT')
- local inc=self.recentIncome or {credits=0,alloy=0,knowledge=0,year=math.max(1,self.g.round-1)}
- self:box(4,10,r.w-8,r.h-17,1)
- r:text(8,15,'GALACTIC YEAR '..inc.year..' COMPLETE',9)
- r:text(8,20,'YEARLY PRODUCTION',6)
- r:text(8,24,'CREDITS +'..inc.credits,17)
- r:text(8,28,'ALLOY +'..inc.alloy,9)
- r:text(8,32,'KNOWLEDGE +'..inc.knowledge,13)
- local y=math.min(r.h-23,39);r:text(8,y,'GALACTIC NEWS',5)
- for i=1,math.min(3,#self.g.log)do r:text(8,y+2*i,clip(self.g.log[i],r.w-18),6)end
- self:button(math.floor((r.w-46)/2),r.h-13,46,7,'PASS TO NEXT COMMANDER','next',function()
-  self.screen=self.g.ended and 'results' or 'handoff';self.notice=''
- end,nil,19)
+  local r = self.r
+  self:space()
+  self:headline("COUNCIL REPORT")
+  local inc = self.recentIncome or { credits = 0, alloy = 0, knowledge = 0, year = math.max(1, self.g.round - 1) }
+  self:box(4, 10, r.w - 8, r.h - 17, 1)
+  r:text(8, 15, "GALACTIC YEAR " .. inc.year .. " COMPLETE", 9)
+  r:text(8, 20, "YEARLY PRODUCTION", 6)
+  r:text(8, 24, "CREDITS +" .. inc.credits, 17)
+  r:text(8, 28, "ALLOY +" .. inc.alloy, 9)
+  r:text(8, 32, "KNOWLEDGE +" .. inc.knowledge, 13)
+  local y = math.min(r.h - 23, 39)
+  r:text(8, y, "GALACTIC NEWS", 5)
+  for i = 1, math.min(3, #self.g.log) do
+    r:text(8, y + 2 * i, clip(self.g.log[i], r.w - 18), 6)
+  end
+  self:button(math.floor((r.w - 46) / 2), r.h - 13, 46, 7, "PASS TO NEXT COMMANDER", "next", function()
+    self.screen = self.g.ended and "results" or "handoff"
+    self.notice = ""
+  end, nil, 19)
 end
 function UI:results()
- local r=self.r;self:space();self:headline('THE GALAXY HAS CHOSEN')
- local g=self.g;local winner=g.factions[g.winner or 1];local cx=math.floor(r.w/2)
- r:icon(cx-3,r.h<68 and 9 or 13,'trophy',17)
- r:bigText(cx-13,r.h<68 and 15 or 23,clip(winner.name,r.h<68 and 11 or 15),9,r.h<68 and 1 or 2)
- r:text(cx-18,r.h<68 and 24 or 36,'VICTORY BY '..(g.winReason or 'LEGACY'),17)
- local ranks={1,2,3,4};table.sort(ranks,function(a,b)return Sim.score(g,a)>Sim.score(g,b)end)
- for i,p in ipairs(ranks)do
-  r:text(cx-22,(r.h<68 and 25 or 40)+i*(r.h<68 and 3 or 5),i..'. '..clip(g.factions[p].name,17),factionColor(p))
-  r:text(cx+10,(r.h<68 and 25 or 40)+i*(r.h<68 and 3 or 5),tostring(Sim.score(g,p)),7)
- end
- self:button(cx-22,math.min(r.h-12,66),44,6,'NEW CAMPAIGN','star',function()self.screen='setup';self.g=nil end,nil,19)
+  local r = self.r
+  self:space()
+  self:headline("THE GALAXY HAS CHOSEN")
+  local g = self.g
+  local winner = g.factions[g.winner or 1]
+  local cx = math.floor(r.w / 2)
+  r:icon(cx - 3, r.h < 68 and 9 or 13, "trophy", 17)
+  r:bigText(cx - 13, r.h < 68 and 15 or 23, clip(winner.name, r.h < 68 and 11 or 15), 9, r.h < 68 and 1 or 2)
+  r:text(cx - 18, r.h < 68 and 24 or 36, "VICTORY BY " .. (g.winReason or "LEGACY"), 17)
+  local ranks = { 1, 2, 3, 4 }
+  table.sort(ranks, function(a, b)
+    return Sim.score(g, a) > Sim.score(g, b)
+  end)
+  for i, p in ipairs(ranks) do
+    r:text(
+      cx - 22,
+      (r.h < 68 and 25 or 40) + i * (r.h < 68 and 3 or 5),
+      i .. ". " .. clip(g.factions[p].name, 17),
+      factionColor(p)
+    )
+    r:text(cx + 10, (r.h < 68 and 25 or 40) + i * (r.h < 68 and 3 or 5), tostring(Sim.score(g, p)), 7)
+  end
+  self:button(cx - 22, math.min(r.h - 12, 66), 44, 6, "NEW CAMPAIGN", "star", function()
+    self.screen = "setup"
+    self.g = nil
+  end, nil, 19)
 end
 function UI:help()
- local r=self.r;self:space();self:headline('HOW TO PLAY','title')
- self:box(3,9,r.w-6,r.h-13,1)
- local blocks={
-  '1. EXPLORE: SEND SCOUTS ALONG LINKED STARS. EACH SHIP HAS TWO ORDERS PER YEAR.',
-  '2. COLONIZE: MOVE AN ARK TO A SCOUTED NEUTRAL STAR NEXT TO YOUR BORDERS. FOUND A COLONY WITH CREDITS AND ALLOY.',
-  '3. SPECIALIZE: WORLDS PRODUCE INDUSTRY, SCIENCE OR COMMERCE. CHANGE THEIR FOCUS OR UPGRADE THEM.',
-  '4. RESEARCH: SPEND KNOWLEDGE ON EXPLORATION, PROSPERITY OR WARFARE. NO EMPIRE ACTION CAP.',
-  '5. DIPLOMACY: SIGN TRADE, NON-AGGRESSION OR ALLIANCE PACTS. FLEETS ONLY FIGHT WHEN YOU ARE AT WAR.',
-  '6. STORIES: COUNCIL DECISIONS GRANT RESOURCES, CHANGE TRUST AND MAY START LATER EVENTS.',
-  '7. WIN: COMPLETE DISCOVERY OR UNITY PROJECTS, HOLD 15 SYSTEMS, OR LEAD THE LEGACY SCORE AT YEAR END.'}
- local y=13;for i,t in ipairs(blocks)do
-  local count=self:lines(7,y,r.w-14,t,i%2==0 and 5 or 6,4)
-  y=y+count+2;if y>r.h-17 then break end
- end
- self:button(math.floor(r.w/2)-17,r.h-10,34,6,'NEW CAMPAIGN','next',function()self.screen='setup'end)
+  local r = self.r
+  self:space()
+  self:headline("HOW TO PLAY", "title")
+  self:box(3, 9, r.w - 6, r.h - 13, 1)
+  local blocks = {
+    "1. EXPLORE: SEND SCOUTS ALONG LINKED STARS. EACH SHIP HAS TWO ORDERS PER YEAR.",
+    "2. COLONIZE: MOVE AN ARK TO A SCOUTED NEUTRAL STAR NEXT TO YOUR BORDERS. FOUND A COLONY WITH CREDITS AND ALLOY.",
+    "3. SPECIALIZE: WORLDS PRODUCE INDUSTRY, SCIENCE OR COMMERCE. CHANGE THEIR FOCUS OR UPGRADE THEM.",
+    "4. RESEARCH: SPEND KNOWLEDGE ON EXPLORATION, PROSPERITY OR WARFARE. NO EMPIRE ACTION CAP.",
+    "5. DIPLOMACY: SIGN TRADE, NON-AGGRESSION OR ALLIANCE PACTS. FLEETS ONLY FIGHT WHEN YOU ARE AT WAR.",
+    "6. STORIES: COUNCIL DECISIONS GRANT RESOURCES, CHANGE TRUST AND MAY START LATER EVENTS.",
+    "7. WIN: COMPLETE DISCOVERY OR UNITY PROJECTS, HOLD 15 SYSTEMS, OR LEAD THE LEGACY SCORE AT YEAR END.",
+  }
+  local y = 13
+  for i, t in ipairs(blocks) do
+    local count = self:lines(7, y, r.w - 14, t, i % 2 == 0 and 5 or 6, 4)
+    y = y + count + 2
+    if y > r.h - 17 then
+      break
+    end
+  end
+  self:button(math.floor(r.w / 2) - 17, r.h - 10, 34, 6, "NEW CAMPAIGN", "next", function()
+    self.screen = "setup"
+  end)
 end
 function UI:draw()
- local r=self.r;r:beginFrame();self.frame=self.frame+1;r:resize()
- if self.screen=='title' then self:title()
- elseif self.screen=='setup' then self:setup()
- elseif self.screen=='keyboard' then self:keyboard()
- elseif self.screen=='handoff' then self:handoff()
- elseif self.screen=='confirm' then self:confirm()
- elseif self.screen=='event' then self:event()
- elseif self.screen=='summary' then self:summary()
- elseif self.screen=='results' then self:results()
- elseif self.screen=='help' then self:help()
- elseif self.g then
-  self:frameScreen()
-  if self.screen=='galaxy' then self:galaxy()
-  elseif self.screen=='ships' then self:ships()
-  elseif self.screen=='colony' then self:colony()
-  elseif self.screen=='research' then self:research()
-  elseif self.screen=='diplomacy' then self:diplomacy()
-  elseif self.screen=='empire' then self:empire()end
-  self:noticeBar()
- end
- r:endFrame()
-end
-function UI:touch(x,y)
- if self.r:hit(x,y) then return true end
- if self.screen=='galaxy' and (self.selected or self.selectedShip) then
-  self.selected=nil;self.selectedShip=nil;self.notice='';return true
- end
- return false
-end
-function UI:monitorTouch(x,y)
- local r=self.r;if type(x)~='number' or type(y)~='number'then return false end
- if r.kind=='gfx' then
-  local ox,oy=r.ox or 0,r.oy or 0
-  if x<ox or y<oy or x>=ox+r.w*r.px or y>=oy+r.h*r.py then return false end
-  x=math.floor((x-ox)/r.px)+1
-  y=math.floor((y-oy)/r.py)+1
- end
- if x<1 or y<1 or x>r.w or y>r.h then return false end
- return self:touch(x-1,y-1)
-end
-function UI:loop(name,computer)
- self:draw();if computer and computer.present then computer.present()end
- local timer=os.startTimer(.8)
- while true do
-  local ev,a,b,c=os.pullEvent()
-  if ev=='monitor_touch' and (not name or a==name)then
-   self:monitorTouch(b,c);self:draw()
-   if computer and computer.present then computer.present()end
-  elseif computer and ev=='mouse_click' then
-   local x,y=b,c
-   if computer.mouse then x,y=computer.mouse(b,c)end
-   if x then self:monitorTouch(x,y);self:draw();if computer and computer.present then computer.present()end end
-  elseif computer and computer.pan and ev=='mouse_scroll' then computer.pan(0,a*4)
-  elseif computer and ev=='term_resize' then self.r:resize();self:draw();if computer.present then computer.present()end
-  elseif computer and computer.pan and ev=='key' and keys and
-   (a==keys.left or a==keys.right or a==keys.up or a==keys.down)then
-   computer.pan(a==keys.left and -8 or (a==keys.right and 8 or 0),
-    a==keys.up and -5 or (a==keys.down and 5 or 0))
-  elseif ev=='monitor_resize' and (not name or a==name) then self.r:resize();self:draw();if computer and computer.present then computer.present()end
-  elseif ev=='timer' and a==timer then self:draw();if computer and computer.present then computer.present()end;timer=os.startTimer((self.screen=='title' or self.screen=='galaxy') and .85 or 1.8)
-  elseif ev=='char' and self.screen=='keyboard' then self.names[self.edit]=safeName(self.names[self.edit]..a);self:draw();if computer and computer.present then computer.present()end
-  elseif ev=='key' and self.screen=='keyboard' and keys and a==keys.backspace then self.names[self.edit]=self.names[self.edit]:sub(1,-2);self:draw();if computer and computer.present then computer.present()end
+  local r = self.r
+  r:beginFrame()
+  self.frame = self.frame + 1
+  r:resize()
+  if self.screen == "title" then
+    self:title()
+  elseif self.screen == "setup" then
+    self:setup()
+  elseif self.screen == "keyboard" then
+    self:keyboard()
+  elseif self.screen == "handoff" then
+    self:handoff()
+  elseif self.screen == "confirm" then
+    self:confirm()
+  elseif self.screen == "event" then
+    self:event()
+  elseif self.screen == "summary" then
+    self:summary()
+  elseif self.screen == "results" then
+    self:results()
+  elseif self.screen == "help" then
+    self:help()
+  elseif self.g then
+    self:frameScreen()
+    if self.screen == "galaxy" then
+      self:galaxy()
+    elseif self.screen == "ships" then
+      self:ships()
+    elseif self.screen == "colony" then
+      self:colony()
+    elseif self.screen == "research" then
+      self:research()
+    elseif self.screen == "diplomacy" then
+      self:diplomacy()
+    elseif self.screen == "empire" then
+      self:empire()
+    end
+    self:noticeBar()
   end
- end
+  r:endFrame()
+end
+function UI:touch(x, y)
+  if self.r:hit(x, y) then
+    return true
+  end
+  if self.screen == "galaxy" and (self.selected or self.selectedShip) then
+    self.selected = nil
+    self.selectedShip = nil
+    self.notice = ""
+    return true
+  end
+  return false
+end
+function UI:monitorTouch(x, y)
+  local r = self.r
+  if type(x) ~= "number" or type(y) ~= "number" then
+    return false
+  end
+  if r.kind == "gfx" then
+    local ox, oy = r.ox or 0, r.oy or 0
+    if x < ox or y < oy or x >= ox + r.w * r.px or y >= oy + r.h * r.py then
+      return false
+    end
+    x = math.floor((x - ox) / r.px) + 1
+    y = math.floor((y - oy) / r.py) + 1
+  end
+  if x < 1 or y < 1 or x > r.w or y > r.h then
+    return false
+  end
+  return self:touch(x - 1, y - 1)
+end
+function UI:loop(name, computer)
+  self:draw()
+  if computer and computer.present then
+    computer.present()
+  end
+  local timer = os.startTimer(0.8)
+  while true do
+    local ev, a, b, c = os.pullEvent()
+    if ev == "monitor_touch" and (not name or a == name) then
+      self:monitorTouch(b, c)
+      self:draw()
+      if computer and computer.present then
+        computer.present()
+      end
+    elseif computer and ev == "mouse_click" then
+      local x, y = b, c
+      if computer.mouse then
+        x, y = computer.mouse(b, c)
+      end
+      if x then
+        self:monitorTouch(x, y)
+        self:draw()
+        if computer and computer.present then
+          computer.present()
+        end
+      end
+    elseif computer and computer.pan and ev == "mouse_scroll" then
+      computer.pan(0, a * 4)
+    elseif computer and ev == "term_resize" then
+      self.r:resize()
+      self:draw()
+      if computer.present then
+        computer.present()
+      end
+    elseif
+      computer
+      and computer.pan
+      and ev == "key"
+      and keys
+      and (a == keys.left or a == keys.right or a == keys.up or a == keys.down)
+    then
+      computer.pan(
+        a == keys.left and -8 or (a == keys.right and 8 or 0),
+        a == keys.up and -5 or (a == keys.down and 5 or 0)
+      )
+    elseif ev == "monitor_resize" and (not name or a == name) then
+      self.r:resize()
+      self:draw()
+      if computer and computer.present then
+        computer.present()
+      end
+    elseif ev == "timer" and a == timer then
+      self:draw()
+      if computer and computer.present then
+        computer.present()
+      end
+      timer = os.startTimer((self.screen == "title" or self.screen == "galaxy") and 0.85 or 1.8)
+    elseif ev == "char" and self.screen == "keyboard" then
+      self.names[self.edit] = safeName(self.names[self.edit] .. a)
+      self:draw()
+      if computer and computer.present then
+        computer.present()
+      end
+    elseif ev == "key" and self.screen == "keyboard" and keys and a == keys.backspace then
+      self.names[self.edit] = self.names[self.edit]:sub(1, -2)
+      self:draw()
+      if computer and computer.present then
+        computer.present()
+      end
+    end
+  end
 end
 return UI
