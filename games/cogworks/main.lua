@@ -89,6 +89,7 @@ local function start()
       return true
     end
     redraw()
+    local drag = nil
     local timer = os.startTimer(0.2)
     while true do
       local event, a, b, c, d = os.pullEventRaw()
@@ -99,10 +100,10 @@ local function start()
         break
       elseif event == "monitor_touch" and a == name then
         local action, x, y = renderer:hit(b, c)
-        -- Vanilla monitor_touch only reports right-click and carries no button.
-        -- Addons that append an explicit mouse button can use button 2 to remove.
-        if action == "cell" and (app.hasLeftInput or d == 2 or d == "right") then
-          action = "remove"
+        -- Vanilla Advanced Monitors offer only tap; select occupied cells and
+        -- expose small rotate/remove buttons on that cell.
+        if action == "cell" then
+          action = "inspect"
         end
         if not act(action, x, y) then
           break
@@ -113,6 +114,9 @@ local function start()
         local action, x, y = renderer:hitNormalized(b, c)
         if action then
           app.hasLeftInput = true
+          if action == "cell" then
+            action = "inspect"
+          end
           if not act(action, x, y) then
             break
           end
@@ -120,10 +124,35 @@ local function start()
       elseif computerMode and event == "mouse_click" then
         local x, y = Display.click(monitor, mode, b, c)
         if x then
-          local action, arg1, arg2 = renderer:hit(x, y)
-          if not act(action, arg1, arg2) then
+          local action, cx, cy = renderer:hit(x, y)
+          if action == "cell" then
+            drag = { button = a, x = cx, y = cy, moved = false }
+          elseif not act(action, cx, cy) then
             break
           end
+        end
+      elseif computerMode and event == "mouse_drag" and drag then
+        local x, y = Display.click(monitor, mode, c, d)
+        if x then
+          local action, cx, cy = renderer:hit(x, y)
+          if action == "cell" and (cx ~= drag.x or cy ~= drag.y) then
+            drag.moved = true
+          end
+        end
+      elseif computerMode and event == "mouse_up" and drag then
+        local start = drag
+        drag = nil
+        local x, y = Display.click(monitor, mode, b, c)
+        local action, cx, cy = x and renderer:hit(x, y)
+        if start.moved then
+          if action == "cell" then
+            app.moveX, app.moveY = cx, cy
+            if not act("move", start.x, start.y) then
+              break
+            end
+          end
+        elseif not act(start.button == 1 and "remove" or "cell", start.x, start.y) then
+          break
         end
       elseif mode == "virtual-text" and event == "mouse_scroll" then
         monitor.pan(0, a * 3)
@@ -141,7 +170,8 @@ local function start()
         then
           redraw()
         end
-        timer = os.startTimer(app.scene == "briefing" and 0.1 or 0.2)
+        -- Peripheral monitor graphics need fewer pushes than native CraftOS-PC.
+        timer = os.startTimer(app.scene == "briefing" and 0.15 or (computerMode and 0.2 or 0.3))
       elseif event == "char" then
         local char = tostring(a):lower()
         local n = tonumber(char)
@@ -154,7 +184,7 @@ local function start()
         elseif char == "x" then
           act("tool", "erase")
         elseif char == "t" then
-          act("tool", "switch")
+          act("tool", "R")
         elseif char == "s" then
           act("save")
         elseif char == "n" then
