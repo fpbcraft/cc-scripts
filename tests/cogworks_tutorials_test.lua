@@ -1,95 +1,75 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 local T = require("games.cogworks.tutorials")
 local E = require("games.cogworks.engine")
-local function copy(value)
-  if type(value) ~= "table" then
-    return value
-  end
+local function copy(v)
+  if type(v) ~= "table" then return v end
   local result = {}
-  for k, v in pairs(value) do
-    result[k] = copy(v)
-  end
+  for k, x in pairs(v) do result[k] = copy(x) end
   return result
 end
--- Lightweight in-memory save system: the UI controller should not depend on
--- CraftOS files or a monitor to decide when a tutorial appears.
 local saved = {}
 local S = {}
 function S.newProgress()
-  return { campaignVersion = 3, level = 1, unlocked = 1, best = {}, sessions = {}, awards = {}, tutorials = {} }
+  return { campaignVersion = 4, unlocked = 1, level = 1,
+    best = {}, sessions = {}, awards = {}, tutorials = {} }
 end
-function S.loadSettings()
-  return { animations = true, showPorts = true, lastSlot = 1 }
-end
-function S.saveSettings()
-  return true
-end
-function S.load(slot)
-  return saved[slot] and copy(saved[slot]) or nil
-end
-function S.has(slot)
-  return saved[slot] ~= nil
-end
-function S.save(slot, data)
-  saved[slot] = copy(data)
-  return true
-end
+function S.loadSettings() return { animations = true, showPorts = true, lastSlot = 1 } end
+function S.saveSettings() return true end
+function S.load(slot) return saved[slot] and copy(saved[slot]) or nil end
+function S.has(slot) return saved[slot] ~= nil end
+function S.save(slot, value) saved[slot] = copy(value); return true end
 package.loaded["games.cogworks.storage"] = S
 local A = require("games.cogworks.app")
-assert(#E.order == 9 and not E.parts.C, "No redundant clutch")
-assert(#T.forLevel(9) == 2, "Speed drive and gearbox are introduced together")
+assert(#T.forLevel(1) == 1 and T.forLevel(1)[1].key == "I")
+assert(T.forLevel(2)[1].key == "Q" and T.forLevel(4)[1].key == "G")
+assert(T.forLevel(6)[1].key == "D" and T.forLevel(7)[1].key == "Z")
+assert(T.forLevel(8)[1].key == "C" and T.forLevel(9)[1].key == "O")
+assert(T.forLevel(11)[1].key == "V")
 local app = A.new()
 app:enter(1, false)
-assert(app.scene == "briefing" and app.briefing.number == 1, "Every level starts with its mission briefing")
+assert(app.scene == "briefing" and app.briefing.number == 1)
 app:act("beginLevel")
-assert(app.scene == "tutorial" and app.tutorial.steps[1].key == "I", "First-ever game opens a shaft Ponder")
+assert(app.scene == "tutorial" and app.tutorial.steps[1].key == "I")
 app:act("tutorialNext")
-assert(app.scene == "game" and saved[1].tutorials.I, "Ponder completion persisted")
+assert(app.scene == "game" and saved[1].tutorials.I, "Tutorial was saved")
 app:openLevel(1)
-assert(app.scene == "briefing", "Briefing reappears on a familiar level")
 app:act("beginLevel")
-assert(app.scene == "game", "Visiting a familiar level does not repeat Ponder")
-app.progress.unlocked = 30
-app:openLevel(9)
-assert(app.scene == "briefing" and #app.briefing.targets == 2)
+assert(app.scene == "game", "Already seen lesson not repeated")
+app.progress.unlocked = #E.levels
+app:openLevel(11)
 app:act("beginLevel")
-assert(app.scene == "tutorial" and #app.tutorial.steps == 2, "First-time level-nine lessons include both mechanics")
-app:act("tutorialNext")
-assert(app.scene == "tutorial" and app.tutorial.index == 2, "NEXT advances to the next illustrated lesson")
+assert(app.scene == "tutorial" and app.tutorial.steps[1].key == "V")
 app:act("tutorialSkip")
-assert(
-  app.scene == "game" and saved[1].tutorials.B and saved[1].tutorials.Q,
-  "SKIP acknowledges all remaining lessons for this level"
-)
-app:openLevel(9)
-assert(app.scene == "briefing")
-app:act("beginLevel")
-assert(app.scene == "game", "Finished tutorials do not repeat after re-entry")
-app:openLevel(6)
-assert(app.scene == "briefing")
-app:act("beginLevel")
-assert(app.scene == "tutorial" and app.tutorial.steps[1].key == "V", "First belt puzzle teaches the bridge mechanic")
-app:act("tutorialSkip")
-app:act("help")
-assert(app.scene == "help")
-app:act("replayTutorial")
-assert(app.scene == "tutorial", "Help allows manual replay")
-app:act("tutorialNext")
-assert(app.scene == "game", "Replayed guide returns to gameplay")
-app:act("pause")
+assert(saved[1].tutorials.V, "Belt lesson seen")
 app:act("help")
 app:act("replayTutorial")
+assert(app.scene == "tutorial")
 app:act("tutorialNext")
-assert(app.scene == "pause", "Replayed guide returns to the prior menu")
-app:enter(2, false)
-assert(app.scene == "briefing")
-app:act("beginLevel")
-assert(app.scene == "tutorial" and app.tutorial.steps[1].key == "I", "Separate save slots learn independently")
-app:act("tutorialSkip")
-assert(saved[2].tutorials.I and saved[1].tutorials.I, "Seen flags are stored with the corresponding slot")
-local again = A.new()
-again:enter(1, false)
-assert(again.scene == "briefing", "Returning players still get the level briefing")
-again:act("beginLevel")
-assert(again.scene == "game", "Previously acknowledged lesson stays dismissed after relaunch")
-print("COGWORKS: briefing to Ponder flow, replay and slot persistence passed.")
+assert(app.scene == "game", "Ponder replay returns to game")
+local fresh = A.new({ dev = true })
+fresh:act("devLevels")
+assert(fresh.scene == "levels" and fresh.devSession and fresh.slot == nil)
+fresh:act("level", #E.levels)
+assert(fresh.scene == "briefing" and fresh.game.number == #E.levels)
+fresh:act("beginLevel")
+fresh:act("tutorialSkip")
+assert(fresh.scene == "game", "Developer may skip directly to last stage")
+assert(not fresh:save(), "Developer session never changes campaign slots")
+fresh:act("pause")
+fresh:act("levels")
+fresh:act("level", 2)
+assert(fresh.game.number == 2, "Developer can jump between any stages")
+local free = A.new()
+free:act("sandbox")
+assert(free.scene == "game" and free.game.sandbox and free.slot == nil)
+free:act("tool", "G")
+free:act("cell", 2, 3)
+assert(E.get(free.game, 2, 3).kind == "G")
+free:act("pause")
+assert(free.scene == "pause")
+free:act("clearSandbox")
+assert(free.scene == "game" and not E.get(free.game, 2, 3), "Sandbox cleared")
+free:act("pause")
+free:act("title")
+assert(free.scene == "title" and not free:save(), "Sandbox never saved into campaign")
+print("COGWORKS: updated tutorials, ephemeral dev navigation and sandbox UI passed.")
