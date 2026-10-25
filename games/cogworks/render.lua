@@ -694,7 +694,7 @@ function R:drawSlots(m)
     if slot.empty then
       self:font(20, y + 12, "EMPTY - NEW GAME", 5)
     else
-      self:font(20, y + 12, "LEVEL " .. slot.level .. "/" .. #E.levels   BONUSES " .. slot.trophies, 9)
+      self:font(20, y + 12, "LEVEL " .. slot.level .. "/" .. #E.levels .. "   BONUSES " .. slot.trophies, 9)
     end
     self:add(12, y, 176, 23, "slot", slot.number)
   end
@@ -919,7 +919,7 @@ function R:drawText(m)
     end
   elseif m.scene == "slots" then
     for i, slot in ipairs(m.slots) do
-      local labelText = slot.empty and "EMPTY - NEW" or ("LV " .. slot.level .. "/" .. #E.levels BONUS " .. slot.trophies)
+      local labelText = slot.empty and "EMPTY - NEW" or ("LV " .. slot.level .. "/" .. #E.levels .. " BONUS " .. slot.trophies)
       btn(4, 5 + (i - 1) * 4, math.min(w - 8, 42), "SLOT " .. i .. "  " .. labelText, "slot", i)
     end
     btn(4, h - 2, 16, "BACK", "back")
