@@ -49,8 +49,10 @@ assert(not powered(wrongAxis, offAxis), "Perpendicular shafts cannot mesh in the
 local reverseRim = E.sandbox()
 put(reverseRim, 2, 3, "G", 1)
 local rimLarge = put(reverseRim, 2, 4, "O", 1)
-assert(state(reverseRim, rimLarge).rate == 0.5 and state(reverseRim, rimLarge).sign == -1,
-  "Adjacent small-to-large toothed rims halve the RPM")
+assert(
+  state(reverseRim, rimLarge).rate == 0.5 and state(reverseRim, rimLarge).sign == -1,
+  "Adjacent small-to-large toothed rims halve the RPM"
+)
 local reduction = E.sandbox()
 put(reduction, 2, 3, "G", 1)
 local largeOut = put(reduction, 3, 4, "O", 1)
