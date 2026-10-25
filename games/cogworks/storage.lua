@@ -88,7 +88,7 @@ function S.normalize(data)
   if data.campaignVersion ~= S.VERSION then
     return p
   end
-  p.unlocked = clamp(data.unlocked, 1, require("games.cogworks.levels") and #require("games.cogworks.levels"), 1)
+  p.unlocked = clamp(data.unlocked, 1, #(require("games.cogworks.levels")), 1)
   p.level = clamp(data.level, 1, p.unlocked, 1)
   p.best = type(data.best) == "table" and data.best or {}
   p.sessions = type(data.sessions) == "table" and data.sessions or {}
