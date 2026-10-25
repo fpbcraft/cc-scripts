@@ -32,7 +32,7 @@ local model = {
   },
   slots = { { number = 1, empty = true }, { number = 2, empty = true }, { number = 3, empty = true } },
 }
-local gfx = { mode = 0, clears = 0, pixels = 0, flushes = 0, palette = {} }
+local gfx = { mode = 0, clears = 0, pixels = 0, flushes = 0, palette = {}, batches = 0 }
 function gfx.getSize(mode)
   if mode == 2 then
     return 400, 260
@@ -53,11 +53,17 @@ function gfx.setFrozen(value)
     gfx.flushes = gfx.flushes + 1
   end
 end
-function gfx.drawPixels(x, y, color, w, h)
+function gfx.drawPixels(x, y, fill, w, h)
   assert(x >= 0 and y >= 0 and x + w <= 400 and y + h <= 260, "Pixel out of bounds")
-  assert(w > 0 and h > 0 and color >= 0 and color < 16, "Invalid pixel rectangle")
-  if x == 0 and y == 0 and w == 400 and h == 260 and color == 0 then
-    gfx.clears = gfx.clears + 1
+  assert(w > 0 and h > 0, "Invalid pixel rectangle")
+  if type(fill) == "table" then
+    assert(#fill == h, "One bitmap row per pixel row")
+    for _, row in ipairs(fill) do
+      assert(type(row) == "string" and #row == w, "Bitmap row must cover its declared width")
+    end
+    gfx.batches = gfx.batches + 1
+  else
+    assert(fill >= 0 and fill < 16, "Invalid palette index")
   end
   gfx.pixels = gfx.pixels + 1
 end
@@ -108,7 +114,7 @@ local function click(action, arg)
   error("Missing touch button " .. action .. " / " .. tostring(arg))
 end
 r:draw(model)
-assert(gfx.clears == 1, "Title screen must clear whole monitor")
+assert(gfx.batches == 1, "Title screen uploads one batched bitmap to the monitor")
 click("slots")
 click("settings")
 click("exit")
@@ -129,7 +135,7 @@ click("tool", "erase")
 for _, target in ipairs(r.targets) do
   assert(target.arg ~= "L" and target.arg ~= "T", "Fictitious controls removed")
 end
-assert(gfx.pixels > 500, "Graphics rendering should draw components")
+assert(gfx.pixels >= 3 and gfx.pixels < 50, "One batched upload per screen instead of thousands of pixel calls")
 model.scene = "pause"
 r:draw(model)
 click("resume")
@@ -177,7 +183,7 @@ click("tutorialSkip")
 for _, target in ipairs(r.targets) do
   assert(target.action ~= "cell", "Ponder must block board interaction")
 end
-assert(gfx.clears == 1, "Pixel-diff display performs only an initial full clear")
+assert(gfx.batches <= 10, "Pixel-diff screens upload at most once per frame")
 -- Briefing is modal, has animated reveals, and respects disabled animation.
 local largeTitles = 0
 local large = r.fontLarge
