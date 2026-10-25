@@ -42,6 +42,7 @@ function A.new(options)
     customSession = false,
     activePack = nil,
     packIndex = 1,
+    catalogPage = 1,
   }, A)
   return self
 end
@@ -268,6 +269,7 @@ function A:model()
     activePack = self.activePack,
     editorFiles = self.scene == "editorList" and Packs.listLevels() or nil,
     packFiles = self.scene == "packList" and Packs.listPacks() or nil,
+    catalogPage = self.catalogPage,
   }
 end
 -- Return 'exit' only in direct response to player choosing Exit.
@@ -431,14 +433,18 @@ function A:act(action, x, y)
     elseif action == "editorSave" then
       self:saveEditor()
     elseif action == "editorLoad" then
+      self.catalogPage = 1
       self.scene = "editorList"
     elseif action == "editorCompile" then
-      self:saveEditor()
-      local ok, reason = Packs.compile("workshop-pack", "WORKSHOP LEVEL PACK")
-      self.message = ok and "COMPILED /PACKS/WORKSHOP-PACK.COGPACK" or ("PACK: " .. tostring(reason))
+      if self:saveEditor() then
+        local ok, reason = Packs.compile("workshop-pack", "WORKSHOP LEVEL PACK")
+        self.message = ok and "COMPILED /PACKS/WORKSHOP-PACK.COGPACK" or ("PACK: " .. tostring(reason))
+      end
     elseif action == "editorTest" then
       self.scene = "editor"
       self:act("editorTest")
+    elseif action == "editorNew" then
+      self:enterEditor()
     elseif action == "title" then
       self.scene = "title"
     end
@@ -447,14 +453,19 @@ function A:act(action, x, y)
       self.scene = "editorMenu"
     elseif action == "editorLoadFile" then
       self:loadEditor(x)
+    elseif action == "catalogPage" then
+      self.catalogPage = math.max(1, tonumber(x) or 1)
     end
   elseif scene == "packList" then
     if action == "back" then
       self.scene = "title"
+    elseif action == "catalogPage" then
+      self.catalogPage = math.max(1, tonumber(x) or 1)
     elseif action == "pack" then
       local pack, reason = Packs.loadPack(x)
       if pack then
         self.activePack = pack
+        self.catalogPage = 1
         self.scene = "packLevels"
       else
         self.message = "PACK ERROR: " .. tostring(reason)
@@ -465,6 +476,8 @@ function A:act(action, x, y)
       self.scene = "packList"
     elseif action == "packLevel" then
       self:playPack(self.activePack, x)
+    elseif action == "catalogPage" then
+      self.catalogPage = math.max(1, tonumber(x) or 1)
     end
   elseif scene == "game" then
     local changed = false
@@ -515,7 +528,7 @@ function A:act(action, x, y)
         self.inspected = nil
         self.selected = x
       end
-    elseif action == "next" or action == "prev" and self.customSession then
+    elseif (action == "next" or action == "prev") and self.customSession then
       if self.activePack then
         local nextIndex = self.packIndex + (action == "next" and 1 or -1)
         if nextIndex >= 1 and nextIndex <= #self.activePack.levels then
