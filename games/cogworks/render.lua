@@ -711,7 +711,11 @@ function R:page(title, subtitle)
 end
 function R:drawGame(m)
   local g, result = m.game, m.result
-  self:page(g.sandbox and "COGWORKS  SANDBOX" or ("COGWORKS  " .. string.format("%02d/%02d", g.number, #E.levels)))
+  self:page(
+    g.editor and "COGWORKS  EDITOR"
+      or (g.custom and "COGWORKS  USER PACK")
+      or (g.sandbox and "COGWORKS  SANDBOX" or ("COGWORKS  " .. string.format("%02d/%02d", g.number, #E.levels)))
+  )
   self:font(77, 5, "MV " .. g.moves, 4)
   -- Quick visible animation control: saves may have animations disabled.
   self:button(
@@ -724,8 +728,9 @@ function R:drawGame(m)
     nil,
     m.settings.animations and 9 or 8
   )
-  self:button(120, 2, 28, 11, g.sandbox and "CLEAR" or "SAVE", g.sandbox and "clearSandbox" or "save")
-  self:button(150, 2, 36, 11, "PAUSE", "pause")
+  self:button(120, 2, 28, 11, g.editor and "SAVE" or (g.sandbox and "CLEAR" or "SAVE"),
+    g.editor and "editorSave" or (g.sandbox and "clearSandbox" or "save"))
+  self:button(150, 2, 36, 11, g.editor and "MENU" or "PAUSE", g.editor and "editorMenu" or "pause")
   self:button(188, 2, 11, 11, "?", "help")
   self:rect(3, 16, 109, 94, 1)
   self:rect(4, 17, 107, 92, 3)
@@ -835,21 +840,31 @@ function R:drawGame(m)
     g.sandbox and "sandboxSize" or nil,
     g.sandbox and (5 + g.width % 6) or nil
   )
-  -- Persistent bonus objectives are visible while building, not buried in
-  -- a modal screen. Labels are deliberately short enough for this pane.
-  self:font(117, 87, g.sandbox and "UNLIMITED PARTS" or "BONUS GOALS", 6)
-  local bonuses = E.challenges(g, result)
-  local awarded = (m.progress.awards and m.progress.awards[g.number]) or {}
-  for i, bonus in ipairs(bonuses) do
-    local y = 93 + (i - 1) * 5
-    local done = awarded[bonus.id] or false
-    local label = bonus.id == "sealed" and "NO IDLE PARTS"
-      or (bonus.id == "master" and "ALL STOCK USED" or (bonus.description:match("%d+") or "?") .. " MOVE PAR")
-    self:rect(117, y, 4, 4, done and 9 or (bonus.earned and 6 or 3))
-    self:fontFit(124, y, label, done and 9 or (bonus.earned and 6 or 5), 70)
-  end
-  if #bonuses == 0 and not g.sandbox then
-    self:font(124, 94, "FROM LEVEL 2", 4)
+  if g.editor then
+    self:font(117, 87, "EDITOR / SELECT A TOOL", 6)
+    self:button(116, 93, 25, 8, "SRC", "editorTool", "S")
+    self:button(143, 93, 25, 8, "GOAL", "editorTool", "M")
+    self:button(170, 93, 25, 8, "WALL", "editorTool", "X")
+    self:button(116, 102, 19, 7, "FIX", "editorFix")
+    self:button(136, 102, 19, 7, "RATE", "editorRate")
+    self:button(156, 102, 19, 7, "DIR", "editorSpin")
+    self:button(176, 102, 19, 7, "TEST", "editorTest")
+  else
+    -- Persistent bonus objectives are visible while building.
+    self:font(117, 87, g.sandbox and "UNLIMITED PARTS" or "BONUS GOALS", 6)
+    local bonuses = E.challenges(g, result)
+    local awarded = (m.progress.awards and m.progress.awards[g.number]) or {}
+    for i, bonus in ipairs(bonuses) do
+      local y = 93 + (i - 1) * 5
+      local done = awarded[bonus.id] or false
+      local label = bonus.id == "sealed" and "NO IDLE PARTS"
+        or (bonus.id == "master" and "ALL STOCK USED" or (bonus.description:match("%d+") or "?") .. " MOVE PAR")
+      self:rect(117, y, 4, 4, done and 9 or (bonus.earned and 6 or 5))
+      self:fontFit(124, y, label, done and 9 or (bonus.earned and 6 or 5), 70)
+    end
+    if #bonuses == 0 and not g.sandbox then
+      self:font(124, 94, "FROM LEVEL 2", 4)
+    end
   end
   if m.inspected then
     local chosen = E.get(g, m.inspected.x, m.inspected.y)
@@ -906,6 +921,14 @@ function R:drawGame(m)
     or info
   self:fontFit(89, 110, statusText, 5, 109)
   local status = m.message
+  if g.editor and m.inspected then
+    local tile = E.get(g, m.inspected.x, m.inspected.y)
+    if tile and tile.kind == "M" then
+      status = "GOAL " .. tile.speed .. "X " .. (tile.sign == 1 and "CW" or "CCW") .. " / RATE + DIR TO EDIT"
+    elseif tile then
+      status = tile.kind .. (tile.fixed and " FIXED" or " MOVABLE") .. " / FIX TO TOGGLE"
+    end
+  end
   if status == "" then
     if result.win then
       status = "CLEARED! BONUS TASKS ARE OPTIONAL"
@@ -1077,15 +1100,17 @@ function R:drawTitle(m)
     { "CONTINUE", hasSave and "continue" or nil },
     { "SAVE SLOTS", "slots" },
     { "FREE SANDBOX", "sandbox" },
+    { "LEVEL EDITOR", "editor" },
+    { "CUSTOM PACKS", "packs" },
   }
   if m.dev then
     options[#options + 1] = { "DEV: ALL LEVELS", "devLevels" }
   end
   options[#options + 1] = { "SETTINGS", "settings" }
   options[#options + 1] = { "EXIT", "exit" }
-  local spacing = m.dev and 11 or 13
+  local spacing = 10
   for i, item in ipairs(options) do
-    self:button(54, 43 + (i - 1) * spacing, 92, 10, item[1], item[2])
+    self:button(54, 39 + (i - 1) * spacing, 92, 9, item[1], item[2])
   end
 end
 function R:drawSlots(m)
@@ -1204,6 +1229,52 @@ function R:drawChapter(m)
     end
   end
   self:button(70, 110, 60, 10, "CHAPTERS", "back")
+end
+local function listMenu(self, title, entries, action, page)
+  self:page(title, "TOUCH A ROW TO SELECT / USE PAGE BUTTONS")
+  page = page or 1
+  for slot = 1, 7 do
+    local index = (page - 1) * 7 + slot
+    local item = entries[index]
+    if item then
+      local label = type(item) == "table" and (item.name or item.title) or item
+      self:button(23, 21 + slot * 11, 154, 10, tostring(index) .. " " .. tostring(label), action,
+        type(item) == "table" and index or item)
+    end
+  end
+  if page > 1 then
+    self:button(15, 109, 48, 10, "PREV", "catalogPage", page - 1)
+  end
+  if page * 7 < #entries then
+    self:button(136, 109, 48, 10, "NEXT", "catalogPage", page + 1)
+  end
+  self:button(72, 109, 56, 10, "BACK", "back")
+end
+function R:drawEditorMenu(m)
+  self:page("LEVEL EDITOR", "SOURCE / TARGET / FIXTURES / STOCK")
+  local options = {
+    { "RESUME EDITING", "resume" },
+    { "SAVE .COGLEVEL", "editorSave" },
+    { "LOAD SAVED LEVEL", "editorLoad" },
+    { "COMPILE .COGPACK", "editorCompile" },
+    { "TEST GOAL NETWORK", "editorTest" },
+    { "START NEW LEVEL", "editorNew" },
+    { "TITLE MENU", "title" },
+  }
+  for i, item in ipairs(options) do
+    self:button(34, 23 + i * 11, 132, 10, item[1], item[2])
+  end
+  self:fontFit(12, 108, m.message, 9, 170)
+end
+function R:drawEditorList(m)
+  listMenu(self, "SAVED LEVEL FILES", m.editorFiles or {}, "editorLoadFile", m.catalogPage)
+end
+function R:drawPackList(m)
+  listMenu(self, "COMPILED PACKS", m.packFiles or {}, "pack", m.catalogPage)
+end
+function R:drawPackLevels(m)
+  listMenu(self, m.activePack and m.activePack.title or "USER PACK", m.activePack and m.activePack.levels or {},
+    "packLevel", m.catalogPage)
 end
 function R:drawConfirm(m)
   self:page("CONFIRM ACTION")
@@ -1503,7 +1574,7 @@ function R:draw(m)
     return
   end
   self.buffer = {}
-  if m.scene == "game" then
+  if m.scene == "game" or m.scene == "editor" then
     self:drawGame(m)
   elseif m.scene == "briefing" then
     self:drawBriefing(m)
@@ -1521,6 +1592,14 @@ function R:draw(m)
     self:drawLevels(m)
   elseif m.scene == "chapter" then
     self:drawChapter(m)
+  elseif m.scene == "editorMenu" then
+    self:drawEditorMenu(m)
+  elseif m.scene == "editorList" then
+    self:drawEditorList(m)
+  elseif m.scene == "packList" then
+    self:drawPackList(m)
+  elseif m.scene == "packLevels" then
+    self:drawPackLevels(m)
   elseif m.scene == "confirm" then
     self:drawConfirm(m)
   else
