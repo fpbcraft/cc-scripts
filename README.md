@@ -44,3 +44,29 @@ See [installation and library details](lib/fpb/README.md).
 
 All factory controls must retain a physical manual override. Do not rely on
 software alone for machinery safety.
+
+## Development: Lua style and linting
+
+Source code is automatically formatted with [StyLua](https://github.com/JohnnyMorganz/StyLua)
+(2.6.0) and statically checked with [Selene](https://github.com/Kampfkarren/selene)
+(0.32.0). Both tools run as required checks on pull requests and on `main`.
+The configuration is in `.stylua.toml`, `selene.toml`, and `cc-tweaked.yml`.
+The latter declares CraftOS globals so they are not mistaken for undefined variables.
+
+Install the pinned versions of `stylua` and `selene` on your development machine,
+then run from the repository root:
+
+```sh
+make format       # rewrite Lua files into the standard style
+make format-check # check without rewriting
+make lint         # detect Lua lint violations
+make style-check  # run both checks locally (same gate as CI)
+```
+
+Editors can invoke StyLua on save; `.editorconfig` defines two-space Lua indentation
+and LF line endings. Lua syntax and regression tests remain in the existing CI workflows.
+Use `-- selene: allow(rule_name)` next to an intentional exception rather than
+disabling a useful rule for the entire project. Avoid committing vendored Lua files.
+
+The repository was normalized once with StyLua. After that baseline, any unformatted
+Lua source or disallowed Selene finding fails CI, including on existing files.
