@@ -34,13 +34,20 @@ local function selectMonitor(preferred)
     assert(m and peripheral.getType(preferred) == "monitor", "Unknown monitor: " .. tostring(preferred), 0)
     return m, preferred
   end
-  local chosen, name, largest = nil, nil, 0
+  local chosen, name, largest = nil, nil, -1
   for _, side in ipairs(peripheral.getNames()) do
     if peripheral.getType(side) == "monitor" then
       local m = peripheral.wrap(side)
       local ok, w, h = pcall(m.getSize)
-      if ok and (not m.isColor or m.isColor()) and w * h > largest then
-        chosen, name, largest = m, side, w * h
+      if ok and w and h then
+        -- Always use an attached monitor rather than CraftOS-PC's own screen.
+        -- Prefer an Advanced (color) monitor, then the largest surface.
+        -- Ordinary monitors remain a supported text-mode fallback.
+        local colored = not m.isColor or m.isColor()
+        local score = w * h + (colored and 1000000 or 0)
+        if score > largest then
+          chosen, name, largest = m, side, score
+        end
       end
     end
   end
@@ -58,7 +65,9 @@ local function start()
 
   local previous = monitor.getTextScale and monitor.getTextScale() or 1
   if monitor.setTextScale then
-    monitor.setTextScale(0.5)
+    -- Half text scale gives Advanced Monitors their maximum usable resolution.
+    -- Restore the original setting when Cogworks exits.
+    pcall(monitor.setTextScale, 0.5)
   end
   local renderer, app
   local ok, reason = xpcall(function()

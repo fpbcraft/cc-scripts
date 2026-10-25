@@ -32,6 +32,27 @@ assert(
   state(large, small).rate == 2 and state(large, small).sign == -1,
   "Large cog drives diagonal small cog at twice the speed and opposite spin"
 )
+-- Adjacent rims must couple too: axial shaft ends are NOT the only
+-- connection. A large/small pair has inverse spin and a 2:1 transfer.
+local rim = E.sandbox()
+put(rim, 2, 3, "O", 1)
+local rimSmall = put(rim, 2, 4, "G", 1)
+assert(
+  state(rim, rimSmall).rate == 2 and state(rim, rimSmall).sign == -1,
+  "Adjacent large/small toothed rims mesh, not just shafts or diagonal neighbors"
+)
+assert(not E.connection(rim, E.get(rim, 2, 3), 2), "Gear rim is not an axial port")
+local wrongAxis = E.sandbox()
+put(wrongAxis, 2, 3, "O", 1)
+local offAxis = put(wrongAxis, 2, 4, "G", 0)
+assert(not powered(wrongAxis, offAxis), "Perpendicular shafts cannot mesh in the 2D workshop")
+local reverseRim = E.sandbox()
+put(reverseRim, 2, 3, "G", 1)
+local rimLarge = put(reverseRim, 2, 4, "O", 1)
+assert(
+  state(reverseRim, rimLarge).rate == 0.5 and state(reverseRim, rimLarge).sign == -1,
+  "Adjacent small-to-large toothed rims halve the RPM"
+)
 local reduction = E.sandbox()
 put(reduction, 2, 3, "G", 1)
 local largeOut = put(reduction, 3, 4, "O", 1)

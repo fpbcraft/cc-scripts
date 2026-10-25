@@ -37,14 +37,27 @@ end
 function monitor.write(text)
   monitor.writes = monitor.writes + #text
 end
+-- Even a larger monochrome monitor must not displace a usable Advanced
+-- Monitor, and the latter must run automatically at half text scale.
+local plain = {
+  getSize = function()
+    return 90, 50
+  end,
+  isColor = function()
+    return false
+  end,
+}
 peripheral = {
   getNames = function()
-    return { "monitor_1" }
+    return { "monitor_plain", "monitor_1" }
   end,
   getType = function(side)
-    return side == "monitor_1" and "monitor" or nil
+    return (side == "monitor_plain" or side == "monitor_1") and "monitor" or nil
   end,
   wrap = function(side)
+    if side == "monitor_plain" then
+      return plain
+    end
     return side == "monitor_1" and monitor or nil
   end,
 }

@@ -42,8 +42,8 @@ generic-port mechanics.
 | Key | Part | Create-inspired interaction |
 | --- | --- | --- |
 | I | Shaft | Two opposing shaft ends, same speed and spin |
-| G | Small cogwheel | Axial shaft ends; gears on adjacent **perpendicular** cells mesh and reverse spin, without changing speed |
-| O | Large cogwheel | Axial shaft ends; same-size neighbors mesh at 1:1; diagonally meshed small/large cogwheels reverse spin and transfer at a 2:1 ratio |
+| G | Small cogwheel | Axial shaft ends; toothed rims on perpendicular neighboring cells mesh and reverse spin, at 1:1 for small/small or 2:1 for small/large |
+| O | Large cogwheel | Axial shaft ends; toothed-rim neighbors mesh at 1:1 for matching sizes or 2:1 with small cogs, either side-adjacent or diagonally |
 | Q | Gearbox | Accepts power from any of four sides; outputs on the other sides reverse spin (1:1 speed) |
 | D | Encased chain drive | Axial shaft ends, plus same-axis chain links to neighboring chain drives **perpendicular** to their shafts; no speed/sign change |
 | V | Belt pulley | Axial shaft ends; two parallel pulleys transmit across a clear, perpendicular span, preserving speed and spin |
@@ -97,6 +97,32 @@ unlimited quantities, within the 7×6 board. A generator is pre-installed.
 There are no targets, victory conditions, part limits or campaign unlocks.
 Build, rotate, switch or remove components freely, and clear the board from
 the pause menu. Sandbox sessions do not overwrite campaign saves.
+
+## Blueprint graphics
+
+The CC:Graphics 2 renderer now uses a custom sixteen-color blueprint palette:
+navy grid panels, cyan blueprint lines, restrained brass machinery, steel
+shafts, and orange redstone/reverse-spin accents. Cogs use small 13-pixel-cell
+sprites with **different small/large tooth silhouettes**, clearly marked
+meshing contacts and speed-sensitive rotating spokes. Shafts animate their
+rotation rather than scrolling dots along the power path.
+
+Each powered tile displays an **RPM multiplier** and a small directional hook:
+
+- **Cyan CW (>)** indicates clockwise motion.
+- **Orange CCW (<)** indicates counter-clockwise motion.
+- **1X**, **2X**, and **0.5** indicate speed relative to the source.
+
+The persistent two-color legend and the numeric multiplier remain visible
+even if animations are disabled. Cog rim meshing works for perpendicular
+adjacent equal-size **and mixed-size** pairs, at the applicable 1:1 or 2:1
+speed ratio. Existing diagonal large/small gearing remains supported.
+
+The game automatically prefers an attached monitor, including an ordinary
+monitor when no color display is connected. It applies **text scale 0.5**
+when supported and restores the previous scale when it exits. With no
+monitor connected, it falls back to the computer or a scrollable text view.
+Graphics pixel scaling is separately fitted to the available pixel dimensions.
 
 ## Controls
 

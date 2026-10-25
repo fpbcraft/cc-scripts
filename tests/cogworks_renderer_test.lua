@@ -32,7 +32,7 @@ local model = {
   },
   slots = { { number = 1, empty = true }, { number = 2, empty = true }, { number = 3, empty = true } },
 }
-local gfx = { mode = 0, clears = 0, pixels = 0, flushes = 0 }
+local gfx = { mode = 0, clears = 0, pixels = 0, flushes = 0, palette = {} }
 function gfx.getSize(mode)
   if mode == 2 then
     return 400, 260
@@ -45,7 +45,9 @@ end
 function gfx.getPaletteColor()
   return 0, 0, 0
 end
-function gfx.setPaletteColor() end
+function gfx.setPaletteColor(index, color)
+  gfx.palette[index] = color
+end
 function gfx.setFrozen(value)
   if not value then
     gfx.flushes = gfx.flushes + 1
@@ -62,6 +64,49 @@ end
 local r = R.new(gfx)
 assert(r.mode == "graphics" and gfx.mode == 2)
 assert(math.abs(r.scale - 2) < 0.001, "Graphics virtual dimensions")
+assert(gfx.palette[0] == 0x07192D and gfx.palette[11] == 0x64D3F2, "Blueprint ink palette installed")
+assert(
+  gfx.palette[14] == 0xF4A25E and gfx.palette[11] ~= gfx.palette[14],
+  "Rotation direction colors use distinct cyan and amber"
+)
+local wheel = E.sandbox()
+assert(E.place(wheel, 2, 3, "O", 1))
+assert(E.place(wheel, 2, 4, "G", 1))
+local wheelInfo = E.evaluate(wheel)
+local labelSeen = {}
+local originalFont = r.font
+function r:font(x, y, value, color)
+  labelSeen[tostring(value)] = true
+  return originalFont(self, x, y, value, color)
+end
+local indicatorCount = 0
+local originalSpin = r.spinMark
+function r:spinMark(...)
+  indicatorCount = indicatorCount + 1
+  return originalSpin(self, ...)
+end
+local cog = E.get(wheel, 2, 4)
+r:piece(20, 20, 13, cog, wheelInfo.lights[cog.id])
+assert(labelSeen["2X"] and indicatorCount == 1, "Small cog displays correct gear-up multiplier and direction")
+local twoPositions = {}
+local previousLine = r.line
+function r:line(x1, y1, x2, y2, color)
+  twoPositions[#twoPositions + 1] = { x2, y2, color }
+  return previousLine(self, x1, y1, x2, y2, color)
+end
+r.frame = 0
+r:cog(35, 35, false, { rate = 2, sign = 1 })
+r.frame = 4
+r:cog(35, 35, false, { rate = 2, sign = 1 })
+assert(#twoPositions >= 2, "Cogwheel animation draws rotating spokes")
+assert(
+  twoPositions[1][1] ~= twoPositions[#twoPositions][1] or twoPositions[1][2] ~= twoPositions[#twoPositions][2],
+  "Powered cog spokes change angle from frame to frame"
+)
+r.frame = 0
+r.line = previousLine
+r.font = originalFont
+r.spinMark = originalSpin
 local function click(action, arg)
   for _, v in ipairs(r.targets) do
     if v.action == action and (arg == nil or v.arg == arg) then

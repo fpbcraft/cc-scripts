@@ -5,23 +5,25 @@ local E = require("games.cogworks.engine")
 local T = require("games.cogworks.tutorials")
 local R = {}
 R.__index = R
+-- All visual elements use CraftOS' sixteen palette indices. The accents
+-- follow Create-style blueprints: navy, cyan ink, steel and restrained brass.
 local palette = {
-  [0] = 0x0E1A23,
-  [1] = 0x172B37,
-  [2] = 0x284250,
-  [3] = 0x355866,
-  [4] = 0x688993,
-  [5] = 0xE6EBD7,
-  [6] = 0xF3BC59,
-  [7] = 0xC97E4E,
-  [8] = 0xD35F51,
-  [9] = 0x89D79F,
-  [10] = 0x39745B,
-  [11] = 0x83C2D7,
-  [12] = 0x365E8D,
-  [13] = 0xD9C391,
-  [14] = 0xBE91E3,
-  [15] = 0xFFF6E0,
+  [0] = 0x07192D, -- blueprint background
+  [1] = 0x0D2844, -- deep panel
+  [2] = 0x173B5A, -- tile/background fill
+  [3] = 0x23567B, -- blue grid lines / borders
+  [4] = 0x4780A4, -- inactive mechanism / secondary ink
+  [5] = 0xC1D8E7, -- text
+  [6] = 0xEBC26A, -- brass selection
+  [7] = 0xA88548, -- brass shadow
+  [8] = 0xEA7750, -- jam / redstone
+  [9] = 0x91D3B7, -- successful machine
+  [10] = 0x356C5C, -- dark source block
+  [11] = 0x64D3F2, -- CW / cyan highlights
+  [12] = 0x307FAF, -- bright-blue frame
+  [13] = 0xA3B6C3, -- steel
+  [14] = 0xF4A25E, -- CCW / orange highlights
+  [15] = 0xF1F5E9, -- white blueprint text
 }
 local F = {
   A = { "010", "101", "111", "101", "101" },
@@ -192,128 +194,195 @@ function R:line(x1, y1, x2, y2, color)
 end
 local DX = { 0, 1, 0, -1 }
 local DY = { -1, 0, 1, 0 }
+-- Numeric rate is relative to the fixed 1X generator. Individual gearbox
+-- outlets have opposite spin, so prefer the actual axial facing port rather
+-- than interpreting the first arbitrary port as the whole block's direction.
+local function motionFor(tile, light)
+  if not light or not light.powered then
+    return nil
+  end
+  return light.ports and (light.ports[tile.r] or light.ports[next(light.ports)])
+    or (light.rate and { sign = light.sign, rate = light.rate })
+end
+local function speedLabel(rate)
+  if not rate or rate <= 0 then
+    return nil
+  end
+  if math.abs(rate - 0.5) < 0.01 then
+    return "0.5"
+  end
+  if math.abs(rate - math.floor(rate + 0.5)) < 0.01 then
+    return tostring(math.floor(rate + 0.5)) .. "X"
+  end
+  return string.format("%.1f", rate)
+end
+-- True rotational animation: phase depends on the signed speed rather than
+-- marching dots translating outward along the shaft.
+function R:shaft(x, y, cx, cy, tile, spin)
+  local active = spin ~= nil
+  local base = active and 13 or 4
+  local phase = active and math.floor(self.frame * math.min(spin.rate, 8) * spin.sign / 2) or 0
+  for dir = 0, 3 do
+    if E.hasPort(tile, dir) then
+      local dx, dy = DX[dir + 1], DY[dir + 1]
+      local ex, ey = cx + dx * 5, cy + dy * 5
+      if dx ~= 0 then
+        local sx = math.min(cx, ex)
+        self:rect(sx, cy - 1, math.abs(cx - ex) + 1, 3, 4)
+        self:rect(sx, cy, math.abs(cx - ex) + 1, 1, base)
+        if active then
+          self:rect(sx + (phase % (math.abs(cx - ex) + 1)), cy - 1, 1, 1, spin.sign > 0 and 11 or 14)
+        end
+      else
+        local sy = math.min(cy, ey)
+        self:rect(cx - 1, sy, 3, math.abs(cy - ey) + 1, 4)
+        self:rect(cx, sy, 1, math.abs(cy - ey) + 1, base)
+        if active then
+          self:rect(cx - 1, sy + (phase % (math.abs(cy - ey) + 1)), 1, 1, spin.sign > 0 and 11 or 14)
+        end
+      end
+      self:rect(ex, ey, 2, 2, 7)
+    end
+  end
+end
+-- Eight coarse teeth plus rotating spokes fit into a 13px CraftOS cell.
+-- Large and small cogs have genuinely different rim radii.
+function R:cog(cx, cy, large, spin)
+  local radius = large and 4 or 3
+  local rim = spin and 6 or 7
+  self:rect(cx - radius + 1, cy - radius + 1, radius * 2 - 1, radius * 2 - 1, 7)
+  self:rect(cx - radius + 2, cy - radius + 2, radius * 2 - 3, radius * 2 - 3, rim)
+  for tooth = 0, 7 do
+    local angle = tooth * math.pi / 4
+    local tx = math.floor(cx + math.cos(angle) * (radius + 1) + 0.5)
+    local ty = math.floor(cy + math.sin(angle) * (radius + 1) + 0.5)
+    self:rect(tx, ty, 2, 2, rim)
+  end
+  if spin then
+    local theta = self.frame * math.min(spin.rate, 8) * spin.sign * 0.33
+    local sx = math.floor(cx + math.cos(theta) * (radius - 1) + 0.5)
+    local sy = math.floor(cy + math.sin(theta) * (radius - 1) + 0.5)
+    self:line(cx, cy, sx, sy, spin.sign > 0 and 11 or 14)
+  else
+    self:line(cx - 1, cy, cx + 1, cy, 4)
+  end
+  self:rect(cx - 1, cy - 1, 3, 3, 13)
+  self:rect(cx, cy, 1, 1, 1)
+end
+-- Inventory glyphs use just 7x7 pixels: real sprites instead of a
+-- colored square containing the part's name.
+function R:toolIcon(x, y, kind)
+  if kind == "G" or kind == "O" then
+    self:rect(x + 1, y + 1, 5, 5, 7)
+    self:rect(x + 2, y + 2, 3, 3, 6)
+    for _, tooth in ipairs({ { 3, 0 }, { 3, 6 }, { 0, 3 }, { 6, 3 } }) do
+      self:rect(x + tooth[1], y + tooth[2], 1, 1, 6)
+    end
+    self:rect(x + 3, y + 3, 1, 1, 1)
+  elseif kind == "I" then
+    self:rect(x + 2, y, 3, 7, 4)
+    self:rect(x + 3, y, 1, 7, 13)
+    self:rect(x + 1, y + 1, 5, 1, 6)
+    self:rect(x + 1, y + 5, 5, 1, 6)
+  elseif kind == "Q" then
+    self:rect(x, y, 7, 7, 13)
+    self:rect(x + 1, y + 1, 5, 5, 2)
+    self:rect(x + 2, y + 2, 3, 3, 7)
+  elseif kind == "V" then
+    self:rect(x, y + 1, 7, 5, 7)
+    self:rect(x + 1, y + 2, 5, 3, 2)
+    self:rect(x + 1, y + 3, 1, 1, 13)
+    self:rect(x + 5, y + 3, 1, 1, 13)
+  elseif kind == "D" then
+    self:rect(x, y + 2, 7, 3, 4)
+    for n = 1, 5, 2 do
+      self:rect(x + n, y + 3, 1, 1, 13)
+    end
+  else
+    self:rect(x + 1, y, 5, 7, 13)
+    self:rect(x + 2, y + 1, 3, 5, 2)
+    self:rect(x + 3, y, 1, 7, kind == "C" and 8 or 6)
+  end
+end
+-- A directional hook uses only six pixels. The color and shape both indicate
+-- direction so users are not dependent on color perception alone.
+function R:spinMark(x, y, sign)
+  local color = sign > 0 and 11 or 14
+  self:rect(x + 1, y, 3, 1, color)
+  self:rect(x, y + 1, 1, 2, color)
+  self:rect(x + 4, y + 1, 1, 3, color)
+  if sign > 0 then
+    self:rect(x + 3, y + 3, 3, 1, color)
+    self:rect(x + 4, y + 4, 1, 1, color)
+  else
+    self:rect(x - 1, y + 3, 3, 1, color)
+    self:rect(x, y + 4, 1, 1, color)
+  end
+end
 function R:piece(x, y, size, tile, light)
-  local running = light and light.powered
-  local core = running and 6 or 4
   if tile.kind == "X" then
     self:rect(x, y, size, size, 2)
     for k = 1, size - 1, 3 do
       self:line(x + k, y + 1, x + 1, y + k, 3)
     end
-    self:rect(x + 3, y + 3, size - 6, size - 6, 1)
     self:font(x + 4, y + 3, "X", 4)
     return
   end
-  local bg = tile.kind == "S" and 10 or (tile.kind == "M" and (tile.sign < 0 and 14 or 12) or 2)
-  self:rect(x, y, size, size, 3)
-  self:rect(x + 1, y + 1, size - 2, size - 2, bg)
-  if running then
-    self:rect(x + 1, y + 1, size - 2, 1, 6)
-  end
-  local cx = x + math.floor(size / 2)
-  local cy = y + math.floor(size / 2)
+  local spin = motionFor(tile, light)
+  local cx, cy = x + math.floor(size / 2), y + math.floor(size / 2)
   if tile.kind == "M" then
-    local active = light and light.correct
-    self:rect(x + 2, y + 2, size - 4, size - 4, active and 9 or 8)
-    self:rect(x + 3, y + 3, size - 6, size - 6, 1)
-    local requirement = (tile.sign < 0 and "-" or "+") .. tostring(tile.speed)
-    self:font(x + 1, y + math.floor(size / 2) - 2, requirement, active and 9 or 15)
-  elseif tile.kind == "S" then
-    self:rect(x + 3, y + 3, size - 6, size - 6, 6)
-    self:font(x + 4, y + math.floor(size / 2) - 2, "S", 0)
-  else
-    -- Different mechanisms have different centerpieces, not just letter changes.
-    if tile.kind == "G" or tile.kind == "O" then
-      for i = 0, 7 do
-        local a = (i * math.pi / 4) + (running and self.frame * 0.25 or 0)
-        self:rect(
-          math.floor(cx + 3 * math.cos(a)),
-          math.floor(cy + 3 * math.sin(a)),
-          2,
-          2,
-          tile.kind == "O" and 7 or 14
-        )
-      end
-      self:rect(cx - 2, cy - 2, 5, 5, tile.kind == "O" and 7 or 14)
-      self:rect(cx - 1, cy - 1, 3, 3, 1)
-    elseif tile.kind == "Q" then
-      self:rect(cx - 3, cy - 3, 7, 7, 13)
-      self:rect(cx - 1, cy - 1, 3, 3, 1)
-      self:rect(cx, cy, 1, 1, 15)
-    elseif tile.kind == "V" then
-      -- The paired rollers turn with the transmission axis.
-      if tile.r % 2 == 1 then
-        self:rect(cx - 4, cy - 3, 8, 2, 7)
-        self:rect(cx - 4, cy + 2, 8, 2, 7)
-        self:rect(cx - 4, cy - 2, 2, 5, 13)
-        self:rect(cx + 2, cy - 2, 2, 5, 13)
-      else
-        self:rect(cx - 3, cy - 4, 2, 8, 7)
-        self:rect(cx + 2, cy - 4, 2, 8, 7)
-        self:rect(cx - 2, cy - 4, 5, 2, 13)
-        self:rect(cx - 2, cy + 2, 5, 2, 13)
-      end
-    elseif tile.kind == "D" then
-      if tile.r % 2 == 1 then
-        for j = -3, 3, 2 do
-          self:rect(cx + j, cy - 3, 1, 7, 11)
-        end
-        self:rect(cx - 3, cy - 3, 7, 1, 4)
-        self:rect(cx - 3, cy + 3, 7, 1, 4)
-      else
-        for j = -3, 3, 2 do
-          self:rect(cx - 3, cy + j, 7, 1, 11)
-        end
-        self:rect(cx - 3, cy - 3, 1, 7, 4)
-        self:rect(cx + 3, cy - 3, 1, 7, 4)
-      end
-    elseif tile.kind == "Z" or tile.kind == "C" then
-      self:rect(cx - 3, cy - 3, 7, 7, tile.engaged and 8 or 9)
-      self:rect(cx - 2, cy - 2, 5, 5, 1)
-      self:font(cx - 1, cy - 2, tile.kind, tile.engaged and 8 or 9)
-    else
-      self:rect(cx - 2, cy - 2, 5, 5, core)
-      self:rect(cx - 1, cy - 1, 3, 3, 1)
-      self:rect(cx, cy, 1, 1, 15)
-    end
-  end
-  -- Port markings are consistent on all devices, including fixed terminals.
-  for dir = 0, 3 do
-    if E.hasPort(tile, dir) then
-      local dx, dy = DX[dir + 1], DY[dir + 1]
-      local sx = cx + dx * (math.floor(size / 2) - 1)
-      local sy = cy + dy * (math.floor(size / 2) - 1)
-      if dx ~= 0 then
-        self:rect(math.min(cx, sx), cy - 1, math.abs(sx - cx) + 1, 3, core)
-      else
-        self:rect(cx - 1, math.min(cy, sy), 3, math.abs(sy - cy) + 1, core)
-      end
-      -- Moving bright dash denotes powered outlets.
-      if running and tile.kind ~= "M" then
-        local shift = 2 + (self.frame % 3)
-        self:rect(cx + dx * shift, cy + dy * shift, 2, 2, 15)
-      end
-    end
-  end
-  -- Machines state rotation in plain CW / CCW text instead of relying
-  -- on cryptic plus/minus symbols. The lower line is required RPM.
-  if tile.kind == "M" then
-    local ready = light and light.correct
-    local text = tile.sign < 0 and "CCW" or "CW"
-    local accent = ready and 9 or (tile.sign < 0 and 14 or 11)
-    self:rect(x + 1, y + 1, size - 2, size - 2, accent)
+    self:shaft(x, y, cx, cy, tile, spin)
+    self:rect(x + 1, y + 1, size - 2, size - 2, light and light.correct and 9 or 8)
     self:rect(x + 2, y + 2, size - 4, size - 4, 1)
-    self:font(x + (text == "CW" and 3 or 0), y + 1, text, accent)
-    local rpm = tostring(tile.speed)
-    if #rpm <= 2 then
-      self:font(x + math.floor((size - #rpm * 4) / 2), y + 7, rpm, 15)
-    else
-      self:font(x, y + 7, rpm, 15)
-    end
-  elseif tile.kind == "S" then
+    self:font(x + 3, y + 2, tile.sign > 0 and ">" or "<", tile.sign > 0 and 11 or 14)
+    self:font(x + 3, y + 7, tostring(tile.speed):sub(1, 2), 15)
+    return
+  end
+  if tile.kind == "S" then
     self:rect(x + 1, y + 1, size - 2, size - 2, 10)
-    self:font(x + 3, y + 1, "CW", 15)
-    self:font(x + 3, y + 7, "1X", 6)
+    self:rect(x + 2, y + 2, size - 4, size - 4, 3)
+    self:font(x + 2, y + 3, "IN", 15)
+  end
+  self:shaft(x, y, cx, cy, tile, spin)
+  if tile.kind == "G" or tile.kind == "O" then
+    self:cog(cx, cy, tile.kind == "O", spin)
+  elseif tile.kind == "Q" then
+    self:rect(cx - 4, cy - 4, 9, 9, 7)
+    self:rect(cx - 3, cy - 3, 7, 7, 13)
+    self:rect(cx - 2, cy - 2, 5, 5, 2)
+    self:rect(cx - 1, cy - 1, 3, 3, 6)
+    self:rect(cx, cy, 1, 1, 1)
+  elseif tile.kind == "V" then
+    self:rect(cx - 4, cy - 3, 9, 7, 7)
+    self:rect(cx - 3, cy - 2, 7, 5, 2)
+    self:rect(cx - 3, cy - 1, 2, 3, 13)
+    self:rect(cx + 2, cy - 1, 2, 3, 13)
+  elseif tile.kind == "D" then
+    self:rect(cx - 4, cy - 4, 9, 9, 4)
+    self:rect(cx - 3, cy - 3, 7, 7, 2)
+    if tile.r % 2 == 1 then
+      self:rect(cx - 3, cy, 7, 1, 13)
+    else
+      self:rect(cx, cy - 3, 1, 7, 13)
+    end
+    self:rect(cx - 1, cy - 1, 3, 3, 6)
+  elseif tile.kind == "C" or tile.kind == "Z" then
+    self:rect(cx - 4, cy - 3, 9, 7, 13)
+    self:rect(cx - 3, cy - 2, 7, 5, 2)
+    self:rect(cx - 1, cy - 3, 3, 7, tile.engaged and 8 or 6)
+    self:rect(cx, cy - 2, 1, 5, 1)
+  elseif tile.kind == "I" then
+    self:rect(cx - 1, cy - 1, 3, 3, 13)
+  end
+  if spin then
+    self:spinMark(x + 1, y + 1, spin.sign)
+    local label = speedLabel(spin.rate)
+    if label then
+      local width = #label * 4 - 1
+      local sx = x + math.max(0, math.floor((size - width) / 2))
+      self:rect(sx - 1, y + size - 5, width + 2, 5, 1)
+      self:font(sx, y + size - 5, label, spin.sign > 0 and 11 or 14)
+    end
   end
 end
 -- Draw belts/chains across every intervening cell, including stone. Draw over
@@ -357,7 +426,15 @@ function R:drawSpans(g, result)
           else
             local mx = math.floor((x1 + x2) / 2)
             local my = math.floor((y1 + y2) / 2)
-            self:rect(mx - 1, my - 1, 3, 3, powered and 6 or (link.chain and 11 or 14))
+            if link.chain then
+              self:rect(mx - 2, my - 1, 5, 3, 4)
+              self:rect(mx, my, 1, 1, powered and 11 or 13)
+            else
+              -- Visible contact teeth bridge the adjacent rims; this is NOT a shaft.
+              self:rect(mx - 2, my, 2, 2, 7)
+              self:rect(mx, my - 1, 2, 2, powered and 6 or 7)
+              self:rect(mx + 2, my, 1, 2, 7)
+            end
           end
         end
       end
@@ -410,7 +487,7 @@ end
 function R:page(title, subtitle)
   self:rect(0, 0, 200, 120, 0)
   self:rect(0, 0, 200, 15, 1)
-  self:rect(0, 14, 200, 1, 7)
+  self:rect(0, 14, 200, 1, 6)
   self:fontFit(7, 5, title, 6, 184)
   if subtitle and subtitle ~= "" then
     self:fontFit(10, 19, subtitle, 11, 180)
@@ -431,7 +508,7 @@ function R:drawGame(m)
       local px = self.boardX + (x - 1) * self.cell
       local py = self.boardY + (y - 1) * self.cell
       self:rect(px, py, 14, 14, 2)
-      self:rect(px + 6, py + 6, 2, 2, 3)
+      self:rect(px + 6, py + 6, 1, 1, 3)
       local tile = E.get(g, x, y)
       if tile then
         self:piece(px + 1, py + 1, 13, tile, result.lights[tile.id])
@@ -446,7 +523,8 @@ function R:drawGame(m)
       self:add(px, py, 14, 14, "cell", x, y)
     end
   end
-  self:rect(114, 16, 83, 97, 1)
+  self:rect(114, 16, 83, 93, 1)
+  self:rect(114, 16, 83, 1, 12)
   self:font(117, 19, "PARTS", 11)
   self:font(163, 19, g.sandbox and "FREE" or (result.correct .. "/" .. result.goals), result.win and 9 or 15)
   -- Two columns keep the eight Create-style mechanisms visible.
@@ -458,21 +536,21 @@ function R:drawGame(m)
     local count = g.remaining[kind] or 0
     local countText = count == math.huge and "++" or tostring(count)
     local active = m.selected == kind
-    self:rect(x, y, 38, 9, active and 6 or 3)
-    self:rect(x + 1, y + 1, 36, 7, active and 2 or 1)
-    self:rect(x + 2, y + 1, 7, 7, count > 0 and E.parts[kind].color or 4)
-    self:font(x + 4, y + 2, kind, 0)
+    self:rect(x, y, 38, 9, active and 6 or 12)
+    self:rect(x + 1, y + 1, 36, 7, active and 3 or 1)
+    self:toolIcon(x + 2, y + 1, kind)
+    self:font(x + 11, y + 2, kind, active and 6 or 11)
     local alias = ({
-      I = "SHAFT",
+      I = "SHFT",
       G = "COG",
-      O = "LARGE",
+      O = "LRGE",
       Q = "BOX",
-      D = "CHAIN",
+      D = "CHN",
       V = "BELT",
-      Z = "SHIFT",
-      C = "CLUTCH",
+      Z = "SHFT",
+      C = "CLCH",
     })[kind]
-    self:fontFit(x + 11, y + 2, alias, count > 0 and 15 or 4, 20)
+    self:fontFit(x + 17, y + 2, alias, count > 0 and 15 or 4, 14)
     self:font(x + 31, y + 2, countText, count > 0 and 9 or 4)
     self:add(x, y, 38, 9, "tool", kind)
   end
@@ -514,11 +592,20 @@ function R:drawGame(m)
   end
   self:drawSpans(g, result)
   self:rect(0, 109, 200, 11, 1)
-  self:rect(0, 109, 200, 1, 7)
+  self:rect(0, 109, 200, 1, 6)
   local selected = E.parts[m.selected]
   local info = selected and (selected.name .. " - " .. T.descriptions[m.selected])
     or (T.descriptions[m.selected] or "SELECT A PART TO PLACE")
-  self:fontFit(3, 110, info, 11, 194)
+  -- Permanent, color-and-shape-coded legend. Motion remains readable even
+  -- with animation disabled or an attached low-resolution monitor.
+  self:font(3, 110, "CW", 11)
+  self:font(13, 110, ">", 11)
+  self:font(19, 110, "CCW", 14)
+  self:font(33, 110, "<", 14)
+  self:font(43, 110, "1X", 15)
+  self:font(56, 110, "2X", 11)
+  self:font(69, 110, "0.5", 14)
+  self:fontFit(89, 110, info, 5, 109)
   local status = m.message
   if status == "" then
     if result.win then
@@ -530,10 +617,10 @@ function R:drawGame(m)
     elseif m.hasLeftInput then
       status = "LEFT: PLACE/TURN   RIGHT: REMOVE"
     else
-      status = "CW = CLOCKWISE  /  CCW = COUNTERCLOCKWISE"
+      status = "BLUE > CW  /  ORANGE < CCW  /  BADGE = SPEED"
     end
   end
-  self:fontFit(3, 115, status, result.win and 9 or 5, 160)
+  self:fontFit(3, 115, status, result.win and 9 or 5, result.win and 160 or 195)
   if result.win then
     self:button(166, 114, 32, 6, "NEXT", "next")
   end
@@ -866,9 +953,12 @@ function R:drawText(m)
           slots[d + 1] = p and E.hasPort(p, d)
         end
         local labelText = p and (p.kind == "M" and (p.sign < 0 and "-" or "+") .. p.speed or p.kind) or "."
+        local motion = p and motionFor(p, result.lights[p.id])
+        local readout = motion and ((motion.sign > 0 and ">" or "<") .. (speedLabel(motion.rate) or "?")) or ""
+        local readoutColor = motion and (motion.sign > 0 and colors.lightBlue or colors.orange) or fg
         label(px, py, slots[1] and "  ^  " or "     ", fg, color, 5)
         label(px, py + 1, (slots[4] and "<" or " ") .. " " .. labelText .. (slots[2] and ">" or " "), fg, color, 5)
-        label(px, py + 2, slots[3] and "  v  " or "     ", fg, color, 5)
+        label(px, py + 2, (readout .. "    "):sub(1, 4) .. (slots[3] and "v" or " "), readoutColor, color, 5)
         self:add(px, py, 5, 3, "cell", x, y)
       end
     end
