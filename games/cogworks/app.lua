@@ -327,6 +327,9 @@ function A:act(action, x, y)
       else
         self.message = "LEVEL LOCKED"
       end
+    elseif action == "clearSandbox" and self.game.sandbox then
+      self.game = E.sandbox()
+      changed = true
     elseif action == "save" then
       self.message = self:save() and "SAVED TO SLOT " .. self.slot or "THIS SESSION IS NOT SAVED"
     elseif action == "pause" then
