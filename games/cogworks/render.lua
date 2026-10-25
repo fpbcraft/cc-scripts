@@ -953,9 +953,12 @@ function R:drawText(m)
           slots[d + 1] = p and E.hasPort(p, d)
         end
         local labelText = p and (p.kind == "M" and (p.sign < 0 and "-" or "+") .. p.speed or p.kind) or "."
+        local motion = p and motionFor(p, result.lights[p.id])
+        local readout = motion and ((motion.sign > 0 and ">" or "<") .. (speedLabel(motion.rate) or "?")) or ""
+        local readoutColor = motion and (motion.sign > 0 and colors.lightBlue or colors.orange) or fg
         label(px, py, slots[1] and "  ^  " or "     ", fg, color, 5)
         label(px, py + 1, (slots[4] and "<" or " ") .. " " .. labelText .. (slots[2] and ">" or " "), fg, color, 5)
-        label(px, py + 2, slots[3] and "  v  " or "     ", fg, color, 5)
+        label(px, py + 2, (readout .. "    "):sub(1, 4) .. (slots[3] and "v" or " "), readoutColor, color, 5)
         self:add(px, py, 5, 3, "cell", x, y)
       end
     end
