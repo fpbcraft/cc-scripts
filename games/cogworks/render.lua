@@ -84,13 +84,15 @@ local function fillText(m, x, y, w, fg, bg, text)
   m.write((tostring(text) .. (" "):rep(w)):sub(1, w))
 end
 function R.new(m)
-  local self = setmetatable({ m = m, mode = "text", frame = 0, original = {}, boardX = 5, boardY = 17, cell = 15 }, R)
+  local self =
+    setmetatable({ m = m, mode = "text", frame = 0, original = {}, buffer = {}, boardX = 5, boardY = 17, cell = 15 }, R)
   self:enable()
   return self
 end
 function R:enable()
   local m = self.m
   self.tw, self.th = m.getSize()
+  self.needsClear = true
   if m.setGraphicsMode and m.drawPixels then
     local ok = pcall(m.setGraphicsMode, 2)
     if ok then
@@ -127,6 +129,10 @@ function R:resize()
       self.scale = math.min(w / 200, h / 120)
       self.ox = math.floor((w - 200 * self.scale) / 2)
       self.oy = math.floor((h - 120 * self.scale) / 2)
+      self.previousBuffer = nil
+      -- The previous image and letterbox are still in the monitor's pixel
+      -- backing surface after a resize. Discard them before the next draw.
+      self.needsClear = true
     end
   else
     self.tw, self.th = self.m.getSize()
@@ -149,14 +155,82 @@ function R:rect(x, y, w, h, color)
   if self.mode ~= "graphics" or w <= 0 or h <= 0 then
     return
   end
-  local s = self.scale
-  local x1 = math.max(0, math.floor(self.ox + x * s))
-  local y1 = math.max(0, math.floor(self.oy + y * s))
-  local x2 = math.min(self.pw, math.floor(self.ox + (x + w) * s))
-  local y2 = math.min(self.ph, math.floor(self.oy + (y + h) * s))
-  if x2 > x1 and y2 > y1 then
-    self.m.drawPixels(x1, y1, color, x2 - x1, y2 - y1)
+  -- Retained logical pixels: individual font and sprite pixels never issue
+  -- peripheral calls. At presentation time only changed horizontal runs are
+  -- sent to the attached monitor.
+  local x1, y1 = math.max(0, math.floor(x)), math.max(0, math.floor(y))
+  local x2, y2 = math.min(200, math.ceil(x + w)), math.min(120, math.ceil(y + h))
+  for py = y1, y2 - 1 do
+    local row = self.buffer[py + 1]
+    if not row then
+      row = {}
+      self.buffer[py + 1] = row
+    end
+    for px = x1, x2 - 1 do
+      row[px + 1] = color
+    end
   end
+end
+-- CC:Graphics uses the CraftOS-PC drawPixels API and supports indexed
+-- bitmap rows. Upload one changed rectangle per frame instead of invoking
+-- thousands of peripheral methods and freezing the server-side monitor.
+function R:flush()
+  local old = self.previousBuffer
+  local current = self.buffer
+  local left, top, right, bottom = 200, 120, -1, -1
+  for y = 0, 119 do
+    local row = current[y + 1] or {}
+    local prior = old and old[y + 1] or nil
+    for x = 0, 199 do
+      if (row[x + 1] or 0) ~= (prior and prior[x + 1] or 0) or not old then
+        left = math.min(left, x)
+        top = math.min(top, y)
+        right = math.max(right, x)
+        bottom = math.max(bottom, y)
+      end
+    end
+  end
+  if right < left then
+    self.previousBuffer = current
+    return 0
+  end
+  local x1 = math.max(0, math.floor(self.ox + left * self.scale))
+  local y1 = math.max(0, math.floor(self.oy + top * self.scale))
+  local x2 = math.min(self.pw, math.ceil(self.ox + (right + 1) * self.scale))
+  local y2 = math.min(self.ph, math.ceil(self.oy + (bottom + 1) * self.scale))
+  local width, height = x2 - x1, y2 - y1
+  if width <= 0 or height <= 0 then
+    self.previousBuffer = current
+    return 0
+  end
+  local rows = {}
+  for py = y1, y2 - 1 do
+    local sy = math.max(0, math.min(119, math.floor((py - self.oy) / self.scale)))
+    local source = current[sy + 1] or {}
+    local bytes = {}
+    for px = x1, x2 - 1 do
+      local sx = math.max(0, math.min(199, math.floor((px - self.ox) / self.scale)))
+      bytes[#bytes + 1] = string.char(source[sx + 1] or 0)
+    end
+    rows[#rows + 1] = table.concat(bytes)
+  end
+  local mon = self.m
+  if mon.setFrozen then
+    pcall(mon.setFrozen, true)
+  end
+  if self.needsClear then
+    -- Clear the FULL pixel surface, including bars outside the scaled 200x120
+    -- logical viewport; otherwise old text and white edges survive resizing.
+    mon.drawPixels(0, 0, 0, self.pw, self.ph)
+    self.needsClear = false
+  end
+  -- One batched draw request, including on remote Minecraft monitors.
+  mon.drawPixels(x1, y1, rows, width, height)
+  if mon.setFrozen then
+    pcall(mon.setFrozen, false)
+  end
+  self.previousBuffer = current
+  return 1
 end
 function R:font(x, y, str, color)
   str = tostring(str):upper()
@@ -216,69 +290,130 @@ local function speedLabel(rate)
   end
   return string.format("%.1f", rate)
 end
--- True rotational animation: phase depends on the signed speed rather than
--- marching dots translating outward along the shaft.
+-- The shaft's highlight alternates across its upper/lower (or left/right)
+-- faces. This communicates *axial rotation*, not motion along a conveyor.
+-- The phase is signed and linked to kinetic speed.
 function R:shaft(x, y, cx, cy, tile, spin)
   local active = spin ~= nil
-  local base = active and 13 or 4
-  local phase = active and math.floor(self.frame * math.min(spin.rate, 8) * spin.sign / 2) or 0
+  local phase = active and math.floor(self.frame * math.min(spin.rate, 4)) * spin.sign or 0
+  local edge = phase % 4
   for dir = 0, 3 do
     if E.hasPort(tile, dir) then
       local dx, dy = DX[dir + 1], DY[dir + 1]
       local ex, ey = cx + dx * 5, cy + dy * 5
       if dx ~= 0 then
         local sx = math.min(cx, ex)
-        self:rect(sx, cy - 1, math.abs(cx - ex) + 1, 3, 4)
-        self:rect(sx, cy, math.abs(cx - ex) + 1, 1, base)
+        local length = math.abs(cx - ex) + 1
+        self:rect(sx, cy - 1, length, 3, 4)
+        self:rect(sx, cy, length, 1, 13)
         if active then
-          self:rect(sx + (phase % (math.abs(cx - ex) + 1)), cy - 1, 1, 1, spin.sign > 0 and 11 or 14)
+          self:rect(sx, cy - 1, length, 1, edge < 2 and 11 or 7)
+          self:rect(sx, cy + 1, length, 1, edge >= 2 and 11 or 7)
         end
       else
         local sy = math.min(cy, ey)
-        self:rect(cx - 1, sy, 3, math.abs(cy - ey) + 1, 4)
-        self:rect(cx, sy, 1, math.abs(cy - ey) + 1, base)
+        local length = math.abs(cy - ey) + 1
+        self:rect(cx - 1, sy, 3, length, 4)
+        self:rect(cx, sy, 1, length, 13)
         if active then
-          self:rect(cx - 1, sy + (phase % (math.abs(cy - ey) + 1)), 1, 1, spin.sign > 0 and 11 or 14)
+          self:rect(cx - 1, sy, 1, length, edge < 2 and 11 or 7)
+          self:rect(cx + 1, sy, 1, length, edge >= 2 and 11 or 7)
         end
       end
       self:rect(ex, ey, 2, 2, 7)
     end
   end
 end
--- Eight coarse teeth plus rotating spokes fit into a 13px CraftOS cell.
--- Large and small cogs have genuinely different rim radii.
-function R:cog(cx, cy, large, spin)
-  local radius = large and 4 or 3
-  local rim = spin and 6 or 7
-  self:rect(cx - radius + 1, cy - radius + 1, radius * 2 - 1, radius * 2 - 1, 7)
-  self:rect(cx - radius + 2, cy - radius + 2, radius * 2 - 3, radius * 2 - 3, rim)
-  for tooth = 0, 7 do
-    local angle = tooth * math.pi / 4
-    local tx = math.floor(cx + math.cos(angle) * (radius + 1) + 0.5)
-    local ty = math.floor(cy + math.sin(angle) * (radius + 1) + 0.5)
-    self:rect(tx, ty, 2, 2, rim)
-  end
-  if spin then
-    local theta = self.frame * math.min(spin.rate, 8) * spin.sign * 0.33
-    local sx = math.floor(cx + math.cos(theta) * (radius - 1) + 0.5)
-    local sy = math.floor(cy + math.sin(theta) * (radius - 1) + 0.5)
-    self:line(cx, cy, sx, sy, spin.sign > 0 and 11 or 14)
+-- Port of the approved Blueprint Lab HTML prototype's gear sprite.
+-- Large cogs use a 4px radius, small cogs a 3px radius, with visible 2x2
+-- teeth outside the circular-ish brass rim and a steel-centered hub.
+-- The first tooth is a moving white index marker, while the two spokes
+-- rotate continuously at the gear's actual signed speed.
+local function rounded(x)
+  return math.floor(x + 0.5)
+end
+-- Two distinct gear silhouettes: small = compact solid four-spoke pinion;
+-- large = open twelve-tooth ring with a steel spider. Both have an obvious
+-- off-center index tooth so animation direction remains visible.
+function R:cog(cx, cy, large, spin, maxRadius)
+  local radius = math.min(large and 4 or 2, maxRadius or 4)
+  local angle = spin and self.frame * 0.44 * math.min(spin.rate, 4) * spin.sign or 0
+  if large then
+    -- The large wheel has a hollow dark center, an outer brass ring, and
+    -- twelve square teeth: its silhouette is not a scaled-up small pinion.
+    self:rect(cx - radius, cy - radius + 1, radius * 2 + 1, radius * 2 - 1, 7)
+    self:rect(cx - radius + 1, cy - radius, radius * 2 - 1, radius * 2 + 1, 7)
+    if radius >= 3 then
+      self:rect(cx - radius + 2, cy - radius + 2, radius * 2 - 3, radius * 2 - 3, 2)
+    end
+    for tooth = 0, 11 do
+      local theta = tooth * math.pi / 6 + angle
+      local tx = rounded(cx + math.cos(theta) * (radius + 1))
+      local ty = rounded(cy + math.sin(theta) * (radius + 1))
+      self:rect(tx, ty, 2, 2, tooth == 0 and spin and 15 or 6)
+    end
+    for arm = 0, 3 do
+      local theta = angle + arm * math.pi / 2
+      local reach = math.max(1, radius - 1)
+      self:line(
+        cx,
+        cy,
+        rounded(cx + math.cos(theta) * reach),
+        rounded(cy + math.sin(theta) * reach),
+        arm == 0 and (spin and 11 or 13) or 13
+      )
+    end
+    self:rect(cx - 1, cy - 1, 3, 3, 13)
+    self:rect(cx, cy, 1, 1, 1)
   else
-    self:line(cx - 1, cy, cx + 1, cy, 4)
+    -- A pinion is a small, solid brass gear with eight individual fine teeth,
+    -- a simple white spoke, and a tiny one-pixel bearing.
+    self:rect(cx - radius + 1, cy - radius + 1, radius * 2 - 1, radius * 2 - 1, 6)
+    for tooth = 0, 7 do
+      local theta = tooth * math.pi / 4 + angle
+      self:rect(
+        rounded(cx + math.cos(theta) * (radius + 1)),
+        rounded(cy + math.sin(theta) * (radius + 1)),
+        1,
+        1,
+        tooth == 0 and spin and 15 or 6
+      )
+    end
+    self:line(
+      cx,
+      cy,
+      rounded(cx + math.cos(angle) * radius),
+      rounded(cy + math.sin(angle) * radius),
+      spin and (spin.sign > 0 and 11 or 14) or 13
+    )
+    self:rect(cx, cy, 1, 1, 1)
   end
-  self:rect(cx - 1, cy - 1, 3, 3, 13)
-  self:rect(cx, cy, 1, 1, 1)
 end
 -- Inventory glyphs use just 7x7 pixels: real sprites instead of a
 -- colored square containing the part's name.
 function R:toolIcon(x, y, kind)
-  if kind == "G" or kind == "O" then
-    self:rect(x + 1, y + 1, 5, 5, 7)
+  if kind == "G" then
+    -- Tiny eight-tooth pinion, deliberately much smaller than the open wheel.
     self:rect(x + 2, y + 2, 3, 3, 6)
-    for _, tooth in ipairs({ { 3, 0 }, { 3, 6 }, { 0, 3 }, { 6, 3 } }) do
+    for _, tooth in ipairs({ { 3, 1 }, { 5, 3 }, { 3, 5 }, { 1, 3 } }) do
       self:rect(x + tooth[1], y + tooth[2], 1, 1, 6)
     end
     self:rect(x + 3, y + 3, 1, 1, 1)
+  elseif kind == "O" then
+    -- Large open rim + four strong teeth + open dark interior.
+    self:rect(x + 1, y + 1, 5, 5, 7)
+    self:rect(x + 2, y + 2, 3, 3, 2)
+    for _, tooth in ipairs({ { 3, 0 }, { 6, 3 }, { 3, 6 }, { 0, 3 } }) do
+      self:rect(x + tooth[1], y + tooth[2], 1, 1, 6)
+    end
+    self:rect(x + 3, y + 3, 1, 1, 13)
+  elseif kind == "R" then
+    self:rect(x + 3, y, 1, 7, 8)
+    self:rect(x, y + 3, 7, 1, 8)
+  elseif kind == "B" then
+    self:rect(x, y, 7, 7, 7)
+    self:rect(x + 1, y + 1, 5, 5, 8)
+    self:rect(x + 2, y + 2, 3, 3, 14)
   elseif kind == "I" then
     self:rect(x + 2, y, 3, 7, 4)
     self:rect(x + 3, y, 1, 7, 13)
@@ -319,6 +454,77 @@ function R:spinMark(x, y, sign)
     self:rect(x, y + 4, 1, 1, color)
   end
 end
+-- Compact 7..12px glyphs for later 10x10 stages. The same indexed
+-- palette and kinetic states apply, without drawing outside a grid cell.
+function R:compactPiece(x, y, size, tile, light)
+  local cx, cy = x + math.floor(size / 2), y + math.floor(size / 2)
+  local spin = motionFor(tile, light)
+  if tile.kind == "R" or tile.kind == "B" then
+    return
+  end
+  if tile.kind == "X" then
+    self:rect(x, y, size, size, 4)
+    self:rect(x + 1, y + 1, size - 2, size - 2, 2)
+    return
+  end
+  if tile.kind == "S" or tile.kind == "M" then
+    self:rect(x + 1, y + 1, size - 2, size - 2, tile.kind == "S" and 10 or (light and light.correct and 9 or 8))
+    self:rect(cx - 1, cy - 1, 3, 3, 15)
+    return
+  end
+  local color = spin and 6 or 7
+  if tile.kind == "G" or tile.kind == "O" then
+    local radius = math.max(2, math.floor(size / 2) - 1)
+    self:cog(cx, cy, tile.kind == "O", spin, radius)
+  else
+    self:rect(cx - 2, cy - 2, 5, 5, tile.kind == "I" and 13 or color)
+    self:rect(cx - 1, cy - 1, 3, 3, tile.kind == "C" and light and light.redstone and 8 or 2)
+    if tile.kind == "I" then
+      if tile.r % 2 == 1 then
+        self:rect(x, cy, size, 1, 13)
+      else
+        self:rect(cx, y, 1, size, 13)
+      end
+    end
+  end
+  if tile.kind ~= "G" and tile.kind ~= "O" then
+    self:rect(cx, cy, 1, 1, 1)
+  end
+  if spin and tile.kind ~= "G" and tile.kind ~= "O" then
+    self:rect(x, y + math.floor(size / 2), 1, 2, spin.sign > 0 and 11 or 14)
+  end
+end
+function R:redstonePiece(g, tile, result, x, y, size)
+  local cx, cy = x + math.floor(size / 2), y + math.floor(size / 2)
+  local powered = result.redstone[tile.id]
+  local ink = powered and 8 or 7
+  if tile.kind == "B" then
+    local radius = math.max(2, math.floor((size - 3) / 2))
+    self:rect(cx - radius, cy - radius, 2 * radius + 1, 2 * radius + 1, 7)
+    self:rect(cx - radius + 1, cy - radius + 1, 2 * radius - 1, 2 * radius - 1, 8)
+    self:rect(cx - 1, cy - 1, 3, 3, 14)
+    return
+  end
+  local connection = E.wireConnections(g, tile)
+  if connection[1] then
+    self:rect(cx, y, 1, cy - y + 1, ink)
+  end
+  if connection[2] then
+    self:rect(cx, cy, x + size - cx, 1, ink)
+  end
+  if connection[3] then
+    self:rect(cx, cy, 1, y + size - cy, ink)
+  end
+  if connection[4] then
+    self:rect(x, cy, cx - x + 1, 1, ink)
+  end
+  self:rect(cx - 1, cy - 1, 3, 3, ink)
+  if size >= 12 then
+    self:rect(cx - 2, cy, 1, 1, ink)
+    self:rect(cx + 2, cy, 1, 1, ink)
+  end
+  self:rect(cx, cy, 1, 1, powered and 14 or 4)
+end
 function R:piece(x, y, size, tile, light)
   if tile.kind == "X" then
     self:rect(x, y, size, size, 2)
@@ -326,6 +532,10 @@ function R:piece(x, y, size, tile, light)
       self:line(x + k, y + 1, x + 1, y + k, 3)
     end
     self:font(x + 4, y + 3, "X", 4)
+    return
+  end
+  if size < 13 then
+    self:compactPiece(x, y, size, tile, light)
     return
   end
   local spin = motionFor(tile, light)
@@ -374,20 +584,14 @@ function R:piece(x, y, size, tile, light)
   elseif tile.kind == "I" then
     self:rect(cx - 1, cy - 1, 3, 3, 13)
   end
-  if spin then
-    self:spinMark(x + 1, y + 1, spin.sign)
-    local label = speedLabel(spin.rate)
-    if label then
-      local width = #label * 4 - 1
-      local sx = x + math.max(0, math.floor((size - width) / 2))
-      self:rect(sx - 1, y + size - 5, width + 2, 5, 1)
-      self:font(sx, y + size - 5, label, spin.sign > 0 and 11 or 14)
-    end
+  if spin and tile.kind ~= "G" and tile.kind ~= "O" then
+    -- Distinct CW/CCW ink remains outside the mechanism face.
+    self:rect(x, y + math.floor(size / 2), 1, 2, spin.sign > 0 and 11 or 14)
   end
 end
 -- Draw belts/chains across every intervening cell, including stone. Draw over
 -- the board but stop at endpoint edges so the pulley sprites stay readable.
-function R:drawSpan(x1, y1, x2, y2, kind, powered)
+function R:drawSpan(x1, y1, x2, y2, kind, powered, motion)
   local dx = x2 > x1 and 1 or (x2 < x1 and -1 or 0)
   local dy = y2 > y1 and 1 or (y2 < y1 and -1 or 0)
   local length = math.max(math.abs(x2 - x1), math.abs(y2 - y1))
@@ -402,9 +606,17 @@ function R:drawSpan(x1, y1, x2, y2, kind, powered)
     local y = y1 + dy * n
     self:line(x - dy * 2, y + dx * 2, x + dy * 2, y - dx * 2, kind == "D" and (n % 8 == 0 and 15 or 4) or 13)
   end
-  if powered then
-    for n = self.frame % 4, length, 8 do
-      self:rect(x1 + dx * n, y1 + dy * n, 2, 2, 15)
+  if powered and motion then
+    local speed = math.min(motion.rate, 8)
+    local phase = math.floor(self.frame * speed * motion.sign)
+    for n = 0, length do
+      -- Opposing strands move in opposite directions and reverse with spin.
+      if (n + phase) % 5 == 0 then
+        self:rect(x1 + dx * n - dy * 2, y1 + dy * n + dx * 2, 1, 1, 11)
+      end
+      if (n - phase) % 5 == 0 then
+        self:rect(x1 + dx * n + dy * 2, y1 + dy * n - dx * 2, 1, 1, 14)
+      end
     end
   end
 end
@@ -414,15 +626,19 @@ function R:drawSpans(g, result)
       for _, link in ipairs(E.meshes(g, tile)) do
         local other = link.tile
         if other.id > tile.id then
-          local x1 = self.boardX + (tile.x - 1) * self.cell + 7
-          local y1 = self.boardY + (tile.y - 1) * self.cell + 7
-          local x2 = self.boardX + (other.x - 1) * self.cell + 7
-          local y2 = self.boardY + (other.y - 1) * self.cell + 7
+          local center = math.floor(self.cell / 2)
+          local x1 = self.boardX + (tile.x - 1) * self.cell + center
+          local y1 = self.boardY + (tile.y - 1) * self.cell + center
+          local x2 = self.boardX + (other.x - 1) * self.cell + center
+          local y2 = self.boardY + (other.y - 1) * self.cell + center
           local powered = result.lights[tile.id].powered and result.lights[other.id].powered
+          local light = result.lights[tile.id]
+          local motion = light.ports[tile.r] or light.ports[next(light.ports)]
           if link.belt then
             local dx = x2 > x1 and 1 or (x2 < x1 and -1 or 0)
             local dy = y2 > y1 and 1 or (y2 < y1 and -1 or 0)
-            self:drawSpan(x1 + dx * 6, y1 + dy * 6, x2 - dx * 6, y2 - dy * 6, "V", powered)
+            local inset = math.min(5, math.floor(self.cell / 3))
+            self:drawSpan(x1 + dx * inset, y1 + dy * inset, x2 - dx * inset, y2 - dy * inset, "V", powered, motion)
           else
             local mx = math.floor((x1 + x2) / 2)
             local my = math.floor((y1 + y2) / 2)
@@ -497,30 +713,65 @@ function R:drawGame(m)
   local g, result = m.game, m.result
   self:page(g.sandbox and "COGWORKS  SANDBOX" or ("COGWORKS  " .. string.format("%02d/%02d", g.number, #E.levels)))
   self:font(77, 5, "MV " .. g.moves, 4)
+  -- Quick visible animation control: saves may have animations disabled.
+  self:button(
+    98,
+    2,
+    20,
+    11,
+    m.settings.animations and "RUN" or "OFF",
+    "toggleAnimations",
+    nil,
+    m.settings.animations and 9 or 8
+  )
   self:button(120, 2, 28, 11, g.sandbox and "CLEAR" or "SAVE", g.sandbox and "clearSandbox" or "save")
   self:button(150, 2, 36, 11, "PAUSE", "pause")
   self:button(188, 2, 11, 11, "?", "help")
   self:rect(3, 16, 109, 94, 1)
   self:rect(4, 17, 107, 92, 3)
-  local directions = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } }
-  for y = 1, E.HEIGHT do
-    for x = 1, E.WIDTH do
+  self.cell = math.min(math.floor(105 / g.width), math.floor(90 / g.height))
+  self.boardX = 5 + math.floor((105 - g.width * self.cell) / 2)
+  self.boardY = 17 + math.floor((90 - g.height * self.cell) / 2)
+  for y = 1, g.height do
+    for x = 1, g.width do
       local px = self.boardX + (x - 1) * self.cell
       local py = self.boardY + (y - 1) * self.cell
-      self:rect(px, py, 14, 14, 2)
-      self:rect(px + 6, py + 6, 1, 1, 3)
+      local size = self.cell - 1
+      self:rect(px, py, size, size, 2)
+      self:rect(px + math.floor(size / 2), py + math.floor(size / 2), 1, 1, 3)
+    end
+  end
+  -- Spans sit behind components, not behind the board cells.
+  self:drawSpans(g, result)
+  local directions = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } }
+  for y = 1, g.height do
+    for x = 1, g.width do
+      local px = self.boardX + (x - 1) * self.cell
+      local py = self.boardY + (y - 1) * self.cell
+      local size = self.cell - 1
       local tile = E.get(g, x, y)
       if tile then
-        self:piece(px + 1, py + 1, 13, tile, result.lights[tile.id])
+        if tile.kind == "R" or tile.kind == "B" then
+          self:redstonePiece(g, tile, result, px, py, size)
+        else
+          self:piece(px + 1, py + 1, size - 2, tile, result.lights[tile.id])
+        end
         if m.settings.showPorts and tile.kind ~= "X" then
           for d = 0, 3 do
             if E.hasPort(tile, d) and not E.connection(g, tile, d) and tile.kind ~= "Q" then
-              self:rect(px + 6 + directions[d + 1][1] * 6, py + 6 + directions[d + 1][2] * 6, 2, 2, 8)
+              local radius = math.max(2, math.floor(size / 2) - 1)
+              self:rect(
+                px + radius + directions[d + 1][1] * radius,
+                py + radius + directions[d + 1][2] * radius,
+                1,
+                1,
+                8
+              )
             end
           end
         end
       end
-      self:add(px, py, 14, 14, "cell", x, y)
+      self:add(px, py, size, size, "cell", x, y)
     end
   end
   self:rect(114, 16, 83, 93, 1)
@@ -538,6 +789,15 @@ function R:drawGame(m)
     local active = m.selected == kind
     self:rect(x, y, 38, 9, active and 6 or 12)
     self:rect(x + 1, y + 1, 36, 7, active and 3 or 1)
+    if active then
+      -- A complete highlighted outline survives the 16-color terminal
+      -- palette, and the small left tab stays visible beside the glyph.
+      self:rect(x, y, 38, 1, 15)
+      self:rect(x, y + 8, 38, 1, 6)
+      self:rect(x, y, 1, 9, 6)
+      self:rect(x + 37, y, 1, 9, 6)
+      self:rect(x + 1, y + 3, 1, 3, 11)
+    end
     self:toolIcon(x + 2, y + 1, kind)
     self:font(x + 11, y + 2, kind, active and 6 or 11)
     local alias = ({
@@ -547,8 +807,10 @@ function R:drawGame(m)
       Q = "BOX",
       D = "CHN",
       V = "BELT",
-      Z = "SHFT",
+      Z = "REV",
       C = "CLCH",
+      R = "DUST",
+      B = "BLOK",
     })[kind]
     self:fontFit(x + 17, y + 2, alias, count > 0 and 15 or 4, 14)
     self:font(x + 31, y + 2, countText, count > 0 and 9 or 4)
@@ -569,10 +831,9 @@ function R:drawGame(m)
     77,
     38,
     9,
-    m.selected == "switch" and "ON/OFF" or "SWITCH",
-    "tool",
-    "switch",
-    m.selected == "switch" and 6 or 3
+    g.sandbox and ("SIZE " .. g.width) or "ROTATE",
+    g.sandbox and "sandboxSize" or nil,
+    g.sandbox and (5 + g.width % 6) or nil
   )
   -- Persistent bonus objectives are visible while building, not buried in
   -- a modal screen. Labels are deliberately short enough for this pane.
@@ -590,7 +851,39 @@ function R:drawGame(m)
   if #bonuses == 0 and not g.sandbox then
     self:font(124, 94, "FROM LEVEL 2", 4)
   end
-  self:drawSpans(g, result)
+  if m.inspected then
+    local chosen = E.get(g, m.inspected.x, m.inspected.y)
+    if chosen then
+      local px = self.boardX + (chosen.x - 1) * self.cell
+      local py = self.boardY + (chosen.y - 1) * self.cell
+      local span = self.cell - 1
+      -- A four-sided frame marks which part is selected without dimming it.
+      self:rect(px, py, span, 1, 11)
+      self:rect(px, py + span - 1, span, 1, 11)
+      self:rect(px, py, 1, span, 11)
+      self:rect(px + span - 1, py, 1, span, 11)
+      -- Place small unboxed glyphs on the grid corners. The targets are
+      -- deliberately larger than the 3-pixel artwork for touch usability.
+      local hitSize = math.min(5, math.floor((span + 1) / 2))
+      if not chosen.fixed and chosen.kind ~= "R" and chosen.kind ~= "B" then
+        self:rect(px + 1, py + 1, 3, 3, 2)
+        self:rect(px + 2, py + 1, 2, 1, 11)
+        self:rect(px + 1, py + 2, 1, 2, 11)
+        self:rect(px + 3, py + 2, 1, 1, 11)
+        self:add(px, py, hitSize, hitSize, "rotate", chosen.x, chosen.y)
+      end
+      if not chosen.fixed then
+        local right = px + span - hitSize
+        self:rect(right + 1, py + 1, 3, 3, 2)
+        self:rect(right + 1, py + 1, 1, 1, 8)
+        self:rect(right + 3, py + 1, 1, 1, 8)
+        self:rect(right + 2, py + 2, 1, 1, 8)
+        self:rect(right + 1, py + 3, 1, 1, 8)
+        self:rect(right + 3, py + 3, 1, 1, 8)
+        self:add(right, py, hitSize, hitSize, "remove", chosen.x, chosen.y)
+      end
+    end
+  end
   self:rect(0, 109, 200, 11, 1)
   self:rect(0, 109, 200, 1, 6)
   local selected = E.parts[m.selected]
@@ -605,7 +898,13 @@ function R:drawGame(m)
   self:font(43, 110, "1X", 15)
   self:font(56, 110, "2X", 11)
   self:font(69, 110, "0.5", 14)
-  self:fontFit(89, 110, info, 5, 109)
+  local inspected = m.inspected and E.get(g, m.inspected.x, m.inspected.y)
+  local light = inspected and result.lights[inspected.id]
+  local motion = light and (light.ports[inspected.r] or light.ports[next(light.ports)])
+  local statusText = motion
+      and (inspected.kind .. " " .. (motion.sign > 0 and "CW " or "CCW ") .. (speedLabel(motion.rate) or "?"))
+    or info
+  self:fontFit(89, 110, statusText, 5, 109)
   local status = m.message
   if status == "" then
     if result.win then
@@ -887,19 +1186,20 @@ function R:drawHelp(m)
     "V: CLEAR-SPAN BELT",
     "Z: GEARSHIFT REVERSE",
     "C: CLUTCH CUT-OFF",
-    "SWITCH: REDSTONE ON",
+    "R: CENTERED REDSTONE DUST",
+    "B: POWER BLOCK",
   }
   local right = {
     "CW = CLOCKWISE",
     "CCW = COUNTERCW",
     "GOAL: MATCH SPIN + RPM",
     "TAP EMPTY TO BUILD",
-    "TAP A PART TO ROTATE",
+    "TAP PART: CORNER CONTROLS",
     "REMOVE TO RECLAIM",
     "COGS MESH PERPENDICULAR",
     "LARGE + SMALL = 2X",
     "BELTS NEED CLEAR SPACE",
-    "REDSTONE TOGGLE TOOL",
+    "REDSTONE POWERS SHIFT/CLUTCH",
     "BONUSES ARE OPTIONAL",
     "AUTO SAVES PER SLOT",
   }
@@ -939,10 +1239,11 @@ function R:drawText(m)
     local g = m.game
     local result = m.result
     local x0, y0 = 2, 3
-    for y = 1, E.HEIGHT do
-      for x = 1, E.WIDTH do
+    local columnWidth = math.min(6, math.max(4, math.floor((w - 2) / g.width)))
+    for y = 1, g.height do
+      for x = 1, g.width do
         local p = E.get(g, x, y)
-        local px = x0 + (x - 1) * 6
+        local px = x0 + (x - 1) * columnWidth
         local py = y0 + (y - 1) * 3
         local color = p
             and (p.kind == "M" and colors.blue or (p.kind == "S" and colors.green or (p.kind == "X" and colors.brown or colors.gray)))
@@ -956,30 +1257,46 @@ function R:drawText(m)
         local motion = p and motionFor(p, result.lights[p.id])
         local readout = motion and ((motion.sign > 0 and ">" or "<") .. (speedLabel(motion.rate) or "?")) or ""
         local readoutColor = motion and (motion.sign > 0 and colors.lightBlue or colors.orange) or fg
-        label(px, py, slots[1] and "  ^  " or "     ", fg, color, 5)
-        label(px, py + 1, (slots[4] and "<" or " ") .. " " .. labelText .. (slots[2] and ">" or " "), fg, color, 5)
-        label(px, py + 2, (readout .. "    "):sub(1, 4) .. (slots[3] and "v" or " "), readoutColor, color, 5)
-        self:add(px, py, 5, 3, "cell", x, y)
+        label(px, py, slots[1] and "  ^  " or "     ", fg, color, columnWidth - 1)
+        label(
+          px,
+          py + 1,
+          (slots[4] and "<" or " ") .. " " .. labelText .. (slots[2] and ">" or " "),
+          fg,
+          color,
+          columnWidth - 1
+        )
+        label(
+          px,
+          py + 2,
+          (readout .. "    "):sub(1, 4) .. (slots[3] and "v" or " "),
+          readoutColor,
+          color,
+          columnWidth - 1
+        )
+        self:add(px, py, columnWidth - 1, 3, "cell", x, y)
       end
     end
     label(
       2,
-      22,
-      g.sandbox and ("SANDBOX / FREE BUILD  MV " .. g.moves)
+      g.height > 6 and 2 or 22,
+      g.sandbox and ("SANDBOX " .. g.width .. "X" .. g.height .. " MV " .. g.moves)
         or ("GOALS " .. result.correct .. "/" .. result.goals .. " CW=+ CCW=- MV " .. g.moves),
       colors.lightBlue
     )
-    local bonuses = E.challenges(g, result)
-    local awards = m.progress.awards[g.number] or {}
-    for i, bonus in ipairs(bonuses) do
-      local name = bonus.id == "sealed" and "NO IDLE PARTS"
-        or (bonus.id == "master" and "USE ALL STOCK" or "PRECISION MOVES")
-      label(
-        2,
-        22 + i,
-        (awards[bonus.id] and "[X] " or "[ ] ") .. name,
-        awards[bonus.id] and colors.lime or colors.white
-      )
+    if g.height <= 6 then
+      local bonuses = E.challenges(g, result)
+      local awards = m.progress.awards[g.number] or {}
+      for i, bonus in ipairs(bonuses) do
+        local name = bonus.id == "sealed" and "NO IDLE PARTS"
+          or (bonus.id == "master" and "USE ALL STOCK" or "PRECISION MOVES")
+        label(
+          2,
+          22 + i,
+          (awards[bonus.id] and "[X] " or "[ ] ") .. name,
+          awards[bonus.id] and colors.lime or colors.white
+        )
+      end
     end
     local size = math.floor(w / 5)
     for i, kind in ipairs(E.order) do
@@ -995,7 +1312,14 @@ function R:drawText(m)
       )
     end
     btn(1, h - 5, 12, "REMOVE", "tool", "erase")
-    btn(15, h - 5, 12, "SWITCH", "tool", "switch")
+    btn(
+      15,
+      h - 5,
+      12,
+      g.sandbox and ("SIZE " .. g.width) or "ROTATE",
+      g.sandbox and "sandboxSize" or nil,
+      g.sandbox and (5 + g.width % 6) or nil
+    )
     btn(1, h - 4, 12, g.sandbox and "CLEAR" or "SAVE", g.sandbox and "clearSandbox" or "save")
     btn(15, h - 4, 12, "PAUSE", "pause")
     if result.win then
@@ -1123,11 +1447,7 @@ function R:draw(m)
     self:drawText(m)
     return
   end
-  local mon = self.m
-  if mon.setFrozen then
-    pcall(mon.setFrozen, true)
-  end
-  mon.drawPixels(0, 0, 0, self.pw, self.ph)
+  self.buffer = {}
   if m.scene == "game" then
     self:drawGame(m)
   elseif m.scene == "briefing" then
@@ -1149,10 +1469,22 @@ function R:draw(m)
   else
     self:drawHelp(m)
   end
-  if mon.setFrozen then
-    pcall(mon.setFrozen, false)
-  end
+  self:flush()
   self.frame = self.frame + 1
+end
+-- Vanilla CC:Tweaked monitor_touch reports 1-based CHARACTER coordinates
+-- even when CC:Graphics mode 2 is enabled. Pixel hitboxes are zero-based.
+-- Sample the center of the touched character cell, allowing the graphics
+-- viewport to letterbox/scalably fill the actual monitor.
+function R:hitTouch(charX, charY)
+  local w, h = self.m.getSize()
+  if type(charX) ~= "number" or type(charY) ~= "number" or charX < 1 or charY < 1 or charX > w or charY > h then
+    return nil
+  end
+  if self.mode == "graphics" then
+    return self:hit((charX - 0.5) * self.pw / w, (charY - 0.5) * self.ph / h)
+  end
+  return self:hit(charX, charY)
 end
 -- Optional FPB Monitor Input addon exposes normalized left-click positions.
 -- Translate those into the renderer's own pixel or character coordinates.

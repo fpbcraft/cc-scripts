@@ -32,7 +32,7 @@ T.lessons = {
   Z = {
     title = "GEARSHIFT",
     lines = {
-      "USE SWITCH TO APPLY REDSTONE POWER.",
+      "REDSTONE BLOCKS OR DUST APPLY POWER.",
       "POWERED GEARSHIFTS REVERSE SPIN.",
     },
   },
@@ -53,8 +53,22 @@ T.lessons = {
   V = {
     title = "MECHANICAL BELTS",
     lines = {
-      "TWO PARALLEL PULLEYS NEED CLEAR SPACE.",
-      "BELTS KEEP ROTATION AND SPEED.",
+      "ADJACENT PULLEYS OR CLEAR-SPAN BELTS.",
+      "SHAFTS CAN CROSS BELT RUNS.",
+    },
+  },
+  R = {
+    title = "REDSTONE DUST",
+    lines = {
+      "DUST LINKS BLOCKS TO CLUTCHES.",
+      "DUST CONNECTS AND TURNS AT CORNERS.",
+    },
+  },
+  B = {
+    title = "REDSTONE BLOCK",
+    lines = {
+      "BLOCKS POWER ADJACENT REDSTONE.",
+      "PLACE BESIDE SHIFT OR WIRE.",
     },
   },
 }
@@ -63,22 +77,23 @@ T.introductions = {
   [2] = { "Q" },
   [4] = { "G" },
   [6] = { "D" },
-  [7] = { "Z" },
-  [8] = { "C" },
+  [7] = { "Z", "B" },
+  [8] = { "C", "R" },
   [9] = { "O" },
   [11] = { "V" },
 }
 T.descriptions = {
   I = "STRAIGHT AXIAL SHAFT; SAME RPM AND SPIN",
   G = "AXIAL SHAFTS; SIDE MESH REVERSES SPIN",
-  O = "LARGE TO SMALL DIAGONAL MESH IS 2X",
+  O = "LARGE/SMALL COGS MESH DIAGONALLY AT 2X",
   Q = "FOUR-WAY BEVEL GEARBOX; REVERSES",
   D = "SIDE-BY-SIDE CHAIN LINKS, SAME SPIN",
-  V = "PARALLEL BELT PULLEYS, CLEAR SPAN",
+  V = "PULLEYS CONNECT ADJACENT OR ACROSS SHAFTS",
   Z = "POWERED GEARSHIFT REVERSES ROTATION",
   C = "POWERED CLUTCH DISCONNECTS SHAFT",
   erase = "REMOVE A PLACED PART AND REFUND IT",
-  switch = "TOGGLE REDSTONE ON CLUTCH/GEARSHIFT",
+  R = "CENTERED CONNECTING REDSTONE POWDER",
+  B = "REDSTONE POWER BLOCK FOR SHIFT AND CLUTCH",
 }
 function T.forLevel(level)
   local result = {}

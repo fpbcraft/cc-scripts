@@ -16,10 +16,13 @@ if args[1] == "--test-api" then
   return { app = App, engine = E, renderer = Renderer }
 end
 local dev = false
+local debugInput = false
 local preferredMonitor = nil
 for _, arg in ipairs(args) do
   if arg == "--dev" then
     dev = true
+  elseif arg == "--input-debug" then
+    debugInput = true
   elseif arg:sub(1, 2) == "--" then
     error("Unknown option: " .. arg)
   elseif not preferredMonitor then
@@ -69,6 +72,13 @@ local function start()
     -- Restore the original setting when Cogworks exits.
     pcall(monitor.setTextScale, 0.5)
   end
+  local inputLog = debugInput and fs.open("/games/cogworks/input-debug.log", "w") or nil
+  local function trace(message)
+    if inputLog then
+      inputLog.write(tostring(message) .. "\n")
+    end
+  end
+  trace("COGWORKS MONITOR=" .. tostring(name) .. " MODE=" .. tostring(mode))
   local renderer, app
   local ok, reason = xpcall(function()
     renderer = Renderer.new(monitor)
@@ -89,23 +99,71 @@ local function start()
       return true
     end
     redraw()
+    local drag = nil
     local timer = os.startTimer(0.2)
     while true do
       local event, a, b, c, d = os.pullEventRaw()
+      if
+        event == "monitor_touch"
+        or event == "monitor_left_click"
+        or event == "monitor_mouse_click"
+        or event == "monitor_resize"
+        or event == "mouse_click"
+      then
+        trace(
+          tostring(event)
+            .. " side="
+            .. tostring(a)
+            .. " x="
+            .. tostring(b)
+            .. " y="
+            .. tostring(c)
+            .. " extra="
+            .. tostring(d)
+            .. " graphics="
+            .. tostring(renderer.mode)
+        )
+      end
       if event == "terminate" then
         if app then
           app:save()
         end
         break
       elseif event == "monitor_touch" and a == name then
-        local action, x, y = renderer:hit(b, c)
-        -- Vanilla monitor_touch only reports right-click and carries no button.
-        -- Addons that append an explicit mouse button can use button 2 to remove.
-        if action == "cell" and (app.hasLeftInput or d == 2 or d == "right") then
-          action = "remove"
+        local action, x, y = renderer:hitTouch(b, c)
+        -- CC:Tweaked reports character-cell coordinates. Other monitor
+        -- implementations may report graphics pixels; try those only if
+        -- character-cell hit testing did not find a control.
+        if not action and renderer.mode == "graphics" then
+          action, x, y = renderer:hit(b, c)
         end
+        if action == "cell" then
+          action = app.selected == "erase" and "remove" or "inspect"
+        end
+        trace("MONITOR HIT=" .. tostring(action) .. " part=" .. tostring(x) .. "," .. tostring(y))
         if not act(action, x, y) then
           break
+        end
+      elseif not computerMode and (event == "mouse_click" or event == "monitor_mouse_click") then
+        -- CraftOS monitor windows can expose a mouse_click event instead of
+        -- vanilla monitor_touch. Pixel graphics input uses pixel coordinates.
+        if event == "mouse_click" or a == name then
+          local mx, my
+          if event == "mouse_click" or d == nil then
+            mx, my = b, c
+          else
+            mx, my = c, d
+          end
+          local action, x, y = renderer:hit(mx, my)
+          if not action then
+            action, x, y = renderer:hitTouch(mx, my)
+          end
+          if action == "cell" then
+            action = app.selected == "erase" and "remove" or "inspect"
+          end
+          if not act(action, x, y) then
+            break
+          end
         end
       elseif event == "monitor_left_click" and a == name then
         -- FPB Monitor Input companion sends normalized 0..1 screen positions.
@@ -113,6 +171,9 @@ local function start()
         local action, x, y = renderer:hitNormalized(b, c)
         if action then
           app.hasLeftInput = true
+          if action == "cell" then
+            action = app.selected == "erase" and "remove" or "inspect"
+          end
           if not act(action, x, y) then
             break
           end
@@ -120,10 +181,38 @@ local function start()
       elseif computerMode and event == "mouse_click" then
         local x, y = Display.click(monitor, mode, b, c)
         if x then
-          local action, arg1, arg2 = renderer:hit(x, y)
-          if not act(action, arg1, arg2) then
+          local action, cx, cy = renderer:hit(x, y)
+          if action == "cell" then
+            drag = { button = a, x = cx, y = cy, moved = false }
+          elseif not act(action, cx, cy) then
             break
           end
+        end
+      elseif computerMode and event == "mouse_drag" and drag then
+        local x, y = Display.click(monitor, mode, b, c)
+        if x then
+          local action, cx, cy = renderer:hit(x, y)
+          if action == "cell" and (cx ~= drag.x or cy ~= drag.y) then
+            drag.moved = true
+          end
+        end
+      elseif computerMode and event == "mouse_up" and drag then
+        local start = drag
+        drag = nil
+        local x, y = Display.click(monitor, mode, b, c)
+        local action, cx, cy
+        if x then
+          action, cx, cy = renderer:hit(x, y)
+        end
+        if start.moved then
+          if action == "cell" then
+            app.moveX, app.moveY = cx, cy
+            if not act("move", start.x, start.y) then
+              break
+            end
+          end
+        elseif not act(start.button == 1 and "remove" or "cell", start.x, start.y) then
+          break
         end
       elseif mode == "virtual-text" and event == "mouse_scroll" then
         monitor.pan(0, a * 3)
@@ -141,7 +230,8 @@ local function start()
         then
           redraw()
         end
-        timer = os.startTimer(app.scene == "briefing" and 0.1 or 0.2)
+        -- Peripheral monitor graphics need fewer pushes than native CraftOS-PC.
+        timer = os.startTimer(app.scene == "briefing" and 0.15 or 0.2)
       elseif event == "char" then
         local char = tostring(a):lower()
         local n = tonumber(char)
@@ -154,7 +244,7 @@ local function start()
         elseif char == "x" then
           act("tool", "erase")
         elseif char == "t" then
-          act("tool", "switch")
+          act("tool", "R")
         elseif char == "s" then
           act("save")
         elseif char == "n" then
@@ -202,6 +292,9 @@ local function start()
   end)
   if renderer then
     renderer:close()
+  end
+  if inputLog then
+    inputLog.close()
   end
   Display.close(monitor, mode)
   if monitor.setTextScale then

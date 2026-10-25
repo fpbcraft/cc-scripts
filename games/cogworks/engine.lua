@@ -1,7 +1,7 @@
 -- COGWORKS kinetic simulation. The board is a 2D teaching abstraction of
 -- Create: axial shaft links, side meshing, clear-span belts and bevel gearboxes.
 local levels = require("games.cogworks.levels")
-local E = { levels = levels, WIDTH = 7, HEIGHT = 6 }
+local E = { levels = levels, WIDTH = 7, HEIGHT = 6, MAX_SIZE = 10 }
 local vectors = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } }
 local ports = {
   S = { 0 },
@@ -23,19 +23,21 @@ E.parts = {
   D = { name = "CHAIN DRIVE", description = "AXIAL SHAFT AND SIDE CHAIN LINKS", color = 11 },
   V = { name = "BELT PULLEY", description = "PARALLEL SHAFTS; CLEAR SPAN", color = 7 },
   Z = { name = "GEARSHIFT", description = "TOGGLE TO REVERSE", color = 6 },
-  C = { name = "CLUTCH", description = "TOGGLE TO DISCONNECT", color = 8 },
+  C = { name = "CLUTCH", description = "REDSTONE DISCONNECTS SHAFT", color = 8 },
+  R = { name = "REDSTONE DUST", description = "CONNECTS TO POWER BLOCKS", color = 8 },
+  B = { name = "REDSTONE BLOCK", description = "POWERS DUST AND SWITCHES", color = 8 },
 }
-E.order = { "I", "G", "O", "Q", "D", "V", "Z", "C" }
-local function index(x, y)
-  return (y - 1) * E.WIDTH + x
+E.order = { "I", "G", "O", "Q", "D", "V", "Z", "C", "R", "B" }
+local function index(x, y, g)
+  return (y - 1) * (g and g.width or E.WIDTH) + x
 end
-function E.inside(x, y)
+function E.inside(x, y, g)
   return type(x) == "number"
     and type(y) == "number"
     and x >= 1
-    and x <= E.WIDTH
+    and x <= (g and g.width or E.WIDTH)
     and y >= 1
-    and y <= E.HEIGHT
+    and y <= (g and g.height or E.HEIGHT)
     and x % 1 == 0
     and y % 1 == 0
 end
@@ -48,11 +50,11 @@ function E.hasPort(tile, dir)
   return false
 end
 function E.get(g, x, y)
-  return E.inside(x, y) and g.map[index(x, y)] or nil
+  return E.inside(x, y, g) and g.map[index(x, y, g)] or nil
 end
 local function add(g, value, fixed)
-  assert(E.inside(value.x, value.y), "Invalid level coordinates")
-  local id = index(value.x, value.y)
+  assert(E.inside(value.x, value.y, g), "Invalid level coordinates")
+  local id = index(value.x, value.y, g)
   assert(not g.map[id], "Overlapping level part at " .. id)
   local t = {
     id = id,
@@ -80,6 +82,8 @@ function E.new(number, solved)
   local data = assert(levels[number], "Invalid level")
   local g = {
     number = number,
+    width = data.width or E.WIDTH,
+    height = data.height or E.HEIGHT,
     name = data.name,
     tip = data.tip,
     tiles = {},
@@ -100,21 +104,29 @@ function E.new(number, solved)
   for _, v in ipairs(data.blocks or {}) do
     add(g, { kind = "X", x = v[1], y = v[2] }, true)
   end
+  for _, wire in ipairs(data.redstone or {}) do
+    add(g, wire, false)
+  end
   if solved then
     for _, v in ipairs(data.build) do
       assert(g.remaining[v.kind] > 0, "Invalid reference inventory")
       g.remaining[v.kind] = g.remaining[v.kind] - 1
       add(g, v, false)
     end
-    for _, v in ipairs(data.toggles or {}) do
-      assert(E.toggle(g, v[1], v[2]), "Invalid authored toggle")
+    for _, v in ipairs(data.removeRedstone or {}) do
+      assert(E.remove(g, v[1], v[2]), "Invalid reference redstone removal")
     end
   end
   return g
 end
-function E.sandbox()
+function E.sandbox(width, height)
+  width = width or E.MAX_SIZE
+  height = height or width
+  assert(width >= 5 and width <= E.MAX_SIZE and height >= 5 and height <= E.MAX_SIZE, "Invalid sandbox size")
   local g = {
     number = 0,
+    width = width,
+    height = height,
     name = "FREE WORKSHOP",
     tip = "EXPERIMENT WITH ALL PARTS. NO GOALS OR LIMITS.",
     tiles = {},
@@ -132,7 +144,7 @@ function E.sandbox()
   return g
 end
 function E.place(g, x, y, kind, rotation)
-  if not E.inside(x, y) or not E.parts[kind] or E.get(g, x, y) then
+  if not E.inside(x, y, g) or not E.parts[kind] or E.get(g, x, y) then
     return false
   end
   if not g.sandbox and (g.remaining[kind] or 0) < 1 then
@@ -158,17 +170,29 @@ function E.remove(g, x, y)
     end
   end
   if not g.sandbox then
-    g.remaining[tile.kind] = g.remaining[tile.kind] + 1
+    g.remaining[tile.kind] = (g.remaining[tile.kind] or 0) + 1
   end
   g.moves = g.moves + 1
   return true
 end
 function E.rotate(g, x, y)
   local tile = E.get(g, x, y)
-  if not tile or tile.fixed then
+  if not tile or tile.fixed or tile.kind == "R" or tile.kind == "B" then
     return false
   end
   tile.r = (tile.r + 1) % 4
+  g.moves = g.moves + 1
+  return true
+end
+function E.move(g, x, y, tx, ty)
+  local tile = E.get(g, x, y)
+  if not tile or tile.fixed or not E.inside(tx, ty, g) or E.get(g, tx, ty) then
+    return false
+  end
+  g.map[tile.id] = nil
+  tile.id = index(tx, ty, g)
+  tile.x, tile.y = tx, ty
+  g.map[tile.id] = tile
   g.moves = g.moves + 1
   return true
 end
@@ -222,16 +246,18 @@ function E.meshes(g, tile)
       for distance = 1, 5 do
         local x = tile.x + (horizontal and 0 or side * distance)
         local y = tile.y + (horizontal and side * distance or 0)
-        if not E.inside(x, y) then
+        if not E.inside(x, y, g) then
           break
         end
         local other = E.get(g, x, y)
         if other then
-          if other.kind == "V" and matching(other) and distance >= 2 then
+          if other.kind == "V" and matching(other) and distance >= 1 then
             links[#links + 1] = { tile = other, ratio = 1, sign = 1, belt = true }
           end
-          -- Belts cannot pass through stone, machinery or another pulley.
-          break
+          -- An axial shaft may cross an existing belt run without severing it.
+          if other.kind ~= "I" then
+            break
+          end
         end
       end
     end
@@ -254,12 +280,55 @@ function E.meshes(g, tile)
   for _, dx in ipairs({ -1, 1 }) do
     for _, dy in ipairs({ -1, 1 }) do
       local other = E.get(g, tile.x + dx, tile.y + dy)
-      if other and other.kind == otherKind and matching(other) then
+      if other and other.kind == otherKind then
         links[#links + 1] = { tile = other, ratio = tile.kind == "O" and 2 or 0.5, sign = -1 }
       end
     end
   end
   return links
+end
+-- Centered dust connects orthogonally, including to redstone-powered devices.
+function E.wireConnections(g, tile)
+  local connected = {}
+  for dir, vector in ipairs(vectors) do
+    local other = E.get(g, tile.x + vector[1], tile.y + vector[2])
+    connected[dir] = other and (other.kind == "R" or other.kind == "B" or other.kind == "C" or other.kind == "Z")
+      or false
+  end
+  return connected
+end
+function E.redstone(g)
+  local powered, queue, first = {}, {}, 1
+  for _, tile in ipairs(g.tiles) do
+    if tile.kind == "B" then
+      powered[tile.id] = true
+      queue[#queue + 1] = tile
+    end
+  end
+  while first <= #queue do
+    local tile = queue[first]
+    first = first + 1
+    for _, delta in ipairs(vectors) do
+      local other = E.get(g, tile.x + delta[1], tile.y + delta[2])
+      if other and other.kind == "R" and not powered[other.id] then
+        powered[other.id] = true
+        queue[#queue + 1] = other
+      end
+    end
+  end
+  local switches = {}
+  for _, tile in ipairs(g.tiles) do
+    if tile.kind == "C" or tile.kind == "Z" then
+      for _, delta in ipairs(vectors) do
+        local other = E.get(g, tile.x + delta[1], tile.y + delta[2])
+        if other and powered[other.id] then
+          switches[tile.id] = true
+          break
+        end
+      end
+    end
+  end
+  return powered, switches
 end
 function E.snapshot(g)
   local list = {}
@@ -284,14 +353,23 @@ function E.snapshot(g)
   return list
 end
 function E.restore(g, list)
-  if type(list) ~= "table" or #list > E.WIDTH * E.HEIGHT then
+  if type(list) ~= "table" or #list > g.width * g.height then
     return false
   end
-  local trial = g.sandbox and E.sandbox() or E.new(g.number)
+  local trial = g.sandbox and E.sandbox(g.width, g.height) or E.new(g.number)
+  -- Nonfixed level-start redstone (e.g. the clutch lesson's powered block)
+  -- is part of the save snapshot. Clear it before restoring the snapshot,
+  -- or the snapshot would conflict with that starting fixture.
+  for i = #trial.tiles, 1, -1 do
+    local tile = trial.tiles[i]
+    if not tile.fixed then
+      E.remove(trial, tile.x, tile.y)
+    end
+  end
   for _, v in ipairs(list) do
     if
       type(v) ~= "table"
-      or not E.inside(v.x, v.y)
+      or not E.inside(v.x, v.y, g)
       or type(v.r) ~= "number"
       or v.r % 1 ~= 0
       or v.r < 0
@@ -330,6 +408,7 @@ function E.restore(g, list)
   return true
 end
 function E.evaluate(g)
+  local redstone, switches = E.redstone(g)
   local states, queue, first = {}, {}, 1
   local jam = false
   local function assign(tile, port, rate, sign, internal)
@@ -358,11 +437,11 @@ function E.evaluate(g)
     local event = queue[first]
     first = first + 1
     local tile, port, info = event.tile, event.port, event.info
-    if (tile.kind ~= "C" or not tile.engaged) and not event.internal then
+    if (tile.kind ~= "C" or not switches[tile.id]) and not event.internal then
       for dir = 0, 3 do
         if dir ~= port and E.hasPort(tile, dir) then
           local sign = info.sign
-          if tile.kind == "Q" or (tile.kind == "Z" and tile.engaged) then
+          if tile.kind == "Q" or (tile.kind == "Z" and switches[tile.id]) then
             sign = -sign
           end
           assign(tile, dir, info.rate, sign, true)
@@ -387,13 +466,14 @@ function E.evaluate(g)
       rate = sample and sample.rate or 0,
       sign = sample and sample.sign or 0,
       ports = slots,
+      redstone = redstone[tile.id] or switches[tile.id] or false,
     }
     if sample then
       powered = powered + 1
-    elseif E.parts[tile.kind] then
+    elseif E.parts[tile.kind] and tile.kind ~= "R" and tile.kind ~= "B" then
       unpowered = unpowered + 1
     end
-    if tile.kind ~= "X" then
+    if tile.kind ~= "X" and tile.kind ~= "R" and tile.kind ~= "B" then
       for dir = 0, 3 do
         if E.hasPort(tile, dir) and not E.connection(g, tile, dir) then
           openPorts = openPorts + 1
@@ -418,6 +498,8 @@ function E.evaluate(g)
   end
   return {
     lights = lights,
+    redstone = redstone,
+    switches = switches,
     powered = powered,
     goals = goals,
     correct = correct,

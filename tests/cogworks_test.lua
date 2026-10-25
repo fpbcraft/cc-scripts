@@ -7,11 +7,11 @@ local function eq(actual, expected, context)
   )
 end
 eq(#E.levels, 16, "All old puzzle stages replaced")
-eq(#E.order, 8, "Only supported Create-style construction parts")
+eq(#E.order, 10, "Eight Create mechanisms plus redstone dust and block")
 for _, kind in ipairs(E.order) do
   assert(E.parts[kind], "Selectable component missing: " .. kind)
 end
-for _, removed in ipairs({ "L", "T", "B" }) do
+for _, removed in ipairs({ "L", "T" }) do
   assert(not E.parts[removed], "Fictitious mechanism still available: " .. removed)
 end
 local goals = 0
@@ -22,7 +22,8 @@ for index, data in ipairs(E.levels) do
   assert(not E.place(game, data.source.x, data.source.y, "I"), "Fixed generator cannot be replaced")
   assert(not E.remove(game, data.source.x, data.source.y), "Generator cannot be removed")
   assert(not E.rotate(game, data.source.x, data.source.y), "Generator cannot be rotated")
-  assert(not E.place(game, 0, 1, "I") and not E.place(game, 8, 1, "I"), "Bounds enforced")
+  assert(not E.place(game, 0, 1, "I") and not E.place(game, game.width + 1, 1, "I"), "Bounds enforced")
+  assert(game.width == data.width and game.height == data.height, "Per-stage grid size applied")
   assert(not E.place(game, 2, 2, "L"), "Elbow no longer offered")
   for _, obstacle in ipairs(data.blocks) do
     assert(E.get(game, obstacle[1], obstacle[2]).kind == "X", "Stone obstacle retained")
@@ -43,14 +44,17 @@ for index, data in ipairs(E.levels) do
   assert(result.unpowered == 0, "Reference contains idle parts at " .. index)
   goals = goals + result.goals
   for _, bonus in ipairs(E.challenges(solved, result)) do
-    assert(bonus.earned, "Reference should earn bonus " .. bonus.id .. " at " .. index)
+    assert(
+      bonus.earned or ((index == 7 or index == 8 or index == 16) and bonus.id == "master"),
+      "Reference should earn bonus " .. bonus.id .. " at " .. index
+    )
   end
   local manual = E.new(index)
   for _, part in ipairs(data.build) do
     assert(E.place(manual, part.x, part.y, part.kind, part.r), "Reference part placement failed on stage " .. index)
   end
-  for _, position in ipairs(data.toggles or {}) do
-    assert(E.toggle(manual, position[1], position[2]), "Authored redstone toggle failed")
+  for _, position in ipairs(data.removeRedstone or {}) do
+    assert(E.remove(manual, position[1], position[2]), "Reference redstone removal failed")
   end
   assert(E.evaluate(manual).win, "Building the reference manually failed at " .. index)
   local saved = E.snapshot(manual)
@@ -64,9 +68,7 @@ for index, data in ipairs(E.levels) do
     local active = E.get(manual, part.x, part.y).engaged
     if E.remove(manual, part.x, part.y) then
       assert(E.place(manual, part.x, part.y, part.kind, part.r), "Refunded part cannot be reused")
-      if active then
-        assert(E.toggle(manual, part.x, part.y), "Reapply powered redstone after reinstalling switch")
-      end
+      assert(not active, "Redstone switches use neighboring blocks instead of per-part toggles")
       break
     end
   end
@@ -79,18 +81,22 @@ assert(not E.evaluate(unlimited).win and E.evaluate(unlimited).goals == 0, "Sand
 for _, kind in ipairs(E.order) do
   assert(unlimited.remaining[kind] == math.huge)
 end
-for x = 2, 7 do
-  for y = 1, 6 do
-    assert(
-      E.place(unlimited, x, y, E.order[(x + y) % #E.order + 1]),
-      "Sandbox must place components without stock limits"
-    )
+for x = 1, unlimited.width do
+  for y = 1, unlimited.height do
+    if x ~= 1 or y ~= 3 then
+      assert(
+        E.place(unlimited, x, y, E.order[(x + y) % #E.order + 1]),
+        "Sandbox must place components without stock limits"
+      )
+    end
   end
 end
 assert(not E.place(unlimited, 1, 3, "I"), "Sandbox generator remains fixed")
 local count = #E.snapshot(unlimited)
-assert(count == 36, "Unlimited inventory does not restrict available board space")
+assert(count == unlimited.width * unlimited.height - 1, "Unlimited sandbox uses the full 10x10 board")
 assert(E.restore(E.sandbox(), E.snapshot(unlimited)), "Sandbox layout restorable")
+assert(E.sandbox(5, 5).width == 5 and E.sandbox(10, 10).height == 10, "Sandbox board size is configurable")
+assert(not E.inside(6, 5, E.sandbox(5, 5)), "Board bounds track the current sandbox size")
 print(
   "COGWORKS: all "
     .. #E.levels

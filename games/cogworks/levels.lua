@@ -31,10 +31,12 @@ local function level(name, tip, source, goals, build, options)
     blocks = options.blocks or {},
     fixtures = options.fixtures or {},
     toggles = options.toggles or {},
+    redstone = options.redstone or {},
+    removeRedstone = options.removeRedstone or {},
     stock = stock,
   }
 end
-return {
+local levels = {
   level(
     "STRAIGHT SHAFT",
     "CONNECT THE GENERATOR TO THE PRESS WITH AXIAL SHAFTS.",
@@ -85,7 +87,7 @@ return {
     s(1, 3, 1),
     { m(4, 3, 3, 1, -1) },
     { p("Z", 2, 3, 1), p("I", 3, 3, 1) },
-    { toggles = { { 2, 3 } } }
+    { spares = { B = 1, R = 2 } }
   ),
   level(
     "CUT THE CLUTCH",
@@ -93,7 +95,7 @@ return {
     s(1, 3, 1),
     { m(4, 3, 3, 1, 1) },
     { p("I", 3, 3, 1) },
-    { fixtures = { p("C", 2, 3, 1, true) }, toggles = { { 2, 3 } } }
+    { fixtures = { p("C", 2, 3, 1) }, redstone = { p("B", 2, 2) }, removeRedstone = { { 2, 2 } } }
   ),
   level(
     "GEAR UP",
@@ -151,6 +153,31 @@ return {
     s(1, 3, 1),
     { m(3, 2, 2, 1, 1), m(4, 3, 3, 1, 1), m(3, 4, 0, 1, 1) },
     { p("Q", 3, 3, 0) },
-    { fixtures = { p("Z", 2, 3, 1) }, toggles = { { 2, 3 } } }
+    { fixtures = { p("Z", 2, 3, 1) }, spares = { B = 1, R = 2 } }
   ),
 }
+local sizes = {
+  { 5, 5 },
+  { 5, 5 },
+  { 5, 5 },
+  { 6, 5 },
+  { 6, 5 },
+  { 6, 6 },
+  { 6, 6 },
+  { 6, 6 },
+  { 7, 6 },
+  { 7, 6 },
+  { 8, 7 },
+  { 8, 7 },
+  { 8, 8 },
+  { 9, 8 },
+  { 9, 9 },
+  { 10, 10 },
+}
+for index, stage in ipairs(levels) do
+  stage.width, stage.height = sizes[index][1], sizes[index][2]
+end
+-- Redstone is part of authored solutions, not a global magic switch.
+levels[7].build[#levels[7].build + 1] = p("B", 2, 2)
+levels[16].build[#levels[16].build + 1] = p("B", 2, 2)
+return levels
