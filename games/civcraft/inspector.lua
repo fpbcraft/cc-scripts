@@ -1,11 +1,11 @@
-local Systems = dofile("/games/civcraft/systems.lua")
-local Hex = dofile("/games/civcraft/hex.lua")
-local World = dofile("/games/civcraft/world.lua")
-local Panels = dofile("/games/civcraft/panels.lua")
-local Combat = dofile("/games/civcraft/combat.lua")
 local Biomes = dofile("/games/civcraft/biomes.lua")
+local Combat = dofile("/games/civcraft/combat.lua")
+local Hex = dofile("/games/civcraft/hex.lua")
 local Landmarks = dofile("/games/civcraft/landmarks.lua")
+local Panels = dofile("/games/civcraft/panels.lua")
+local Systems = dofile("/games/civcraft/systems.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
+local World = dofile("/games/civcraft/world.lua")
 local I = {}
 local function at(list, x, y)
 	for _, item in ipairs(list or {}) do
@@ -516,8 +516,7 @@ function I.draw(ui, state, player, rect, modal)
 		end
 	end
 	if not ui.selected.empty and World.known(player, ui.selected.x, ui.selected.y) ~= "hidden" then
-		local k = World.key(ui.selected.x, ui.selected.y)
-		local landmark = state.world and (state.world.landmarks or {})[k]
+		local landmark, rail = World.observedFeatures(state, player, ui.selected.x, ui.selected.y)
 		if landmark then
 			local record = (landmark.natural and Systems.naturalWonders or Systems.wonders)[landmark.kind]
 			if record then
@@ -529,10 +528,10 @@ function I.draw(ui, state, player, rect, modal)
 				)
 			end
 		end
-		if state.world and (state.world.rails or {})[k] then
+		if rail then
 			text("RAILWAY: 1/4 move between owned rail hexes.", 13)
 		end
-		for _, spawner in ipairs(state.spawners or {}) do
+		for _, spawner in ipairs(World.observedCamps(state, player)) do
 			if spawner.x == ui.selected.x and spawner.y == ui.selected.y then
 				text(
 					spawner.cleared and "CLEARED SPAWNER"

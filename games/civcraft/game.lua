@@ -88,12 +88,27 @@ local Actions = dofile("/games/civcraft/actions.lua")
 local Hostiles = dofile("/games/civcraft/hostiles.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local Victory = dofile("/games/civcraft/victory.lua")
+local CommandQueue = dofile("/games/civcraft/command_queue.lua")
+local Events = dofile("/games/civcraft/events.lua")
+local Snapshots = dofile("/games/civcraft/snapshots.lua")
 local audio = Audio.new()
+local commandQueue = CommandQueue.new(function()
+	if os.queueEvent then
+		os.queueEvent("civcraft_state_changed")
+	end
+end)
+local campaignCounter = 0
+local function newCampaignID()
+	campaignCounter = campaignCounter + 1
+	local stamp = os.epoch and os.epoch("utc") or math.floor(os.clock() * 1000000)
+	return tostring(stamp) .. ":" .. campaignCounter
+end
 local W, H = Hex.width, Hex.height
 local state
 local turnProgress = function() end
 local function newGame()
 	return {
+		campaignID = newCampaignID(),
 		version = 6,
 		ruleset = "create",
 		roundLimit = 180,
@@ -237,6 +252,7 @@ local function nextTurn()
 	trace("round.begin", state.round)
 	turnProgress("PROCESSING ROUND", "Economy, exploration and reports")
 	state.round = state.round + 1
+	Events.prune(state)
 	Combat.round(state, Systems)
 	Systems.production(state, Hex)
 	Villages.round(state, Systems, Combat)
@@ -284,6 +300,17 @@ local function apply(id, req)
 	if not p then
 		return false, "You are not registered"
 	end
+	local current, reason = Actions.validateIntent(state, req)
+	if not current then
+		return false, reason
+	end
+	if req.action == "save" then
+		if state.phase ~= "game" and state.phase ~= "over" then
+			return false, "Game not running"
+		end
+		save()
+		return true, "Game saved"
+	end
 	if req.action == "hostileMode" and state.phase == "lobby" then
 		if id ~= state.players[1].id then
 			return false, "Host only"
@@ -311,6 +338,7 @@ local function apply(id, req)
 	if req.action == "end" then
 		p.turnBaseline = Reports.capture(state, p)
 		p.ready = true
+		Events.notice(state, "order", nil, "end", id)
 		log(p.name .. " is ready")
 		if localMode then
 			for _, q in ipairs(state.players) do
@@ -352,6 +380,7 @@ if localHost then
 		local loaded = args[2] ~= "--new" and Saves.load(slot)
 		if type(loaded) == "table" then
 			state = Systems.migrate(World.migrate(loaded))
+			state.campaignID = state.campaignID or newCampaignID()
 			hasHumanSave = true
 		end
 	elseif fs.exists(SAVE) and args[2] ~= "--new" then
@@ -361,6 +390,7 @@ if localHost then
 			h.close()
 			if type(loaded) == "table" and loaded.version then
 				state = Systems.migrate(World.migrate(loaded))
+				state.campaignID = state.campaignID or newCampaignID()
 				hasHumanSave = true
 			end
 		end
@@ -408,6 +438,7 @@ else
 	)
 end
 Systems.migrate(state)
+state.campaignID = state.campaignID or newCampaignID()
 World.reveal(state, Hex, Systems)
 local snapshot = localHost and state or nil
 local message = "Tap a tile, then choose an action"
@@ -426,6 +457,9 @@ local function activeID()
 	return myId
 end
 local function draw()
+	if commandQueue.busy then
+		return
+	end
 	trace(
 		"draw.begin",
 		appScreen
@@ -469,6 +503,7 @@ local function dispatch(action, params)
 			hasHumanSave = type(loaded) == "table"
 			if hasHumanSave then
 				state = Systems.migrate(World.migrate(loaded))
+				state.campaignID = state.campaignID or newCampaignID()
 				if state.world then
 					W, H = state.world.width, state.world.height
 				end
@@ -588,8 +623,17 @@ local function dispatch(action, params)
 		return
 	end
 	if action == "save" then
-		save()
-		message = "GAME SAVED"
+		if localHost then
+			save()
+			message = "GAME SAVED"
+		else
+			rednet.send(hostId, {
+				action = "save",
+				round = snapshot and snapshot.round,
+				campaignID = snapshot and snapshot.campaignID,
+			}, PROTOCOL)
+			message = "SAVE REQUESTED"
+		end
 		return
 	end
 	if action == "civ" and state.phase == "lobby" then
@@ -688,10 +732,23 @@ local function dispatch(action, params)
 			save()
 		end
 	else
+		req.round = snapshot and snapshot.round
+		req.campaignID = snapshot and snapshot.campaignID
 		rednet.send(hostId, req, PROTOCOL)
 	end
 end
-view = UI.new(display, dispatch)
+view = UI.new(display, function(action, params)
+	if localHost then
+		local accepted, reason = commandQueue:submit(function()
+			dispatch(action, params)
+		end)
+		if not accepted then
+			message = reason
+		end
+	else
+		dispatch(action, params)
+	end
+end)
 if view.r and debugging then
 	view.r.trace = trace
 end
@@ -711,56 +768,112 @@ Systems.checkpoint = function()
 	end
 end
 World.checkpoint = Systems.checkpoint
+local sendSnapshot = Snapshots.sender(tostring(myId) .. ":" .. newCampaignID())
+local receiveSnapshot = Snapshots.receiver()
+local acknowledged = {}
+local function sendState(id)
+	local cursor = acknowledged[id]
+	if cursor and cursor.campaign ~= state.campaignID then
+		cursor = nil
+	end
+	local projected = World.forPlayer(state, id, cursor and cursor.seq)
+	if projected then
+		rednet.send(id, sendSnapshot(id, projected), PROTOCOL)
+	end
+end
 local function publish()
-	if not hasModem then
+	if not hasModem or commandQueue.busy then
 		return
 	end
-	for _, p in ipairs(state.players) do
-		if p.id ~= myId then
-			rednet.send(p.id, { type = "state", state = World.forPlayer(state, p.id) }, PROTOCOL)
+	commandQueue:submit(function()
+		for _, p in ipairs(state.players) do
+			if p.id ~= myId and not p.ai then
+				sendState(p.id)
+			end
 		end
-	end
+	end, false)
 end
 local function server()
 	while true do
 		local id, req = rednet.receive(PROTOCOL)
 		if type(req) == "table" then
-			if req.action == "join" then
-				local p = player(id)
-				if not p and state.phase == "lobby" and #state.players < 4 then
-					table.insert(state.players, {
-						id = id,
-						name = tostring(req.name or ("P" .. (#state.players + 1))):sub(1, 10),
-						ready = false,
-					})
-					log("Player joined: " .. id)
+			local accepted, reason = commandQueue:submit(function()
+				if req.action == "join" then
+					local p = player(id)
+					if not p and state.phase == "lobby" and #state.players < 4 then
+						table.insert(state.players, {
+							id = id,
+							name = tostring(req.name or ("P" .. (#state.players + 1))):sub(1, 10),
+							ready = false,
+						})
+						log("Player joined: " .. id)
+					end
+					acknowledged[id] = nil
+					sendState(id)
+				elseif player(id) and req.action == "ackEvents" then
+					if req.campaign == state.campaignID then
+						local stream = Events.forPlayer(state, id)
+						local seq = math.min(
+							stream.lastSeq,
+							math.max(0, math.floor(tonumber(req.seq) or 0))
+						)
+						local previous = acknowledged[id]
+						if
+							not previous
+							or previous.campaign ~= state.campaignID
+							or seq > previous.seq
+						then
+							acknowledged[id] = { campaign = state.campaignID, seq = seq }
+						end
+					end
+				elseif player(id) then
+					local ok, why = apply(id, req)
+					rednet.send(
+						id,
+						{ type = "result", ok = ok, message = why or (ok and "Order accepted") },
+						PROTOCOL
+					)
 				end
-				local view = World.forPlayer(state, id)
-				if view then
-					rednet.send(id, { type = "state", state = view }, PROTOCOL)
-				end
-			elseif player(id) then
-				local ok, why = apply(id, req)
-				rednet.send(
-					id,
-					{ type = "result", ok = ok, message = why or (ok and "Order accepted") },
-					PROTOCOL
-				)
+			end, req.action ~= "ackEvents")
+			if not accepted then
+				rednet.send(id, { type = "result", ok = false, message = reason }, PROTOCOL)
 			end
-			publish()
+			if req.action ~= "ackEvents" then
+				publish()
+			end
 		end
 	end
 end
 local function clientListener()
+	local ackCampaign, ackSeq
 	while true do
 		local id, packet = rednet.receive(PROTOCOL)
 		if id == hostId and type(packet) == "table" then
-			if packet.type == "state" and type(packet.state) == "table" then
-				snapshot = packet.state
+			local changed = false
+			if packet.type == "state" then
+				local accepted, cursor = receiveSnapshot:accept(packet, myId)
+				if accepted then
+					snapshot = accepted
+					changed = true
+					if
+						cursor and (ackCampaign ~= accepted.campaignID or cursor > (ackSeq or -1))
+					then
+						rednet.send(
+							hostId,
+							{ action = "ackEvents", campaign = accepted.campaignID, seq = cursor },
+							PROTOCOL
+						)
+						ackCampaign, ackSeq = accepted.campaignID, cursor
+					end
+				end
 			elseif packet.type == "result" then
-				message = packet.ok and "Order accepted" or tostring(packet.message)
+				message =
+					tostring(packet.message or (packet.ok and "Order accepted" or "Order rejected"))
+				changed = true
 			end
-			os.queueEvent("civcraft_state_changed")
+			if changed then
+				os.queueEvent("civcraft_state_changed")
+			end
 		end
 	end
 end

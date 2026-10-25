@@ -1,11 +1,11 @@
 -- CIVCRAFT local/network UI built on the RAILBREAK pixel canvas.
 -- Never mutate simulation here: all commands flow through dispatch().
-local Renderer = dofile("/games/civcraft/render.lua")
-local Hex = dofile("/games/civcraft/hex.lua")
-local Systems = dofile("/games/civcraft/systems.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
 local GameView = dofile("/games/civcraft/game_view.lua")
+local Hex = dofile("/games/civcraft/hex.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
+local Renderer = dofile("/games/civcraft/render.lua")
+local Systems = dofile("/games/civcraft/systems.lua")
 local World = dofile("/games/civcraft/world.lua")
 local UI = {}
 UI.__index = UI
@@ -278,7 +278,7 @@ function UI:tile(x, y)
 					end
 					awake.standby = false
 					awake.healing = false
-					forecast = Combat.predict(self.state, awake, p, Systems)
+					forecast = Combat.predictOrder(self.state, awake, p, Systems)
 				end
 				self.pendingMove.forecast = forecast
 				local summary = "COST " .. p.cost

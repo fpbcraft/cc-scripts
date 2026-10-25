@@ -1,9 +1,9 @@
 -- World geometry, painting and pointer targets use the same pointy hex polygons.
 local Hex = dofile("/games/civcraft/hex.lua")
-local World = dofile("/games/civcraft/world.lua")
-local Systems = dofile("/games/civcraft/systems.lua")
 local Icons = dofile("/games/civcraft/icons.lua")
+local Systems = dofile("/games/civcraft/systems.lua")
 local Terrain = dofile("/games/civcraft/terrain_view.lua")
+local World = dofile("/games/civcraft/world.lua")
 local V = {}
 local colors = { 8, 13, 11, 21 }
 local function at(list, x, y)
@@ -61,6 +61,10 @@ function V.draw(ui, state, player, rect)
 		{ x = rect.x, y = rect.y, w = rect.w, h = rect.h, tile = size, maxX = maxX, maxY = maxY }
 	local citySignature = {}
 	local cityIndex, unitIndex = {}, {}
+	local campIndex = {}
+	for _, camp in ipairs(World.observedCamps(state, player)) do
+		campIndex[World.key(camp.x, camp.y)] = camp
+	end
 	for _, city in ipairs(state.cities or {}) do
 		citySignature[#citySignature + 1] =
 			table.concat({ city.id or 0, city.owner, city.x, city.y, city.population or 2 }, ":")
@@ -228,7 +232,8 @@ function V.draw(ui, state, player, rect)
 			end
 			local k = World.key(x, y)
 			if t.visibility ~= "hidden" then
-				if (world.rails or {})[k] then
+				local landmark, rail = World.observedFeatures(state, player, x, y)
+				if rail then
 					r:line(
 						px + size * 0.25,
 						py + size * 0.35,
@@ -244,7 +249,6 @@ function V.draw(ui, state, player, rect)
 						9
 					)
 				end
-				local landmark = (world.landmarks or {})[k]
 				if landmark then
 					local colors = {
 						lushcavern = 11,
@@ -267,10 +271,9 @@ function V.draw(ui, state, player, rect)
 						Icons.draw(r, "wonder", px + size / 2 - 4, py + size / 2 - 4, 9)
 					end
 				end
-				for _, spawner in ipairs(state.spawners or {}) do
-					if spawner.x == x and spawner.y == y and not spawner.cleared then
-						Icons.draw(r, "spawner", px + size / 2 - 4, py + size / 2 - 4, 9)
-					end
+				local spawner = campIndex[k]
+				if spawner and not spawner.cleared then
+					Icons.draw(r, "spawner", px + size / 2 - 4, py + size / 2 - 4, 9)
 				end
 			end
 			local city = t.visibility ~= "hidden" and cityIndex[World.key(x, y)]

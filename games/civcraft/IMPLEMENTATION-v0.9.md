@@ -37,6 +37,21 @@ Validation:
 - All 52 repository regression scripts passed with a Lua 5.3 runtime and the repository's existing `bit32` compatibility shim. A renderer preview was visually inspected. These are local automated/rendered checks, not live multiplayer or monitor validation.
 - Run `lua5.3 tests/civcraft_world_benchmark.lua` for reproducible desktop timing output. See [WORLDGEN-BENCHMARK.md](WORLDGEN-BENCHMARK.md) for the measured scenarios and limitations.
 
+## 03: Action events and observer snapshots
+
+Implemented locally:
+
+- Version 1 observer journals retain up to 128 entries with an age limit of eight rounds. Movement, combat, capture/defeat, founding, disbanding, rail work, unit production, completed buildings/wonders, research and landmark discoveries emit action-time records. Research and administrative orders are private to their issuer.
+- Each movement segment updates exploration and records who could actually see that position. Observer projections split paths at fog boundaries, omit hidden origins/endpoints and never reconstruct them from later exploration. Partially observed combat sends either an impact without its concealed attacker or visible actor activity without the concealed target. Only explicitly supported fields and event categories survive projection.
+- The host assigns observer-local sequence numbers, so a recipient cannot infer the count of hidden actions from sequence gaps. The host retains no separate unrestricted raw-action history. Trusted host saves contain the observers' bounded journals; snapshots contain only the receiving observer's `eventStream`.
+- Snapshots have per-observer transport serials and host-session identifiers. Receivers reject duplicates, stale snapshots, retired sessions, malformed streams and streams belonging to another observer. Campaign changes reset replay windows; received windows merge before acknowledgement so a fast empty snapshot cannot erase queued presentation data. Old protocol peers remain usable without the new replay guarantees.
+- Host UI and network commands pass through one bounded cooperative queue, including snapshot construction. A yielded rule calculation or snapshot cannot interleave another mutation; overflow returns a retry result. Event acknowledgements cannot create a publication loop. New network orders include campaign/round context so stale commands cannot spend a new round's movement. Remote Save asks the host to persist its authoritative state.
+- Visible rival cities/units use public-field snapshots instead of copying production, worker allocation or auto-exploration plans. Public combat ratings keep remote forecasts consistent without transmitting the hidden army that contributes to city strength. Melee attacks physically follow their approved approach, and ranged attacks cannot use an untraversed path to shoot outside their actual range.
+- Version 1 map-memory records preserve last-observed rails, landmarks and camps while terrain is in explored fog. Rival construction and camp clearing stay private until re-scouted, in both network snapshots and local map/inspector rendering. Old saves preserve terrain/deposits; unknown dynamic infrastructure is not invented during migration. Immutable natural landmarks can restore previously explored knowledge.
+- The package manifest installs all new runtime modules.
+
+All 54 repository regression scripts passed. Automated evidence includes privacy and temporal-order assertions, interrupted command/snapshot coroutines, replay bounds/cursors, stale/malformed packets, hidden infrastructure and text/graphics inspector checks. Three checks passed together in a fresh native CraftOS-PC profile: the core event suite, actual renderer/button calls with filesystem serialization/reload, and a complete game session. That session uses real mouse events to traverse the paged lobby, initial reports, two human turns and private handoffs, round processing, pause, save and exit. See [NATIVE-TESTS.md](NATIVE-TESTS.md) for isolated reproduction and exact boundaries. These do not yet prove multi-client rednet behavior, physical monitor input or animation responsiveness. The visible replay/feed and interpolation controller belong to workstream 04.
+
 ## Lua style and upstream integration
 
 The user's governing guide is the [Roblox Lua style guide](https://roblox.github.io/lua-style-guide/), replacing the earlier LuaRocks reference. After rebasing, the user authorized updating `.stylua.toml` to align with the Roblox guide: tabs displayed at four columns, a 100-column target, double-quoted strings and expanded blocks. `.editorconfig` and repository documentation match; the repository was reformatted with AST verification. Modified code follows the guide's readability, expanded blocks, double-quoted strings and camelCase naming where introduced; existing save/API names remain compatible. New code remains ordinary Lua, without Luau-only syntax.
@@ -45,7 +60,6 @@ Rebased onto `main` at `3a7518b` after PR #47 merged. Formatting conflicts were 
 
 ## Remaining workstreams
 
-03. Sequenced events and event-time observer projections.
 04. Smooth movement/combat animation, playback controls and bounded replay.
 05. Stable strategic plans, fixed personalities and economic utilities.
 06. Threat maps, tactical campaigns, retreat and coordinated support.
@@ -56,6 +70,6 @@ Rebased onto `main` at `3a7518b` after PR #47 merged. Formatting conflicts were 
 11. AI difficulty variants after the Prince baseline.
 12. Save/integration/fuzz/performance/network validation and release metadata.
 
-Remaining foundation concerns: threat highlights and destination scores; exact city-defense forecasts when remote snapshots omit units that contribute to global city strength; event-backed per-segment movement/visibility; live CC:Tweaked verification. Keep hidden unit information out of forecasts instead of exposing authoritative records to clients. Resolve the remote defense rule in the event/snapshot workstream before calling all combat previews exact across clients.
+Remaining foundation concerns: threat highlights and destination scores; complete simulation/presentation isolation during cooperative rendering; physical monitor and live rednet verification. Native CraftOS-PC event, rendering and save checks complement the automated suite. Public city/unit ratings now resolve the earlier hidden-army forecast mismatch; event-time path projection resolves the earlier replay-visibility gap.
 
-The full roadmap is not complete. Live CC:Tweaked and rednet validation is still required for both implemented workstreams; do not treat these commits as a v0.9 release.
+The full roadmap is not complete. Target-server CC:Tweaked and live rednet validation is still required; do not treat these commits as a v0.9 release.

@@ -1,7 +1,11 @@
 -- Deterministic strength-difference combat with separate city and wall health.
+local CombatStrength = dofile("/games/civcraft/combat_strength.lua")
+local Events = dofile("/games/civcraft/events.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
-local World = dofile("/games/civcraft/world.lua")
+local UnitMovement = dofile("/games/civcraft/unit_movement.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
+local VisibilityEvents = dofile("/games/civcraft/visibility_events.lua")
+local World = dofile("/games/civcraft/world.lua")
 local C = {}
 local function at(list, x, y)
 	for _, v in ipairs(list or {}) do
@@ -43,55 +47,8 @@ function C.migrate(state)
 		C.city(city)
 	end
 end
-function C.power(unit, systems, defending, state)
-	C.unit(unit)
-	local stats = systems.units[unit.kind] or systems.units.warrior
-	local base = (defending and stats.defense or stats.strength) or 0
-	local result = 10 + base * 5 + (unit.level - 1) * 2 - math.floor((100 - unit.hp) / 10)
-	if defending then
-		for _, p in ipairs(state and state.players or {}) do
-			if
-				p.id == unit.owner
-				and p.civ == "highland"
-				and Hex.terrain(unit.x, unit.y, state) == "hills"
-			then
-				result = result + 3
-			end
-		end
-		local terrain = Hex.terrain(unit.x, unit.y, state)
-		if terrain == "hills" or terrain == "forest" then
-			result = result + 3
-		end
-		if unit.standby or unit.healing then
-			result = result + 3
-		end
-	end
-	return math.max(1, result)
-end
-function C.cityPower(state, city, systems)
-	C.city(city)
-	local strongest = 20
-	for _, u in ipairs(state.units) do
-		if u.owner == city.owner then
-			strongest = math.max(strongest, C.power(u, systems, true, state))
-		end
-	end
-	local bonus = 0
-	for _, p in ipairs(state.players or {}) do
-		if p.id == city.owner and p.civ == "sentinel" then
-			bonus = 3
-		end
-	end
-	return math.max(
-		1,
-		bonus
-			+ 10
-			+ math.floor(strongest / 2)
-			+ city.population * 2
-			+ (city.maxWalls > 0 and 8 or 0)
-			- math.floor((200 - city.hp) / 20)
-	)
-end
+C.power = CombatStrength.unit
+C.cityPower = CombatStrength.city
 function C.damage(attack, defense)
 	return math.max(8, math.min(80, math.floor(30 * math.exp((attack - defense) / 25) + 0.5)))
 end
@@ -185,15 +142,7 @@ function C.predict(state, unit, target, systems)
 	if city then
 		city = copy(city)
 		C.city(city)
-		local units = {}
-		for _, u in ipairs(state.units) do
-			units[#units + 1] = copy(u)
-		end
-		defense = C.cityPower(
-			{ units = units, players = state.players, world = state.world },
-			city,
-			systems
-		)
+		defense = C.cityPower(state, city, systems)
 	else
 		defender = copy(defender)
 		C.unit(defender)
@@ -241,10 +190,32 @@ function C.predict(state, unit, target, systems)
 		ranged = ranged,
 	}
 end
+function C.predictOrder(state, unit, order, systems)
+	local attacker = copy(unit)
+	attacker.standby = false
+	attacker.healing = false
+	if not order.ranged and order.path and #order.path > 1 then
+		local approach = order.path[#order.path - 1]
+		attacker.x, attacker.y = approach.x, approach.y
+	end
+	return C.predict(state, attacker, order, systems)
+end
+
 function C.attack(state, unit, target, systems)
-	local result, why = C.predict(state, unit, target, systems)
+	local result, why
+	if target.path then
+		result, why = C.predictOrder(state, unit, target, systems)
+	else
+		result, why = C.predict(state, unit, target, systems)
+	end
 	if not result then
 		return false, why
+	end
+	if target.path and not result.ranged and #target.path > 2 then
+		local first = target.path[1]
+		if unit.x == first.x and unit.y == first.y then
+			UnitMovement.walk(state, unit, target.path, systems, #target.path - 1)
+		end
 	end
 	C.migrate(state)
 	local stats = systems.units[unit.kind] or systems.units.warrior
@@ -253,6 +224,14 @@ function C.attack(state, unit, target, systems)
 		city = nil
 	end
 	local defender = at(state.units, target.x, target.y)
+	local event = {
+		type = "combat",
+		actor = VisibilityEvents.actor(unit),
+		start = VisibilityEvents.frame(state, unit),
+		target = VisibilityEvents.frame(state, city or defender),
+		defender = VisibilityEvents.actor(city or defender),
+		result = result,
+	}
 	local damage, retaliation, captured, ranged =
 		result.damage, result.retaliation, result.captured, result.ranged
 	if city then
@@ -314,6 +293,8 @@ function C.attack(state, unit, target, systems)
 	if unit.hp <= 0 then
 		remove(state, unit)
 	end
+	Events.emit(state, event)
+	World.reveal(state, Hex, systems)
 	return true,
 		captured and "City captured"
 			or ("Dealt " .. damage .. " HP; received " .. retaliation .. " HP"),
@@ -340,6 +321,13 @@ function C.strike(state, city, x, y, systems)
 	if owner and not (owner.visible or {})[World.key(x, y)] then
 		return false, "Target is not visible"
 	end
+	local event = {
+		type = "cityStrike",
+		actor = VisibilityEvents.actor(city),
+		start = VisibilityEvents.frame(state, city),
+		target = VisibilityEvents.frame(state, enemy),
+		defender = VisibilityEvents.actor(enemy),
+	}
 	local damage = C.damage(C.cityPower(state, city, systems), C.power(enemy, systems, true, state))
 	enemy.hp = math.max(0, enemy.hp - damage)
 	C.experience(enemy, 2)
@@ -350,6 +338,10 @@ function C.strike(state, city, x, y, systems)
 		end
 		remove(state, enemy)
 	end
-	return true, "City strike dealt " .. damage .. " HP"
+	event.result =
+		{ attackerHP = city.hp, defenderHP = enemy.hp, defenderDied = enemy.hp <= 0, ranged = true }
+	Events.emit(state, event)
+	World.reveal(state, Hex, systems)
+	return true, "City strike dealt " .. damage .. " HP", event.result
 end
 return C

@@ -110,6 +110,12 @@ P.packages.civcraft = {
 	files = {
 		"README.md",
 		"actions.lua",
+		"command_queue.lua",
+		"combat_strength.lua",
+		"events.lua",
+		"snapshots.lua",
+		"unit_movement.lua",
+		"visibility_events.lua",
 		"biomes.lua",
 		"world_random.lua",
 		"worldgen.lua",

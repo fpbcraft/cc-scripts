@@ -1,6 +1,10 @@
 -- Seeded hex geography, strategic deposits, private discovery and territory.
 -- World state is authoritative and saved; map presets never reroll on reload.
+local Biomes = dofile("/games/civcraft/biomes.lua")
+local CombatStrength = dofile("/games/civcraft/combat_strength.lua")
 local Content = dofile("/games/civcraft/content.lua")
+local Events = dofile("/games/civcraft/events.lua")
+local Generator = dofile("/games/civcraft/worldgen.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local W = {}
 W.sizes = {
@@ -19,8 +23,30 @@ local function key(x, y)
 	return x .. ":" .. y
 end
 W.key = key
-local Biomes = dofile("/games/civcraft/biomes.lua")
-local Generator = dofile("/games/civcraft/worldgen.lua")
+local function landmarkView(landmark)
+	if not landmark then
+		return nil
+	end
+	return { kind = landmark.kind, natural = landmark.natural == true }
+end
+
+local function campView(camp)
+	return { id = camp.id, x = camp.x, y = camp.y, kind = camp.kind, cleared = camp.cleared == true }
+end
+
+local function mapMemory(player, world)
+	if not player.mapMemory or player.mapMemory.version ~= 1 then
+		player.mapMemory = { version = 1, landmarks = {}, rails = {}, spawners = {} }
+		-- Natural geography is immutable; old explored land may restore that knowledge.
+		for tileKey, landmark in pairs(world.landmarks or {}) do
+			if landmark.natural and (player.explored or {})[tileKey] then
+				player.mapMemory.landmarks[tileKey] = landmarkView(landmark)
+			end
+		end
+	end
+	return player.mapMemory
+end
+
 W.generationVersion = Generator.version
 function W.generate(seed, size, count, mapType)
 	size = W.sizes[size] and size or "standard"
@@ -246,10 +272,14 @@ function W.strategic(state, player, hex, res)
 	end
 	return false
 end
-function W.reveal(state, hex, systems)
+function W.reveal(state, hex, systems, pendingNotices)
 	local world = state.world
 	if not world then
 		return
+	end
+	local camps = {}
+	for _, camp in ipairs(state.spawners or {}) do
+		camps[key(camp.x, camp.y)] = camp
 	end
 	for _, p in ipairs(state.players or {}) do
 		if W.checkpoint then
@@ -280,10 +310,91 @@ function W.reveal(state, hex, systems)
 			end
 		end
 		p.visible = visible
+		local memory = mapMemory(p, world)
+		for tileKey in pairs(visible) do
+			memory.landmarks[tileKey] = landmarkView((world.landmarks or {})[tileKey])
+			memory.rails[tileKey] = (world.rails or {})[tileKey] and true or nil
+			memory.spawners[tileKey] = camps[tileKey] and campView(camps[tileKey]) or nil
+		end
+		p.knownLandmarks = p.knownLandmarks or {}
+		local landmarkKeys = {}
+		for tileKey in pairs(world.landmarks or {}) do
+			landmarkKeys[#landmarkKeys + 1] = tileKey
+		end
+		table.sort(landmarkKeys)
+		for _, tileKey in ipairs(landmarkKeys) do
+			local landmark = world.landmarks[tileKey]
+			if visible[tileKey] and not p.knownLandmarks[tileKey] then
+				p.knownLandmarks[tileKey] = true
+				local x, y = tileKey:match("^(%d+):(%d+)$")
+				local event = {
+					type = "landmark",
+					recipient = p.id,
+					content = landmark.kind,
+					target = { x = tonumber(x), y = tonumber(y), visible = { [p.id] = true } },
+				}
+				if pendingNotices then
+					pendingNotices[#pendingNotices + 1] = event
+				else
+					Events.emit(state, event)
+				end
+			end
+		end
 	end
 end
+function W.observedFeatures(state, observer, x, y)
+	if not observer or not state.world then
+		return nil, nil
+	end
+	local tileKey = key(x, y)
+	local world = state.world
+	if (observer.visible or {})[tileKey] then
+		return landmarkView((world.landmarks or {})[tileKey]),
+			(world.rails or {})[tileKey] and true or nil
+	end
+	if not (observer.explored or {})[tileKey] then
+		return nil, nil
+	end
+	local memory = observer.mapMemory
+	if memory and memory.version == 1 then
+		return memory.landmarks[tileKey], memory.rails[tileKey]
+	end
+	local landmark = (world.landmarks or {})[tileKey]
+	if landmark and landmark.natural then
+		return landmarkView(landmark), nil
+	end
+	return nil, nil
+end
+
+function W.observedCamps(state, observer)
+	if not observer then
+		return {}
+	end
+	local knownCamps = {}
+	for tileKey, camp in pairs(observer.mapMemory and observer.mapMemory.spawners or {}) do
+		if (observer.explored or {})[tileKey] and not (observer.visible or {})[tileKey] then
+			knownCamps[tileKey] = campView(camp)
+		end
+	end
+	for _, camp in ipairs(state.spawners or {}) do
+		if (observer.visible or {})[key(camp.x, camp.y)] then
+			knownCamps[key(camp.x, camp.y)] = campView(camp)
+		end
+	end
+	local campKeys = {}
+	for tileKey in pairs(knownCamps) do
+		campKeys[#campKeys + 1] = tileKey
+	end
+	table.sort(campKeys)
+	local result = {}
+	for _, tileKey in ipairs(campKeys) do
+		result[#result + 1] = knownCamps[tileKey]
+	end
+	return result
+end
+
 -- Build an observer-safe network snapshot. Local saves keep the authoritative state.
-function W.forPlayer(state, id)
+function W.forPlayer(state, id, afterSeq)
 	local observer
 	for _, p in ipairs(state.players or {}) do
 		if p.id == id then
@@ -294,11 +405,11 @@ function W.forPlayer(state, id)
 	if not observer then
 		return nil
 	end
-	if state.phase ~= "game" and state.phase ~= "over" then
-		return state
-	end
 	local view = {
 		version = state.version,
+		observerID = id,
+		campaignID = state.campaignID,
+		eventStream = Events.forPlayer(state, id, afterSeq),
 		phase = state.phase,
 		round = state.round,
 		turn = state.turn,
@@ -314,6 +425,19 @@ function W.forPlayer(state, id)
 		units = {},
 		logs = {},
 	}
+	if state.phase ~= "game" and state.phase ~= "over" then
+		view.mapSize, view.mapType, view.mapSeed = state.mapSize, state.mapType, state.mapSeed
+		for _, player in ipairs(state.players) do
+			view.players[#view.players + 1] = {
+				id = player.id,
+				name = player.name,
+				civ = player.civ,
+				ai = player.ai,
+				ready = player.ready,
+			}
+		end
+		return view
+	end
 	local world = state.world
 	if world then
 		view.world = {
@@ -339,8 +463,8 @@ function W.forPlayer(state, id)
 					view.world.tiles[k] = world.tiles[k]
 					view.world.geography[k] = (world.geography or {})[k]
 					view.world.resources[k] = (world.resources or {})[k]
-					view.world.landmarks[k] = (world.landmarks or {})[k]
-					view.world.rails[k] = (world.rails or {})[k]
+					view.world.landmarks[k], view.world.rails[k] =
+						W.observedFeatures(state, observer, x, y)
 				end
 			end
 		end
@@ -368,9 +492,33 @@ function W.forPlayer(state, id)
 			or c.village and (observer.explored or {})[key(c.x, c.y)]
 		then
 			local copy = {}
-			for field, value in pairs(c) do
-				copy[field] = value
+			if c.owner == id then
+				for field, value in pairs(c) do
+					copy[field] = value
+				end
+			else
+				copy = {
+					id = c.id,
+					name = c.name,
+					owner = c.owner,
+					x = c.x,
+					y = c.y,
+					hp = c.hp,
+					maxHP = c.maxHP,
+					wallHP = c.wallHP,
+					maxWalls = c.maxWalls,
+					population = c.population,
+					capitalOf = c.capitalOf,
+					village = c.village,
+					villageOwner = c.villageOwner,
+					villageKind = c.villageKind,
+					buildings = {
+						walls = (c.buildings or {}).walls,
+						fortress = (c.buildings or {}).fortress,
+					},
+				}
 			end
+			copy.publicDefense = CombatStrength.city(state, c, Content)
 			if c.village then
 				if not (observer.visible or {})[key(c.x, c.y)] then
 					copy = {
@@ -394,17 +542,26 @@ function W.forPlayer(state, id)
 	end
 	for _, u in ipairs(state.units or {}) do
 		if u.owner == id or (observer.visible or {})[key(u.x, u.y)] then
-			view.units[#view.units + 1] = u
+			if u.owner == id then
+				view.units[#view.units + 1] = u
+			else
+				view.units[#view.units + 1] = {
+					id = u.id,
+					owner = u.owner,
+					kind = u.kind,
+					x = u.x,
+					y = u.y,
+					hp = u.hp,
+					maxHP = u.maxHP,
+					level = u.level,
+					villageGuard = u.villageGuard and true or nil,
+					publicAttack = CombatStrength.unit(u, Content, false, state),
+					publicDefense = CombatStrength.unit(u, Content, true, state),
+				}
+			end
 		end
 	end
-	for _, spawner in ipairs(state.spawners or {}) do
-		if
-			(observer.explored or {})[key(spawner.x, spawner.y)]
-			or (observer.visible or {})[key(spawner.x, spawner.y)]
-		then
-			view.spawners[#view.spawners + 1] = spawner
-		end
-	end
+	view.spawners = W.observedCamps(state, observer)
 	return view
 end
 function W.known(player, x, y)

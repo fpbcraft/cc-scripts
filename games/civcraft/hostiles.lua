@@ -1,7 +1,9 @@
 -- Bounded, deterministic wilderness opposition; never a player or city owner.
-local Hex = dofile("/games/civcraft/hex.lua")
-local World = dofile("/games/civcraft/world.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
+local Events = dofile("/games/civcraft/events.lua")
+local Hex = dofile("/games/civcraft/hex.lua")
+local UnitMovement = dofile("/games/civcraft/unit_movement.lua")
+local World = dofile("/games/civcraft/world.lua")
 local H = { owner = -2147483647 }
 local function at(list, x, y)
 	for _, v in ipairs(list or {}) do
@@ -131,6 +133,7 @@ function H.round(state, systems)
 					moved = true,
 					spawner = s.id,
 				}
+				Events.notice(state, "spawn", state.units[#state.units])
 				state.nextId = state.nextId + 1
 				count = count + 1
 			end
@@ -172,9 +175,7 @@ function H.round(state, systems)
 					if c.attack then
 						Combat.attack(state, u, c, systems)
 					else
-						u.x = c.x
-						u.y = c.y
-						u.actedThisRound = true
+						UnitMovement.walk(state, u, c.path, systems)
 					end
 				end
 			end

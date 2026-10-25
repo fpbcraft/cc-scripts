@@ -1,12 +1,25 @@
 -- Host-authoritative gameplay orders shared by humans, remote players and AI.
 -- Session orchestration (lobby, save, end turn) belongs to game.lua.
-local Hex = dofile("/games/civcraft/hex.lua")
-local World = dofile("/games/civcraft/world.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
+local Events = dofile("/games/civcraft/events.lua")
+local Hex = dofile("/games/civcraft/hex.lua")
 local Hostiles = dofile("/games/civcraft/hostiles.lua")
 local Rails = dofile("/games/civcraft/railways.lua")
+local UnitMovement = dofile("/games/civcraft/unit_movement.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
+local World = dofile("/games/civcraft/world.lua")
 local A = {}
+
+function A.validateIntent(state, request)
+	if request.campaignID ~= nil and request.campaignID ~= state.campaignID then
+		return false, "Campaign changed; refresh before ordering"
+	end
+	if request.round ~= nil and request.round ~= state.round then
+		return false, "Round changed; refresh before ordering"
+	end
+	return true
+end
+
 function A.apply(state, id, req, Systems)
 	if type(req) ~= "table" then
 		return false, "Invalid order"
@@ -22,6 +35,10 @@ function A.apply(state, id, req, Systems)
 	end
 	if state.phase ~= "game" then
 		return false, "Game not running"
+	end
+	local current, reason = A.validateIntent(state, req)
+	if not current then
+		return false, reason
 	end
 	if p.ready then
 		return false, "Already ended turn"
@@ -51,6 +68,9 @@ function A.apply(state, id, req, Systems)
 	end
 	if req.action == "exchange" then
 		local ok, why = Systems.exchange(state, p, req.resource)
+		if ok then
+			Events.notice(state, "order", nil, req.action, id)
+		end
 		return ok, why
 	end
 	if
@@ -91,6 +111,9 @@ function A.apply(state, id, req, Systems)
 				ok, why = Systems.queue(p, c, "unit", req.id, state, Hex)
 			end
 		end
+		if ok then
+			Events.notice(state, "order", nil, req.action, id)
+		end
 		return ok, why
 	end
 	local x, y = tonumber(req.x), tonumber(req.y)
@@ -111,6 +134,7 @@ function A.apply(state, id, req, Systems)
 		if u.standby then
 			u.autoExplore = false
 		end
+		Events.notice(state, "order", nil, req.action, id)
 		return true
 	elseif req.action == "autoExplore" then
 		if not u or u.owner ~= id then
@@ -118,9 +142,13 @@ function A.apply(state, id, req, Systems)
 		end
 		if req.value == false then
 			u.autoExplore = false
+			Events.notice(state, "order", nil, req.action, id)
 			return true
 		end
 		local ok, why = Systems.autoExplore(state, u, Hex)
+		if ok then
+			Events.notice(state, "order", nil, req.action, id)
+		end
 		return ok, why
 	elseif req.action == "move" then
 		local sx, sy = tonumber(req.sx), tonumber(req.sy)
@@ -142,6 +170,12 @@ function A.apply(state, id, req, Systems)
 		if not legal then
 			return false, "Destination out of range or blocked"
 		end
+		if legal.attack then
+			local prediction, reason = Combat.predictOrder(state, moving, legal, Systems)
+			if not prediction then
+				return false, reason
+			end
+		end
 		local asleep, healing = moving.standby, moving.healing
 		moving.standby = false
 		moving.healing = false
@@ -156,8 +190,7 @@ function A.apply(state, id, req, Systems)
 			moving.movesLeft = legal.ranged and 0
 				or math.max(0, (moving.movesLeft or Systems.units[moving.kind].move) - legal.cost)
 		else
-			moving.x = x
-			moving.y = y
+			UnitMovement.walk(state, moving, legal.path, Systems)
 			moving.movesLeft =
 				math.max(0, (moving.movesLeft or Systems.units[moving.kind].move) - legal.cost)
 			moving.actedThisRound = true
@@ -177,6 +210,7 @@ function A.apply(state, id, req, Systems)
 				break
 			end
 		end
+		Events.notice(state, "disband", u)
 	elseif req.action == "buildRail" then
 		local moving = unitAt(tonumber(req.sx), tonumber(req.sy))
 		local asleep = moving and moving.standby
@@ -191,6 +225,7 @@ function A.apply(state, id, req, Systems)
 			return false, why
 		end
 		moving.healing = false
+		Events.notice(state, "rail", { x = x, y = y, owner = id }, "rail")
 	elseif req.action == "envoy" then
 		local ok, why = Villages.envoy(state, p, c)
 		if not ok then
@@ -266,8 +301,12 @@ function A.apply(state, id, req, Systems)
 		state.nextId = state.nextId + 1
 		World.ensureTerritories(state, Hex, false)
 		log(p.name .. " founded " .. founded.name)
+		Events.notice(state, "found", founded)
 	else
 		return false, "Unknown action"
+	end
+	if req.action == "heal" or req.action == "envoy" then
+		Events.notice(state, "order", nil, req.action, id)
 	end
 	Hostiles.clear(state, Systems)
 	World.reveal(state, Hex, Systems)

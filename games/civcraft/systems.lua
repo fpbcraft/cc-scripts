@@ -1,6 +1,15 @@
 -- CIVCRAFT 4X data & deterministic mechanics, no dependencies on UI/peripherals.
 local M = {}
+local AI = dofile("/games/civcraft/ai.lua")
+local Actions = dofile("/games/civcraft/actions.lua")
+local Combat = dofile("/games/civcraft/combat.lua")
 local Content = dofile("/games/civcraft/content.lua")
+local Economy = dofile("/games/civcraft/economy.lua")
+local Events = dofile("/games/civcraft/events.lua")
+local Hex = dofile("/games/civcraft/hex.lua")
+local Landmarks = dofile("/games/civcraft/landmarks.lua")
+local Rails = dofile("/games/civcraft/railways.lua")
+local World = dofile("/games/civcraft/world.lua")
 M.civs = Content.civs
 M.techs = Content.techs
 M.techOrder = Content.techOrder
@@ -12,14 +21,6 @@ M.resourceOrder = Content.resourceOrder
 M.wonders = Content.wonders
 M.naturalWonders = Content.naturalWonders
 M.jobs = { "food", "wood", "science" }
-local Hex = dofile("/games/civcraft/hex.lua")
-local Combat = dofile("/games/civcraft/combat.lua")
-local World = dofile("/games/civcraft/world.lua")
-local Economy = dofile("/games/civcraft/economy.lua")
-local Landmarks = dofile("/games/civcraft/landmarks.lua")
-local Rails = dofile("/games/civcraft/railways.lua")
-local AI = dofile("/games/civcraft/ai.lua")
-local Actions = dofile("/games/civcraft/actions.lua")
 M.exchange = Economy.exchange
 function M.territoryCity(state, x, y)
 	return World.territoryCity(state, Hex, x, y)
@@ -222,6 +223,14 @@ function M.migrate(state)
 		end
 		p.ai = p.ai or false
 		p.explored = p.explored or {}
+		if not p.knownLandmarks then
+			p.knownLandmarks = {}
+			for tileKey in pairs(state.world and state.world.landmarks or {}) do
+				if p.explored[tileKey] and state.world.landmarks[tileKey].natural then
+					p.knownLandmarks[tileKey] = true
+				end
+			end
+		end
 		p.food = p.food or 0
 		p.wood = p.wood or 0
 		p.science = p.science or 0
@@ -560,6 +569,7 @@ local function spawn(state, p, c, id, hex)
 	end
 	state.units[#state.units + 1] =
 		{ id = state.nextId, owner = p.id, x = x, y = y, kind = id, moved = true, movesLeft = 0 }
+	Events.notice(state, "spawn", state.units[#state.units])
 	state.nextId = state.nextId + 1
 	if id == "settler" then
 		p.settlersTrained = (p.settlersTrained or 0) + 1
@@ -755,6 +765,13 @@ function M.production(state, hex)
 								completed = spawn(state, p, c, pr.id, hex)
 							end
 							if completed then
+								if pr.kind ~= "unit" then
+									local target = c
+									if pr.kind == "wonder" then
+										target = { x = pr.x, y = pr.y, owner = c.owner }
+									end
+									Events.notice(state, pr.kind, target, pr.id)
+								end
 								c.project = nil
 								c.projectProgress = c.projectProgress or {}
 								c.projectProgress[pr.kind .. ":" .. pr.id] = nil
@@ -775,6 +792,7 @@ function M.production(state, hex)
 				local unit = state.units[index]
 				if unit.owner == p.id then
 					p.gold = p.gold + ((M.units[unit.kind] or {}).upkeep or 1)
+					Events.notice(state, "disband", unit)
 					table.remove(state.units, index)
 					if p.gold >= 0 then
 						break
@@ -792,6 +810,7 @@ function M.production(state, hex)
 			if progress >= M.techs[id].cost then
 				p.techs[id] = true
 				p.researchTarget = nil
+				Events.notice(state, "research", nil, id, p.id)
 			end
 		end
 	end

@@ -1,7 +1,7 @@
 -- Persistent natural landmarks and world-unique constructed wonders.
+local Biomes = dofile("/games/civcraft/biomes.lua")
 local Content = dofile("/games/civcraft/content.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
-local Biomes = dofile("/games/civcraft/biomes.lua")
 local Random = dofile("/games/civcraft/world_random.lua")
 local L = {}
 local function key(x, y)
@@ -144,6 +144,23 @@ function L.complete(state, city, project, systems)
 	state.world.landmarks = state.world.landmarks or {}
 	state.world.landmarks[key(project.x, project.y)] =
 		{ kind = project.id, cityId = city.id, natural = false }
+	for _, player in ipairs(state.players) do
+		if player.id == city.owner then
+			local tileKey = key(project.x, project.y)
+			player.explored = player.explored or {}
+			player.explored[tileKey] = true
+			player.mapMemory = player.mapMemory
+				or {
+					version = 1,
+					landmarks = {},
+					rails = {},
+					spawners = {},
+				}
+			player.mapMemory.landmarks[tileKey] = { kind = project.id, natural = false }
+			player.knownLandmarks = player.knownLandmarks or {}
+			player.knownLandmarks[tileKey] = true
+		end
+	end
 	-- A competing city's reservation is released; its invested industry is retained.
 	for _, other in ipairs(state.cities) do
 		if

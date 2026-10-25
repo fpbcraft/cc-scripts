@@ -246,7 +246,7 @@ function H.reachable(state, unit, owner, Systems)
 							visible(nx, ny)
 							and (stats.strength or 0) > 0
 							and (not unit.attackedRound or unit.attackedRound ~= state.round)
-							and (stats.range or 1) >= 1
+							and (stats.range or 1) == 1
 							and (stats.naval or (not state.world or H.terrain(unit.x, unit.y, state) ~= "water" and H.terrain(
 								nx,
 								ny,

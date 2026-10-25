@@ -8,6 +8,8 @@ lua5.3 tests/civcraft_world_benchmark.lua
 
 Measured locally using the Lua 5.3 runtime provided by Lupa 2.8 on the development Mac. These numbers measure game code with mocked peripherals; they do not predict CC:Tweaked FPS, rednet latency, disk latency or late-game AI processing.
 
+These baseline measurements predate action journals and map-memory caches; rerun the benchmark on the final implementation before release.
+
 Seed 238711, Continents, four civilizations, one city/scout per civilization. Player one has explored the whole map. Each case generates a world, calculates ordinary and continent-wide movement, constructs a filtered snapshot, serializes/restores a save, draws the map twice and runs four AI turns. The serialization helper approximates CraftOS table saves; actual `textutils.serialize` timings and bytes can differ. Retained memory is collected after the scenario and includes renderer buffers, snapshot/save data and simulation state.
 
 | Size | Dimensions | Generate ms | Full land path ms | Snapshot ms | Save/load ms | Draw/redraw ms | Four AI turns ms | Approx save KiB | Retained KiB |

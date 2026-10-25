@@ -1,4 +1,5 @@
 -- Independent villager city-states: defense, envoys and contested alliances.
+local Events = dofile("/games/civcraft/events.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local V = {}
 V.types = {
@@ -193,6 +194,7 @@ function V.round(state, systems, combat)
 						movesLeft = 0,
 						moved = true,
 					}
+					Events.notice(state, "spawn", state.units[#state.units])
 					state.nextId = state.nextId + 1
 				end
 			end
