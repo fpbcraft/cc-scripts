@@ -127,15 +127,14 @@ assert(state(wired, wireOut).sign == 1, "Moving the redstone source turns off th
 local diagonals = E.sandbox()
 put(diagonals, 2, 3, "O", 1)
 local misaligned = put(diagonals, 3, 4, "G", 0)
-assert(state(diagonals, misaligned).rate == 2 and state(diagonals, misaligned).sign == -1,
-  "Diagonal large/small cogs couple regardless of orientation")
+assert(
+  state(diagonals, misaligned).rate == 2 and state(diagonals, misaligned).sign == -1,
+  "Diagonal large/small cogs couple regardless of orientation"
+)
 -- Starting redstone block removal must survive a save/load roundtrip.
 local fixture = E.new(8, true)
 local restored = E.new(8)
-assert(
-  E.restore(restored, E.snapshot(fixture)) and E.evaluate(restored).win,
-  "Clutch redstone removal is serialized"
-)
+assert(E.restore(restored, E.snapshot(fixture)) and E.evaluate(restored).win, "Clutch redstone removal is serialized")
 -- Contradictory loops are jams, not arbitrary winner-takes-all power.
 assert(not E.evaluate(E.new(16, true)).jam, "Three gearbox outputs must coexist")
 print("COGWORKS: redstone blocks/dust, diagonal cogs, crossing shafts, nearby belts and gearboxes passed.")
