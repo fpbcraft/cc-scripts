@@ -258,14 +258,14 @@ model.pending = "newGame"
 r:draw(model)
 click("confirm")
 click("cancel")
--- Draw the belt between parallel pulleys on the new stage eleven.
+-- Draw a verified belt span in chapter four's transmission-yard stage.
 local spanCount = 0
 local originalSpan = r.drawSpan
 function r:drawSpan(...)
   spanCount = spanCount + 1
   return originalSpan(self, ...)
 end
-model.game = E.new(11, true)
+model.game = E.new(26, true)
 model.result = E.evaluate(model.game)
 model.scene = "game"
 r:draw(model)
@@ -292,7 +292,7 @@ function r:fontLarge(...)
   return large(self, ...)
 end
 model.scene = "briefing"
-model.briefing = B.forLevel(11)
+model.briefing = B.forLevel(26)
 model.settings.animations = true
 r:draw(model)
 assert(largeTitles == 0, "Briefing title animates into view")
