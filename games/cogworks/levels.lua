@@ -468,9 +468,15 @@ local function bonusFor(stage, key, index)
   -- A category restriction must be satisfied by at least one certified
   -- reference. When the authored transmission motif fundamentally requires
   -- that part, substitute a comparable feasible constraint.
-  if key == "no_gearbox" and countKind(stage.build, "Q") > 0 then key = "gear_limit" end
-  if key == "no_belt" and countKind(stage.build, "V") > 0 then key = "gear_limit" end
-  if key == "no_chain" and countKind(stage.build, "D") > 0 then key = "budget" end
+  if key == "no_gearbox" and countKind(stage.build, "Q") > 0 then
+    key = "gear_limit"
+  end
+  if key == "no_belt" and countKind(stage.build, "V") > 0 then
+    key = "gear_limit"
+  end
+  if key == "no_chain" and countKind(stage.build, "D") > 0 then
+    key = "budget"
+  end
   local definition = assert(names[key], "Unknown bonus " .. tostring(key))
   local spec = { id = "extra" .. index, name = definition[1], description = definition[2], type = definition[3] }
   if key == "budget" or key == "exact" then
