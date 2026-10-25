@@ -39,7 +39,7 @@ T.lessons = {
   C = {
     title = "CLUTCH",
     lines = {
-      "USE SWITCH TO APPLY REDSTONE POWER.",
+      "REDSTONE BLOCKS OR DUST APPLY POWER.",
       "POWERED CLUTCHES DISCONNECT SHAFTS.",
     },
   },
@@ -74,13 +74,13 @@ T.lessons = {
 }
 T.introductions = {
   [1] = { "I" },
-  [2] = { "Q" },
-  [4] = { "G" },
-  [6] = { "D" },
-  [7] = { "Z", "B" },
-  [8] = { "C", "R" },
-  [9] = { "O" },
-  [11] = { "V" },
+  [9] = { "Q" },
+  [17] = { "G" },
+  [25] = { "O" },
+  [33] = { "D" },
+  [41] = { "V" },
+  [49] = { "Z", "C", "R", "B" },
+  [57] = { "Q", "O", "V", "R" },
 }
 T.descriptions = {
   I = "STRAIGHT AXIAL SHAFT; SAME RPM AND SPIN",
