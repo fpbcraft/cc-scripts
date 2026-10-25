@@ -103,7 +103,7 @@ local function start()
         -- Vanilla Advanced Monitors offer only tap; select occupied cells and
         -- expose small rotate/remove buttons on that cell.
         if action == "cell" then
-          action = "inspect"
+          action = app.selected == "erase" and "remove" or "inspect"
         end
         if not act(action, x, y) then
           break
@@ -115,7 +115,7 @@ local function start()
         if action then
           app.hasLeftInput = true
           if action == "cell" then
-            action = "inspect"
+            action = app.selected == "erase" and "remove" or "inspect"
           end
           if not act(action, x, y) then
             break
