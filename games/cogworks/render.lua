@@ -267,12 +267,10 @@ function R:piece(x, y, size, tile, light)
         self:rect(cx - 3, cy - 3, 1, 7, 4)
         self:rect(cx + 3, cy - 3, 1, 7, 4)
       end
-    elseif tile.kind == "B" then
-      self:rect(cx - 3, cy - 3, 7, 7, 7)
+    elseif tile.kind == "Z" or tile.kind == "C" then
+      self:rect(cx - 3, cy - 3, 7, 7, tile.engaged and 8 or 9)
       self:rect(cx - 2, cy - 2, 5, 5, 1)
-      self:font(cx - 1, cy - 2, "2", 15)
-      -- Green tick indicates the speed controller input direction.
-      self:rect(cx + DX[tile.r + 1] * 4, cy + DY[tile.r + 1] * 4, 2, 2, 9)
+      self:font(cx - 1, cy - 2, tile.kind, tile.engaged and 8 or 9)
     else
       self:rect(cx - 2, cy - 2, 5, 5, core)
       self:rect(cx - 1, cy - 1, 3, 3, 1)
@@ -316,8 +314,6 @@ function R:piece(x, y, size, tile, light)
     self:rect(x + 1, y + 1, size - 2, size - 2, 10)
     self:font(x + 3, y + 1, "CW", 15)
     self:font(x + 3, y + 7, "1X", 6)
-  elseif tile.kind == "B" or tile.kind == "O" then
-    self:rect(cx + DX[tile.r + 1] * 4, cy + DY[tile.r + 1] * 4, 2, 2, 9)
   end
 end
 -- Draw belts/chains across every intervening cell, including stone. Draw over
@@ -345,24 +341,24 @@ function R:drawSpan(x1, y1, x2, y2, kind, powered)
 end
 function R:drawSpans(g, result)
   for _, tile in ipairs(g.tiles) do
-    if tile.kind == "V" or tile.kind == "D" then
-      for dir = 1, 2 do
-        local other = E.connection(g, tile, dir)
-        if other and other.kind == tile.kind and math.abs(other.x - tile.x) + math.abs(other.y - tile.y) > 1 then
+    if tile.kind == "V" or tile.kind == "G" or tile.kind == "O" or tile.kind == "D" then
+      for _, link in ipairs(E.meshes(g, tile)) do
+        local other = link.tile
+        if other.id > tile.id then
           local x1 = self.boardX + (tile.x - 1) * self.cell + 7
           local y1 = self.boardY + (tile.y - 1) * self.cell + 7
           local x2 = self.boardX + (other.x - 1) * self.cell + 7
           local y2 = self.boardY + (other.y - 1) * self.cell + 7
-          local dx = DX[dir + 1]
-          local dy = DY[dir + 1]
-          self:drawSpan(
-            x1 + dx * 6,
-            y1 + dy * 6,
-            x2 - dx * 6,
-            y2 - dy * 6,
-            tile.kind,
-            result.lights[tile.id].powered and result.lights[other.id].powered
-          )
+          local powered = result.lights[tile.id].powered and result.lights[other.id].powered
+          if link.belt then
+            local dx = x2 > x1 and 1 or (x2 < x1 and -1 or 0)
+            local dy = y2 > y1 and 1 or (y2 < y1 and -1 or 0)
+            self:drawSpan(x1 + dx * 6, y1 + dy * 6, x2 - dx * 6, y2 - dy * 6, "V", powered)
+          else
+            local mx = math.floor((x1 + x2) / 2)
+            local my = math.floor((y1 + y2) / 2)
+            self:rect(mx - 1, my - 1, 3, 3, powered and 6 or (link.chain and 11 or 14))
+          end
         end
       end
     end
@@ -422,7 +418,7 @@ function R:page(title, subtitle)
 end
 function R:drawGame(m)
   local g, result = m.game, m.result
-  self:page("COGWORKS  " .. string.format("%02d/30", g.number))
+  self:page(g.sandbox and "COGWORKS  SANDBOX" or ("COGWORKS  " .. string.format("%02d/%02d", g.number, #E.levels)))
   self:font(77, 5, "MV " .. g.moves, 4)
   self:button(120, 2, 28, 11, "SAVE", "save")
   self:button(150, 2, 36, 11, "PAUSE", "pause")
@@ -452,47 +448,41 @@ function R:drawGame(m)
   end
   self:rect(114, 16, 83, 97, 1)
   self:font(117, 19, "PARTS", 11)
-  self:font(163, 19, result.correct .. "/" .. result.goals, result.win and 9 or 15)
-  -- Two columns keep all nine mechanisms visible at once.
+  self:font(163, 19, g.sandbox and "FREE" or (result.correct .. "/" .. result.goals), result.win and 9 or 15)
+  -- Two columns keep the eight Create-style mechanisms visible.
   for n, kind in ipairs(E.order) do
     local col = (n - 1) % 2
     local row = math.floor((n - 1) / 2)
     local x = 116 + col * 40
     local y = 26 + row * 10
     local count = g.remaining[kind] or 0
+    local countText = count == math.huge and "++" or tostring(count)
     local active = m.selected == kind
     self:rect(x, y, 38, 9, active and 6 or 3)
     self:rect(x + 1, y + 1, 36, 7, active and 2 or 1)
     self:rect(x + 2, y + 1, 7, 7, count > 0 and E.parts[kind].color or 4)
-    self:font(x + 4, y + 2, kind == "B" and "2" or kind, 0)
+    self:font(x + 4, y + 2, kind, 0)
     local alias = ({
       I = "SHAFT",
-      L = "ELBOW",
-      T = "SPLIT",
-      G = "GEAR",
-      B = "2X",
+      G = "COG",
+      O = "LARGE",
       Q = "BOX",
-      O = "COG",
-      V = "BELT",
       D = "CHAIN",
+      V = "BELT",
+      Z = "SHIFT",
+      C = "CLUTCH",
     })[kind]
     self:fontFit(x + 11, y + 2, alias, count > 0 and 15 or 4, 20)
-    self:font(x + 32, y + 2, tostring(count), count > 0 and 9 or 4)
+    self:font(x + 31, y + 2, countText, count > 0 and 9 or 4)
     self:add(x, y, 38, 9, "tool", kind)
   end
-  self:button(
-    117,
-    77,
-    77,
-    9,
-    m.selected == "erase" and "ERASING" or "REMOVE",
-    "tool",
-    "erase",
-    m.selected == "erase" and 8 or 3
-  )
+  self:button(117, 77, 38, 9, m.selected == "erase" and "ERASE" or "REMOVE", "tool", "erase",
+    m.selected == "erase" and 8 or 3)
+  self:button(157, 77, 38, 9, m.selected == "switch" and "ON/OFF" or "SWITCH", "tool", "switch",
+    m.selected == "switch" and 6 or 3)
   -- Persistent bonus objectives are visible while building, not buried in
   -- a modal screen. Labels are deliberately short enough for this pane.
-  self:font(117, 87, "BONUS GOALS", 6)
+  self:font(117, 87, g.sandbox and "UNLIMITED PARTS" or "BONUS GOALS", 6)
   local bonuses = E.challenges(g, result)
   local awarded = (m.progress.awards and m.progress.awards[g.number]) or {}
   for i, bonus in ipairs(bonuses) do
@@ -503,7 +493,7 @@ function R:drawGame(m)
     self:rect(117, y, 4, 4, done and 9 or (bonus.earned and 6 or 3))
     self:fontFit(124, y, label, done and 9 or (bonus.earned and 6 or 5), 70)
   end
-  if #bonuses == 0 then
+  if #bonuses == 0 and not g.sandbox then
     self:font(124, 94, "FROM LEVEL 2", 4)
   end
   self:drawSpans(g, result)
@@ -544,7 +534,7 @@ function R:drawBriefing(m)
   self:rect(0, 0, 200, 120, 0)
   self:rect(0, 0, 200, 15, 1)
   self:font(8, 5, "COGWORKS / MISSION BRIEF", 6)
-  self:font(168, 5, string.format("%02d/30", b.number), 15)
+  self:font(164, 5, string.format("%02d/%02d", b.number, #E.levels), 15)
   self:rect(0, 14, 200, 1, 7)
   for x = 0, 199, 9 do
     local offset = motion and (tick * 2) % 9 or 0
@@ -613,7 +603,7 @@ function R:drawBriefing(m)
       self:rect(x + 1, y, 6, 5, E.parts[part.kind].color)
       self:font(x + 2, y, part.kind, 0)
       local labels =
-        { I = "SHFT", L = "ELBW", T = "SPLT", G = "GEAR", B = "2X", Q = "BOX", O = "COG", V = "BELT", D = "CHN" }
+        { I = "SHFT", G = "COG", O = "LG", Q = "BOX", D = "CHN", V = "BELT", Z = "SHIFT", C = "CLTCH" }
       self:fontFit(x + 9, y, labels[part.kind], 15, 16)
       self:font(x + 26, y, tostring(part.count), 6)
     end
@@ -656,17 +646,13 @@ function R:drawTutorial(m)
     self:drawSpan(59, 61, 129, 61, key, true)
     self:font(93, 51, key == "V" and "BELT" or "CHAIN", 6)
   else
-    local rpm = (key == "B" or key == "O") and 2 or 1
-    local sign = (key == "G" or key == "O") and -1 or 1
+    local rpm = key == "O" and 2 or 1
+    local sign = (key == "G" or key == "O" or key == "Q") and -1 or 1
     self:piece(47, 55, 13, { kind = "S", r = 1 }, powered)
     self:line(60, 61, 76, 61, 6)
     self:piece(79, 55, 13, { kind = key, r = 1, enabled = true }, powered)
-    if key == "L" then
-      self:line(85, 69, 85, 74, 6)
-    else
-      self:line(92, 61, 116, 61, 6)
-      self:piece(120, 55, 13, { kind = "M", r = 3, sign = sign, speed = rpm }, powered)
-    end
+    self:line(92, 61, 116, 61, 6)
+    self:piece(120, 55, 13, { kind = "M", r = 3, sign = sign, speed = rpm }, powered)
   end
   self:fontFit(23, 80, lesson.lines[1], 15, 155)
   self:fontFit(23, 87, lesson.lines[2], 11, 155)
@@ -674,20 +660,30 @@ function R:drawTutorial(m)
   self:button(110, 94, 65, 9, m.tutorial.index == #m.tutorial.steps and "GOT IT" or "NEXT", "tutorialNext")
 end
 function R:drawTitle(m)
-  self:page("COGWORKS", "KINETIC WORKSHOP  /  30 PUZZLES")
-  self:rect(27, 32, 146, 79, 1)
-  self:rect(33, 38, 134, 67, 2)
-  self:font(59, 43, "BUILD THE NETWORK", 6)
+  self:page("COGWORKS", "KINETIC WORKSHOP / " .. #E.levels .. " PUZZLES")
+  self:rect(27, 29, 146, 86, 1)
+  self:rect(33, 32, 134, 80, 2)
+  self:font(59, 36, "BUILD THE NETWORK", 6)
   local hasSave = false
-  for _, s in ipairs(m.slots) do
-    if not s.empty then
+  for _, slot in ipairs(m.slots) do
+    if not slot.empty then
       hasSave = true
     end
   end
-  self:button(54, 55, 92, 10, "CONTINUE", hasSave and "continue" or nil)
-  self:button(54, 67, 92, 10, "SAVE SLOTS", "slots")
-  self:button(54, 79, 92, 10, "SETTINGS", "settings")
-  self:button(54, 91, 92, 10, "EXIT", "exit")
+  local options = {
+    { "CONTINUE", hasSave and "continue" or nil },
+    { "SAVE SLOTS", "slots" },
+    { "FREE SANDBOX", "sandbox" },
+  }
+  if m.dev then
+    options[#options + 1] = { "DEV: ALL LEVELS", "devLevels" }
+  end
+  options[#options + 1] = { "SETTINGS", "settings" }
+  options[#options + 1] = { "EXIT", "exit" }
+  local spacing = m.dev and 11 or 13
+  for i, item in ipairs(options) do
+    self:button(54, 43 + (i - 1) * spacing, 92, 10, item[1], item[2])
+  end
 end
 function R:drawSlots(m)
   self:page("SELECT SAVE SLOT", "SELECT A SLOT TO LOAD OR START")
@@ -698,22 +694,24 @@ function R:drawSlots(m)
     if slot.empty then
       self:font(20, y + 12, "EMPTY - NEW GAME", 5)
     else
-      self:font(20, y + 12, "LEVEL " .. slot.level .. "/30   BONUSES " .. slot.trophies, 9)
+      self:font(20, y + 12, "LEVEL " .. slot.level .. "/" .. #E.levels   BONUSES " .. slot.trophies, 9)
     end
     self:add(12, y, 176, 23, "slot", slot.number)
   end
   self:button(69, 110, 62, 9, "BACK", "back")
 end
 function R:drawPause(m)
-  self:page("GAME PAUSED", "SLOT " .. m.slot .. "  /  LEVEL " .. m.game.number)
+  self:page("GAME PAUSED", m.game.sandbox and "SANDBOX / FREE BUILD"
+    or (m.devSession and "DEV SESSION / LEVEL " .. m.game.number
+    or "SLOT " .. m.slot .. " / LEVEL " .. m.game.number))
   local items = {
     { "RESUME", "resume" },
-    { "SAVE GAME", "save" },
-    { "SELECT LEVEL", "levels" },
+    { m.game.sandbox and "CLEAR WORKSHOP" or "SAVE GAME", m.game.sandbox and "clearSandbox" or "save" },
+    { m.game.sandbox and "FREE WORKSHOP" or "SELECT LEVEL", m.game.sandbox and nil or "levels" },
     { "SETTINGS", "settings" },
     { "HELP", "help" },
-    { "RESTART LEVEL", "restart" },
-    { "NEW CAMPAIGN", "newGame" },
+    { m.game.sandbox and "CLEAR WORKSHOP" or "RESTART LEVEL", m.game.sandbox and "clearSandbox" or "restart" },
+    { m.game.sandbox and "FREE BUILD" or "NEW CAMPAIGN", (m.game.sandbox or m.devSession) and nil or "newGame" },
     { "TITLE MENU", "title" },
   }
   for i, item in ipairs(items) do
@@ -737,8 +735,9 @@ function R:drawLevels(m)
   for i = 1, #E.levels do
     local x = 10 + ((i - 1) % 6) * 30
     local y = 30 + math.floor((i - 1) / 6) * 15
-    local unlocked = i <= m.progress.unlocked
-    self:button(x, y, 28, 12, string.format("%02d", i), unlocked and "level" or nil, i, i == m.game.number and 6 or 3)
+    local unlocked = m.dev or i <= m.progress.unlocked
+    self:button(x, y, 28, 12, string.format("%02d", i), unlocked and "level" or nil, i,
+      m.game and i == m.game.number and 6 or 3)
   end
   self:button(70, 108, 60, 10, "BACK", "back")
 end
@@ -756,14 +755,14 @@ function R:drawHelp(m)
     "S: ENGINE CW 1X",
     "M: PRESS NEEDS CW/CCW",
     "I: STRAIGHT SHAFT",
-    "L: 90 DEG ELBOW",
-    "T: THREE WAY SPLIT",
-    "G: FLIPS CW / CCW",
-    "B: DOUBLES SPEED",
-    "Q: FOUR WAY BOX",
-    "O: 2X + SPIN REVERSE",
-    "V: SHORT SPAN BELT",
-    "D: LONG SPAN CHAIN",
+    "G: AXIAL / SIDE COG",
+    "O: LARGE 2X COG",
+    "Q: REVERSE GEARBOX",
+    "D: ENCASED CHAIN",
+    "V: CLEAR-SPAN BELT",
+    "Z: GEARSHIFT REVERSE",
+    "C: CLUTCH CUT-OFF",
+    "SWITCH: REDSTONE ON",
   }
   local right = {
     "CW = CLOCKWISE",
@@ -772,10 +771,10 @@ function R:drawHelp(m)
     "TAP EMPTY TO BUILD",
     "TAP A PART TO ROTATE",
     "REMOVE TO RECLAIM",
-    "PAIR BELT ENDS",
-    "CHECK SELECTED INFO",
-    "CHAIN BRIDGES 2 CELLS",
-    "GEAR FLIPS ROTATION",
+    "COGS MESH PERPENDICULAR",
+    "LARGE + SMALL = 2X",
+    "BELTS NEED CLEAR SPACE",
+    "REDSTONE TOGGLE TOOL",
     "BONUSES ARE OPTIONAL",
     "AUTO SAVES PER SLOT",
   }
@@ -914,7 +913,7 @@ function R:drawText(m)
     end
   elseif m.scene == "slots" then
     for i, slot in ipairs(m.slots) do
-      local labelText = slot.empty and "EMPTY - NEW" or ("LV " .. slot.level .. "/30 BONUS " .. slot.trophies)
+      local labelText = slot.empty and "EMPTY - NEW" or ("LV " .. slot.level .. "/" .. #E.levels BONUS " .. slot.trophies)
       btn(4, 5 + (i - 1) * 4, math.min(w - 8, 42), "SLOT " .. i .. "  " .. labelText, "slot", i)
     end
     btn(4, h - 2, 16, "BACK", "back")
