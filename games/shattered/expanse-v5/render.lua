@@ -394,7 +394,6 @@ function Renderer:icon(x, y, name, c)
       dock = "D",
       fort = "#",
       energy = "E",
-      alloy = "A",
       science = "S",
       influence = "I",
       research = "R",

@@ -1,7 +1,11 @@
 # The runtime is CC:Tweaked/CraftOS rather than stock Lua.
 # 'any' on APIs permits peripheral/mod-specific methods without misleading signatures.
 base: lua53
+lua_versions:
+  - lua53
 globals:
+  "...":
+    any: true
   _G:
     any: true
   _ENV:
