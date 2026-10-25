@@ -49,7 +49,7 @@ software alone for machinery safety.
 
 Source code is automatically formatted with [StyLua](https://github.com/JohnnyMorganz/StyLua)
 (2.6.0) and statically checked with [Selene](https://github.com/Kampfkarren/selene)
-(0.32.0). Both tools run as required checks on pull requests and on `main`.
+(0.32.0). Both tools run in CI on pull requests and on pushes to `main`.
 The configuration is in `.stylua.toml`, `selene.toml`, and `cc-tweaked.yml`.
 The latter declares CraftOS globals so they are not mistaken for undefined variables.
 
