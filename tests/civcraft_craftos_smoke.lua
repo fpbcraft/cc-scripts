@@ -6,6 +6,8 @@
 local Actions = dofile("/games/civcraft/actions.lua")
 local Events = dofile("/games/civcraft/events.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
+local Playback = dofile("/games/civcraft/playback_ui.lua")
+local Presentation = dofile("/games/civcraft/presentation.lua")
 local Saves = dofile("/games/civcraft/saves.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local UI = dofile("/games/civcraft/ui.lua")
@@ -37,7 +39,7 @@ state.units[1] = {
 	kind = "scout",
 	x = start.x + 1,
 	y = start.y,
-	movesLeft = 4,
+	movesLeft = 6,
 	standby = true,
 }
 Systems.migrate(state)
@@ -50,7 +52,7 @@ local ui = UI.new(term.current(), function(action, request)
 	applied = applied + 1
 end)
 local function draw()
-	ui:draw(state, 1, { screen = "game" })
+	ui:draw(Presentation.capture(state, 1), 1, { screen = "game" })
 end
 local function click(label)
 	for _, button in ipairs(ui.r.buttons) do
@@ -81,9 +83,8 @@ draw()
 assert(find("MOVE / ATTACK"))
 local target
 for _, destination in ipairs(ui.reachable) do
-	if not destination.attack then
+	if not destination.attack and (not target or #destination.path > #target.path) then
 		target = destination
-		break
 	end
 end
 assert(target, "Native UI offered no legal scout movement")
@@ -93,6 +94,39 @@ assert(click("CONFIRM"))
 assert(not state.units[1].standby and applied == 2)
 local before = Events.forPlayer(state, 1)
 assert(before.lastSeq >= 2)
+draw()
+local movement
+for _, event in ipairs(ui.playback.feed) do
+	if event.type == "move" then
+		movement = event
+	end
+end
+assert(movement and #movement.paths[1] > 2, "Native feed must retain the approved route")
+ui.animationPreferences.reducedMotion = false
+ui.animationPreferences.speed = "normal"
+ui.playback:setSpeed("normal")
+Playback.watch(ui, { movement }, true)
+local began = os.epoch("utc")
+local positions, frames = {}, 0
+repeat
+	draw()
+	frames = frames + 1
+	local sprite = ui.animationFrame and ui.animationFrame.sprites[1]
+	if sprite then
+		positions[string.format("%.2f:%.2f", sprite.position.x, sprite.position.y)] = true
+	end
+	sleep(0.05)
+until not ui:animating()
+local seconds = (os.epoch("utc") - began) / 1000
+local distinct = 0
+for _ in pairs(positions) do
+	distinct = distinct + 1
+end
+assert(distinct >= 3 and seconds < 5, "Native playback must interpolate and finish promptly")
+Playback.watch(ui, { movement })
+draw()
+assert(ui:animating() and click("SKIP"))
+assert(not ui:animating() and #ui.playback.feed > 0, "Skip retains the observed summary")
 assert(Saves.save(3, state))
 local restored = Saves.load(3)
 assert(restored.campaignID == state.campaignID and restored.eventJournal.version == 1)
@@ -108,6 +142,10 @@ report.write(textutils.serialize({
 	rows = ui.r.ch,
 	appliedOrders = applied,
 	replaySeq = before.lastSeq,
+	animationFrames = frames,
+	animationPositions = distinct,
+	animationSeconds = seconds,
+	animatedHexes = #movement.paths[1] - 1,
 	saveReload = true,
 }))
 report.close()

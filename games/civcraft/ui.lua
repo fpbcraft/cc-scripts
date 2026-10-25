@@ -4,6 +4,7 @@ local Combat = dofile("/games/civcraft/combat.lua")
 local GameView = dofile("/games/civcraft/game_view.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
+local Playback = dofile("/games/civcraft/playback_ui.lua")
 local Renderer = dofile("/games/civcraft/render.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local World = dofile("/games/civcraft/world.lua")
@@ -42,6 +43,7 @@ function UI.new(m, dispatch)
 		productionPage = 1,
 		workCity = nil,
 	}, UI)
+	Playback.attach(self)
 	return self
 end
 function UI:message(s)
@@ -75,6 +77,9 @@ function UI:turnProgress(title, detail)
 	r:finish()
 end
 function UI:command(action, params)
+	if Playback.command(self, action) then
+		return
+	end
 	self.localNotice = nil
 	self.notice = ""
 	if action == "disband" and params and not params.confirmed then
@@ -100,6 +105,7 @@ function UI:command(action, params)
 		end
 	end
 	if action == "end" then
+		Playback.endTurn(self)
 		self.placement = nil
 		self.pendingMove = nil
 		self.cityStrikeSource = nil
@@ -356,12 +362,16 @@ function UI:draw(state, playerID, opts)
 		self.notice = ""
 		self.activeScroll = nil
 		self.selected = { x = 2, y = 2, empty = true }
+		self.recap = nil
 		for _, city in ipairs(state.cities or {}) do
 			if city.owner == playerID then
 				self.selected = { x = city.x, y = city.y }
 				break
 			end
 		end
+	end
+	if self.recap and self.recap.campaign ~= (state and state.campaignID) then
+		self.recap = nil
 	end
 	self.lastPlayer = playerID
 	if self.selected.kind == "unit" and self.selected.unitID then
@@ -412,6 +422,7 @@ function UI:draw(state, playerID, opts)
 		self.endConfirm = nil
 		self.lastDrag = nil
 	end
+	Playback.update(self, state, playerID, opts)
 	r:begin()
 	self.hexTargets = {}
 	self.mapViewport = nil
@@ -524,6 +535,15 @@ function UI:draw(state, playerID, opts)
 			{ "RESUME", "resume" },
 			{ "SAVE", "save" },
 			{ opts.audio == false and "AUDIO OFF" or "AUDIO ON", "audio" },
+			{ "ANIMATIONS " .. self.animationPreferences.speed:upper(), "animationSpeed" },
+			{
+				"REDUCED MOTION " .. (self.animationPreferences.reducedMotion and "ON" or "OFF"),
+				"reducedMotion",
+			},
+			{
+				"AUTO PLAYBACK " .. (self.animationPreferences.automatic and "ON" or "OFF"),
+				"automaticPlayback",
+			},
 			{ "MAIN MENU", "title" },
 			{ "EXIT", "exit" },
 		}) do
@@ -771,6 +791,9 @@ function UI:draw(state, playerID, opts)
 			self.reportOffset = 0
 		end
 	end
+	if self.recap and self.panel == "context" then
+		self.panel = "recap"
+	end
 	GameView.draw(self, state, mine or { techs = {}, name = "OBSERVER" })
 
 	r:finish()
@@ -966,6 +989,9 @@ function UI:back()
 		return true
 	end
 	if self.panel ~= "context" then
+		if self.panel == "recap" then
+			self.recap = nil
+		end
 		self.panel = "context"
 		self.pointerStart = nil
 		self.techDrag = nil
@@ -1232,6 +1258,9 @@ function UI:tap(x, y)
 end
 function UI:resize()
 	self.r:resize()
+end
+function UI:animating()
+	return self.playback and (self.playback.active ~= nil or #self.playback.pending > 0)
 end
 function UI:close()
 	self.r:close()

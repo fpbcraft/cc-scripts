@@ -13,14 +13,15 @@ civcraft_test_root=$(mktemp -d /tmp/civcraft-native.XXXXXX)
 /Applications/CraftOS-PC.app/Contents/MacOS/craftos \
   --headless --directory "$civcraft_test_root" \
   --mount-ro "/repo=$PWD" \
-  --exec 'fs.copy("/repo/games/civcraft","/games/civcraft");fs.copy("/repo/tests","/tests");local results={};for _,name in ipairs({"civcraft_events_test.lua","civcraft_craftos_smoke.lua","civcraft_craftos_session.lua"})do results[name]=shell.run("/tests/"..name)end;local out=assert(fs.open("/native-results.txt","w"));out.write(textutils.serialize({host=_HOST,results=results}));out.close();os.shutdown()'
+  --exec 'fs.copy("/repo/games/civcraft","/games/civcraft");fs.copy("/repo/tests","/tests");local results={};for _,name in ipairs({"civcraft_events_test.lua","civcraft_animations_test.lua","civcraft_craftos_smoke.lua","civcraft_craftos_session.lua"})do results[name]=shell.run("/tests/"..name)end;local out=assert(fs.open("/native-results.txt","w"));out.write(textutils.serialize({host=_HOST,results=results}));out.close();os.shutdown()'
 ```
 
 Results are under `$civcraft_test_root/computer/0/`:
 
 - `native-results.txt`: each program's pass/fail result and emulator version.
 - `civcraft-native-smoke.txt`: renderer mode, actual button commands, journal
-  sequence and successful filesystem save/reload.
+  sequence, interpolated positions, elapsed playback time, successful Skip and
+  filesystem save/reload.
 - `civcraft-native-session.txt`: full game-loop stages, round two, renderer mode
   and successful save/reload.
 - `session-input.log`: injected mouse coordinates and the actual buttons under

@@ -1,13 +1,14 @@
-local Map = dofile("/games/civcraft/map_view.lua")
-local Inspector = dofile("/games/civcraft/inspector.lua")
+local Empire = dofile("/games/civcraft/empire_menu.lua")
 local Codex = dofile("/games/civcraft/encyclopedia.lua")
-local TechTree = dofile("/games/civcraft/tech_tree.lua")
-local Systems = dofile("/games/civcraft/systems.lua")
+local EventFeed = dofile("/games/civcraft/event_feed.lua")
+local HUD = dofile("/games/civcraft/hud.lua")
+local Inspector = dofile("/games/civcraft/inspector.lua")
+local Map = dofile("/games/civcraft/map_view.lua")
+local Minimap = dofile("/games/civcraft/minimap.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
 local Reports = dofile("/games/civcraft/reports.lua")
-local Minimap = dofile("/games/civcraft/minimap.lua")
-local Empire = dofile("/games/civcraft/empire_menu.lua")
-local HUD = dofile("/games/civcraft/hud.lua")
+local Systems = dofile("/games/civcraft/systems.lua")
+local TechTree = dofile("/games/civcraft/tech_tree.lua")
 local G = {}
 local modes = { "terrain", "territory", "resources", "yields" }
 local function modal(ui, rect, preserve)
@@ -189,6 +190,16 @@ function G.draw(ui, state, player)
 	for i, action in ipairs(actions) do
 		iconButton(2 + (i - 1) * (width + 2), bottom + 1, width, action[1], action[2], action[3])
 	end
+	if ui:animating() then
+		iconButton(30, bottom + 1, 12, "SKIP", "nextUnit", function()
+			ui:command("skipPlayback")
+		end)
+	else
+		iconButton(30, bottom + 1, 12, "OBSERVED EVENTS", "contract", function()
+			ui.panel = "events"
+			ui.eventOffset = 0
+		end)
+	end
 	r:button(w - 54, bottom + 1, 52, 12, "END TURN", function()
 		ui:command("end")
 	end, { primary = true, icon = "endTurn" })
@@ -313,6 +324,9 @@ function G.draw(ui, state, player)
 		end, { primary = true })
 		r:icon("endTurn", v.x + 17, v.y + 3, 1)
 		r.buttons[#r.buttons].label = "CONFIRM"
+	elseif ui.panel == "events" or ui.panel == "recap" then
+		modal(ui, rect)
+		EventFeed.draw(ui, rect, ui.panel == "recap")
 	elseif ui.panel == "report" then
 		local dw, dh = math.min(w - 20, 280), math.min(math.floor(h * 0.7), 140)
 		local box = { x = math.floor((w - dw) / 2), y = math.floor((h - dh) / 2), w = dw, h = dh }

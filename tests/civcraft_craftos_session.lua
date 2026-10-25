@@ -78,6 +78,10 @@ dofile = function(path)
 			if queued then
 				return
 			end
+			if self.panel == "recap" and not options.handoff then
+				tap(self, "SKIP")
+				return
+			end
 			if
 				state.phase == "game"
 				and not options.paused

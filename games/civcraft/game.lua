@@ -90,9 +90,12 @@ local Villages = dofile("/games/civcraft/villages.lua")
 local Victory = dofile("/games/civcraft/victory.lua")
 local CommandQueue = dofile("/games/civcraft/command_queue.lua")
 local Events = dofile("/games/civcraft/events.lua")
+local Presentation = dofile("/games/civcraft/presentation.lua")
 local Snapshots = dofile("/games/civcraft/snapshots.lua")
 local audio = Audio.new()
+local stateRevision = 0
 local commandQueue = CommandQueue.new(function()
+	stateRevision = stateRevision + 1
 	if os.queueEvent then
 		os.queueEvent("civcraft_state_changed")
 	end
@@ -456,6 +459,7 @@ local function activeID()
 	end
 	return myId
 end
+local displaySnapshot, displayRevision, displayObserver
 local function draw()
 	if commandQueue.busy then
 		return
@@ -472,9 +476,16 @@ local function draw()
 			.. " zoom="
 			.. tostring(view.zoomLevel)
 	)
-	local s = localHost and state or snapshot
+	local observer = localMode and activeID() or myId
+	if localHost and (displayRevision ~= stateRevision or displayObserver ~= observer) then
+		commandQueue:submit(function()
+			displaySnapshot = Presentation.capture(state, observer)
+			displayRevision, displayObserver = stateRevision, observer
+		end, false)
+	end
+	local s = localHost and displaySnapshot or snapshot
 	view:message(message)
-	view:draw(s, localMode and activeID() or myId, {
+	view:draw(s, observer, {
 		handoff = handoff,
 		localMode = localMode,
 		hostID = hostId,
@@ -771,6 +782,7 @@ World.checkpoint = Systems.checkpoint
 local sendSnapshot = Snapshots.sender(tostring(myId) .. ":" .. newCampaignID())
 local receiveSnapshot = Snapshots.receiver()
 local acknowledged = {}
+local publishedRevision = -1
 local function sendState(id)
 	local cursor = acknowledged[id]
 	if cursor and cursor.campaign ~= state.campaignID then
@@ -782,15 +794,17 @@ local function sendState(id)
 	end
 end
 local function publish()
-	if not hasModem or commandQueue.busy then
+	if not hasModem or commandQueue.busy or publishedRevision == stateRevision then
 		return
 	end
 	commandQueue:submit(function()
+		local revision = stateRevision
 		for _, p in ipairs(state.players) do
 			if p.id ~= myId and not p.ai then
 				sendState(p.id)
 			end
 		end
+		publishedRevision = revision
 	end, false)
 end
 local function server()
@@ -878,7 +892,7 @@ local function clientListener()
 	end
 end
 local function ui()
-	local resizeTimer, frameTimer
+	local resizeTimer, frameTimer, animationTimer
 	local displayTimer = os.startTimer and os.startTimer(0.25)
 	draw()
 	audio:update(appScreen)
@@ -923,6 +937,9 @@ local function ui()
 		elseif e == "timer" and a == frameTimer then
 			frameTimer = nil
 			draw()
+		elseif e == "timer" and a == animationTimer then
+			animationTimer = nil
+			draw()
 		elseif e == "timer" and a == displayTimer then
 			local width, height = display.getSize()
 			if view.r and (width ~= view.r.cw or height ~= view.r.ch) then
@@ -939,6 +956,9 @@ local function ui()
 				gamePaused = not gamePaused
 			end
 			draw()
+		end
+		if view:animating() and not animationTimer then
+			animationTimer = os.startTimer(0.05)
 		end
 		if localHost and hasModem then
 			publish()

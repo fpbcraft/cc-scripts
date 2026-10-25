@@ -52,6 +52,19 @@ Implemented locally:
 
 All 54 repository regression scripts passed. Automated evidence includes privacy and temporal-order assertions, interrupted command/snapshot coroutines, replay bounds/cursors, stale/malformed packets, hidden infrastructure and text/graphics inspector checks. Three checks passed together in a fresh native CraftOS-PC profile: the core event suite, actual renderer/button calls with filesystem serialization/reload, and a complete game session. That session uses real mouse events to traverse the paged lobby, initial reports, two human turns and private handoffs, round processing, pause, save and exit. See [NATIVE-TESTS.md](NATIVE-TESTS.md) for isolated reproduction and exact boundaries. These do not yet prove multi-client rednet behavior, physical monitor input or animation responsiveness. The visible replay/feed and interpolation controller belong to workstream 04.
 
+## 04: Presentation playback
+
+Implemented locally:
+
+- Separate timing and frame-projection modules animate only frozen observer events. Movement interpolates actual approved hex centers at a nominal 120 ms per hex; concealed gaps disappear rather than drawing an invented connecting path. Melee uses a lunge and return/advance, ranged attacks use a projectile, impact changes the displayed HP, defeated units briefly disappear, and founding/capture use contextual effects. Research and other notices retain feed summaries.
+- Static instances of animated entities are suppressed, including entities with later queued actions. Animation never changes positions, HP, movement budgets or turn order. Local display snapshots detach all nested tables from host state; cooperative rendering cannot read a partially mutated host entity. Host display snapshots are cached by state revision. Animation-only redraws do not broadcast new network snapshots.
+- An observer-specific feed offers Play All, Watch and Skip. Watch explicitly centers on an observed event; ordinary playback leaves the camera in place. Hotseat observers keep separate permitted feeds, and the handoff conceals all animation. On returning, a private recap shows qualifying events since that player's previous turn ended, after any round report; dismissal leaves the recent feed available. Normal/Fast/Off, reduced motion and automatic playback are device preferences separate from campaign and audio data. Reduced motion and Skip retain summaries.
+- Presentation queues are capped at 32 events, summaries at 128 and age at eight rounds. Motion is discarded first under pressure so combat/founding summaries survive motion bursts. Queues accelerate under backlog; monotonic elapsed time prevents frame rewinds. Timers request redraws cooperatively rather than blocking the command loop.
+
+Automatic onscreen playback is a provisional default pending the user's answer; it can be disabled in Pause. Offscreen events stay in the feed. Since-last-turn recap cursors belong to the current session; restarting retains the bounded saved event window in the feed. Future diplomacy and Council event effects must accompany their respective workstreams.
+
+All 56 repository regression scripts passed, including the recap. Tests cover a five-hex timeline, fog gaps, ranged/melee phases, HP/fade timing, stale duplicate ingestion, queue bounds, age, skips and detached nested data. Text/graphics UI checks cover automatic playback, one rendered sprite, feed controls, reduced motion and private recaps without reconstructing concealed paths. Four native CraftOS-PC checks passed together in an isolated profile. The latest text playback traversed six hexes at 13 distinct positions across 14 draws in 0.806 seconds, then accepted Skip without losing the feed. This measures the default 51×19 text backend; native GUI/graphics animation, physical monitor input, frame pacing on larger displays and live rednet races remain release-validation work.
+
 ## Lua style and upstream integration
 
 The user's governing guide is the [Roblox Lua style guide](https://roblox.github.io/lua-style-guide/), replacing the earlier LuaRocks reference. After rebasing, the user authorized updating `.stylua.toml` to align with the Roblox guide: tabs displayed at four columns, a 100-column target, double-quoted strings and expanded blocks. `.editorconfig` and repository documentation match; the repository was reformatted with AST verification. Modified code follows the guide's readability, expanded blocks, double-quoted strings and camelCase naming where introduced; existing save/API names remain compatible. New code remains ordinary Lua, without Luau-only syntax.
@@ -60,7 +73,6 @@ Rebased onto `main` at `3a7518b` after PR #47 merged. Formatting conflicts were 
 
 ## Remaining workstreams
 
-04. Smooth movement/combat animation, playback controls and bounded replay.
 05. Stable strategic plans, fixed personalities and economic utilities.
 06. Threat maps, tactical campaigns, retreat and coordinated support.
 07. Hybrid peaceful/war-group turns and declaration transitions.
@@ -70,6 +82,6 @@ Rebased onto `main` at `3a7518b` after PR #47 merged. Formatting conflicts were 
 11. AI difficulty variants after the Prince baseline.
 12. Save/integration/fuzz/performance/network validation and release metadata.
 
-Remaining foundation concerns: threat highlights and destination scores; complete simulation/presentation isolation during cooperative rendering; physical monitor and live rednet verification. Native CraftOS-PC event, rendering and save checks complement the automated suite. Public city/unit ratings now resolve the earlier hidden-army forecast mismatch; event-time path projection resolves the earlier replay-visibility gap.
+Remaining foundation concerns: threat highlights and destination scores; physical monitor and live rednet verification. Native CraftOS-PC event, rendering and save checks complement the automated suite. Public city/unit ratings resolve the earlier hidden-army forecast mismatch; event-time path projection resolves replay visibility, and detached local display snapshots separate simulation from cooperative rendering.
 
 The full roadmap is not complete. Target-server CC:Tweaked and live rednet validation is still required; do not treat these commits as a v0.9 release.

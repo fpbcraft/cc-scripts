@@ -1,4 +1,6 @@
 -- World geometry, painting and pointer targets use the same pointy hex polygons.
+local AnimationView = dofile("/games/civcraft/animation_view.lua")
+local Animations = dofile("/games/civcraft/animations.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local Icons = dofile("/games/civcraft/icons.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
@@ -61,6 +63,7 @@ function V.draw(ui, state, player, rect)
 		{ x = rect.x, y = rect.y, w = rect.w, h = rect.h, tile = size, maxX = maxX, maxY = maxY }
 	local citySignature = {}
 	local cityIndex, unitIndex = {}, {}
+	local hidden = ui.animationFrame and ui.animationFrame.hidden or {}
 	local campIndex = {}
 	for _, camp in ipairs(World.observedCamps(state, player)) do
 		campIndex[World.key(camp.x, camp.y)] = camp
@@ -277,7 +280,11 @@ function V.draw(ui, state, player, rect)
 				end
 			end
 			local city = t.visibility ~= "hidden" and cityIndex[World.key(x, y)]
-			if city and (city.owner == ui.playerID or t.visibility == "visible") then
+			if
+				city
+				and not hidden["city:" .. tostring(city.id)]
+				and (city.owner == ui.playerID or t.visibility == "visible")
+			then
 				cityLabels[#cityLabels + 1] = { city = city, x = px + size / 2, y = py - 6 }
 				if size < 16 then
 					r:fill(
@@ -298,7 +305,13 @@ function V.draw(ui, state, player, rect)
 					)
 				end
 			end
+			if city and hidden["city:" .. tostring(city.id)] then
+				city = nil
+			end
 			local unit = t.visibility == "visible" and unitIndex[World.key(x, y)]
+			if unit and hidden[Animations.identity(unit)] then
+				unit = nil
+			end
 			if unit then
 				if size < 16 then
 					r:fill(px + size / 2, py + size / 2, 2, 2, ownerColor(state, unit.owner))
@@ -440,6 +453,7 @@ function V.draw(ui, state, player, rect)
 				r:text(xx, label.y, name, ownerColor(state, label.city.owner), 1, width)
 			end
 		end
+		AnimationView.draw(ui, state, rect, size)
 	end)
 	r:outline(rect.x - 1, rect.y - 1, rect.w + 2, rect.h + 2, 3)
 	-- Four narrow click strips belong to the map frame, never the side panels.

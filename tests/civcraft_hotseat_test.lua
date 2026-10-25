@@ -87,6 +87,7 @@ end
 keys = { q = 16, escape = 1 }
 local frames, stage = 0, 0
 local progress = {}
+local aiName
 local originalDofile = dofile
 dofile = function(path)
 	if path:sub(1, 16) == "/games/civcraft/" and path ~= "/games/civcraft/ui.lua" then
@@ -126,13 +127,15 @@ dofile = function(path)
 						callback("addPlayer")
 					elseif stage == 2 then
 						assert(#s.players == 3)
-						callback("removePlayer")
+						callback("toggleAI", { player = 3 })
 					elseif stage == 3 then
-						assert(#s.players == 2)
+						assert(#s.players == 3 and s.players[3].ai)
+						aiName = s.players[3].name
 						for _, size in ipairs({ "large", "huge", "vast", "compact", "standard" }) do
 							callback("mapSize")
+							callback("save")
 							assert(
-								s.mapSize == size,
+								last.mapSize == size,
 								"Lobby must expose every supported world size"
 							)
 						end
@@ -142,29 +145,35 @@ dofile = function(path)
 						assert(id == s.players[1].id)
 						local unit = s.units[1]
 						callback("standby", { x = unit.x, y = unit.y, value = true })
-						assert(unit.standby, "Sleep command persists on the authoritative unit")
+						callback("save")
+						assert(
+							last.units[1].standby,
+							"Sleep command persists on the authoritative unit"
+						)
+						assert(
+							not unit.standby,
+							"A displayed frame remains detached after commands"
+						)
 						callback("standby", { x = unit.x, y = unit.y, value = false })
-						assert(not unit.standby, "Wake command restores active orders")
+						callback("save")
+						assert(not last.units[1].standby, "Wake command restores active orders")
 						callback("end")
 					elseif stage == 5 then
 						assert(opt.handoff and id == s.players[2].id)
 						callback("reveal")
 					elseif stage == 6 then
 						assert(not opt.handoff)
-						-- Run a real AI turn after the second human ends their turn.
-						s.players[3] =
-							{ id = -3, name = "TEST AI", ai = true, civ = "iron", techs = {} }
+						-- The third player was configured through the actual lobby command.
 						callback("end")
 						assert(
 							progress[1].title == "AI TAKING ITS TURN"
-								and progress[1].detail == "TEST AI",
+								and progress[1].detail == aiName,
 							"Waiting screen identifies the AI player"
 						)
 						assert(
 							progress[2].title == "PROCESSING ROUND",
 							"Waiting screen covers round processing"
 						)
-						table.remove(s.players, 3)
 						callback("save")
 					elseif stage == 7 then
 						assert(
@@ -184,6 +193,9 @@ dofile = function(path)
 				resize = function() end,
 				tap = function() end,
 				close = function() end,
+				animating = function()
+					return false
+				end,
 			}
 		end,
 	}
@@ -204,15 +216,15 @@ os.pullEvent = originalPull
 dofile = originalDofile
 assert(ok, err)
 assert(frames == 8, "Should render through complete hotseat sequence")
-assert(last.round == 2 and #last.players == 2, "Round persists with correct player count")
+assert(last.round == 2 and #last.players == 3, "Round persists with correct player count")
 assert(last.activeIndex == 1, "Current player persisted")
 assert(files["/games/civcraft/data/slot-1.dat"], "Separate local save exists")
 assert(not files["/games/civcraft/data/save.dat"], "Network save untouched")
 local diagnostic = files["/games/civcraft/data/debug.log"]
 assert(
 	diagnostic
-		and diagnostic:find("ai.begin TEST AI", 1, true)
-		and diagnostic:find("ai.end TEST AI", 1, true)
+		and diagnostic:find("ai.begin " .. aiName, 1, true)
+		and diagnostic:find("ai.end " .. aiName, 1, true)
 		and diagnostic:find("draw.end", 1, true),
 	"Debug mode persists operation boundaries"
 )

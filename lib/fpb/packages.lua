@@ -110,6 +110,13 @@ P.packages.civcraft = {
 	files = {
 		"README.md",
 		"actions.lua",
+		"animation_frame.lua",
+		"animation_preferences.lua",
+		"animation_view.lua",
+		"animations.lua",
+		"event_feed.lua",
+		"playback_ui.lua",
+		"presentation.lua",
 		"command_queue.lua",
 		"combat_strength.lua",
 		"events.lua",
