@@ -73,21 +73,9 @@ local wheel = E.sandbox()
 assert(E.place(wheel, 2, 3, "O", 1))
 assert(E.place(wheel, 2, 4, "G", 1))
 local wheelInfo = E.evaluate(wheel)
-local labelSeen = {}
-local originalFont = r.font
-function r:font(x, y, value, color)
-  labelSeen[tostring(value)] = true
-  return originalFont(self, x, y, value, color)
-end
-local indicatorCount = 0
-local originalSpin = r.spinMark
-function r:spinMark(...)
-  indicatorCount = indicatorCount + 1
-  return originalSpin(self, ...)
-end
 local cog = E.get(wheel, 2, 4)
 r:piece(20, 20, 13, cog, wheelInfo.lights[cog.id])
-assert(labelSeen["2X"] and indicatorCount == 1, "Small cog displays correct gear-up multiplier and direction")
+assert(r.buffer[27] and r.buffer[27][21] == 14, "Powered opposite-spin cog shows unobtrusive amber edge")
 local twoPositions = {}
 local previousLine = r.line
 function r:line(x1, y1, x2, y2, color)
@@ -105,8 +93,6 @@ assert(
 )
 r.frame = 0
 r.line = previousLine
-r.font = originalFont
-r.spinMark = originalSpin
 local function click(action, arg)
   for _, v in ipairs(r.targets) do
     if v.action == action and (arg == nil or v.arg == arg) then
@@ -132,15 +118,16 @@ click("slot", 1)
 click("slot", 2)
 model.scene = "game"
 r:draw(model)
-assert(#r.targets >= E.WIDTH * E.HEIGHT + 12, "Game includes parts and board hitboxes")
+assert(#r.targets >= game.width * game.height + 12, "Game includes all variable-size board cells")
 click("cell", 1)
 click("pause")
 click("save")
 click("tool", "D")
-click("tool", "switch")
+click("tool", "R")
+click("tool", "B")
 click("tool", "erase")
 for _, target in ipairs(r.targets) do
-  assert(target.arg ~= "L" and target.arg ~= "T" and target.arg ~= "B", "Fictitious controls removed")
+  assert(target.arg ~= "L" and target.arg ~= "T", "Fictitious controls removed")
 end
 assert(gfx.pixels > 500, "Graphics rendering should draw components")
 model.scene = "pause"
@@ -190,7 +177,7 @@ click("tutorialSkip")
 for _, target in ipairs(r.targets) do
   assert(target.action ~= "cell", "Ponder must block board interaction")
 end
-assert(gfx.clears == 10, "Every scene including Ponder clears the framebuffer")
+assert(gfx.clears == 1, "Pixel-diff display performs only an initial full clear")
 -- Briefing is modal, has animated reveals, and respects disabled animation.
 local largeTitles = 0
 local large = r.fontLarge
@@ -229,13 +216,14 @@ for index, level in ipairs(E.levels) do
   model.settings.animations = false
   r:draw(model)
 end
--- Sandbox shows unlimited stock and the redstone switch tool in graphics mode.
+-- Sandbox includes two dedicated redstone palette components.
 model.game = E.sandbox()
 model.result = E.evaluate(model.game)
 model.progress = { awards = {}, unlocked = 1 }
 model.scene = "game"
 r:draw(model)
-click("tool", "switch")
+click("tool", "R")
+click("tool", "B")
 model.scene = "title"
 model.dev = true
 r:draw(model)
@@ -253,6 +241,11 @@ assert(
   "Out-of-range normalized monitor clicks rejected"
 )
 r:resize()
+model.scene = "title"
+r:draw(model)
+local afterFullDraw = gfx.pixels
+r:draw(model)
+assert(gfx.pixels == afterFullDraw, "No-op draw must not send redundant monitor pixels")
 r:close()
 assert(gfx.mode == 0, "Graphics mode restored")
 local txt = { w = 70, h = 40, writes = 0 }
@@ -292,4 +285,4 @@ for _, scene in ipairs({
 end
 plain:close()
 assert(txt.writes > 0, "Vanilla renderer should draw text")
-print("COGWORKS: animated briefing, belt spans, Ponder and touch targets passed.")
+print("COGWORKS: pixel-diff monitor, animated cogs, flexible grid, belts and touch controls passed.")
