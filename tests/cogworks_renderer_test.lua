@@ -95,7 +95,7 @@ click("tool", "D")
 click("tool", "switch")
 click("tool", "erase")
 for _, target in ipairs(r.targets) do
-  assert(target.arg ~= "C" and target.arg ~= "switch", "Clutch control removed")
+  assert(target.arg ~= "L" and target.arg ~= "T" and target.arg ~= "B", "Fictitious controls removed")
 end
 assert(gfx.pixels > 500, "Graphics rendering should draw components")
 model.scene = "pause"
