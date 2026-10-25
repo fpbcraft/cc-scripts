@@ -143,7 +143,10 @@ local function start()
         local start = drag
         drag = nil
         local x, y = Display.click(monitor, mode, b, c)
-        local action, cx, cy = x and renderer:hit(x, y)
+        local action, cx, cy
+        if x then
+          action, cx, cy = renderer:hit(x, y)
+        end
         if start.moved then
           if action == "cell" then
             app.moveX, app.moveY = cx, cy
