@@ -20,8 +20,20 @@ local function simulate(firstID, secondID, expected)
 		nextId = 10,
 		world = world,
 		players = {
-			{ id = firstID, name = "A", civ = "scholar", techs = {}, ai = true },
-			{ id = secondID, name = "B", civ = "iron", techs = {}, ai = true },
+			{
+				id = firstID,
+				name = "A",
+				civ = expected == "INDUSTRIAL" and "forge" or "scholar",
+				techs = {},
+				ai = true,
+			},
+			{
+				id = secondID,
+				name = "B",
+				civ = expected == "INDUSTRIAL" and "forge" or "scholar",
+				techs = {},
+				ai = true,
+			},
 		},
 		cities = {},
 		units = {},
@@ -80,7 +92,6 @@ local function simulate(firstID, secondID, expected)
 	end
 	print("CIVCRAFT seeded AI campaign: " .. expected .. " in round " .. state.round)
 end
--- Each scenario gives both empires the existing goal preference for that victory.
--- Faster legal expansion can let an industrial rival win the mixed-goal race.
+-- Victory preferences belong to fixed civilizations rather than computer ID parity.
 simulate(2, 4, "END EXPEDITION")
 simulate(1, 3, "INDUSTRIAL")

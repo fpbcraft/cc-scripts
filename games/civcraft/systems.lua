@@ -820,6 +820,7 @@ function M.aiTurn(state, p, hex)
 	if p.ready then
 		return
 	end
+	AI.beginTurn(state, p)
 	AI.diplomacy(state, p, M)
 	if not p.researchTarget then
 		local id = AI.research(p, M)

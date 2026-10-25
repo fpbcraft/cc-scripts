@@ -1,11 +1,19 @@
 -- Content-aware priorities, shared with the same queues and material rules as humans.
+local Actions = dofile("/games/civcraft/actions.lua")
+local Strategy = dofile("/games/civcraft/ai_strategy.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
-local World = dofile("/games/civcraft/world.lua")
+local Landmarks = dofile("/games/civcraft/landmarks.lua")
 local Rails = dofile("/games/civcraft/railways.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
-local Landmarks = dofile("/games/civcraft/landmarks.lua")
-local Actions = dofile("/games/civcraft/actions.lua")
+local World = dofile("/games/civcraft/world.lua")
 local A = {}
+function A.beginTurn(state, player)
+	return Strategy.review(
+		World.forPlayer(state, player.id),
+		player,
+		state.world and state.world.seed
+	)
+end
 local function queue(state, p, city, kind, id, systems, x, y)
 	return Actions.apply(state, p.id, {
 		action = "queue",
@@ -42,8 +50,14 @@ function A.research(p, systems)
 		"education",
 		"steampower",
 	}
-	local finish = p.id % 2 == 0 and { "brewing", "netherite", "astronomy", "enlightenment" }
+	local goal = p.aiPlan and p.aiPlan.primary
+		or (p.civ == "scholar" and "expedition" or "industrial")
+	local finish = goal == "expedition" and { "brewing", "netherite", "astronomy", "enlightenment" }
 		or { "mechanicalcrafting", "commerce", "railways", "logistics", "economics" }
+	if goal == "conquest" then
+		table.insert(finish, 1, "netherite")
+		table.insert(finish, 1, "brewing")
+	end
 	for _, id in ipairs(finish) do
 		goals[#goals + 1] = id
 	end
@@ -146,7 +160,7 @@ function A.choose(state, p, city, systems)
 		"fortress",
 		"grandacademy",
 	}
-	if p.id % 2 == 0 then
+	if (p.aiPlan and p.aiPlan.primary == "expedition") or (not p.aiPlan and p.civ == "scholar") then
 		-- Expedition empires prioritize their final projects once they unlock them.
 		for _, id in ipairs({ "observatory", "eyes", "equipment", "dragon" }) do
 			if systems.canBuild(p, city, id, state) then

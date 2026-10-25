@@ -127,6 +127,8 @@ P.packages.civcraft = {
 		"world_random.lua",
 		"worldgen.lua",
 		"ai.lua",
+		"ai_personalities.lua",
+		"ai_strategy.lua",
 		"economy.lua",
 		"hostiles.lua",
 		"landmarks.lua",

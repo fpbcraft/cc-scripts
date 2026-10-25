@@ -4,6 +4,7 @@
 	No terminal, event, filesystem or peripheral API is mocked here.
 ]]
 local Actions = dofile("/games/civcraft/actions.lua")
+local AI = dofile("/games/civcraft/ai.lua")
 local Events = dofile("/games/civcraft/events.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local Playback = dofile("/games/civcraft/playback_ui.lua")
@@ -127,11 +128,16 @@ Playback.watch(ui, { movement })
 draw()
 assert(ui:animating() and click("SKIP"))
 assert(not ui:animating() and #ui.playback.feed > 0, "Skip retains the observed summary")
+state.players[2].ai = true
+AI.beginTurn(state, state.players[2])
 assert(Saves.save(3, state))
 local restored = Saves.load(3)
 assert(restored.campaignID == state.campaignID and restored.eventJournal.version == 1)
 assert(Events.forPlayer(restored, 1).lastSeq == before.lastSeq)
 assert(restored.units[1].x == target.x and restored.units[1].y == target.y)
+assert(
+	restored.players[2].aiPlan.version == 1 and restored.players[2].aiPlan.primary == "industrial"
+)
 local safe = World.forPlayer(restored, 1)
 assert(not safe.eventJournal and safe.eventStream.observer == 1)
 local report = assert(fs.open("/civcraft-native-smoke.txt", "w"))
@@ -147,6 +153,7 @@ report.write(textutils.serialize({
 	animationSeconds = seconds,
 	animatedHexes = #movement.paths[1] - 1,
 	saveReload = true,
+	aiPlanReload = true,
 }))
 report.close()
 ui:close()

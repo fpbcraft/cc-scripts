@@ -21,7 +21,7 @@ Results are under `$civcraft_test_root/computer/0/`:
 - `native-results.txt`: each program's pass/fail result and emulator version.
 - `civcraft-native-smoke.txt`: renderer mode, actual button commands, journal
   sequence, interpolated positions, elapsed playback time, successful Skip and
-  filesystem save/reload.
+  filesystem campaign/AI-plan save/reload.
 - `civcraft-native-session.txt`: full game-loop stages, round two, renderer mode
   and successful save/reload.
 - `session-input.log`: injected mouse coordinates and the actual buttons under

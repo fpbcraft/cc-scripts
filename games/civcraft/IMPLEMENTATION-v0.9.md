@@ -65,6 +65,17 @@ Automatic onscreen playback is a provisional default pending the user's answer; 
 
 All 56 repository regression scripts passed, including the recap. Tests cover a five-hex timeline, fog gaps, ranged/melee phases, HP/fade timing, stale duplicate ingestion, queue bounds, age, skips and detached nested data. Text/graphics UI checks cover automatic playback, one rendered sprite, feed controls, reduced motion and private recaps without reconstructing concealed paths. Four native CraftOS-PC checks passed together in an isolated profile. The latest text playback traversed six hexes at 13 distinct positions across 14 draws in 0.806 seconds, then accepted Skip without losing the feed. This measures the default 51×19 text backend; native GUI/graphics animation, physical monitor input, frame pacing on larger displays and live rednet races remain release-validation work.
 
+## 05: Strategic director foundation (in progress)
+
+- Civilization archetypes have fixed aggression, ambition, risk, diplomacy, loyalty and border preferences, separate from difficulty. Values are initial tuning settings. Scholars prefer End Expedition, Engineers prefer Industrial and Miners prefer Conquest. Merchants use Industrial until Council victory exists; their diplomatic preference is retained for that later workstream.
+- Optional version 1 `player.aiPlan` saves the primary goal, objectives, priorities, revision/review rounds and city specializations. A review occurs every ten rounds or on city loss, a treasury shock, decisive technology, newly urgent public rival progress or an explicit strategic signal. An incumbent survives unless a challenger exceeds a substantial utility margin. Seeded goal tie-breaks do not consume global randomness.
+- Bankruptcy, a visible threat near the capital and urgent public rival progress add emergency priorities without replacing the primary goal. These priorities and city specializations are recorded for the upcoming economic/tactical executors; those executors are not complete yet.
+- The director receives `World.forPlayer` output, so an undiscovered nearby army cannot trigger its emergency assessment. Rival snapshots omit saved plans. Research/final-project preference now follows the saved goal instead of computer-ID parity.
+
+All 57 repository regression scripts passed. Focused checks cover fixed civilization archetypes, ID independence, periodic and major-event reviews, goal hysteresis, emergency separation, nested plan restore and hidden-army privacy. Updated seeded scenarios use two Scholars and two Engineers: expedition victory occurred in round 93 and industrial victory in round 131. These replace the old ID-parity fixtures rather than requiring an archetype to change goals when its computer ID changes. Native CraftOS-PC passed the director checks and campaign/AI-plan serialization alongside the presentation/save and full-session tests. A final focused check also covers a deliberate low-progress Score pivot near the round cap and late-game research-fork independence from ID parity.
+
+Still required in workstream 05: utility-valued research/production, specialization-aware workers, saved settlement targets, improved treasury/material management and persistent rail goals. Existing tactical/settlement code still needs its own complete observer-state conversion; the director's privacy checks do not establish privacy for all older AI decisions.
+
 ## Lua style and upstream integration
 
 The user's governing guide is the [Roblox Lua style guide](https://roblox.github.io/lua-style-guide/), replacing the earlier LuaRocks reference. After rebasing, the user authorized updating `.stylua.toml` to align with the Roblox guide: tabs displayed at four columns, a 100-column target, double-quoted strings and expanded blocks. `.editorconfig` and repository documentation match; the repository was reformatted with AST verification. Modified code follows the guide's readability, expanded blocks, double-quoted strings and camelCase naming where introduced; existing save/API names remain compatible. New code remains ordinary Lua, without Luau-only syntax.
@@ -73,7 +84,7 @@ Rebased onto `main` at `3a7518b` after PR #47 merged. Formatting conflicts were 
 
 ## Remaining workstreams
 
-05. Stable strategic plans, fixed personalities and economic utilities.
+05. Complete economic utilities, specialization, settlement and infrastructure plans.
 06. Threat maps, tactical campaigns, retreat and coordinated support.
 07. Hybrid peaceful/war-group turns and declaration transitions.
 08. Relations, treaty offers, explicit defense calls and authored conversations.
