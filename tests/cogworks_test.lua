@@ -81,12 +81,14 @@ assert(not E.evaluate(unlimited).win and E.evaluate(unlimited).goals == 0, "Sand
 for _, kind in ipairs(E.order) do
   assert(unlimited.remaining[kind] == math.huge)
 end
-for x = 2, unlimited.width do
+for x = 1, unlimited.width do
   for y = 1, unlimited.height do
-    assert(
-      E.place(unlimited, x, y, E.order[(x + y) % #E.order + 1]),
-      "Sandbox must place components without stock limits"
-    )
+    if x ~= 1 or y ~= 3 then
+      assert(
+        E.place(unlimited, x, y, E.order[(x + y) % #E.order + 1]),
+        "Sandbox must place components without stock limits"
+      )
+    end
   end
 end
 assert(not E.place(unlimited, 1, 3, "I"), "Sandbox generator remains fixed")
