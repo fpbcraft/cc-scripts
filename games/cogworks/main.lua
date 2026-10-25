@@ -75,7 +75,7 @@ local function start()
   local inputLog = debugInput and fs.open("/games/cogworks/input-debug.log", "w") or nil
   local function trace(message)
     if inputLog then
-      inputLog.write(tostring(message) .. "\\n")
+      inputLog.write(tostring(message) .. "\n")
     end
   end
   trace("COGWORKS MONITOR=" .. tostring(name) .. " MODE=" .. tostring(mode))
