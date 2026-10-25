@@ -1,8 +1,8 @@
 # Cogworks — Discovery-Driven 64-Level Campaign Design
 
-> **Status:** Design specification / proposal only — **not implemented**. Updated October 25, 2026.  
+> **Status:** Design specification + implementation tracking. First playable campaign committed; manual puzzle-design review ongoing. Updated October 25, 2026.  
 > **Target branch:** `feat/cogworks-64-campaign-editor` (PR #52).  
-> **Scope of this update:** Documentation only. The current `levels.lua` still generates repetitive placeholder layouts (notably straight shaft extensions), `chapters.lua` still uses its existing unlock thresholds, and `engine.lua` still awards generic bonus types. Those existing files are **not** representative of the campaign specified below.
+> **Implementation:** The branch includes 64 distinct simulator-verified layouts, including 22 bespoke network definitions and 42 individually named/locked/transformed motifs. The chapter gates, typed bonus evaluator and map status UI are implemented. **The design briefs below remain the authoritative target**; seed-derived motifs require further hand-authoring and blind playtests before describing the 64 levels as fully realized.
 
 ## Creative direction
 
@@ -268,6 +268,11 @@ Levels should be stored as validated **data**, not dynamically executed Lua. Use
 5. Perform blind playtests with hint frequency, alternative solutions and pacing tracked. Refine or remove repetitive entries instead of lengthening them.
 6. Retire the generated `shaftLesson` / `fromSeed` placeholder campaign **only when authored replacement stages are proven playable**.
 
-### Explicitly out of scope for this documentation commit
+### Implementation status and remaining review
 
-No level geometry, `levels.lua`, `chapters.lua`, bonus logic, editor implementation, save schema, installation manifest or graphics code is changed here. PR #52 is currently **implementation-in-progress**; this document records the **revised creative target**, not a claim that the playable campaign already matches it.
+- **Implemented:** 64 playable level records; references solved by the Lua engine; separate authored bonus slots with at least twelve rule families; branching chapter gates; objective status in the chapter menu; fixed fixtures; 5×5–10×10 boards; replayable optional remixes/examinations; save version 6 with old-save backup.
+- **Bespoke networks:** First chapter (8 layouts) and 14 additional substantial circuits, including the real powered-shaft/belt crossover, two separately controlled gearshifts, clockmaker branches, four closely spaced presses, and the four-target final factory.
+- **First-pass variations:** Other 42 stages currently reuse proven mechanical motifs with individual fixtures, board arrangements, restrictions and objective pairs. They are solver-correct but should receive **manual puzzle-design review** to ensure each fulfils the unique insight recorded in this document.
+- **Not proven by automatic tests:** That a puzzle has only interesting alternative solutions, that a bonus is actually challenging rather than merely achievable, or that blind playtesters will recognize the intended revelation. Those are separate design acceptance gates.
+
+All development is contained in PR #52; no merge has been made as part of this campaign implementation.
