@@ -300,6 +300,18 @@ model.scene = "game"
 r:draw(model)
 click("tool", "R")
 click("tool", "B")
+click("toggleAnimations")
+local running = E.sandbox(5, 5)
+assert(E.place(running, 2, 3, "I", 1))
+assert(E.place(running, 3, 3, "G", 1))
+model.game = running
+model.result = E.evaluate(running)
+model.selected = "G"
+model.settings.animations = true
+r:draw(model)
+local beforeAnimated = gfx.batches
+r:draw(model)
+assert(gfx.batches == beforeAnimated + 1, "Two consecutive animated frames upload distinct cog pixels")
 model.scene = "title"
 model.dev = true
 r:draw(model)
