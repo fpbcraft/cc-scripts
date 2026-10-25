@@ -6,14 +6,14 @@ local vectors = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } }
 local ports = {
   S = { 0 }, M = { 0 }, I = { 0, 2 }, G = { 0, 2 },
   O = { 0, 2 }, V = { 0, 2 }, Z = { 0, 2 }, C = { 0, 2 },
-  Q = { 0, 1, 2, 3 }, D = { 0, 1, 2, 3 },
+  Q = { 0, 1, 2, 3 }, D = { 0, 2 },
 }
 E.parts = {
   I = { name = "SHAFT", description = "AXIAL ROTATION, 1:1", color = 11 },
   G = { name = "SMALL COG", description = "SHAFTS AXIALLY; MESHES SIDEWAYS", color = 14 },
   O = { name = "LARGE COG", description = "SIDE MESH OR DIAGONAL 2:1", color = 7 },
   Q = { name = "GEARBOX", description = "FOUR SIDES; REVERSES SPIN", color = 13 },
-  D = { name = "CHAIN DRIVE", description = "ADJACENT SIDES; SAME SPIN", color = 11 },
+  D = { name = "CHAIN DRIVE", description = "AXIAL SHAFT AND SIDE CHAIN LINKS", color = 11 },
   V = { name = "BELT PULLEY", description = "PARALLEL SHAFTS; CLEAR SPAN", color = 7 },
   Z = { name = "GEARSHIFT", description = "TOGGLE TO REVERSE", color = 6 },
   C = { name = "CLUTCH", description = "TOGGLE TO DISCONNECT", color = 8 },
@@ -170,12 +170,22 @@ end
 -- Pulley belts also run perpendicular to two parallel shafts, without gearing.
 function E.meshes(g, tile)
   local links = {}
-  if tile.kind ~= "G" and tile.kind ~= "O" and tile.kind ~= "V" then
+  if tile.kind ~= "G" and tile.kind ~= "O" and tile.kind ~= "V" and tile.kind ~= "D" then
     return links
   end
   local horizontal = tile.r % 2 == 1
   local function matching(other)
     return other and other.r % 2 == tile.r % 2
+  end
+  if tile.kind == "D" then
+    local sideways = horizontal and { { 0, -1 }, { 0, 1 } } or { { -1, 0 }, { 1, 0 } }
+    for _, d in ipairs(sideways) do
+      local other = E.get(g, tile.x + d[1], tile.y + d[2])
+      if other and other.kind == "D" and matching(other) then
+        links[#links + 1] = { tile = other, ratio = 1, sign = 1, chain = true }
+      end
+    end
+    return links
   end
   if tile.kind == "V" then
     for _, side in ipairs({ -1, 1 }) do
@@ -257,7 +267,7 @@ end
 function E.evaluate(g)
   local states, queue, first = {}, {}, 1
   local jam = false
-  local function assign(tile, port, rate, sign)
+  local function assign(tile, port, rate, sign, internal)
     local slots = states[tile.id]
     if not slots then
       slots = {}
@@ -272,7 +282,7 @@ function E.evaluate(g)
     end
     local state = { rate = rate, sign = sign }
     slots[port] = state
-    queue[#queue + 1] = { tile = tile, port = port, info = state }
+    queue[#queue + 1] = { tile = tile, port = port, info = state, internal = internal }
   end
   for _, tile in ipairs(g.tiles) do
     if tile.kind == "S" then
@@ -283,14 +293,14 @@ function E.evaluate(g)
     local event = queue[first]
     first = first + 1
     local tile, port, info = event.tile, event.port, event.info
-    if tile.kind ~= "C" or not tile.engaged then
+    if (tile.kind ~= "C" or not tile.engaged) and not event.internal then
       for dir = 0, 3 do
         if dir ~= port and E.hasPort(tile, dir) then
           local sign = info.sign
           if tile.kind == "Q" or (tile.kind == "Z" and tile.engaged) then
             sign = -sign
           end
-          assign(tile, dir, info.rate, sign)
+          assign(tile, dir, info.rate, sign, true)
         end
       end
       for _, link in ipairs(E.meshes(g, tile)) do
