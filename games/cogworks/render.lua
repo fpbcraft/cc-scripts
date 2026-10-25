@@ -332,57 +332,69 @@ end
 local function rounded(x)
   return math.floor(x + 0.5)
 end
+-- Two distinct gear silhouettes: small = compact solid four-spoke pinion;
+-- large = open twelve-tooth ring with a steel spider. Both have an obvious
+-- off-center index tooth so animation direction remains visible.
 function R:cog(cx, cy, large, spin, maxRadius)
-  local radius = math.min(large and 4 or 3, maxRadius or 4)
-  local core = math.max(1, radius - 1)
+  local radius = math.min(large and 4 or 2, maxRadius or 4)
   local angle = spin and self.frame * 0.44 * math.min(spin.rate, 4) * spin.sign or 0
-  self:rect(cx - radius + 1, cy - radius + 1, radius * 2 - 1, radius * 2 - 1, 7)
-  self:rect(cx - radius + 2, cy - radius + 2, math.max(1, radius * 2 - 3), math.max(1, radius * 2 - 3), 6)
-  for tooth = 0, 7 do
-    local theta = tooth * math.pi / 4 + angle
-    local tx = rounded(cx + math.cos(theta) * (radius + 1))
-    local ty = rounded(cy + math.sin(theta) * (radius + 1))
-    self:rect(tx, ty, 2, 2, tooth == 0 and spin and 15 or 6)
-  end
-  if spin then
-    self:line(
-      cx,
-      cy,
-      rounded(cx + math.cos(angle) * core),
-      rounded(cy + math.sin(angle) * core),
-      spin.sign > 0 and 11 or 14
-    )
-    self:line(
-      cx,
-      cy,
-      rounded(cx + math.cos(angle + math.pi / 2) * core),
-      rounded(cy + math.sin(angle + math.pi / 2) * core),
-      13
-    )
+  if large then
+    -- The large wheel has a hollow dark center, an outer brass ring, and
+    -- twelve square teeth: its silhouette is not a scaled-up small pinion.
+    self:rect(cx - radius, cy - radius + 1, radius * 2 + 1, radius * 2 - 1, 7)
+    self:rect(cx - radius + 1, cy - radius, radius * 2 - 1, radius * 2 + 1, 7)
+    if radius >= 3 then
+      self:rect(cx - radius + 2, cy - radius + 2, radius * 2 - 3, radius * 2 - 3, 2)
+    end
+    for tooth = 0, 11 do
+      local theta = tooth * math.pi / 6 + angle
+      local tx = rounded(cx + math.cos(theta) * (radius + 1))
+      local ty = rounded(cy + math.sin(theta) * (radius + 1))
+      self:rect(tx, ty, 2, 2, tooth == 0 and spin and 15 or 6)
+    end
+    for arm = 0, 3 do
+      local theta = angle + arm * math.pi / 2
+      local reach = math.max(1, radius - 1)
+      self:line(cx, cy, rounded(cx + math.cos(theta) * reach), rounded(cy + math.sin(theta) * reach), arm == 0 and (spin and 11 or 13) or 13)
+    end
+    self:rect(cx - 1, cy - 1, 3, 3, 13)
+    self:rect(cx, cy, 1, 1, 1)
   else
-    self:line(cx, cy, cx + core, cy, 13)
-    self:line(cx, cy, cx, cy + core, 13)
+    -- A pinion is a small, solid brass gear with eight individual fine teeth,
+    -- a simple white spoke, and a tiny one-pixel bearing.
+    self:rect(cx - radius + 1, cy - radius + 1, radius * 2 - 1, radius * 2 - 1, 6)
+    for tooth = 0, 7 do
+      local theta = tooth * math.pi / 4 + angle
+      self:rect(
+        rounded(cx + math.cos(theta) * (radius + 1)),
+        rounded(cy + math.sin(theta) * (radius + 1)),
+        1,
+        1,
+        tooth == 0 and spin and 15 or 6
+      )
+    end
+    self:line(cx, cy, rounded(cx + math.cos(angle) * radius), rounded(cy + math.sin(angle) * radius), spin and (spin.sign > 0 and 11 or 14) or 13)
+    self:rect(cx, cy, 1, 1, 1)
   end
-  self:rect(cx - 1, cy - 1, 3, 3, 13)
-  self:rect(cx, cy, 1, 1, 1)
 end
 -- Inventory glyphs use just 7x7 pixels: real sprites instead of a
 -- colored square containing the part's name.
 function R:toolIcon(x, y, kind)
-  if kind == "G" or kind == "O" then
-    local radius = kind == "O" and 3 or 2
-    self:rect(x + 3 - radius, y + 3 - radius, radius * 2 + 1, radius * 2 + 1, 7)
-    for tooth = 0, 7 do
-      local theta = tooth * math.pi / 4
-      self:rect(
-        rounded(x + 3 + math.cos(theta) * (radius + 1)),
-        rounded(y + 3 + math.sin(theta) * (radius + 1)),
-        1,
-        1,
-        6
-      )
+  if kind == "G" then
+    -- Tiny eight-tooth pinion, deliberately much smaller than the open wheel.
+    self:rect(x + 2, y + 2, 3, 3, 6)
+    for _, tooth in ipairs({ { 3, 1 }, { 5, 3 }, { 3, 5 }, { 1, 3 } }) do
+      self:rect(x + tooth[1], y + tooth[2], 1, 1, 6)
     end
     self:rect(x + 3, y + 3, 1, 1, 1)
+  elseif kind == "O" then
+    -- Large open rim + four strong teeth + open dark interior.
+    self:rect(x + 1, y + 1, 5, 5, 7)
+    self:rect(x + 2, y + 2, 3, 3, 2)
+    for _, tooth in ipairs({ { 3, 0 }, { 6, 3 }, { 3, 6 }, { 0, 3 } }) do
+      self:rect(x + tooth[1], y + tooth[2], 1, 1, 6)
+    end
+    self:rect(x + 3, y + 3, 1, 1, 13)
   elseif kind == "R" then
     self:rect(x + 3, y, 1, 7, 8)
     self:rect(x, y + 3, 7, 1, 8)
@@ -463,7 +475,9 @@ function R:compactPiece(x, y, size, tile, light)
       end
     end
   end
-  self:rect(cx, cy, 1, 1, 1)
+  if tile.kind ~= "G" and tile.kind ~= "O" then
+    self:rect(cx, cy, 1, 1, 1)
+  end
   if spin and tile.kind ~= "G" and tile.kind ~= "O" then
     self:rect(x, y + math.floor(size / 2), 1, 2, spin.sign > 0 and 11 or 14)
   end
