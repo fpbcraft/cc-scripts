@@ -12,7 +12,6 @@ P.packages.cogworks = {
     "briefing.lua",
     "display.lua",
     "engine.lua",
-    "expansion.lua",
     "levels.lua",
     "main.lua",
     "render.lua",
@@ -218,11 +217,11 @@ P.packages.fpbstore = {
 }
 P.apps = {
   {
-    version = "1.0.0",
+    version = "2.0.0",
     id = "cogworks",
     name = "COGWORKS",
     subtitle = "KINETIC LAB",
-    description = "30 tactile Create-inspired machinery puzzles.",
+    description = "16 Create-accurate kinetic puzzles and a free sandbox.",
     icon = "C",
     genre = "PUZZLE",
   },
