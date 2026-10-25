@@ -13,9 +13,14 @@ local names = {
 local chapters = {}
 for i, spec in ipairs(names) do
   chapters[i] = {
-    number = i, name = spec[1], mechanic = spec[2], test = spec[3],
-    first = (i - 1) * 8 + 1, last = i * 8,
-    requiredPoints = 6, requiredMain = 4,
+    number = i,
+    name = spec[1],
+    mechanic = spec[2],
+    test = spec[3],
+    first = (i - 1) * 8 + 1,
+    last = i * 8,
+    requiredPoints = 6,
+    requiredMain = 4,
   }
 end
 local C = { chapters = chapters }
@@ -73,36 +78,62 @@ function C.unlocked(progress, chapter)
   return true
 end
 function C.levelUnlocked(progress, level, dev)
-  if dev then return level >= 1 and level <= 64 end
-  if level < 1 or level > 64 then return false end
+  if dev then
+    return level >= 1 and level <= 64
+  end
+  if level < 1 or level > 64 then
+    return false
+  end
   local chapter = C.chapterFor(level)
-  if not C.unlocked(progress, chapter) then return false end
+  if not C.unlocked(progress, chapter) then
+    return false
+  end
   local first = chapters[chapter].first
   local localIndex = level - first + 1
-  if localIndex == 1 then return true end
+  if localIndex == 1 then
+    return true
+  end
   local function completed(stage)
     return cleared(progress, first + stage - 1)
   end
-  if localIndex == 2 or localIndex == 3 then return completed(1) end
-  if localIndex == 4 or localIndex == 5 then return completed(2) or completed(3) end
+  if localIndex == 2 or localIndex == 3 then
+    return completed(1)
+  end
+  if localIndex == 4 or localIndex == 5 then
+    return completed(2) or completed(3)
+  end
   if localIndex == 6 then
     local count = 0
-    for stage = 2, 5 do if completed(stage) then count = count + 1 end end
+    for stage = 2, 5 do
+      if completed(stage) then
+        count = count + 1
+      end
+    end
     return count >= 2
   end
   if localIndex == 7 then
     local count = 0
-    for stage = 1, 6 do if completed(stage) then count = count + 1 end end
+    for stage = 1, 6 do
+      if completed(stage) then
+        count = count + 1
+      end
+    end
     return completed(4) and count >= 2
   end
   local count = 0
-  for stage = 1, 6 do if completed(stage) then count = count + 1 end end
+  for stage = 1, 6 do
+    if completed(stage) then
+      count = count + 1
+    end
+  end
   return count >= 4
 end
 -- Kept as a migration/API convenience for older saved slots; the level menu
 -- uses levelUnlocked for each node instead of this range.
 function C.openLevels(progress, dev)
-  if dev then return 64 end
+  if dev then
+    return 64
+  end
   local last = 8
   for chapter = 2, 8 do
     if C.unlocked(progress, chapter) then
