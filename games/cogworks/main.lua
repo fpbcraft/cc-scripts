@@ -226,7 +226,7 @@ local function start()
         if
           renderer.mode == "graphics"
           and app.settings.animations
-          and (app.scene == "game" or app.scene == "briefing" or app.scene == "tutorial")
+          and (app.scene == "game" or app.scene == "editor" or app.scene == "briefing" or app.scene == "tutorial")
         then
           redraw()
         end
