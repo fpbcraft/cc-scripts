@@ -3,6 +3,7 @@ local E = require("games.cogworks.engine")
 local S = require("games.cogworks.storage")
 local T = require("games.cogworks.tutorials")
 local B = require("games.cogworks.briefing")
+local Campaign = require("games.cogworks.chapters")
 local A = {}
 A.__index = A
 local function countAward(awards)
@@ -34,6 +35,7 @@ function A.new(options)
     dev = options and options.dev == true or false,
     devSession = false,
     levelReturn = "pause",
+    levelChapter = 1,
   }, A)
   return self
 end
@@ -84,7 +86,7 @@ function A:finishTutorial()
   self:save()
 end
 function A:openLevel(index)
-  assert(self.progress and index >= 1 and index <= (self.devSession and #E.levels or self.progress.unlocked))
+  assert(self.progress and index >= 1 and index <= (self.devSession and #E.levels or Campaign.openLevels(self.progress)))
   self.game = E.new(index)
   local session = self.progress.sessions[index]
   if type(session) == "table" and E.restore(self.game, session.parts) then
@@ -106,6 +108,7 @@ function A:enter(slot, newGame)
   if not self.progress then
     self.progress = self.store.newProgress()
   end
+  self.progress.unlocked = Campaign.openLevels(self.progress)
   self.settings.lastSlot = slot
   self.cachedSlots = nil
   self.store.saveSettings(self.settings)
@@ -153,7 +156,6 @@ function A:updateGame()
     return
   end
   if self.result.win then
-    self.progress.unlocked = math.max(self.progress.unlocked, math.min(#E.levels, self.game.number + 1))
     local earned = self.progress.awards[self.game.number]
     if type(earned) ~= "table" then
       earned = {}
@@ -172,7 +174,9 @@ function A:updateGame()
         self.progress.best[self.game.number] = self.game.moves
       end
     end
-    self.message = additions > 0 and ("LEVEL CLEAR + " .. additions .. " BONUS") or "LEVEL CLEAR - NEXT UNLOCKED"
+    local previous = self.progress.unlocked
+    self.progress.unlocked = Campaign.openLevels(self.progress)
+    self.message = self.progress.unlocked > previous and "CHAPTER UNLOCKED!" or ("LEVEL CLEAR +" .. additions .. " BONUS")
   elseif self.result.jam then
     self.message = "JAM: INCONSISTENT ROTATION"
   end
@@ -198,6 +202,9 @@ function A:model()
     dev = self.dev,
     devSession = self.devSession,
     sandboxSize = self.sandboxSize,
+    chapters = Campaign.chapters,
+    levelChapter = self.levelChapter,
+    objectives = Campaign.objectives(self.progress or self.store.newProgress()),
   }
 end
 -- Return 'exit' only in direct response to player choosing Exit.
@@ -236,6 +243,7 @@ function A:act(action, x, y)
       self.result = nil
       self.progress = self.store.newProgress()
       self.progress.unlocked = #E.levels
+      self.levelChapter = 1
       self.levelReturn = "title"
       self.scene = "levels"
     elseif action == "settings" then
@@ -380,6 +388,7 @@ function A:act(action, x, y)
       self.scene = "help"
     elseif action == "levels" and not self.game.sandbox then
       self.levelReturn = "pause"
+      self.levelChapter = Campaign.chapterFor(self.game.number)
       self.scene = "levels"
     elseif action == "clearSandbox" and self.game.sandbox then
       self.game = E.sandbox(self.sandboxSize)
@@ -400,7 +409,18 @@ function A:act(action, x, y)
   elseif scene == "levels" then
     if action == "back" then
       self.scene = self.levelReturn
-    elseif action == "level" and x >= 1 and x <= (self.devSession and #E.levels or self.progress.unlocked) then
+    elseif action == "chapter" and x >= 1 and x <= #Campaign.chapters then
+      if self.devSession or Campaign.unlocked(self.progress, x) then
+        self.levelChapter = x
+        self.scene = "chapter"
+      else
+        self.message = "EARN MORE OBJECTIVES TO UNLOCK"
+      end
+    end
+  elseif scene == "chapter" then
+    if action == "back" then
+      self.scene = "levels"
+    elseif action == "level" and x >= 1 and x <= (self.devSession and #E.levels or Campaign.openLevels(self.progress)) then
       self:save()
       self:openLevel(x)
       self.levelReturn = "pause"
