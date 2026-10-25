@@ -1,5 +1,6 @@
 local Hex = dofile("/games/civcraft/hex.lua")
 local World = dofile("/games/civcraft/world.lua")
+local Terrain = dofile("/games/civcraft/terrain_view.lua")
 local M = {}
 function M.draw(ui, state, player, rect)
   local r = ui.r
@@ -13,8 +14,7 @@ function M.draw(ui, state, player, rect)
       for x = 1, width do
         local known = World.known(player, x, y)
         if known ~= "hidden" then
-          local land = Hex.terrain(x, y, state)
-          local color = known == "explored" and 14 or land == "water" and 19 or land == "mountain" and 4 or 12
+          local color = Terrain.color(Hex.tile(x, y, state), known == "explored")
           r:fill(
             rect.x + (x - 1 + (y - 1) % 2 * 0.5) * rect.w / fullW,
             rect.y + (y - 1) * 0.75 * rect.h / fullH,

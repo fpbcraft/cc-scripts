@@ -1,152 +1,37 @@
 -- Seeded hex geography, strategic deposits, private discovery and territory.
 -- World state is authoritative and saved; map presets never reroll on reload.
 local Content = dofile("/games/civcraft/content.lua")
-local Landmarks = dofile("/games/civcraft/landmarks.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local W = {}
-W.sizes = { compact = { 18, 12 }, standard = { 28, 18 }, large = { 40, 26 } }
+W.sizes = {
+  compact = { 18, 12 },
+  standard = { 28, 18 },
+  large = { 40, 26 },
+  huge = { 48, 32 },
+  vast = {
+    64,
+    40,
+  },
+}
+W.sizeOrder = { "compact", "standard", "large", "huge", "vast" }
 W.types = { "continents", "archipelago", "pangaea", "highlands" }
 local function key(x, y)
   return x .. ":" .. y
 end
 W.key = key
-local function noise(seed, x, y, salt)
-  local n = (seed * 1103515245 + x * 110351 + y * 143417 + salt * 7193) % 2147483647
-  return ((n * 48271 + 17) % 2147483647) / 2147483647
-end
-local function clamp(v, a, b)
-  return math.max(a, math.min(b, v))
-end
-local function deposit(seed, x, y, t)
-  local v = noise(seed, x, y, 19)
-  if t == "water" then
-    return v > 0.88 and "fish" or nil
-  end
-  if t == "forest" and v > 0.54 then
-    return "timber"
-  end
-  if t == "hills" or t == "mountain" then
-    if v > 0.78 then
-      return "iron"
-    end
-    if v > 0.40 then
-      return "stone"
-    end
-  end
-  if t == "plains" then
-    if v > 0.91 then
-      return "saltpeter"
-    end
-    if v > 0.85 then
-      return "horses"
-    end
-    if v > 0.57 then
-      return "grain"
-    end
-  end
-end
+local Biomes = dofile("/games/civcraft/biomes.lua")
+local Generator = dofile("/games/civcraft/worldgen.lua")
+W.generationVersion = Generator.version
 function W.generate(seed, size, count, mapType)
   size = W.sizes[size] and size or "standard"
-  local dims = W.sizes[size]
   seed = math.floor(tonumber(seed) or 12345) % 1000000
-  mapType = mapType or "continents"
+  count = math.max(1, math.min(4, math.floor(tonumber(count) or 4)))
   if not ({ continents = true, archipelago = true, pangaea = true, highlands = true })[mapType] then
     mapType = "continents"
   end
-  local world = {
-    width = dims[1],
-    height = dims[2],
-    seed = seed,
-    size = size,
-    mapType = mapType,
-    tiles = {},
-    resources = {},
-    starts = {},
-  }
-  local w, h = world.width, world.height
-  for y = 1, h do
-    for x = 1, w do
-      local nx = (x - (w + 1) / 2) / (w / 2)
-      local ny = (y - (h + 1) / 2) / (h / 2)
-      local d = math.sqrt(nx * nx + ny * ny)
-      local macro = noise(seed, math.floor(x / 5), math.floor(y / 5), 7)
-      local detail = noise(seed, x, y, 1)
-      local v = 0.58 * macro + 0.42 * detail
-      local waterLimit
-      if mapType == "pangaea" then
-        waterLimit = 0.11 + d * 0.40
-      elseif mapType == "archipelago" then
-        waterLimit = 0.43 + d * 0.11
-      elseif mapType == "highlands" then
-        waterLimit = 0.09 + d * 0.12
-      else
-        waterLimit = 0.22 + d * 0.17
-      end
-      local t
-      if v < waterLimit then
-        t = "water"
-      elseif (mapType == "highlands" and v > 0.68) or v > 0.84 then
-        t = "mountain"
-      elseif v > 0.57 then
-        t = "forest"
-      elseif v > 0.40 then
-        t = "hills"
-      else
-        t = "plains"
-      end
-      world.tiles[key(x, y)] = t
-      world.resources[key(x, y)] = deposit(seed, x, y, t)
-    end
-  end
-  local starts = { { 3, 3 }, { w - 2, h - 2 }, { w - 2, 3 }, { 3, h - 2 } }
-  for i = 1, math.min(4, count or 4) do
-    local x, y = starts[i][1], starts[i][2]
-    world.starts[i] = { x = x, y = y }
-    for yy = y - 1, y + 1 do
-      for xx = x - 1, x + 1 do
-        if xx >= 1 and xx <= w and yy >= 1 and yy <= h then
-          world.tiles[key(xx, yy)] = "plains"
-          world.resources[key(xx, yy)] = deposit(seed, xx, yy, "plains")
-        end
-      end
-    end
-  end
-  for _, pos in ipairs(world.starts) do
-    local nx = pos.x + (pos.x < world.width / 2 and 1 or -1)
-    world.resources[key(nx, pos.y)] = "grain"
-  end
-  -- New-world deposits, deterministic and independent of discovery.
-  for y = 1, h do
-    for x = 1, w do
-      local k = key(x, y)
-      local t = world.tiles[k]
-      local value = noise(seed, x, y, 37)
-      if t ~= "water" and t ~= "mountain" then
-        if value > 0.96 then
-          world.resources[k] = "diamond"
-        elseif value > 0.91 then
-          world.resources[k] = "redstone"
-        elseif value > 0.85 then
-          world.resources[k] = "copper"
-        elseif value > 0.80 then
-          world.resources[k] = "zinc"
-        end
-        if world.resources[k] == "saltpeter" then
-          world.resources[k] = "redstone"
-        end
-      end
-    end
-  end
-  -- Every start has accessible iron; trading handles rarer material shortages.
-  for _, pos in ipairs(world.starts) do
-    local nx = pos.x + (pos.x < w / 2 and 1 or -1)
-    world.resources[key(nx, pos.y + 1)] = "iron"
-    world.resources[key(nx, pos.y)] = "grain"
-  end
-  world.contentVersion = 1
-  Landmarks.generate(world)
-  return world
+  return Generator.generate(seed, size, count, mapType, W.sizes[size], W.checkpoint)
 end
+W.tile = Biomes.tile
 function W.terrain(world, x, y)
   if not world or x < 1 or y < 1 or x > world.width or y > world.height then
     return nil
@@ -162,8 +47,16 @@ end
 -- Migrate pre-v0.5 legacy maps without changing existing city terrain.
 function W.migrate(state)
   if not state.world and state.phase == "game" then
-    local world =
-      { width = 12, height = 8, seed = 0, size = "legacy", mapType = "legacy", tiles = {}, resources = {}, starts = {} }
+    local world = {
+      width = 12,
+      height = 8,
+      seed = 0,
+      size = "legacy",
+      mapType = "legacy",
+      tiles = {},
+      resources = {},
+      starts = {},
+    }
     for y = 1, 8 do
       for x = 1, 12 do
         local v = (x * 37 + y * 61 + x * y * 13) % 19
@@ -179,14 +72,7 @@ function W.migrate(state)
     local world = state.world
     world.mapType = world.mapType or "continents"
     world.resources = world.resources or {}
-    for y = 1, world.height do
-      for x = 1, world.width do
-        local k = key(x, y)
-        if not world.contentVersion and world.resources[k] == nil then
-          world.resources[k] = deposit(world.seed or 0, x, y, world.tiles[k])
-        end
-      end
-    end
+    world.generationVersion = world.generationVersion or 1
   end
   state.mapType = state.mapType or state.world and state.world.mapType or "continents"
   return state
@@ -288,19 +174,8 @@ function W.expandCity(state, hex, city)
   return true, tile
 end
 function W.yields(world, x, y)
-  local t = W.terrain(world, x, y)
-  local food, industry, science = 0, 0, 0
-  if t == "plains" then
-    food, industry = 2, 1
-  elseif t == "hills" then
-    food, industry = 1, 2
-  elseif t == "forest" then
-    food, industry = 1, 2
-  elseif t == "mountain" then
-    industry = 2
-  elseif t == "water" then
-    food = 2
-  end
+  local food, industry = Biomes.yields(Biomes.tile(world, x, y))
+  local science = 0
   local deposit = W.deposit(world, x, y)
   if deposit == "grain" or deposit == "fish" then
     food = food + 2
@@ -334,6 +209,9 @@ function W.territory(state, hex)
     return result
   end
   for y = 1, w.height do
+    if W.checkpoint then
+      W.checkpoint()
+    end
     for x = 1, w.width do
       local city = W.territoryCity(state, hex, x, y)
       if city then
@@ -358,6 +236,9 @@ function W.reveal(state, hex, systems)
     return
   end
   for _, p in ipairs(state.players or {}) do
+    if W.checkpoint then
+      W.checkpoint()
+    end
     p.explored = p.explored or {}
     local visible = {}
     local function reveal(x, y, r)
@@ -425,16 +306,22 @@ function W.forPlayer(state, id)
       size = world.size,
       mapType = world.mapType,
       tiles = {},
+      geography = {},
       resources = {},
       landmarks = {},
       rails = {},
       contentVersion = world.contentVersion,
+      generationVersion = world.generationVersion,
     }
     for y = 1, world.height do
+      if W.checkpoint then
+        W.checkpoint()
+      end
       for x = 1, world.width do
         local k = key(x, y)
         if (observer.explored or {})[k] or (observer.visible or {})[k] then
           view.world.tiles[k] = world.tiles[k]
+          view.world.geography[k] = (world.geography or {})[k]
           view.world.resources[k] = (world.resources or {})[k]
           view.world.landmarks[k] = (world.landmarks or {})[k]
           view.world.rails[k] = (world.rails or {})[k]

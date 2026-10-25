@@ -41,7 +41,7 @@ local mechanics = {
   {
     id = "movement",
     name = "MOVEMENT",
-    text = "Select an owned unit, then press MOVE / ATTACK in the inspector to show legal destinations. Cyan dotted borders and numbered badges show reachable movement costs; outlined red crosses mark attacks. Choose a destination to preview its route, then click it again or press the confirm icon. Gold pips identify awake units that can still move. Clicking the unit again deselects it. Cancel leaves your orders unchanged. Plains cost one movement point; forests and hills cost two. Settlers have three movement points and pay one on ordinary land, but need movement remaining to found a city. Valid orders wake sleeping units. Scouts and rangers cross forests for one. Mountains block land units.",
+    text = "Select an owned unit, then press MOVE / ATTACK in the inspector to show legal destinations. Cyan dotted borders and numbered badges show reachable movement costs; outlined red crosses mark attacks. Choose a destination to preview its route, then click it again or press the confirm icon. Gold pips identify awake units that can still move. Clicking the unit again deselects it. Cancel leaves your orders unchanged. Open land in any biome costs one movement point; woods, dense jungle, marshes and hills cost two. Settlers have three movement points and pay one on ordinary land, but need movement remaining to found a city. Valid orders wake sleeping units. Scouts and rangers cross forests for one. Mountains block land units.",
   },
   {
     id = "combat",
@@ -177,7 +177,10 @@ function E.describe(category, entry, player)
   local record = entry.record
   local lines = {}
   if category == "sites" then
-    return { record.description, "Natural landmark: work the tile with a citizen to collect its bonus." }
+    return {
+      record.description,
+      "Natural landmark: work the tile with a citizen to collect its bonus.",
+    }
   end
   if category == "wonders" then
     return {

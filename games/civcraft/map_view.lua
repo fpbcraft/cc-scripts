@@ -121,7 +121,8 @@ function V.draw(ui, state, player, rect)
               end
             end
           end
-          local base = hidden and 15 or Terrain.color(land, visibility == "explored")
+          local geography = Hex.tile(x, y, state)
+          local base = hidden and 15 or Terrain.color(geography, visibility == "explored")
           if visibility == "visible" then
             if overlays.territory then
               base = owner and ownerColor(state, owner) or base
@@ -130,7 +131,7 @@ function V.draw(ui, state, player, rect)
           if r.buffer and r.blit then
             r:blit(
               Terrain.sprite(
-                land,
+                geography,
                 size,
                 x,
                 y,
@@ -147,7 +148,7 @@ function V.draw(ui, state, player, rect)
               r:fill(px + inset, py + dy, math.max(1, size - inset * 2), 1, base)
             end
             if not hidden and visibility == "visible" and not overlays.territory then
-              Terrain.draw(r, land, px, py, size, x, y)
+              Terrain.draw(r, geography, px, py, size, x, y)
             end
             local vertices = Hex.vertices(px, py, size)
             for i, a in ipairs(vertices) do
@@ -215,8 +216,14 @@ function V.draw(ui, state, player, rect)
         end
         local landmark = (world.landmarks or {})[k]
         if landmark then
-          local colors =
-            { lushcavern = 11, amethyst = 10, mushroom = 31, ice_spikes = 13, dripstone = 9, ancientcity = 4 }
+          local colors = {
+            lushcavern = 11,
+            amethyst = 10,
+            mushroom = 31,
+            ice_spikes = 13,
+            dripstone = 9,
+            ancientcity = 4,
+          }
           if landmark.natural then
             r:fill(
               px + size * 0.4,
@@ -273,7 +280,10 @@ function V.draw(ui, state, player, rect)
         else
           local kind = "food"
           local value = t.yields.food
-          for _, entry in ipairs({ { "wood", t.yields.industry }, { "science", t.yields.science } }) do
+          for _, entry in ipairs({
+            { "wood", t.yields.industry },
+            { "science", t.yields.science },
+          }) do
             if entry[2] > value then
               kind = entry[1]
               value = entry[2]
@@ -353,9 +363,25 @@ function V.draw(ui, state, player, rect)
   -- Four narrow click strips belong to the map frame, never the side panels.
   local edges = {
     { x = frame.x, y = frame.y, w = 4, h = frame.h, dx = -3, dy = 0, name = "LEFT" },
-    { x = frame.x + frame.w - 4, y = frame.y, w = 4, h = frame.h, dx = 3, dy = 0, name = "RIGHT" },
+    {
+      x = frame.x + frame.w - 4,
+      y = frame.y,
+      w = 4,
+      h = frame.h,
+      dx = 3,
+      dy = 0,
+      name = "RIGHT",
+    },
     { x = frame.x + 4, y = frame.y, w = frame.w - 8, h = 4, dx = 0, dy = -3, name = "UP" },
-    { x = frame.x + 4, y = frame.y + frame.h - 4, w = frame.w - 8, h = 4, dx = 0, dy = 3, name = "DOWN" },
+    {
+      x = frame.x + 4,
+      y = frame.y + frame.h - 4,
+      w = frame.w - 8,
+      h = 4,
+      dx = 0,
+      dy = 3,
+      name = "DOWN",
+    },
   }
   for _, edge in ipairs(edges) do
     r:fill(edge.x, edge.y, edge.w, edge.h, 3)

@@ -337,7 +337,13 @@ for _, u in pairs(C.units) do
   end
 end
 local function building(id, name, tech, cost, effects, needs, extra)
-  local b = { name = name:upper(), tech = tech, production = cost, effects = effects or {}, requires = needs or {} }
+  local b = {
+    name = name:upper(),
+    tech = tech,
+    production = cost,
+    effects = effects or {},
+    requires = needs or {},
+  }
   for k, v in pairs(extra or {}) do
     b[k] = v
   end
@@ -389,15 +395,9 @@ building(
   { description = "200 wall HP; enables iron golems" }
 )
 building("burner", "Blaze Burner", "heatedmixing", 45, { industry = 1 }, { "portal" })
-building(
-  "mixer",
-  "Heated Mixer",
-  "heatedmixing",
-  60,
-  { industry = 2 },
-  { "press", "burner" },
-  { description = "+2 industry; after Brassworking converts 1 copper + 1 zinc into 2 brass per round" }
-)
+building("mixer", "Heated Mixer", "heatedmixing", 60, { industry = 2 }, { "press", "burner" }, {
+  description = "+2 industry; after Brassworking converts 1 copper + 1 zinc into 2 brass per round",
+})
 building("deployer", "Deployer Workshop", "deployers", 65, { industry = 3 }, { "mixer" })
 building(
   "assembly",
@@ -470,10 +470,20 @@ C.resources = {
 }
 C.resourceOrder = { "iron", "copper", "zinc", "redstone", "diamond", "brass" }
 C.naturalWonders = {
-  lushcavern = { name = "LUSH CAVERN", food = 3, science = 1, description = "Worked tile: +3 food, +1 science" },
+  lushcavern = {
+    name = "LUSH CAVERN",
+    food = 3,
+    science = 1,
+    description = "Worked tile: +3 food, +1 science",
+  },
   amethyst = { name = "AMETHYST GEODE", science = 4, description = "Worked tile: +4 science" },
   mushroom = { name = "MUSHROOM ISLAND", food = 4, description = "Worked tile: +4 food" },
-  ice_spikes = { name = "ICE SPIKES", science = 2, industry = 2, description = "Worked tile: +2 science, +2 industry" },
+  ice_spikes = {
+    name = "ICE SPIKES",
+    science = 2,
+    industry = 2,
+    description = "Worked tile: +2 science, +2 industry",
+  },
   dripstone = { name = "DRIPSTONE CAVE", industry = 4, description = "Worked tile: +4 industry" },
   ancientcity = {
     name = "ANCIENT CITY",
@@ -528,7 +538,16 @@ C.wonders = {
   },
 }
 C.hostiles = {
-  zombie = { name = "ZOMBIE", move = 2, vision = 4, strength = 2, defense = 2, range = 1, hostile = true, upkeep = 0 },
+  zombie = {
+    name = "ZOMBIE",
+    move = 2,
+    vision = 4,
+    strength = 2,
+    defense = 2,
+    range = 1,
+    hostile = true,
+    upkeep = 0,
+  },
   skeleton = {
     name = "SKELETON",
     move = 2,

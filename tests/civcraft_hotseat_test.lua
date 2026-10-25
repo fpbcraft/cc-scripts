@@ -129,6 +129,10 @@ dofile = function(path)
             callback("removePlayer")
           elseif stage == 3 then
             assert(#s.players == 2)
+            for _, size in ipairs({ "large", "huge", "vast", "compact", "standard" }) do
+              callback("mapSize")
+              assert(s.mapSize == size, "Lobby must expose every supported world size")
+            end
             callback("start")
           elseif stage == 4 then
             assert(s.phase == "game" and s.round == 1)

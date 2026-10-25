@@ -28,10 +28,23 @@ local function simulate(firstID, secondID, expected)
   }
   for i, p in ipairs(state.players) do
     local start = world.starts[i]
-    state.cities[#state.cities + 1] =
-      { id = i, owner = p.id, capitalOf = p.id, x = start.x, y = start.y, population = 2, buildings = {} }
-    state.units[#state.units + 1] =
-      { id = i + 3, owner = p.id, kind = "warrior", x = start.x + 1, y = start.y, movesLeft = 2 }
+    state.cities[#state.cities + 1] = {
+      id = i,
+      owner = p.id,
+      capitalOf = p.id,
+      x = start.x,
+      y = start.y,
+      population = 2,
+      buildings = {},
+    }
+    state.units[#state.units + 1] = {
+      id = i + 3,
+      owner = p.id,
+      kind = "warrior",
+      x = start.x + 1,
+      y = start.y,
+      movesLeft = 2,
+    }
   end
   M.generate(state)
   Villages.generate(state)

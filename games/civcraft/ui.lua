@@ -6,8 +6,14 @@ local Systems = dofile("/games/civcraft/systems.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
 local GameView = dofile("/games/civcraft/game_view.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
+local World = dofile("/games/civcraft/world.lua")
 local UI = {}
 UI.__index = UI
+local function mapLabel(state)
+  local size = state.mapSize or "standard"
+  local dims = World.sizes[size] or World.sizes.standard
+  return size:upper() .. " " .. dims[1] .. "X" .. dims[2]
+end
 local P = { 8, 13, 11, 21 }
 local function clip(s, n)
   return tostring(s or ""):upper():sub(1, math.max(0, n))
@@ -117,14 +123,20 @@ function UI:endWarnings()
       and not u.autoExplore
       and (u.movesLeft or (u.moved and 0 or 1)) > 0
     then
-      warnings[#warnings + 1] =
-        { text = u.kind .. " at " .. u.x .. "," .. u.y .. " has moves left.", kind = "unit", item = u }
+      warnings[#warnings + 1] = {
+        text = u.kind .. " at " .. u.x .. "," .. u.y .. " has moves left.",
+        kind = "unit",
+        item = u,
+      }
     end
   end
   for _, c in ipairs(state.cities or {}) do
     if c.owner == self.playerID and not c.project and not c.productionIdle then
-      warnings[#warnings + 1] =
-        { text = (c.name or ("City " .. c.x .. "," .. c.y)) .. " has no production.", kind = "city", item = c }
+      warnings[#warnings + 1] = {
+        text = (c.name or ("City " .. c.x .. "," .. c.y)) .. " has no production.",
+        kind = "city",
+        item = c,
+      }
     end
   end
   for _, p in ipairs(state.players or {}) do
@@ -189,7 +201,13 @@ function UI:tile(x, y)
   if self.placement and not self.pendingMove then
     for _, t in ipairs(self.reachable or {}) do
       if t.x == x and t.y == y then
-        self.pendingMove = { placement = self.placement, x = x, y = y, cost = t.cost, player = self.playerID }
+        self.pendingMove = {
+          placement = self.placement,
+          x = x,
+          y = y,
+          cost = t.cost,
+          player = self.playerID,
+        }
         self:feedback("CLICK HEX AGAIN OR CONFIRM TO BUILD")
         return
       end
@@ -285,8 +303,12 @@ function UI:tile(x, y)
     return
   end
   local unit = where(self.state.units, x, y)
-  self.selected =
-    { x = x, y = y, kind = unit and unit.owner == self.playerID and "unit" or "city", unitID = unit and unit.id }
+  self.selected = {
+    x = x,
+    y = y,
+    kind = unit and unit.owner == self.playerID and "unit" or "city",
+    unitID = unit and unit.id,
+  }
   self.panel = "context"
   self.cityPanel = "jobs"
   self.workCity = nil
@@ -533,7 +555,7 @@ function UI:draw(state, playerID, opts)
           }
         end
       end
-      rows[#rows + 1] = { text = "MAP: " .. (state.mapSize or "standard") .. " / " .. (state.mapType or "continents") }
+      rows[#rows + 1] = { text = "MAP: " .. mapLabel(state) .. " / " .. (state.mapType or "continents") }
       rows[#rows + 1] = {
         buttons = {
           {
@@ -632,7 +654,7 @@ function UI:draw(state, playerID, opts)
       13,
       y - 27,
       "MAP "
-        .. tostring(state.mapSize or "STANDARD"):upper()
+        .. mapLabel(state)
         .. " / "
         .. tostring(state.mapType or "continents"):upper()
         .. " / SEED "
@@ -814,10 +836,14 @@ function UI:confirmMove()
     local placement = order.placement
     local item = placement.item
     if placement.kind == "wonder" then
-      self:command(
-        "queue",
-        { kind = "wonder", id = placement.id, cityX = item.x, cityY = item.y, tileX = order.x, tileY = order.y }
-      )
+      self:command("queue", {
+        kind = "wonder",
+        id = placement.id,
+        cityX = item.x,
+        cityY = item.y,
+        tileX = order.x,
+        tileY = order.y,
+      })
     else
       self:command("buildRail", { sx = item.x, sy = item.y, x = order.x, y = order.y })
     end
@@ -943,7 +969,13 @@ function UI:pointerDown(x, y)
   if rx and area and rx >= area.x and rx < area.x + area.w and ry >= area.y and ry < area.y + area.h then
     self.pointerStart = { x = x, y = y }
     self.blockDrag = false
-    self.techDrag = { x = rx, y = ry, panX = model.panX or 0, panY = model.panY or 0, offset = model.offset or 0 }
+    self.techDrag = {
+      x = rx,
+      y = ry,
+      panX = model.panX or 0,
+      panY = model.panY or 0,
+      offset = model.offset or 0,
+    }
     return true
   end
   if

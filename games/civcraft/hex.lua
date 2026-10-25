@@ -1,4 +1,5 @@
 -- Odd-row offset pointy hexes. All geometry/pathfinding uses the same rules.
+local Biomes = dofile("/games/civcraft/biomes.lua")
 local H = { width = 12, height = 8 }
 local function dims(state)
   local world = state and state.world
@@ -19,8 +20,10 @@ function H.distance(x, y, xx, yy)
   return math.max(math.abs(a - d), math.abs(b - e), math.abs(c - f))
 end
 function H.neighbours(x, y, state)
-  local dirs = ((y - 1) % 2 == 0) and { { -1, -1 }, { 0, -1 }, { -1, 0 }, { 1, 0 }, { -1, 1 }, { 0, 1 } }
-    or { { 0, -1 }, { 1, -1 }, { -1, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } }
+  local dirs = ((y - 1) % 2 == 0) and { { -1, -1 }, { 0, -1 }, { -1, 0 }, { 1, 0 }, { -1, 1 }, {
+    0,
+    1,
+  } } or { { 0, -1 }, { 1, -1 }, { -1, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } }
   local out = {}
   for _, d in ipairs(dirs) do
     local nx, ny = x + d[1], y + d[2]
@@ -38,14 +41,8 @@ function H.edgeNeighbours(x, y)
     { x = x + 1, y = y },
     { x = x + shift, y = y + 1 },
     { x = x + shift - 1, y = y + 1 },
-    {
-      x = x - 1,
-      y = y,
-    },
-    {
-      x = x + shift - 1,
-      y = y - 1,
-    },
+    { x = x - 1, y = y },
+    { x = x + shift - 1, y = y - 1 },
   }
 end
 function H.vertices(x, y, size)
@@ -65,6 +62,12 @@ function H.contains(px, py, size, x, y)
   end
   local inset = dy < size / 4 and size / 2 - 2 * dy or dy > size * 3 / 4 and 2 * dy - size * 1.5 or 0
   return dx >= inset and dx < size - inset
+end
+function H.tile(x, y, state)
+  if state and state.world then
+    return Biomes.tile(state.world, x, y)
+  end
+  return Biomes.legacy(H.terrain(x, y, state))
 end
 function H.terrain(x, y, state)
   local world = state and state.world
@@ -122,13 +125,15 @@ function H.moveCost(x, y, state, unit, Systems, fromX, fromY)
   if unit.kind == "settler" then
     return 1
   end
+  local tile = H.tile(x, y, state)
+  local wooded = tile.feature == "woods" or tile.feature == "dense"
   if t == "forest" and stats.forest then
     return 1
   end
   if t == "forest" and (unit.kind == "scout" or unit.kind == "ranger") then
     return 1
   end
-  if t == "forest" and Systems and state and state.players then
+  if wooded and t ~= "hills" and Systems and state and state.players then
     for _, p in ipairs(state.players) do
       if p.id == unit.owner and p.civ == "wild" then
         return 1
@@ -311,10 +316,7 @@ function H.reachable(state, unit, owner, Systems)
               cost = budget,
               attack = true,
               ranged = true,
-              path = {
-                { x = unit.x, y = unit.y },
-                { x = u.x, y = u.y },
-              },
+              path = { { x = unit.x, y = unit.y }, { x = u.x, y = u.y } },
             }
           end
         end

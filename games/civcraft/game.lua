@@ -40,7 +40,6 @@ local function trace(stage, detail)
 end
 trace("session.begin", MODE)
 local slot = 1
-local mapSizes = { "compact", "standard", "large" }
 local mapTypes = { "continents", "archipelago", "pangaea", "highlands" }
 local function modem()
   for _, side in ipairs(peripheral.getNames()) do
@@ -80,6 +79,7 @@ end
 local Hex = dofile("/games/civcraft/hex.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local World = dofile("/games/civcraft/world.lua")
+local mapSizes = World.sizeOrder
 local Saves = dofile("/games/civcraft/saves.lua")
 local Reports = dofile("/games/civcraft/reports.lua")
 local Audio = dofile("/games/civcraft/audio.lua")
@@ -122,8 +122,15 @@ local function log(s)
   end
 end
 local function addUnit(owner, x, y, kind)
-  local u =
-    { id = state.nextId, owner = owner, x = x, y = y, kind = kind, moved = false, movesLeft = Systems.units[kind].move }
+  local u = {
+    id = state.nextId,
+    owner = owner,
+    x = x,
+    y = y,
+    kind = kind,
+    moved = false,
+    movesLeft = Systems.units[kind].move,
+  }
   state.nextId = state.nextId + 1
   table.insert(state.units, u)
   return u
@@ -529,10 +536,14 @@ local function dispatch(action, params)
         end
         state.activeIndex = 1
       else
-        table.insert(
-          state.players,
-          { id = myId, name = "P1", ready = false, civ = Systems.civs[1].id, ai = false, techs = {} }
-        )
+        table.insert(state.players, {
+          id = myId,
+          name = "P1",
+          ready = false,
+          civ = Systems.civs[1].id,
+          ai = false,
+          techs = {},
+        })
       end
     end
     appScreen = "game"
@@ -681,6 +692,7 @@ Systems.checkpoint = function()
     view.r:cooperate()
   end
 end
+World.checkpoint = Systems.checkpoint
 local function publish()
   if not hasModem then
     return
@@ -698,10 +710,11 @@ local function server()
       if req.action == "join" then
         local p = player(id)
         if not p and state.phase == "lobby" and #state.players < 4 then
-          table.insert(
-            state.players,
-            { id = id, name = tostring(req.name or ("P" .. (#state.players + 1))):sub(1, 10), ready = false }
-          )
+          table.insert(state.players, {
+            id = id,
+            name = tostring(req.name or ("P" .. (#state.players + 1))):sub(1, 10),
+            ready = false,
+          })
           log("Player joined: " .. id)
         end
         local view = World.forPlayer(state, id)

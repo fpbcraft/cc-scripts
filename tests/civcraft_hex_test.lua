@@ -1,4 +1,8 @@
 -- Hex movement, offsets and player-visible path eligibility.
+local native = dofile
+dofile = function(path)
+  return native(path:gsub("^/games/civcraft/", "games/civcraft/"))
+end
 local H = assert(loadfile("games/civcraft/hex.lua"))()
 for y = 1, H.height do
   for x = 1, H.width do

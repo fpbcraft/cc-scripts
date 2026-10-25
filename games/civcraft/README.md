@@ -2,6 +2,12 @@
 
 Implementation of the next gameplay iteration is tracked in [IMPLEMENTATION-v0.9.md](IMPLEMENTATION-v0.9.md), based on [design draft v0.9.1](ROADMAP-v0.9.md).
 
+The upcoming iteration adds layered Minecraft-inspired biomes and two larger map
+presets: **Huge 48×32** and **Vast 64×40**. New worlds use sparse, habitat-specific
+deposits and repaired starting areas; existing saves keep their original terrain
+and deposits. See [world-generation benchmarks](WORLDGEN-BENCHMARK.md) for the
+local measurements and remaining live validation.
+
 A Civilization-inspired, turn-based hex 4X for **CC:Tweaked**, supporting local hot-seat (2–4 human/AI slots) or multiplayer over rednet. Local games use one computer or an Advanced Monitor; networked games use an authoritative host. Computers communicate through **rednet modems**, either wireless (within range) or wired (via the same wired modem network). It also works over interdimensional wireless modems. No HTTP or external web server is needed after installation.
 
 ## Diagnosing freezes

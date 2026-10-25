@@ -7,12 +7,15 @@ local Landmarks = dofile("/games/civcraft/landmarks.lua")
 local Actions = dofile("/games/civcraft/actions.lua")
 local A = {}
 local function queue(state, p, city, kind, id, systems, x, y)
-  return Actions.apply(
-    state,
-    p.id,
-    { action = "queue", cityX = city.x, cityY = city.y, kind = kind, id = id, tileX = x, tileY = y },
-    systems
-  )
+  return Actions.apply(state, p.id, {
+    action = "queue",
+    cityX = city.x,
+    cityY = city.y,
+    kind = kind,
+    id = id,
+    tileX = x,
+    tileY = y,
+  }, systems)
 end
 function A.research(p, systems)
   local goals = {

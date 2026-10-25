@@ -381,7 +381,13 @@ function M.queue(p, c, kind, id, state, hex, x, y)
     c.projectProgress[c.project.kind .. ":" .. c.project.id] = c.project.progress
   end
   c.productionIdle = false
-  c.project = { kind = kind, id = id, x = x, y = y, progress = (c.projectProgress or {})[kind .. ":" .. id] or 0 }
+  c.project = {
+    kind = kind,
+    id = id,
+    x = x,
+    y = y,
+    progress = (c.projectProgress or {})[kind .. ":" .. id] or 0,
+  }
   return true
 end
 function M.build(p, c, id, state, hex)
@@ -777,12 +783,13 @@ function M.aiTurn(state, p, hex)
       for _, enemy in ipairs(state.units) do
         if
           enemy.owner ~= p.id
-          and Actions.apply(
-            state,
-            p.id,
-            { action = "cityStrike", x = city.x, y = city.y, tx = enemy.x, ty = enemy.y },
-            M
-          )
+          and Actions.apply(state, p.id, {
+            action = "cityStrike",
+            x = city.x,
+            y = city.y,
+            tx = enemy.x,
+            ty = enemy.y,
+          }, M)
         then
           break
         end

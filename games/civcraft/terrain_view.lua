@@ -1,13 +1,43 @@
 -- Deterministic pixel detail; no random shimmer when the camera moves.
 local Hex = dofile("/games/civcraft/hex.lua")
+local Biomes = dofile("/games/civcraft/biomes.lua")
 local T = {}
 function T.color(land, explored)
   if explored then
     return 14
   end
-  return ({ water = 19, mountain = 4, forest = 12, hills = 28, plains = 11, grassland = 11, desert = 29 })[land] or 11
+  if type(land) == "table" then
+    if land.elevation == "mountain" then
+      return land.biome == "snowy_plains" and 30 or 4
+    end
+    return ({
+      plains = 11,
+      forest = 12,
+      savanna = 8,
+      desert = 29,
+      taiga = 22,
+      jungle = 21,
+      swamp = 25,
+      snowy_plains = 30,
+      badlands = 26,
+      coast = 13,
+      ocean = 19,
+      mushroom = 10,
+    })[land.biome] or 11
+  end
+  return ({
+    water = 19,
+    mountain = 4,
+    forest = 12,
+    hills = 28,
+    plains = 11,
+    grassland = 11,
+    desert = 29,
+  })[land] or 11
 end
 function T.draw(r, land, x, y, size, tx, ty)
+  local tile = type(land) == "table" and land or Biomes.legacy(land)
+  land = Biomes.terrain(tile)
   if size < 12 then
     return
   end
@@ -17,14 +47,20 @@ function T.draw(r, land, x, y, size, tx, ty)
     end
   end
   local seed = tx * 37 + ty * 67
-  local count = land == "water" and 2 or 0
+  local count = (land == "water" or tile.biome == "desert" or tile.biome == "snowy_plains" or tile.feature == "marsh")
+      and 3
+    or 0
   for n = 1, count do
     local dx = (seed + n * 17) % math.max(1, size - 4) + 2
     local dy = (seed * 3 + n * 11) % math.max(1, size - 4) + 2
     if land == "water" then
       dot(dx, dy, size >= 20 and 3 or 2, 1, n % 2 == 0 and 13 or 25)
+    elseif tile.feature == "marsh" then
+      dot(dx, dy, 2, 1, 13)
+    elseif tile.biome == "snowy_plains" then
+      dot(dx, dy, 2, 1, 7)
     elseif land ~= "mountain" then
-      dot(dx, dy, 1, 1, land == "forest" and 21 or 28)
+      dot(dx, dy, 2, 1, 8)
     end
   end
   if size < 16 then
@@ -43,7 +79,8 @@ function T.draw(r, land, x, y, size, tx, ty)
         r:fill(cx - span, top + row, span * 2 + 1, 1, 30)
       end
     end
-  elseif land == "forest" then
+  end
+  if tile.feature == "woods" or tile.feature == "dense" then
     local trees = 1
     for n = 1, trees do
       local px = cx + (n - 2) * (size / 5)
@@ -61,9 +98,13 @@ function T.draw(r, land, x, y, size, tx, ty)
   end
 end
 local sprites = {}
+local spriteKeys = {}
+local spriteSlot = 1
+local spriteLimit = 256
 function T.sprite(land, size, tx, ty, base, detail, edge)
   local variant = (tx * 37 + ty * 67) % 16
-  local key = table.concat({ land, size, variant, base, detail and 1 or 0, edge }, ":")
+  local style = type(land) == "table" and (land.biome .. "/" .. land.elevation .. "/" .. land.feature) or land
+  local key = table.concat({ style, size, variant, base, detail and 1 or 0, edge }, ":")
   if sprites[key] then
     return sprites[key]
   end
@@ -100,6 +141,12 @@ function T.sprite(land, size, tx, ty, base, detail, edge)
       canvas:fill(a.x + dx * step / count, a.y + dy * step / count, 1, 1, edge)
     end
   end
+  local previous = spriteKeys[spriteSlot]
+  if previous then
+    sprites[previous] = nil
+  end
+  spriteKeys[spriteSlot] = key
+  spriteSlot = spriteSlot % spriteLimit + 1
   sprites[key] = rows
   return rows
 end

@@ -1,4 +1,3 @@
-local H = assert(loadfile("games/civcraft/hex.lua"))()
 local oldDofile = dofile
 dofile = function(p)
   if p:sub(1, 16) == "/games/civcraft/" then
@@ -6,6 +5,7 @@ dofile = function(p)
   end
   return oldDofile(p)
 end
+local H = assert(loadfile("games/civcraft/hex.lua"))()
 local S = assert(loadfile("games/civcraft/systems.lua"))()
 dofile = oldDofile
 local tiles = {}

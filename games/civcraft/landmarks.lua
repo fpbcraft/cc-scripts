@@ -1,38 +1,73 @@
 -- Persistent natural landmarks and world-unique constructed wonders.
 local Content = dofile("/games/civcraft/content.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
+local Biomes = dofile("/games/civcraft/biomes.lua")
+local Random = dofile("/games/civcraft/world_random.lua")
 local L = {}
 local function key(x, y)
   return x .. ":" .. y
 end
-function L.generate(world)
+function L.habitat(tile, id)
+  if tile.biome == "ocean" or tile.biome == "coast" then
+    return false
+  end
+  if id == "ice_spikes" then
+    return tile.biome == "snowy_plains" or tile.biome == "taiga"
+  end
+  if id == "mushroom" then
+    return tile.elevation ~= "mountain"
+      and (tile.biome == "swamp" or tile.biome == "jungle" or tile.biome == "forest" or tile.biome == "mushroom")
+  end
+  if id == "lushcavern" then
+    return tile.elevation ~= "mountain"
+      and (tile.biome == "forest" or tile.biome == "jungle" or tile.biome == "swamp" or tile.biome == "taiga")
+  end
+  return tile.elevation == "hill" or tile.elevation == "mountain" or tile.biome == "badlands"
+end
+function L.generate(world, checkpoint)
   world.landmarks = {}
   world.rails = {}
-  local kinds = { "lushcavern", "amethyst", "mushroom", "ice_spikes", "dripstone", "ancientcity" }
-  local used = {}
-  for index, id in ipairs(kinds) do
-    local best, score
-    for y = 2, world.height - 1 do
-      for x = 2, world.width - 1 do
-        local k = key(x, y)
-        local safe = true
-        for _, p in ipairs(world.starts) do
-          if Hex.distance(x, y, p.x, p.y) < 4 then
-            safe = false
-          end
+  local rng = Random.new(world.seed, 83)
+  local kinds = { "ice_spikes", "mushroom", "lushcavern", "amethyst", "dripstone", "ancientcity" }
+  local short = math.min(world.width, world.height)
+  world.wonderSpawnBuffer = short <= 12 and 5 or short >= 26 and 8 or 6
+  world.wonderSeparation = math.min(world.width, world.height) >= 26 and 4 or 3
+  local candidates = {}
+  for y = 2, world.height - 1 do
+    if checkpoint then
+      checkpoint()
+    end
+    for x = 2, world.width - 1 do
+      local safe = true
+      for _, p in ipairs(world.starts) do
+        if Hex.distance(x, y, p.x, p.y) < world.wonderSpawnBuffer then
+          safe = false
+          break
         end
-        for placed in pairs(used) do
-          local xx, yy = placed:match("^(%d+):(%d+)$")
-          if Hex.distance(x, y, tonumber(xx), tonumber(yy)) < 3 then
-            safe = false
-          end
+      end
+      if safe then
+        candidates[#candidates + 1] = { x = x, y = y, tile = Biomes.tile(world, x, y) }
+      end
+    end
+  end
+  rng:shuffle(candidates)
+  local placed = {}
+  for _, id in ipairs(kinds) do
+    local best, bestScore
+    for rank, c in ipairs(candidates) do
+      if checkpoint and rank % 128 == 0 then
+        checkpoint()
+      end
+      if L.habitat(c.tile, id) then
+        local separation = math.huge
+        for _, p in ipairs(placed) do
+          separation = math.min(separation, Hex.distance(c.x, c.y, p.x, p.y))
         end
-        local terrain = world.tiles[k]
-        if safe and not used[k] and terrain ~= "water" and terrain ~= "mountain" then
-          local value = ((world.seed + index * 997) * 48271 + x * 7919 + y * 104729) % 2147483647
-          if not score or value < score then
-            best = { x = x, y = y }
-            score = value
+        if separation >= world.wonderSeparation then
+          -- Prefer dispersed regions; the shuffled tie break avoids common scanline rows.
+          local score = (#placed == 0 and 0 or math.min(12, separation)) + #candidates / (rank + #candidates)
+          if not bestScore or score > bestScore then
+            best, bestScore = c, score
           end
         end
       end
@@ -40,7 +75,12 @@ function L.generate(world)
     if best then
       local k = key(best.x, best.y)
       world.landmarks[k] = { kind = id, natural = true }
-      used[k] = true
+      placed[#placed + 1] = best
+      if world.geography and id == "mushroom" then
+        best.tile.biome = "mushroom"
+        best.tile.feature = "none"
+        world.tiles[k] = Biomes.terrain(best.tile)
+      end
     end
   end
 end

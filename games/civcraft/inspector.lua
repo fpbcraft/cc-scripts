@@ -3,6 +3,7 @@ local Hex = dofile("/games/civcraft/hex.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
+local Biomes = dofile("/games/civcraft/biomes.lua")
 local Landmarks = dofile("/games/civcraft/landmarks.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local I = {}
@@ -88,8 +89,13 @@ function I.draw(ui, state, player, rect, modal)
         end
       end
       if stacked and h < 64 then
-        tabButtons[#tabButtons + 1] =
-          { label = label, run = choose, style = { selected = (ui.cityPanel or "jobs") == mode } }
+        tabButtons[#tabButtons + 1] = {
+          label = label,
+          run = choose,
+          style = {
+            selected = (ui.cityPanel or "jobs") == mode,
+          },
+        }
       else
         r:button(
           x + 2 + (i - 1) * (width + 2),
@@ -387,12 +393,14 @@ function I.draw(ui, state, player, rect, modal)
       },
     }
     rows[#rows + 1] = {
-      buttons = { {
-        label = "DESELECT",
-        run = function()
-          ui:deselect()
-        end,
-      } },
+      buttons = {
+        {
+          label = "DESELECT",
+          run = function()
+            ui:deselect()
+          end,
+        },
+      },
     }
     if unit.kind == "settler" and not at(state.cities, unit.x, unit.y) then
       rows[#rows + 1] = {
@@ -449,7 +457,7 @@ function I.draw(ui, state, player, rect, modal)
   else
     local known = World.known(player, ui.selected.x, ui.selected.y)
     text("HEX " .. ui.selected.x .. "," .. ui.selected.y, 7)
-    text(known == "hidden" and "UNEXPLORED" or Hex.terrain(ui.selected.x, ui.selected.y, state))
+    text(known == "hidden" and "UNEXPLORED" or Biomes.label(Hex.tile(ui.selected.x, ui.selected.y, state)))
     if known ~= "hidden" then
       local yields = World.yields(state.world, ui.selected.x, ui.selected.y)
       rows[#rows + 1] = { yields = yields }
