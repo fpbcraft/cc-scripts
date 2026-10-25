@@ -38,6 +38,46 @@ local function campView(camp)
 	return { id = camp.id, x = camp.x, y = camp.y, kind = camp.kind, cleared = camp.cleared == true }
 end
 
+local function copy(value)
+	if type(value) ~= "table" then
+		return value
+	end
+	local result = {}
+	for field, item in pairs(value) do
+		result[field] = copy(item)
+	end
+	return result
+end
+
+local function cityObservation(state, city, observer)
+	return {
+		id = city.id,
+		name = city.name,
+		owner = city.owner,
+		x = city.x,
+		y = city.y,
+		hp = city.hp,
+		maxHP = city.maxHP,
+		wallHP = city.wallHP,
+		maxWalls = city.maxWalls,
+		population = city.population,
+		capitalOf = city.capitalOf,
+		village = city.village,
+		villageOwner = city.villageOwner,
+		villageKind = city.villageKind,
+		buildings = {
+			walls = (city.buildings or {}).walls,
+			fortress = (city.buildings or {}).fortress,
+		},
+		publicDefense = CombatStrength.city(state, city, Content),
+		influence = city.village and { [observer] = (city.influence or {})[observer] } or nil,
+		envoyRounds = city.village and { [observer] = (city.envoyRounds or {})[observer] } or nil,
+		publicAlly = city.village and (Villages.ally(city) or false) or nil,
+		remembered = true,
+		lastSeenRound = state.round or 1,
+	}
+end
+
 local function mapMemory(player, world)
 	if not player.mapMemory or player.mapMemory.version ~= 1 then
 		player.mapMemory = { version = 1, landmarks = {}, rails = {}, spawners = {} }
@@ -48,6 +88,8 @@ local function mapMemory(player, world)
 			end
 		end
 	end
+	player.mapMemory.observations = player.mapMemory.observations or {}
+	player.mapMemory.cities = player.mapMemory.cities or {}
 	return player.mapMemory
 end
 
@@ -282,6 +324,10 @@ function W.reveal(state, hex, systems, pendingNotices)
 		return
 	end
 	local camps = {}
+	local cities = {}
+	for _, city in ipairs(state.cities or {}) do
+		cities[key(city.x, city.y)] = city
+	end
 	for _, camp in ipairs(state.spawners or {}) do
 		camps[key(camp.x, camp.y)] = camp
 	end
@@ -313,10 +359,30 @@ function W.reveal(state, hex, systems, pendingNotices)
 				reveal(unit.x, unit.y, stat.vision or 2)
 			end
 		end
+		local lastLook = {}
+		for tileKey in pairs(p.visible or {}) do
+			lastLook[tileKey] = true
+		end
+		for tileKey in pairs(visible) do
+			lastLook[tileKey] = true
+		end
 		p.visible = visible
 		Contacts.observe(state, p, pendingNotices)
 		local memory = mapMemory(p, world)
-		for tileKey in pairs(visible) do
+		for tileKey in pairs(lastLook) do
+			local x, y = tileKey:match("^(%d+):(%d+)$")
+			x, y = tonumber(x), tonumber(y)
+			local claim = W.territoryCity(state, hex, x, y)
+			memory.observations[tileKey] = {
+				tile = copy(world.tiles[tileKey]),
+				geography = copy((world.geography or {})[tileKey]),
+				resource = (world.resources or {})[tileKey] or false,
+				owner = claim and claim.owner or false,
+				round = state.round or 1,
+			}
+			memory.cities[tileKey] = cities[tileKey]
+					and cityObservation(state, cities[tileKey], p.id)
+				or nil
 			memory.landmarks[tileKey] = landmarkView((world.landmarks or {})[tileKey])
 			memory.rails[tileKey] = (world.rails or {})[tileKey] and true or nil
 			memory.spawners[tileKey] = camps[tileKey] and campView(camps[tileKey]) or nil
@@ -346,6 +412,38 @@ function W.reveal(state, hex, systems, pendingNotices)
 			end
 		end
 	end
+end
+function W.observedCity(state, observer, x, y)
+	local tileKey = key(x, y)
+	for _, city in ipairs(state.cities or {}) do
+		if
+			city.x == x
+			and city.y == y
+			and (city.owner == observer.id or (observer.visible or {})[tileKey])
+		then
+			return city
+		end
+	end
+	if not (observer.visible or {})[tileKey] and (observer.explored or {})[tileKey] then
+		return observer.mapMemory
+			and observer.mapMemory.cities
+			and observer.mapMemory.cities[tileKey]
+	end
+end
+
+function W.observedOwner(state, observer, x, y)
+	local tileKey = key(x, y)
+	if state.world and state.world.observedOwners then
+		return state.world.observedOwners[tileKey] or nil
+	end
+	local claim = W.territoryCity(state, Hex, x, y)
+	if (observer.visible or {})[tileKey] or claim and claim.owner == observer.id then
+		return claim and claim.owner
+	end
+	local record = observer.mapMemory
+		and observer.mapMemory.observations
+		and observer.mapMemory.observations[tileKey]
+	return record and record.owner or nil
 end
 function W.observedFeatures(state, observer, x, y)
 	if not observer or not state.world then
@@ -462,6 +560,7 @@ function W.forPlayer(state, id, afterSeq)
 			resources = {},
 			landmarks = {},
 			rails = {},
+			observedOwners = {},
 			contentVersion = world.contentVersion,
 			generationVersion = world.generationVersion,
 		}
@@ -472,9 +571,22 @@ function W.forPlayer(state, id, afterSeq)
 			for x = 1, world.width do
 				local k = key(x, y)
 				if (observer.explored or {})[k] or (observer.visible or {})[k] then
-					view.world.tiles[k] = world.tiles[k]
-					view.world.geography[k] = (world.geography or {})[k]
-					view.world.resources[k] = (world.resources or {})[k]
+					local record = observer.mapMemory
+						and observer.mapMemory.observations
+						and observer.mapMemory.observations[k]
+					local visible = (observer.visible or {})[k]
+					if not visible and record then
+						view.world.tiles[k], view.world.geography[k] = record.tile, record.geography
+					else
+						view.world.tiles[k], view.world.geography[k] =
+							world.tiles[k], (world.geography or {})[k]
+					end
+					if visible then
+						view.world.resources[k] = (world.resources or {})[k]
+					elseif record then
+						view.world.resources[k] = record.resource or nil
+					end
+					view.world.observedOwners[k] = W.observedOwner(state, observer, x, y) or false
 					view.world.landmarks[k], view.world.rails[k] =
 						W.observedFeatures(state, observer, x, y)
 				end
@@ -498,11 +610,7 @@ function W.forPlayer(state, id, afterSeq)
 		end
 	end
 	for _, c in ipairs(state.cities or {}) do
-		if
-			c.owner == id
-			or (observer.visible or {})[key(c.x, c.y)]
-			or c.village and (observer.explored or {})[key(c.x, c.y)]
-		then
+		if c.owner == id or (observer.visible or {})[key(c.x, c.y)] then
 			local copy = {}
 			if c.owner == id then
 				for field, value in pairs(c) do
@@ -550,6 +658,19 @@ function W.forPlayer(state, id, afterSeq)
 				copy.publicAlly = Villages.ally(c) or false
 			end
 			view.cities[#view.cities + 1] = copy
+		end
+	end
+	for tileKey, remembered in pairs(observer.mapMemory and observer.mapMemory.cities or {}) do
+		if
+			remembered.village
+			and not (observer.visible or {})[tileKey]
+			and (observer.explored or {})[tileKey]
+		then
+			local village = copy(remembered)
+			village.remoteVillage = true
+			village.hp, village.maxHP, village.wallHP, village.maxWalls = nil, nil, nil, nil
+			village.population, village.buildings, village.publicDefense = nil, nil, nil
+			view.cities[#view.cities + 1] = village
 		end
 	end
 	for _, u in ipairs(state.units or {}) do

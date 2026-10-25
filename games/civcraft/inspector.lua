@@ -22,7 +22,8 @@ function I.draw(ui, state, player, rect, modal)
 	ui.inspectorBounds = rect
 	r:fill(x, y, w, h, 1)
 	r:outline(x, y, w, h, 3)
-	local selectedCity = not ui.selected.empty and at(state.cities, ui.selected.x, ui.selected.y)
+	local selectedCity = not ui.selected.empty
+		and World.observedCity(state, player, ui.selected.x, ui.selected.y)
 	r:text(
 		x + 3,
 		y + 3,
@@ -36,7 +37,7 @@ function I.draw(ui, state, player, rect, modal)
 			ui.panel = "context"
 		end)
 	end
-	local city = not ui.selected.empty and at(state.cities, ui.selected.x, ui.selected.y)
+	local city = selectedCity
 	local unit = not ui.selected.empty
 		and Stacks.at(state.units, ui.selected.x, ui.selected.y, ui.selected.unitID)
 	local rows = {}
@@ -613,6 +614,10 @@ function I.draw(ui, state, player, rect, modal)
 				},
 			}
 		end
+	elseif city and city.remembered then
+		text(city.name or "REMEMBERED CITY", 17)
+		text("LAST SEEN ROUND " .. (city.lastSeenRound or "?"), 17)
+		text("Scout again for current details.")
 	elseif
 		city
 		and Villages.independent(city)

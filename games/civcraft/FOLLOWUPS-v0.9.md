@@ -50,7 +50,7 @@ in the design draft. Keep this list alongside the main roadmap until verified.
   snaps fractional camera origins to the pixel grid before drawing strokes. The
   first uploaded frame stays sharp with either warm or cold scaling caches;
   panning is not required.
-- Keep explored tiles outside vision visible, greyed out and frozen at their
+- [x] Keep explored tiles outside vision visible, greyed out and frozen at their
   last observed state. Do not show unseen units, new cities or other changes.
   Re-entering vision updates the remembered state. Check local, hotseat, remote
   snapshots and event playback against the same observation rules.

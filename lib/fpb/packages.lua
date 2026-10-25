@@ -192,6 +192,7 @@ P.packages.civcraft = {
 		"settings_view.lua",
 		"systems.lua",
 		"terrain_view.lua",
+		"fog_view.lua",
 		"tech_tree.lua",
 		"ui.lua",
 		"world.lua",

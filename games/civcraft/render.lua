@@ -83,6 +83,7 @@ local terminalColors = {
 	[34] = 4,
 	[35] = 2048,
 }
+dofile("/games/civcraft/fog_view.lua").install(R.palette, terminalColors)
 local FONT = {
 	["&"] = { "01100", "10010", "10100", "01000", "10101", "10010", "01101" },
 	["A"] = { "01110", "10001", "10001", "11111", "10001", "10001", "10001" },

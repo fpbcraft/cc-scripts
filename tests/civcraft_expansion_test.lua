@@ -350,8 +350,11 @@ state.round = 2
 assert(C.attack(state, visitor, { x = monster.x, y = monster.y }, S))
 assert((village.influence[1] or 0) == 10)
 p.explored[W.key(village.x, village.y)] = true
-p.visible = {}
 village.influence[2] = 50
+W.reveal(state, H, S)
+p.visible = {}
+village.influence[2] = 0
+village.influence[1] = 75
 local diplomatic = W.forPlayer(state, 1)
 local public
 for _, c in ipairs(diplomatic.cities) do
@@ -368,7 +371,7 @@ assert(
 )
 assert(
 	V.ally(public) == 2,
-	"Network alliance calculation must not mistake private relation filtering for an alliance change"
+	"An unseen village alliance change must not replace the last observed alliance"
 )
 -- Observer snapshots conceal unseen hostiles, landmarks, rails, and private relations.
 state, p, city = fixture()

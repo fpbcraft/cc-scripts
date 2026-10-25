@@ -132,3 +132,10 @@ to verify the actual host start-of-turn hook and saved progress. A peaceful run
 asserts resumption; combining it with `--war` verifies waiting for the rotated
 war-group activation. These scenarios use isolated computers and the installed
 loader environment.
+
+
+`civcraft_fog_memory_test.lua` checks frozen scenery/cities/deposits/borders,
+last-look capture, re-scouting, local and network projections, grey sprite pixels
+and recreated display preferences. Its pixel comparison uses instrumented
+graphics and its core rules also run in isolated CraftOS-PC. The normal full
+session covers renderer preference changes, hotseat, routes and save reload.

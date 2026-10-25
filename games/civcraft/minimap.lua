@@ -2,9 +2,12 @@ local FactionColors = dofile("/games/civcraft/faction_colors.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Terrain = dofile("/games/civcraft/terrain_view.lua")
+local Fog = dofile("/games/civcraft/fog_view.lua")
 local M = {}
 function M.draw(ui, state, player, rect)
 	local r = ui.r
+	local canvas = r
+	local rememberedRenderer = Fog.forUI(ui)
 	local world = state.world
 	local width, height = world and world.width or Hex.width, world and world.height or Hex.height
 	r:fill(rect.x, rect.y, rect.w, rect.h, 15)
@@ -15,7 +18,8 @@ function M.draw(ui, state, player, rect)
 			for x = 1, width do
 				local known = World.known(player, x, y)
 				if known ~= "hidden" then
-					local color = Terrain.color(Hex.tile(x, y, state), known == "explored")
+					r = known == "explored" and rememberedRenderer or canvas
+					local color = Terrain.color(Hex.tile(x, y, state), false)
 					r:fill(
 						rect.x + (x - 1 + (y - 1) % 2 * 0.5) * rect.w / fullW,
 						rect.y + (y - 1) * 0.75 * rect.h / fullH,
@@ -24,6 +28,18 @@ function M.draw(ui, state, player, rect)
 						color
 					)
 				end
+			end
+		end
+		r = canvas
+		for tileKey, city in pairs(player.mapMemory and player.mapMemory.cities or {}) do
+			if (player.explored or {})[tileKey] and not (player.visible or {})[tileKey] then
+				rememberedRenderer:fill(
+					rect.x + (city.x - 0.5) * rect.w / fullW,
+					rect.y + ((city.y - 1) * 0.75 + 0.5) * rect.h / fullH,
+					2,
+					2,
+					7
+				)
 			end
 		end
 		for _, list in ipairs({ state.cities, state.units }) do

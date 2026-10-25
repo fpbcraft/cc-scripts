@@ -1,4 +1,5 @@
 -- World geometry, painting and pointer targets use the same pointy hex polygons.
+local Fog = dofile("/games/civcraft/fog_view.lua")
 local FactionColors = dofile("/games/civcraft/faction_colors.lua")
 local AnimationView = dofile("/games/civcraft/animation_view.lua")
 local Animations = dofile("/games/civcraft/animations.lua")
@@ -21,6 +22,8 @@ function V.draw(ui, state, player, rect)
 	rect = { x = frame.x + 4, y = frame.y + 4, w = frame.w - 8, h = frame.h - 8 }
 	ui.mapFrame = frame
 	local r = ui.r
+	local canvas = r
+	local rememberedRenderer = Fog.forUI(ui)
 	local world = state.world
 	local overlays = ui.overlays or {}
 	local width, height = world and world.width or Hex.width, world and world.height or Hex.height
@@ -125,13 +128,11 @@ function V.draw(ui, state, player, rect)
 					and py < rect.y + rect.h
 				then
 					local visibility = World.known(player, x, y)
+					r = visibility == "explored" and rememberedRenderer or canvas
 					local hidden = visibility == "hidden"
 					local land = Hex.terrain(x, y, state)
 					local claim = claims[World.key(x, y)]
-					local owner = claim and claim.owner
-					if owner ~= ui.playerID and visibility ~= "visible" then
-						owner = nil
-					end
+					local owner = World.observedOwner(state, player, x, y)
 					local deposit = not hidden and World.deposit(world, x, y)
 					local yields = not hidden and World.yields(world, x, y)
 					local city = cityIndex[World.key(x, y)]
@@ -144,7 +145,7 @@ function V.draw(ui, state, player, rect)
 						end
 					end
 					local geography = Hex.tile(x, y, state)
-					local base = hidden and 15 or Terrain.color(geography, visibility == "explored")
+					local base = hidden and 15 or Terrain.color(geography, false)
 					if visibility == "visible" then
 						if overlays.territory then
 							base = owner and ownerColor(state, owner) or base
@@ -158,7 +159,7 @@ function V.draw(ui, state, player, rect)
 								x,
 								y,
 								base,
-								not hidden and visibility == "visible" and not overlays.territory,
+								not hidden and not overlays.territory,
 								hidden and 14 or 3
 							),
 							px,
@@ -171,7 +172,7 @@ function V.draw(ui, state, player, rect)
 								or 0
 							r:fill(px + inset, py + dy, math.max(1, size - inset * 2), 1, base)
 						end
-						if not hidden and visibility == "visible" and not overlays.territory then
+						if not hidden and not overlays.territory then
 							Terrain.draw(r, geography, px, py, size, x, y)
 						end
 						local vertices = Hex.vertices(px, py, size)
@@ -197,6 +198,7 @@ function V.draw(ui, state, player, rect)
 				end
 			end
 		end
+		r = canvas
 		if ui.pendingMove and ui.pendingMove.path then
 			local function center(point)
 				return rect.x + (point.x - 0.5 + ((point.y - 1) % 2) * 0.5) * size - ui.panX,
@@ -215,10 +217,11 @@ function V.draw(ui, state, player, rect)
 		-- Paint borders after all terrain, so neighbouring fills cannot erase them.
 		for _, t in ipairs(tiles) do
 			local x, y, px, py = t.x, t.y, t.px, t.py
+			r = t.visibility == "explored" and rememberedRenderer or canvas
 			if t.owner and t.visibility ~= "hidden" then
 				local vertices = Hex.vertices(px, py, size)
 				for side, n in ipairs(Hex.edgeNeighbours(x, y)) do
-					if claims[World.key(n.x, n.y)] ~= t.claim then
+					if World.observedOwner(state, player, n.x, n.y) ~= t.owner then
 						local a, b = vertices[side], vertices[side % 6 + 1]
 						-- Dark edging keeps bright ownership lines distinct on every biome.
 						for _, offset in ipairs({ { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } }) do
@@ -289,13 +292,18 @@ function V.draw(ui, state, player, rect)
 					Icons.draw(r, "spawner", px + size / 2 - 4, py + size / 2 - 4, 9)
 				end
 			end
-			local city = t.visibility ~= "hidden" and cityIndex[World.key(x, y)]
+			local city = t.visibility ~= "hidden" and World.observedCity(state, player, x, y)
 			if
 				city
 				and not hidden["city:" .. tostring(city.id)]
-				and (city.owner == ui.playerID or t.visibility == "visible")
+				and (city.remembered or city.owner == ui.playerID or t.visibility == "visible")
 			then
-				cityLabels[#cityLabels + 1] = { city = city, x = px + size / 2, y = py - 6 }
+				cityLabels[#cityLabels + 1] = {
+					city = city,
+					x = px + size / 2,
+					y = py - 6,
+					remembered = t.visibility == "explored",
+				}
 				if size < 16 then
 					r:fill(px + size / 2 - 2, py + size / 2 - 2, 5, 5, 0)
 					r:fill(
@@ -492,6 +500,7 @@ function V.draw(ui, state, player, rect)
 				end
 			end
 		end
+		r = canvas
 		for _, label in ipairs(cityLabels) do
 			local name = label.city.name or "CITY"
 			local width = r:textWidth(name)
@@ -499,7 +508,8 @@ function V.draw(ui, state, player, rect)
 				local xx =
 					math.max(rect.x + 2, math.min(rect.x + rect.w - width - 2, label.x - width / 2))
 				r:fill(xx - 2, label.y - 1, width + 4, 7, 0)
-				r:text(xx, label.y, name, ownerColor(state, label.city.owner), 1, width)
+				local labelRenderer = label.remembered and rememberedRenderer or canvas
+				labelRenderer:text(xx, label.y, name, ownerColor(state, label.city.owner), 1, width)
 			end
 		end
 		AnimationView.draw(ui, state, rect, size)

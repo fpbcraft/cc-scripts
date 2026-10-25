@@ -153,8 +153,8 @@ All 65 regression scripts pass. New scenarios cover transaction validation, doub
 
 09. Council elections, resolutions and diplomatic victory.
 10. Remaining display integration, faction diplomacy controls and larger map presets.
-    Remaining 25 October requirements include frozen grey fog memory, the
-    top-right reverse-chronological Event Log and replay pauses. Capture, attached
+    Remaining 25 October requirements include the top-right reverse-chronological
+    Event Log and replay pauses. Frozen grey fog memory is implemented below. Capture, attached
     escorts, queued movement and sharp zoom labels are implemented below.
 11. AI difficulty variants after the Prince baseline.
 12. Save/integration/fuzz/performance/network validation and release metadata.
@@ -428,3 +428,33 @@ ending turns and reloading the save. Peaceful sessions assert host-driven route
 resumption in round two; Surprise War sessions assert that an inactive war-group
 member retains its new allowance and pending route while waiting for activation.
 Physical monitors and live rednet clients remain unverified.
+
+### Frozen explored terrain and remembered cities
+
+Each observer saves last-look terrain/geography, deposits, ownership and a public
+city record alongside existing rail/wonder/camp memory. Records update in sight,
+including the final view when a unit/city sight source is lost, then freeze until
+re-scouted. Capturing a player's last visible city therefore records its observed
+new owner. Unseen construction, renaming, damage, ownership changes, destruction
+and village alliances cannot update the remembered scene. A newly discovered
+city appears only when actually seen. Units have no fog markers. Own city controls
+and known own claims remain available as the player's own information.
+
+Observer snapshots carry frozen deposits and terrain, and an observed ownership
+map for exact border rendering without exposing unseen city claims. Remembered
+foreign cities stay in the observer's private memory, separate from current
+combat entities. Known villages retain their frozen remote record. Ordinary
+remembered cities show their name and last-observed round in a read-only inspector.
+Re-scouting clears destroyed-city markers and refreshes the observed facts. Old
+saves retain immutable explored geography, while unsupported dynamic facts are
+left unknown until seen rather than reconstructed from hidden current state.
+
+Remembered terrain keeps its silhouettes/details under a dedicated seven-shade
+grey palette. Cities, deposits, infrastructure, borders, labels and minimap
+markers share that treatment. The grey renderer caches tinted sprite rows and
+refreshes when display settings replace the underlying renderer. Faction colors
+remain separate from terrain. Instrumented text/graphics tests compare frozen
+map pixels before/after unseen city destruction, check grey city pixels and
+read-only last-seen labels, and exercise detached local and network snapshots.
+Native CraftOS-PC rule and full-session scenarios pass; physical-monitor and
+live-modem behavior remain separate validation boundaries.
