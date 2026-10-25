@@ -749,6 +749,15 @@ function R:drawGame(m)
     local active = m.selected == kind
     self:rect(x, y, 38, 9, active and 6 or 12)
     self:rect(x + 1, y + 1, 36, 7, active and 3 or 1)
+    if active then
+      -- A complete highlighted outline survives the 16-color terminal
+      -- palette, and the small left tab stays visible beside the glyph.
+      self:rect(x, y, 38, 1, 15)
+      self:rect(x, y + 8, 38, 1, 6)
+      self:rect(x, y, 1, 9, 6)
+      self:rect(x + 37, y, 1, 9, 6)
+      self:rect(x + 1, y + 3, 1, 3, 11)
+    end
     self:toolIcon(x + 2, y + 1, kind)
     self:font(x + 11, y + 2, kind, active and 6 or 11)
     local alias = ({
@@ -803,24 +812,35 @@ function R:drawGame(m)
     self:font(124, 94, "FROM LEVEL 2", 4)
   end
   if m.inspected then
-    local selectedTile = E.get(g, m.inspected.x, m.inspected.y)
-    if selectedTile then
-      local px = self.boardX + (selectedTile.x - 1) * self.cell
-      local py = self.boardY + (selectedTile.y - 1) * self.cell
-      local control = self.cell >= 12 and 5 or 3
-      self:rect(px, py, self.cell - 1, 1, 11)
-      self:rect(px, py, 1, self.cell - 1, 11)
-      if not selectedTile.fixed and selectedTile.kind ~= "R" and selectedTile.kind ~= "B" then
-        self:rect(px + 1, py + 1, control, control, 12)
-        self:rect(px + 2, py + 1, 1, 2, 15)
-        self:add(px + 1, py + 1, control, control, "rotate", selectedTile.x, selectedTile.y)
+    local chosen = E.get(g, m.inspected.x, m.inspected.y)
+    if chosen then
+      local px = self.boardX + (chosen.x - 1) * self.cell
+      local py = self.boardY + (chosen.y - 1) * self.cell
+      local span = self.cell - 1
+      -- A four-sided frame marks which part is selected without dimming it.
+      self:rect(px, py, span, 1, 11)
+      self:rect(px, py + span - 1, span, 1, 11)
+      self:rect(px, py, 1, span, 11)
+      self:rect(px + span - 1, py, 1, span, 11)
+      -- Place small unboxed glyphs on the grid corners. The targets are
+      -- deliberately larger than the 3-pixel artwork for touch usability.
+      local hitSize = math.min(5, math.floor((span + 1) / 2))
+      if not chosen.fixed and chosen.kind ~= "R" and chosen.kind ~= "B" then
+        self:rect(px + 1, py + 1, 3, 3, 2)
+        self:rect(px + 2, py + 1, 2, 1, 11)
+        self:rect(px + 1, py + 2, 1, 2, 11)
+        self:rect(px + 3, py + 2, 1, 1, 11)
+        self:add(px, py, hitSize, hitSize, "rotate", chosen.x, chosen.y)
       end
-      if not selectedTile.fixed then
-        local rx = px + self.cell - control - 1
-        self:rect(rx, py + 1, control, control, 8)
-        self:rect(rx + 1, py + 1, 1, 1, 15)
-        self:rect(rx + control - 2, py + control - 1, 1, 1, 15)
-        self:add(rx, py + 1, control, control, "remove", selectedTile.x, selectedTile.y)
+      if not chosen.fixed then
+        local right = px + span - hitSize
+        self:rect(right + 1, py + 1, 3, 3, 2)
+        self:rect(right + 1, py + 1, 1, 1, 8)
+        self:rect(right + 3, py + 1, 1, 1, 8)
+        self:rect(right + 2, py + 2, 1, 1, 8)
+        self:rect(right + 1, py + 3, 1, 1, 8)
+        self:rect(right + 3, py + 3, 1, 1, 8)
+        self:add(right, py, hitSize, hitSize, "remove", chosen.x, chosen.y)
       end
     end
   end
