@@ -127,6 +127,7 @@ function R:resize()
       self.scale = math.min(w / 200, h / 120)
       self.ox = math.floor((w - 200 * self.scale) / 2)
       self.oy = math.floor((h - 120 * self.scale) / 2)
+      self.previousBuffer = nil
     end
   else
     self.tw, self.th = self.m.getSize()
@@ -149,14 +150,64 @@ function R:rect(x, y, w, h, color)
   if self.mode ~= "graphics" or w <= 0 or h <= 0 then
     return
   end
-  local s = self.scale
-  local x1 = math.max(0, math.floor(self.ox + x * s))
-  local y1 = math.max(0, math.floor(self.oy + y * s))
-  local x2 = math.min(self.pw, math.floor(self.ox + (x + w) * s))
-  local y2 = math.min(self.ph, math.floor(self.oy + (y + h) * s))
-  if x2 > x1 and y2 > y1 then
-    self.m.drawPixels(x1, y1, color, x2 - x1, y2 - y1)
+  -- Retained logical pixels: individual font and sprite pixels never issue
+  -- peripheral calls. At presentation time only changed horizontal runs are
+  -- sent to the attached monitor.
+  local x1, y1 = math.max(0, math.floor(x)), math.max(0, math.floor(y))
+  local x2, y2 = math.min(200, math.ceil(x + w)), math.min(120, math.ceil(y + h))
+  for py = y1, y2 - 1 do
+    local row = self.buffer[py + 1]
+    if not row then
+      row = {}
+      self.buffer[py + 1] = row
+    end
+    for px = x1, x2 - 1 do
+      row[px + 1] = color
+    end
   end
+end
+function R:flush()
+  local before = self.previousBuffer
+  local current = self.buffer
+  local changed = 0
+  local mon = self.m
+  if mon.setFrozen then
+    pcall(mon.setFrozen, true)
+  end
+  if not before then
+    mon.drawPixels(0, 0, 0, self.pw, self.ph)
+  end
+  for y = 0, 119 do
+    local row = current[y + 1] or {}
+    local old = before and before[y + 1] or nil
+    local x = 0
+    while x < 200 do
+      local color = row[x + 1] or 0
+      if old and color == (old[x + 1] or 0) then
+        x = x + 1
+      else
+        local start = x
+        repeat
+          x = x + 1
+        until x >= 200
+          or (row[x + 1] or 0) ~= color
+          or (old and (row[x + 1] or 0) == (old[x + 1] or 0))
+        local x1 = math.max(0, math.floor(self.ox + start * self.scale))
+        local x2 = math.min(self.pw, math.floor(self.ox + x * self.scale))
+        local y1 = math.max(0, math.floor(self.oy + y * self.scale))
+        local y2 = math.min(self.ph, math.floor(self.oy + (y + 1) * self.scale))
+        if x2 > x1 and y2 > y1 then
+          mon.drawPixels(x1, y1, color, x2 - x1, y2 - y1)
+          changed = changed + 1
+        end
+      end
+    end
+  end
+  if mon.setFrozen then
+    pcall(mon.setFrozen, false)
+  end
+  self.previousBuffer = current
+  return changed
 end
 function R:font(x, y, str, color)
   str = tostring(str):upper()
@@ -252,14 +303,15 @@ function R:cog(cx, cy, large, spin)
   local rim = spin and 6 or 7
   self:rect(cx - radius + 1, cy - radius + 1, radius * 2 - 1, radius * 2 - 1, 7)
   self:rect(cx - radius + 2, cy - radius + 2, radius * 2 - 3, radius * 2 - 3, rim)
+  local phase = spin and self.frame * math.min(spin.rate, 4) * spin.sign * 0.31 or 0
   for tooth = 0, 7 do
-    local angle = tooth * math.pi / 4
+    local angle = tooth * math.pi / 4 + phase
     local tx = math.floor(cx + math.cos(angle) * (radius + 1) + 0.5)
     local ty = math.floor(cy + math.sin(angle) * (radius + 1) + 0.5)
     self:rect(tx, ty, 2, 2, rim)
   end
   if spin then
-    local theta = self.frame * math.min(spin.rate, 8) * spin.sign * 0.33
+    local theta = self.frame * math.min(spin.rate, 4) * spin.sign * 0.72
     local sx = math.floor(cx + math.cos(theta) * (radius - 1) + 0.5)
     local sy = math.floor(cy + math.sin(theta) * (radius - 1) + 0.5)
     self:line(cx, cy, sx, sy, spin.sign > 0 and 11 or 14)
@@ -319,6 +371,83 @@ function R:spinMark(x, y, sign)
     self:rect(x, y + 4, 1, 1, color)
   end
 end
+-- Compact 7..12px glyphs for later 10x10 stages. The same indexed
+-- palette and kinetic states apply, without drawing outside a grid cell.
+function R:compactPiece(x, y, size, tile, light)
+  local cx, cy = x + math.floor(size / 2), y + math.floor(size / 2)
+  local spin = motionFor(tile, light)
+  if tile.kind == "R" or tile.kind == "B" then
+    return
+  end
+  if tile.kind == "X" then
+    self:rect(x, y, size, size, 4)
+    self:rect(x + 1, y + 1, size - 2, size - 2, 2)
+    return
+  end
+  if tile.kind == "S" or tile.kind == "M" then
+    self:rect(x + 1, y + 1, size - 2, size - 2, tile.kind == "S" and 10 or (light and light.correct and 9 or 8))
+    self:rect(cx - 1, cy - 1, 3, 3, 15)
+    return
+  end
+  local color = spin and 6 or 7
+  if tile.kind == "G" or tile.kind == "O" then
+    local r = math.min(tile.kind == "O" and 3 or 2, math.floor(size / 2) - 1)
+    self:rect(cx - r, cy - r, r * 2 + 1, r * 2 + 1, color)
+    local phase = spin and self.frame * spin.rate * spin.sign * 0.72 or 0
+    for tooth = 0, 3 do
+      local angle = tooth * math.pi / 2 + phase
+      self:rect(math.floor(cx + math.cos(angle) * (r + 1)), math.floor(cy + math.sin(angle) * (r + 1)), 1, 1, color)
+    end
+    if spin then
+      self:rect(math.floor(cx + math.cos(phase) * r), math.floor(cy + math.sin(phase) * r), 1, 1, spin.sign > 0 and 11 or 14)
+    end
+  else
+    self:rect(cx - 2, cy - 2, 5, 5, tile.kind == "I" and 13 or color)
+    self:rect(cx - 1, cy - 1, 3, 3, tile.kind == "C" and light and light.redstone and 8 or 2)
+    if tile.kind == "I" then
+      if tile.r % 2 == 1 then
+        self:rect(x, cy, size, 1, 13)
+      else
+        self:rect(cx, y, 1, size, 13)
+      end
+    end
+  end
+  self:rect(cx, cy, 1, 1, 1)
+  if spin then
+    self:rect(x, y + math.floor(size / 2), 1, 2, spin.sign > 0 and 11 or 14)
+  end
+end
+function R:redstonePiece(g, tile, result, x, y, size)
+  local cx, cy = x + math.floor(size / 2), y + math.floor(size / 2)
+  local powered = result.redstone[tile.id]
+  local ink = powered and 8 or 7
+  if tile.kind == "B" then
+    local radius = math.max(2, math.floor((size - 3) / 2))
+    self:rect(cx - radius, cy - radius, 2 * radius + 1, 2 * radius + 1, 7)
+    self:rect(cx - radius + 1, cy - radius + 1, 2 * radius - 1, 2 * radius - 1, 8)
+    self:rect(cx - 1, cy - 1, 3, 3, 14)
+    return
+  end
+  local connection = E.wireConnections(g, tile)
+  if connection[1] then
+    self:rect(cx, y, 1, cy - y + 1, ink)
+  end
+  if connection[2] then
+    self:rect(cx, cy, x + size - cx, 1, ink)
+  end
+  if connection[3] then
+    self:rect(cx, cy, 1, y + size - cy, ink)
+  end
+  if connection[4] then
+    self:rect(x, cy, cx - x + 1, 1, ink)
+  end
+  self:rect(cx - 1, cy - 1, 3, 3, ink)
+  if size >= 12 then
+    self:rect(cx - 2, cy, 1, 1, ink)
+    self:rect(cx + 2, cy, 1, 1, ink)
+  end
+  self:rect(cx, cy, 1, 1, powered and 14 or 4)
+end
 function R:piece(x, y, size, tile, light)
   if tile.kind == "X" then
     self:rect(x, y, size, size, 2)
@@ -326,6 +455,10 @@ function R:piece(x, y, size, tile, light)
       self:line(x + k, y + 1, x + 1, y + k, 3)
     end
     self:font(x + 4, y + 3, "X", 4)
+    return
+  end
+  if size < 13 then
+    self:compactPiece(x, y, size, tile, light)
     return
   end
   local spin = motionFor(tile, light)
@@ -375,14 +508,8 @@ function R:piece(x, y, size, tile, light)
     self:rect(cx - 1, cy - 1, 3, 3, 13)
   end
   if spin then
-    self:spinMark(x + 1, y + 1, spin.sign)
-    local label = speedLabel(spin.rate)
-    if label then
-      local width = #label * 4 - 1
-      local sx = x + math.max(0, math.floor((size - width) / 2))
-      self:rect(sx - 1, y + size - 5, width + 2, 5, 1)
-      self:font(sx, y + size - 5, label, spin.sign > 0 and 11 or 14)
-    end
+    -- Direction is an edge marker, leaving teeth and spokes unobstructed.
+    self:rect(x, y + math.floor(size / 2), 1, 3, spin.sign > 0 and 11 or 14)
   end
 end
 -- Draw belts/chains across every intervening cell, including stone. Draw over
@@ -1123,11 +1250,7 @@ function R:draw(m)
     self:drawText(m)
     return
   end
-  local mon = self.m
-  if mon.setFrozen then
-    pcall(mon.setFrozen, true)
-  end
-  mon.drawPixels(0, 0, 0, self.pw, self.ph)
+  self.buffer = {}
   if m.scene == "game" then
     self:drawGame(m)
   elseif m.scene == "briefing" then
@@ -1149,9 +1272,7 @@ function R:draw(m)
   else
     self:drawHelp(m)
   end
-  if mon.setFrozen then
-    pcall(mon.setFrozen, false)
-  end
+  self:flush()
   self.frame = self.frame + 1
 end
 -- Optional FPB Monitor Input addon exposes normalized left-click positions.
