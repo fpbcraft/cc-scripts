@@ -1146,24 +1146,64 @@ function R:drawSettings(m)
   self:font(42, 92, "TEXT SCALE: 0.5", 4)
   self:button(68, 108, 64, 10, "BACK", "back")
 end
+-- Campaign hub: eight mechanic chapters, each gated by earned objectives.
 function R:drawLevels(m)
-  self:page("CHOOSE LEVEL", "UNLOCKED: " .. m.progress.unlocked .. "/" .. #E.levels)
-  for i = 1, #E.levels do
-    local x = 10 + ((i - 1) % 6) * 30
-    local y = 30 + math.floor((i - 1) / 6) * 15
-    local unlocked = m.devSession or i <= m.progress.unlocked
-    self:button(
-      x,
-      y,
-      28,
-      12,
-      string.format("%02d", i),
-      unlocked and "level" or nil,
-      i,
-      m.game and i == m.game.number and 6 or 3
-    )
+  self:page("CAMPAIGN CHAPTERS", "OBJECTIVES " .. m.objectives .. " / 64 LEVELS")
+  for i, chapter in ipairs(m.chapters) do
+    local col, row = (i - 1) % 2, math.floor((i - 1) / 2)
+    local x, y = 8 + col * 94, 23 + row * 21
+    local active = m.devSession or i == 1 or m.progress.unlocked >= chapter.first
+    local score = 0
+    for n = chapter.first, chapter.last do
+      if m.progress.best[n] ~= nil then
+        score = score + 1
+      end
+      for _, earned in pairs(m.progress.awards[n] or {}) do
+        if earned then
+          score = score + 1
+        end
+      end
+    end
+    self:rect(x, y, 89, 19, active and 12 or 3)
+    self:rect(x + 1, y + 1, 87, 17, active and 1 or 0)
+    self:fontFit(x + 4, y + 2, string.format("%d  %s", i, chapter.name), active and 15 or 4, 80)
+    local hint = string.format("%d PTS  %s", score, active and "OPEN" or ("NEED " .. chapter.threshold))
+    self:fontFit(x + 4, y + 10, hint, active and 11 or 8, 82)
+    if active then
+      self:add(x, y, 89, 19, "chapter", i)
+    end
   end
-  self:button(70, 108, 60, 10, "BACK", "back")
+  self:button(70, 110, 60, 10, "BACK", "back")
+end
+-- An eight-stage chapter page shows the primary clear and optional objective
+-- progress for each level. The last card is deliberately marked as a test.
+function R:drawChapter(m)
+  local chapter = m.chapters[m.levelChapter]
+  self:page("CH " .. m.levelChapter .. " / " .. chapter.name, chapter.mechanic:upper())
+  for step = 1, 8 do
+    local i = chapter.first + step - 1
+    local item = E.levels[i]
+    local col, row = (step - 1) % 2, math.floor((step - 1) / 2)
+    local x, y = 7 + col * 95, 23 + row * 21
+    local cleared = m.progress.best[i] ~= nil
+    local awards = m.progress.awards[i] or {}
+    local achieved = 0
+    for _, yes in pairs(awards) do
+      if yes then
+        achieved = achieved + 1
+      end
+    end
+    local active = m.devSession or i <= m.progress.unlocked
+    self:rect(x, y, 90, 19, i == (m.game and m.game.number) and 6 or (cleared and 9 or 12))
+    self:rect(x + 1, y + 1, 88, 17, 1)
+    self:fontFit(x + 3, y + 2, string.format("%02d %s", i, item.name), 15, 83)
+    self:fontFit(x + 3, y + 10, (cleared and "[X]" or "[ ]") .. " CLEAR  +"
+      .. achieved .. " BONUS" .. (step == 8 and " TEST" or ""), cleared and 9 or 11, 85)
+    if active then
+      self:add(x, y, 90, 19, "level", i)
+    end
+  end
+  self:button(70, 110, 60, 10, "CHAPTERS", "back")
 end
 function R:drawConfirm(m)
   self:page("CONFIRM ACTION")
@@ -1386,14 +1426,29 @@ function R:drawText(m)
     end
     btn(4, h - 2, 16, "BACK", "back")
   elseif m.scene == "levels" then
-    for i = 1, #E.levels do
-      local col = (i - 1) % 6
-      local row = math.floor((i - 1) / 6)
-      local x = 2 + col * 7
-      local y = 4 + row * 3
-      btn(x, y, 6, string.format("%02d", i), (m.devSession or i <= m.progress.unlocked) and "level" or nil, i)
+    label(2, 3, "OBJECTIVES: " .. m.objectives .. "  (OPEN CHAPTERS)", colors.lightBlue)
+    for i, chapter in ipairs(m.chapters) do
+      local open = m.devSession or i == 1 or m.progress.unlocked >= chapter.first
+      btn(3, 4 + i * 3, math.min(w - 6, 45), i .. " " .. chapter.name .. (open and " OPEN" or (" NEED " .. chapter.threshold)),
+        open and "chapter" or nil, i)
     end
     btn(3, h - 2, 16, "BACK", "back")
+  elseif m.scene == "chapter" then
+    local chapter = m.chapters[m.levelChapter]
+    label(2, 3, "CHAPTER " .. m.levelChapter .. " " .. chapter.name, colors.lightBlue)
+    for step = 1, 8 do
+      local i = chapter.first + step - 1
+      local clear = m.progress.best[i] ~= nil
+      local count = 0
+      for _, yes in pairs(m.progress.awards[i] or {}) do
+        if yes then
+          count = count + 1
+        end
+      end
+      btn(3, 4 + step * 3, math.min(w - 6, 50),
+        string.format("%02d %s CLEAR:%s BONUS:%d", i, E.levels[i].name, clear and "Y" or "N", count), "level", i)
+    end
+    btn(3, h - 2, 16, "CHAPTERS", "back")
   else
     local choices = {}
     if m.scene == "pause" then
@@ -1464,6 +1519,8 @@ function R:draw(m)
     self:drawSettings(m)
   elseif m.scene == "levels" then
     self:drawLevels(m)
+  elseif m.scene == "chapter" then
+    self:drawChapter(m)
   elseif m.scene == "confirm" then
     self:drawConfirm(m)
   else
