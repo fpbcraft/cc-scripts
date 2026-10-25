@@ -65,8 +65,10 @@ local r = R.new(gfx)
 assert(r.mode == "graphics" and gfx.mode == 2)
 assert(math.abs(r.scale - 2) < 0.001, "Graphics virtual dimensions")
 assert(gfx.palette[0] == 0x07192D and gfx.palette[11] == 0x64D3F2, "Blueprint ink palette installed")
-assert(gfx.palette[14] == 0xF4A25E and gfx.palette[11] ~= gfx.palette[14],
-  "Rotation direction colors use distinct cyan and amber")
+assert(
+  gfx.palette[14] == 0xF4A25E and gfx.palette[11] ~= gfx.palette[14],
+  "Rotation direction colors use distinct cyan and amber"
+)
 local wheel = E.sandbox()
 assert(E.place(wheel, 2, 3, "O", 1))
 assert(E.place(wheel, 2, 4, "G", 1))
@@ -97,9 +99,10 @@ r:cog(35, 35, false, { rate = 2, sign = 1 })
 r.frame = 4
 r:cog(35, 35, false, { rate = 2, sign = 1 })
 assert(#twoPositions >= 2, "Cogwheel animation draws rotating spokes")
-assert(twoPositions[1][1] ~= twoPositions[#twoPositions][1]
-  or twoPositions[1][2] ~= twoPositions[#twoPositions][2],
-  "Powered cog spokes change angle from frame to frame")
+assert(
+  twoPositions[1][1] ~= twoPositions[#twoPositions][1] or twoPositions[1][2] ~= twoPositions[#twoPositions][2],
+  "Powered cog spokes change angle from frame to frame"
+)
 r.frame = 0
 r.line = previousLine
 r.font = originalFont
