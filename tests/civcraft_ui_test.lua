@@ -169,6 +169,8 @@ assert(
 )
 assert(not actions["MOVE UNIT"], "City should not expose unit movement")
 assert(ui.mapViewport and ui.mapViewport.w > 0, "Central map viewport")
+touchLabel("JOBS")
+ui:draw(state, 11, { localMode = true })
 touchLabel("-")
 assert(
 	calls[#calls].action == "assign" and calls[#calls].data.to == "idle",
@@ -203,7 +205,7 @@ end
 assert(techNode, "City tech tab opens connected technology graph canvas")
 touchLabel("CLOSE")
 ui:draw(state, 11, { localMode = true })
-touchLabel("END TURN")
+ui:command("end")
 assert(ui.endConfirm, "Unfinished orders require confirmation")
 ui:draw(state, 11, { localMode = true })
 touchLabel("END ANYWAY")

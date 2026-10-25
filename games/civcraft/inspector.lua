@@ -377,6 +377,20 @@ function I.draw(ui, state, player, rect, modal)
 		rows[#rows + 1] = {
 			buttons = {
 				{
+					label = "SKIP TURN",
+					run = function()
+						ui:command("skipTurn", { x = unit.x, y = unit.y, unitID = unit.id })
+						ui.source, ui.pendingMove, ui.reachable = nil, nil, {}
+						if modal then
+							ui.panel = "context"
+						end
+					end,
+				},
+			},
+		}
+		rows[#rows + 1] = {
+			buttons = {
+				{
 					label = unit.standby and "WAKE UNIT" or "SLEEP UNIT",
 					run = function()
 						ui.source = nil

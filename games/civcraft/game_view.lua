@@ -221,9 +221,7 @@ function G.draw(ui, state, player)
 
 	local footerX = w - right - 2
 	r:fill(footerX, bottom, right, 15, 1)
-	iconButton(footerX + 1, bottom + 1, 12, "NEXT IDLE UNIT", "nextUnit", function()
-		ui:nextIdle()
-	end)
+
 	if ui:animating() then
 		iconButton(2, bottom + 1, 12, "SKIP", "nextUnit", function()
 			ui:command("skipPlayback")
@@ -234,19 +232,13 @@ function G.draw(ui, state, player)
 			ui.eventOffset = 0
 		end)
 	end
-	r:button(
-		footerX + 15,
-		bottom + 1,
-		right - 15,
-		12,
-		right < 68 and "END" or "END TURN",
-		function()
-			ui:command("end")
-		end,
-		{ primary = true, icon = "endTurn" }
-	)
-	r.buttons[#r.buttons].icon = "endTurn"
-	r.buttons[#r.buttons].label = "END TURN"
+	local turnLabel, turnIcon = ui:turnAction()
+	r:button(footerX + 1, bottom + 1, right - 1, 12, turnLabel, function()
+		ui:advanceTurn()
+	end, { primary = turnLabel ~= "WAITING", icon = turnIcon })
+	r.buttons[#r.buttons].icon = turnIcon
+	r.buttons[#r.buttons].turnAction = true
+
 	local rect = { x = 3, y = 3, w = w - 6, h = h - 6 }
 	if ui.disbandConfirm then
 		modal(ui, rect, true)

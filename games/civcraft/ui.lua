@@ -13,6 +13,8 @@ local Playback = dofile("/games/civcraft/playback_ui.lua")
 local Renderer = dofile("/games/civcraft/render.lua")
 local Settings = dofile("/games/civcraft/settings_view.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
+local TurnTasks = dofile("/games/civcraft/turn_tasks.lua")
+local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local World = dofile("/games/civcraft/world.lua")
 local UI = {}
 UI.__index = UI
@@ -130,45 +132,49 @@ function UI:command(action, params)
 	end
 end
 function UI:endWarnings()
-	local warnings = {}
-	local state = self.state
-	if not state then
-		return warnings
+	return TurnTasks.pending(self.state, self.playerID, Systems)
+end
+function UI:turnAction()
+	local eligible = self.state and Scheduler.canAct(self.state, self.playerID)
+	if not eligible then
+		return "WAITING", "pause", "waiting"
 	end
-	for _, u in ipairs(state.units or {}) do
-		if
-			u.owner == self.playerID
-			and not u.standby
-			and not u.autoExplore
-			and (u.movesLeft or (u.moved and 0 or 1)) > 0
-		then
-			warnings[#warnings + 1] = {
-				text = u.kind .. " at " .. u.x .. "," .. u.y .. " has moves left.",
-				kind = "unit",
-				item = u,
-			}
+	local task = self:endWarnings()[1]
+	if task then
+		if task.kind == "unit" then
+			return "UNIT ORDERS", "nextUnit", "unit"
 		end
-	end
-	for _, c in ipairs(state.cities or {}) do
-		if c.owner == self.playerID and not c.project and not c.productionIdle then
-			warnings[#warnings + 1] = {
-				text = (c.name or ("City " .. c.x .. "," .. c.y)) .. " has no production.",
-				kind = "city",
-				item = c,
-			}
+		if task.kind == "city" then
+			return "PRODUCTION", "station", "city"
 		end
+		return "RESEARCH", "tree", "research"
 	end
-	for _, p in ipairs(state.players or {}) do
-		if p.id == self.playerID and not p.researchTarget then
-			for id in pairs(Systems.techs) do
-				if Systems.canResearch(p, id) then
-					warnings[#warnings + 1] = { text = "No research selected.", kind = "research" }
-					break
-				end
-			end
-		end
+	return "END TURN", "endTurn", "end"
+end
+function UI:advanceTurn()
+	local _, _, action = self:turnAction()
+	if action == "waiting" then
+		return false
 	end
-	return warnings
+	if action == "unit" then
+		self:nextIdle()
+	elseif action == "city" then
+		self:nextIdleCity()
+	elseif action == "research" then
+		self.panel = "tech"
+		self.techModel = self.techModel or {}
+		self:feedback("CHOOSE A RESEARCH PROJECT")
+	else
+		self:command("end")
+	end
+	if
+		(action == "unit" or action == "city")
+		and self.inspectorBounds
+		and self.inspectorBounds.h < 60
+	then
+		self.panel = "inspector"
+	end
+	return true
 end
 function UI:deselect()
 	self.placement = nil
@@ -928,11 +934,7 @@ function UI:nextIdle()
 	local candidates = {}
 	local current
 	for _, unit in ipairs(self.state.units or {}) do
-		if
-			unit.owner == self.playerID
-			and not unit.standby
-			and (unit.movesLeft or (unit.moved and 0 or 1)) > 0
-		then
+		if TurnTasks.idle(self.state, unit, self.playerID) then
 			candidates[#candidates + 1] = unit
 			if
 				not self.selected.empty

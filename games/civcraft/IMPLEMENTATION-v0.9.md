@@ -217,3 +217,32 @@ Surprise War, hotseat handoff, settings/research/campaign options and save reloa
 The actual graphics renderer was captured at 57x38 text cells for visual review.
 These remain instrumented graphics and native text checks, not physical-monitor
 or live remote-client validation.
+
+### Unified turn decisions and Skip Turn
+
+A single primary footer button resolves remaining decisions in this order:
+awake idle units, cities without production, and unassigned available research.
+Its text changes between Unit Orders, Production, Research and End Turn. It
+navigates to the relevant unit or production inspector, or the research tree,
+without arming movement. Extremely short sidebars use the full-screen inspector.
+No Production satisfies a city decision. Sleep, automatic exploration and spent
+movement do not create idle-unit reminders. Waiting/Ready players cannot use the
+button to gain an extra turn.
+
+Skip Turn is a host-validated unit order, with ownership, identity, round and
+scheduler validation. It retains movement/attack budgets, cancels previous
+sleep/heal/exploration intentions and records only a temporary attention stamp.
+A rejected new order retains the skip; an accepted unit order clears it. Optional
+`unit.skippedTurn` persists through saves and private snapshots. The stamp expires
+on the next round, and distinguishes the Surprise War response from the ended
+normal turn so a defender can use only its remaining actions in that new window.
+No loading or skipping action replenishes movement.
+
+The focused text/graphics workflow test exercises the actual primary controls,
+Skip Turn, No Production, research assignment and final end dispatch. Rule tests
+cover foreign/stale unit targets, invalid/valid new orders, stored skips, round
+expiry, Ready locks and response windows. The native full-session driver now
+resolves decisions through actual mouse input instead of End Anyway. Both the
+hotseat/Surprise War and host-with-AI sessions pass, including real trades,
+settings/research/campaign controls and save reload. The host result also asserts
+saved skip orders and resolved human production/research (`turnTasks = true`).

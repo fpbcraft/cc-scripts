@@ -384,7 +384,7 @@ for _, graphics in ipairs({ false, true }) do
 				"Empire menu focuses owned cities"
 			)
 			draw()
-			assert(click("NEXT IDLE UNIT"))
+			assert(click("UNIT ORDERS"))
 			draw()
 			assert(
 				ui.selected.kind == "unit" and not ui.source,
@@ -426,38 +426,35 @@ for _, graphics in ipairs({ false, true }) do
 						button.icon and button.y < 24,
 						"Secondary actions are icons in the top bar"
 					)
-				elseif button.label == "END TURN" or button.label == "NEXT IDLE UNIT" then
+				elseif button.turnAction then
 					assert(
 						button.icon and button.y >= ui.r.h - 15,
 						"Primary actions use a compact icon footer"
 					)
 				end
 			end
-			local research, nextUnit, endTurn
+			local research, turnButton
 			for _, button in ipairs(ui.r.buttons) do
 				if button.label == "TECH TREE" then
 					research = button
 				end
-				if button.label == "NEXT IDLE UNIT" then
-					nextUnit = button
+				if button.turnAction then
+					assert(not turnButton)
+					turnButton = button
 				end
-				if button.label == "END TURN" then
-					endTurn = button
-				end
+				assert(button.label ~= "NEXT IDLE UNIT")
 			end
 			assert(research and research.y < 14, "Research belongs in the top bar")
 			assert(
-				nextUnit
-					and endTurn
-					and nextUnit.x + nextUnit.w <= endTurn.x
-					and nextUnit.y == endTurn.y,
-				"Next idle is beside End Turn"
+				turnButton and turnButton.x + turnButton.w == ui.r.w - 2,
+				"A single primary turn action fills the inspector footer"
 			)
 			assert(
 				ui.statusBounds.y >= ui.mapViewport.y + ui.mapViewport.h
-					and ui.statusBounds.x + ui.statusBounds.w <= endTurn.x,
+					and ui.statusBounds.x + ui.statusBounds.w <= turnButton.x,
 				"Status feedback occupies the strip below the map, beside the inspector footer"
 			)
+
 			assert(click("FACTIONS"))
 			draw()
 			bounds()

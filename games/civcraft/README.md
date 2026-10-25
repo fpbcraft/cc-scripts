@@ -178,14 +178,19 @@ Names appear above cities and in city navigation, and remain stable in saves.
   A waiting screen names the AI currently taking its turn, then shows
   **PROCESSING ROUND** while the next round is prepared.
 
-The map stays central with a permanent, scrollable inspector. The left controls
-always use square icons. **PREV/NEXT**, the scrollbar, and mouse wheel scrolling
-keep inspector actions reachable. The bottom-left icons open **TECH TREE** and
-**NEXT IDLE UNIT**. The labeled **END TURN** button sits at the bottom right.
-The top-right city, book, clipboard and pause icons open **EMPIRE**, **CODEX**,
-**REPORT** and **PAUSE**. Zoom buttons are in the left sidebar, with the fullscreen
-**WORLD OVERVIEW** button anchored at its bottom. Four narrow, clickable map
-edges pan in their respective directions.
+The map stays central with a permanent inspector. City **INFO**, **JOBS**,
+**TILES** and **PROD** views separate statistics from the task being edited;
+compact unit inspectors separate actions from secondary details. Extremely
+short sidebars open a full-screen inspector. **PREV/NEXT**, the scrollbar and
+mouse wheel navigate long lists. Status messages appear below the map.
+
+One primary button occupies the inspector footer. It shows **UNIT ORDERS**,
+**PRODUCTION** or **RESEARCH** and opens the corresponding unresolved decision.
+Once those decisions are resolved, it becomes **END TURN**. Explicitly selecting
+**NO PRODUCTION** satisfies a city's reminder while preserving project progress.
+The top-right buttons open **TECH TREE**, **FACTIONS**, **EMPIRE**, **CODEX**,
+**REPORT** and **PAUSE**. Zoom buttons remain in the left sidebar, with
+**WORLD OVERVIEW** at its bottom. Four clickable map edges pan the view.
 Drag inside the map to pan on a computer; CraftOS monitor windows also support
 mouse dragging. Vanilla Minecraft monitor taps use the edge strips.
 
@@ -199,9 +204,9 @@ its base yields plus buildings and civilization bonuses; adding its worked tiles
 gives the total shown in the inspector. Terrain detail increases with zoom.
 
 **EMPIRE** opens a paged list of all owned units and cities; selecting an entry
-centers the map and opens its inspector. **NEXT IDLE UNIT** cycles through awake
-units with movement left, skipping sleeping and spent units. These navigation
-actions never activate movement mode. When a unit occupies a city tile, use the
+centers the map and opens its inspector. **UNIT ORDERS** cycles through awake
+units with movement left, excluding sleeping, auto-exploring and skipped units.
+This navigation never activates movement mode. When a unit occupies a city tile, use the
 inspector's **CITY / UNIT** chooser to inspect either one; map taps select the
 unit first.
 
@@ -214,10 +219,14 @@ units that can still act. Gold-framed worker badges identify worked tiles. **CAN
 **WAKE UNIT** restores active orders. Other unit actions require their own
 inspector buttons. Escape closes a dialog or cancels the current action first.
 
-**END TURN** asks for confirmation when awake units have moves remaining, a city
-has no production, or an available research project is unassigned. **GO TO** buttons jump to the missing orders; **END ANYWAY**
-skips them. Hotseat handoffs clear the outgoing camera, selection and
-action overlays; the next player starts centered on their own city or unit.
+**SKIP TURN** ignores a unit for the current turn's reminders without spending
+its remaining movement. It becomes available again next turn; accepted new
+orders clear the skip immediately. Unlike Sleep, Skip Turn does not persist
+across turns. An eligible Surprise War response is a new reminder window, using
+only the defender's unspent actions. The primary turn button handles remaining
+unit, production and research decisions before it offers **END TURN**.
+Hotseat handoffs clear the outgoing camera, selection and action overlays; the
+next player starts centered on their own city or unit.
 A scrollable **turn report dialog** lists economic changes, completed research
 and buildings, city growth, and recruited/lost/damaged units. **REPORT** reopens
 it. Reports contain only that player's empire information.

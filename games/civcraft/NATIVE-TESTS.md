@@ -92,3 +92,9 @@ capitals within normal sight so first contact is established through revelation.
 It never assigns contact flags or bypasses host diplomacy validation. Run
 `civcraft_contacts_test.lua` and `civcraft_conversation_ui_test.lua` in the isolated
 computer for contact privacy, actual widget input and counteroffer checks.
+
+The main session now follows the unified turn button, chooses Skip Turn for its
+human units, chooses No Production for idle cities and assigns research before
+ending. `turnTasks` verifies those accepted orders in the saved campaign. The
+response scenario uses the same task workflow during the defender's unspent-action
+window. The driver allows 45 seconds for the longer sequence of real mouse events.

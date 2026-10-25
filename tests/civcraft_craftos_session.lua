@@ -95,6 +95,54 @@ local function tap(view, label)
 	return false
 end
 
+local function completeDecisions(view)
+	if view.panel == "context" then
+		local label = view:turnAction()
+		if tap(view, label) then
+			return label == "END TURN"
+		end
+	elseif view.panel == "inspector" then
+		if view.selected.kind == "unit" then
+			if not tap(view, "SKIP TURN") then
+				tap(view, "NEXT")
+			end
+		else
+			local resolved = false
+			for _, city in ipairs(view.state.cities) do
+				if city.x == view.selected.x and city.y == view.selected.y then
+					resolved = city.productionIdle or city.project
+				end
+			end
+			if resolved then
+				tap(view, "CLOSE")
+			elseif not tap(view, "NO PRODUCTION") then
+				tap(view, "NEXT")
+			end
+		end
+	elseif view.panel == "tech" then
+		local researching = false
+		for _, player in ipairs(view.state.players) do
+			if player.id == view.playerID then
+				researching = player.researchTarget
+			end
+		end
+		if researching then
+			tap(view, "CLOSE")
+		elseif view.techModel and view.techModel.detail then
+			if not tap(view, "RESEARCH") then
+				tap(view, "NEXT")
+			end
+		elseif
+			not tap(view, "RESEARCH")
+			and not tap(view, "DETAILS")
+			and not tap(view, "DETAILS / CODEX")
+		then
+			tap(view, "WHEAT FARMING")
+		end
+	end
+	return false
+end
+
 dofile = function(path)
 	local module = native(path)
 	if path == "/games/civcraft/world.lua" and (includeConversation or includeWar) then
@@ -289,8 +337,23 @@ dofile = function(path)
 						"Ended defender must receive an unspent-action response before the round closes"
 					)
 				end
-				if tap(self, label) then
+				if label == "END TURN" then
+					if completeDecisions(self) then
+						responseStep = responseStep + 1
+					end
+				elseif tap(self, label) then
 					responseStep = responseStep + 1
+				end
+				return
+			end
+			if
+				(stage == 2 or stage == 5)
+				and state.phase == "game"
+				and not options.handoff
+				and not options.paused
+			then
+				if completeDecisions(self) then
+					stage = stage + 2
 				end
 				return
 			end
@@ -339,7 +402,7 @@ dofile = function(path)
 	return module
 end
 local completed = false
-local timeout = os.startTimer(20)
+local timeout = os.startTimer(45)
 local success, reason = pcall(function()
 	parallel.waitForAny(function()
 		assert(loadfile("/games/civcraft/game.lua", "t", _ENV))(
@@ -432,6 +495,27 @@ if includeSettings then
 		"Native settings must persist across renderer recreation"
 	)
 end
+
+for _, participant in ipairs(state.players) do
+	if not participant.ai then
+		assert(
+			participant.researchTarget or next(participant.techs),
+			"Human turn workflow assigns research"
+		)
+		local skipped = false
+		for _, unit in ipairs(state.units) do
+			if unit.owner == participant.id and unit.skippedTurn then
+				skipped = true
+			end
+		end
+		assert(skipped, "Human turn workflow saves the actual Skip Turn order")
+		for _, city in ipairs(state.cities) do
+			if city.owner == participant.id then
+				assert(city.project or city.productionIdle, "Human cities resolve production")
+			end
+		end
+	end
+end
 local Events = native("/games/civcraft/events.lua")
 assert(Events.forPlayer(state, state.players[1].id).lastSeq > 0)
 assert(Events.forPlayer(state, state.players[2].id).lastSeq > 0)
@@ -442,6 +526,7 @@ output.write(textutils.serialize({
 	stages = stage,
 	round = state.round,
 	saveReload = true,
+	turnTasks = true,
 	aiPlanReload = includeAI,
 	settingsReload = includeSettings,
 	researchFlow = includeResearch,

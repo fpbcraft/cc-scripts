@@ -12,6 +12,7 @@ local UnitMovement = dofile("/games/civcraft/unit_movement.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
+local TurnTasks = dofile("/games/civcraft/turn_tasks.lua")
 local A = {}
 
 function A.validateIntent(state, request)
@@ -200,10 +201,19 @@ function A.apply(state, id, req, Systems)
 	local c, u = cityAt(x, y), unitAt(x, y)
 	if req.action == "research" or req.action == "warrior" or req.action == "settler" then
 		return false, "Use research and city production projects"
+	elseif req.action == "skipTurn" then
+		if not u or u.owner ~= id or req.unitID and req.unitID ~= u.id then
+			return false, "Select an owned unit"
+		end
+		u.skippedTurn = TurnTasks.stamp(state, id)
+		u.standby, u.healing, u.autoExplore = false, false, false
+		Events.notice(state, "order", nil, "Skipped unit for this turn", id)
+		return true
 	elseif req.action == "standby" then
 		if not u or u.owner ~= id then
 			return false, "Select an owned unit"
 		end
+		u.skippedTurn = nil
 		u.standby = req.value == true
 		if not u.standby then
 			u.healing = false
@@ -219,11 +229,13 @@ function A.apply(state, id, req, Systems)
 		end
 		if req.value == false then
 			u.autoExplore = false
+			u.skippedTurn = nil
 			Events.notice(state, "order", nil, req.action, id)
 			return true
 		end
 		local ok, why = Systems.autoExplore(state, u, Hex)
 		if ok then
+			u.skippedTurn = nil
 			Events.notice(state, "order", nil, req.action, id)
 		end
 		return ok, why
@@ -276,6 +288,7 @@ function A.apply(state, id, req, Systems)
 		end
 		moving.standby = false
 		moving.healing = false
+		moving.skippedTurn = nil
 		moving.moved = moving.movesLeft <= 0
 	elseif req.action == "disband" then
 		if not u or u.owner ~= id or (req.unitID and req.unitID ~= u.id) then
@@ -302,6 +315,7 @@ function A.apply(state, id, req, Systems)
 			return false, why
 		end
 		moving.healing = false
+		moving.skippedTurn = nil
 		Events.notice(state, "rail", { x = x, y = y, owner = id }, "rail")
 	elseif req.action == "envoy" then
 		local ok, why = Villages.envoy(state, p, c)
@@ -312,6 +326,7 @@ function A.apply(state, id, req, Systems)
 		if not u or u.owner ~= id then
 			return false, "Select an owned unit"
 		end
+		u.skippedTurn = nil
 		u.healing = true
 		u.standby = true
 		u.autoExplore = false

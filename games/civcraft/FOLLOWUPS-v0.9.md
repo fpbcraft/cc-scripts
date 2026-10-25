@@ -65,11 +65,11 @@ combat previews; these still need the final integrated interaction checks.
 
 ## Further interaction and combat requirements
 
-- Replace separate Next Idle Unit and End Turn controls with one primary button.
+- [x] Replace separate Next Idle Unit and End Turn controls with one primary button.
   Its label must describe the next action: select an idle unit, choose city
   production, choose research, or end the turn only when no required task remains.
   Explicit No Production satisfies a city's production reminder.
-- Add a unit Skip Turn order. It ignores that unit for this turn's idle reminders
+- [x] Add a unit Skip Turn order. It ignores that unit for this turn's idle reminders
   and clears at its next eligible turn; it is distinct from persistent Sleep.
 - Implement Civ6-style [zone of control](https://civilization.fandom.com/wiki/Zone_of_control_%28Civ6%29):
   hostile military/city control restricts movement after entering controlled
