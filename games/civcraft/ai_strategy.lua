@@ -96,6 +96,8 @@ local function emergency(view, player, cities)
 			for _, unit in ipairs(view.units or {}) do
 				if
 					unit.owner ~= player.id
+					and not unit.villageGuard
+					and unit.kind ~= "settler"
 					and Hex.distance(city.x, city.y, unit.x, unit.y) <= 3
 				then
 					return "defendCapital"

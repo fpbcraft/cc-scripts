@@ -9,7 +9,7 @@ Implemented locally:
 - `actions.lua` owns gameplay-order validation and execution. Local/remote human requests, AI research/production/staffing/trading/envoys, movement, founding, city strikes and engineer orders use it. Session startup, ready-state transitions and persistence remain in `game.lua`; wilderness monsters keep their separate local-sight rules.
 - Settlers have three base movement points, pay one on ordinary land and require positive movement remaining to found. Founding checks ownership, terrain, landmarks, camps and city spacing before consuming the unit. Cavalry difficult-terrain cost is capped at two.
 - Valid movement/attack/rail orders wake sleeping units. Invalid orders preserve sleep. The inspector allows orders without a manual Wake step.
-- Passive healing requires owned territory; support healing still works outside it.
+- Both passive and support healing require the receiving unit to be in its own territory, following the user's 25 October clarification.
 - `Combat.predict` is pure, includes HP, wall loss, retaliation, deaths and capture, and supplies the result applied by combat resolution. Unit attack previews show predicted remaining HP and walls in the status line.
 - No Production preserves project progress and suppresses deliberate-idle reminders. Selecting production resumes saved work.
 - The installer package includes the new action module.
@@ -58,10 +58,12 @@ Implemented locally:
 
 - Separate timing and frame-projection modules animate only frozen observer events. Movement interpolates actual approved hex centers at a nominal 120 ms per hex; concealed gaps disappear rather than drawing an invented connecting path. Melee uses a lunge and return/advance, ranged attacks use a projectile, impact changes the displayed HP, defeated units briefly disappear, and founding/capture use contextual effects. Research and other notices retain feed summaries.
 - Static instances of animated entities are suppressed, including entities with later queued actions. Animation never changes positions, HP, movement budgets or turn order. Local display snapshots detach all nested tables from host state; cooperative rendering cannot read a partially mutated host entity. Host display snapshots are cached by state revision. Animation-only redraws do not broadcast new network snapshots.
-- An observer-specific feed offers Play All, Watch and Skip. Watch explicitly centers on an observed event; ordinary playback leaves the camera in place. Hotseat observers keep separate permitted feeds, and the handoff conceals all animation. On returning, a private recap shows qualifying events since that player's previous turn ended, after any round report; dismissal leaves the recent feed available. Normal/Fast/Off, reduced motion and automatic playback are device preferences separate from campaign and audio data. Reduced motion and Skip retain summaries.
+- Observer-safe actions play automatically one at a time, and the camera follows the current action. There is no handoff replay question. Returning players automatically receive their permitted deferred actions after private handoff/report screens; modal/pause screens suspend timing without consuming the animation. The optional event feed remains available for manually reviewing prior observations.
+- The observer's own auto-explore movement is excluded from playback. A private event-time flag distinguishes automatic travel from a manual order overriding exploration; other observers do not receive that order metadata. Normal/Fast/Off and reduced motion remain separate from campaign/audio data. Reduced motion and Skip retain non-excluded summaries.
+
 - Presentation queues are capped at 32 events, summaries at 128 and age at eight rounds. Motion is discarded first under pressure so combat/founding summaries survive motion bursts. Queues accelerate under backlog; monotonic elapsed time prevents frame rewinds. Timers request redraws cooperatively rather than blocking the command loop.
 
-Automatic onscreen playback is a provisional default pending the user's answer; it can be disabled in Pause. Offscreen events stay in the feed. Since-last-turn recap cursors belong to the current session; restarting retains the bounded saved event window in the feed. Future diplomacy and Council event effects must accompany their respective workstreams.
+The user's 25 October clarification supersedes the earlier optional/onscreen playback proposal: automatic playback also follows offscreen observed actions. See [FOLLOWUPS-v0.9.md](FOLLOWUPS-v0.9.md). Future diplomacy and Council effects must accompany their respective workstreams.
 
 All 56 repository regression scripts passed, including the recap. Tests cover a five-hex timeline, fog gaps, ranged/melee phases, HP/fade timing, stale duplicate ingestion, queue bounds, age, skips and detached nested data. Text/graphics UI checks cover automatic playback, one rendered sprite, feed controls, reduced motion and private recaps without reconstructing concealed paths. Four native CraftOS-PC checks passed together in an isolated profile. The latest text playback traversed six hexes at 13 distinct positions across 14 draws in 0.806 seconds, then accepted Skip without losing the feed. This measures the default 51×19 text backend; native GUI/graphics animation, physical monitor input, frame pacing on larger displays and live rednet races remain release-validation work.
 
@@ -82,6 +84,17 @@ Economic execution now adds:
 
 All 58 repository regression scripts passed. Economic scenarios additionally cover food-secure roles, treasury pressure, intentional idle/resume, multi-round settlement detours, failed movement, invisible-world changes, rail persistence and purchase limits. The current seeded Scholar and Engineer scenarios won by expedition in round 93 and industry in round 137. CraftOS-PC passed the economic scenario suite, rendering/save smoke test and a full mouse-driven two-human/one-AI game session, including persisted AI planning. See [AI-EVALUATION.md](AI-EVALUATION.md) for timing scope and limitations.
 
+## 06: Threats and tactical campaigns
+
+- Confirmed danger maps derive only from visible combatants and functioning visible city walls. They estimate next-turn reach and damage; remembered sightings are separately capped/aged AI uncertainty and never contribute to the human danger overlay. Move destinations show amber warning marks separately from red attack targets, with estimated exposure in the preview.
+- Tactical shortlists use the same pure `Combat.predictOrder` forecast as human previews and resolution, then score retaliation, kills/capture, wall damage, next-turn exposure, survival, objective progress, support and personality risk tolerance. Damaged units withdraw toward owned land; support placement respects owned-territory healing. Rejected candidates trigger bounded replanning through the shared executor.
+- Optional version 1 unit roles cover capital garrison, scout, settler escort, screening, main army, ranged/siege support, healer, engineer and fleet roles. Version 1 campaigns persist target identity, last observed position/walls, group ID, muster point and known approach corridor. Campaign phases distinguish defense, muster, approach, siege and regroup. Unknown current target changes cannot update remembered coordinates.
+- Fortified objectives request siege even at an ordinary army quota; damaged groups request support, and coastal/naval observations influence shipyard/fleet demand. Deterministic action order lets ranged/siege fire soften targets before melee and support repositioning.
+
+All 59 repository regression scripts passed. Focused scenarios verify exact forecast application, safe ranged focus fire, retreat instead of lethal attacks, private threat memory, persisted fortified objectives, siege/support demand and text/graphics danger previews. Five native CraftOS-PC checks passed together, including the tactical scenarios, event privacy/auto-explore tagging, animation timing, real rendering/save smoke and a complete human/AI session. Live modem scheduling, large-army quality/balance, wider campaign recovery and physical graphics/monitor validation remain release checks.
+
+Confirmed scheduler choice: a Surprise War attacker uses **all remaining legal actions** before the defender responds. Spent movement and attacks remain spent.
+
 ## Lua style and upstream integration
 
 The user's governing guide is the [Roblox Lua style guide](https://roblox.github.io/lua-style-guide/), replacing the earlier LuaRocks reference. After rebasing, the user authorized updating `.stylua.toml` to align with the Roblox guide: tabs displayed at four columns, a 100-column target, double-quoted strings and expanded blocks. `.editorconfig` and repository documentation match; the repository was reformatted with AST verification. Modified code follows the guide's readability, expanded blocks, double-quoted strings and camelCase naming where introduced; existing save/API names remain compatible. New code remains ordinary Lua, without Luau-only syntax.
@@ -90,7 +103,6 @@ Rebased onto `main` at `3a7518b` after PR #47 merged. Formatting conflicts were 
 
 ## Remaining workstreams
 
-06. Threat maps, tactical campaigns, retreat and coordinated support.
 07. Hybrid peaceful/war-group turns and declaration transitions.
 08. Relations, treaty offers, explicit defense calls and authored conversations.
 09. Council elections, resolutions and diplomatic victory.
@@ -98,6 +110,6 @@ Rebased onto `main` at `3a7518b` after PR #47 merged. Formatting conflicts were 
 11. AI difficulty variants after the Prince baseline.
 12. Save/integration/fuzz/performance/network validation and release metadata.
 
-Remaining foundation concerns: threat highlights and destination scores; physical monitor and live rednet verification. Native CraftOS-PC event, rendering and save checks complement the automated suite. Public city/unit ratings resolve the earlier hidden-army forecast mismatch; event-time path projection resolves replay visibility, and detached local display snapshots separate simulation from cooperative rendering.
+Remaining foundation concerns: physical monitor and live rednet verification, plus the newly clarified lobby/research/HUD/layout changes in FOLLOWUPS-v0.9.md. Native CraftOS-PC event, rendering and save checks complement the automated suite. Public city/unit ratings resolve the earlier hidden-army forecast mismatch; event-time path projection resolves replay visibility, and detached local display snapshots separate simulation from cooperative rendering.
 
 The full roadmap is not complete. Target-server CC:Tweaked and live rednet validation is still required; do not treat these commits as a v0.9 release.

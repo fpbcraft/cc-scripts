@@ -57,6 +57,7 @@ function Events.move(state, unit)
 	return {
 		type = "move",
 		actor = VisibilityEvents.actor(unit),
+		autoExplore = unit.executingAutoExplore == true,
 		frames = { VisibilityEvents.frame(state, unit) },
 	}
 end

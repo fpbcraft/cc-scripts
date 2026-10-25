@@ -670,12 +670,18 @@ function M.autoExplore(state, unit, hex)
 			unit.moved = true
 			break
 		end
-		local ok = Actions.apply(
+		unit.executingAutoExplore = true
+		local completed, ok = pcall(
+			Actions.apply,
 			state,
 			unit.owner,
 			{ action = "move", sx = unit.x, sy = unit.y, x = destination.x, y = destination.y },
 			M
 		)
+		unit.executingAutoExplore = nil
+		if not completed then
+			error(ok, 0)
+		end
 		if not ok then
 			unit.autoExplore = false
 			return false, "Exploration route blocked"
@@ -836,129 +842,53 @@ function M.aiTurn(state, p, hex)
 	end
 	for _, city in ipairs(state.cities) do
 		if city.owner == p.id then
-			for _, enemy in ipairs(AI.knowledge(state, p).units) do
-				if
-					enemy.owner ~= p.id
-					and Actions.apply(state, p.id, {
-						action = "cityStrike",
-						x = city.x,
-						y = city.y,
-						tx = enemy.x,
-						ty = enemy.y,
-					}, M)
-				then
-					break
-				end
-			end
+			AI.strike(state, p, city, M)
 			AI.choose(state, p, city, M)
 		end
 	end
-	-- Move one unit a turn; settlers expand, warriors approach other empires.
 	local orders = {}
-	for _, u in ipairs(state.units) do
-		orders[#orders + 1] = u
+	for _, unit in ipairs(state.units) do
+		if unit.owner == p.id then
+			orders[#orders + 1] = unit
+		end
 	end
-	for _, u in ipairs(orders) do
+	local priority = {
+		settler = 0,
+		scout = 1,
+		siege = 2,
+		ranged = 3,
+		mainArmy = 4,
+		screening = 4,
+		naval = 4,
+		settlerEscort = 4,
+		healer = 5,
+		engineer = 6,
+		garrison = 7,
+	}
+	table.sort(orders, function(a, b)
+		local aa = priority[(a.aiRole or {}).name] or 4
+		local bb = priority[(b.aiRole or {}).name] or 4
+		if aa ~= bb then
+			return aa < bb
+		end
+		return a.id < b.id
+	end)
+	for _, unit in ipairs(orders) do
 		local present = false
-		for _, v in ipairs(state.units) do
-			if v == u then
+		for _, current in ipairs(state.units) do
+			if current == unit then
 				present = true
 				break
 			end
 		end
-		if present and u.owner == p.id and not u.moved then
-			local engineer = (M.units[u.kind] or {}).engineer
-			if engineer then
-				AI.engineer(state, p, u, M)
+		if present and not unit.moved then
+			if unit.kind == "settler" then
+				AI.settle(state, p, unit, M)
+			elseif (M.units[unit.kind] or {}).engineer then
+				AI.engineer(state, p, unit, M)
+			else
+				AI.military(state, p, unit, M)
 			end
-			local settler = u.kind == "settler"
-			if settler then
-				AI.settle(state, p, u, M)
-			end
-			local observed = AI.knowledge(state, p)
-			local choices = not engineer and not settler and hex.reachable(observed, u, p.id, M)
-				or {}
-			for index = #choices, 1, -1 do
-				if choices[index].attack then
-					local neutral = false
-					for _, c in ipairs(observed.cities) do
-						if
-							c.village
-							and c.owner == c.villageOwner
-							and c.x == choices[index].x
-							and c.y == choices[index].y
-						then
-							neutral = true
-						end
-					end
-					for _, v in ipairs(observed.units) do
-						if
-							v.villageGuard
-							and v.owner < 0
-							and v.x == choices[index].x
-							and v.y == choices[index].y
-						then
-							neutral = true
-						end
-					end
-					if neutral then
-						table.remove(choices, index)
-					end
-				end
-			end
-			if not u.consumed and #choices > 0 then
-				local target
-				for _, c in ipairs(observed.cities) do
-					if
-						c.owner ~= p.id
-						and (
-							(p.explored or {})[c.x .. ":" .. c.y]
-							or (p.visible or {})[c.x .. ":" .. c.y]
-						)
-					then
-						target = c
-						break
-					end
-				end
-				table.sort(choices, function(a, b)
-					if not target then
-						return a.x + a.y > b.x + b.y
-					end
-					return hex.distance(a.x, a.y, target.x, target.y)
-						< hex.distance(b.x, b.y, target.x, target.y)
-				end)
-				for _, choice in ipairs(choices) do
-					if choice.attack then
-						target = { x = choice.x, y = choice.y }
-						break
-					end
-				end
-				if u.kind ~= "settler" then
-					table.sort(choices, function(a, b)
-						if (a.attack == true) ~= (b.attack == true) then
-							return a.attack == true
-						end
-						local da = target and hex.distance(a.x, a.y, target.x, target.y) or a.cost
-						local db = target and hex.distance(b.x, b.y, target.x, target.y) or b.cost
-						if da ~= db then
-							return da < db
-						end
-						return a.y == b.y and a.x < b.x or a.y < b.y
-					end)
-				end
-				local choice = choices[1]
-				Actions.apply(
-					state,
-					p.id,
-					{ action = "move", sx = u.x, sy = u.y, x = choice.x, y = choice.y },
-					M
-				)
-			end
-		end
-	end
-	for i = #state.units, 1, -1 do
-		if state.units[i].consumed then
-			table.remove(state.units, i)
 		end
 	end
 	p.ready = true

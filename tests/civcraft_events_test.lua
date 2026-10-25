@@ -105,6 +105,17 @@ assert(
 		and not hasSecret(projection)
 )
 assert(not VisibilityEvents.project(raw, 3))
+local automated = {
+	type = "move",
+	autoExplore = true,
+	actor = { id = 4, owner = 1, kind = "scout" },
+	frames = { { x = 3, y = 3, visible = { [1] = true, [2] = true } } },
+}
+assert(VisibilityEvents.project(automated, 1).ownAutoExplore == true)
+assert(
+	VisibilityEvents.project(automated, 2).ownAutoExplore == nil,
+	"Other observers must not receive private auto-explore order metadata"
+)
 local state = fixture()
 Events.emit(state, raw)
 local first = Events.forPlayer(state, 1)
@@ -460,6 +471,40 @@ queue:submit(function()
 end)
 assert(second == false and state.units[1].x == 4 and state.units[2].x == 5)
 Systems.checkpoint = nil
+local autoState = fixture()
+local scout = { id = 7, owner = 1, kind = "scout", x = 3, y = 6, hp = 100, movesLeft = 4 }
+autoState.units = { scout }
+World.reveal(autoState, Hex, Systems)
+assert(Actions.apply(autoState, 1, { action = "autoExplore", x = scout.x, y = scout.y }, Systems))
+local sawAutomated = false
+for _, event in ipairs(Events.forPlayer(autoState, 1).entries) do
+	if event.type == "move" then
+		assert(event.ownAutoExplore)
+		sawAutomated = true
+	end
+end
+assert(sawAutomated and scout.executingAutoExplore == nil)
+autoState.round, scout.movesLeft, scout.moved = 2, 2, false
+local destination = Hex.reachable(autoState, scout, 1, Systems)[1]
+assert(destination)
+assert(
+	Actions.apply(
+		autoState,
+		1,
+		{ action = "move", sx = scout.x, sy = scout.y, x = destination.x, y = destination.y },
+		Systems
+	)
+)
+local manual
+for _, event in ipairs(Events.forPlayer(autoState, 1).entries) do
+	if event.type == "move" then
+		manual = event
+	end
+end
+assert(
+	manual and not manual.ownAutoExplore,
+	"A manual order overriding auto-explore is still replayable"
+)
 print(
 	"CIVCRAFT: action-time redaction, partial combat, bounded replay, snapshot privacy/order and queued host commands passed."
 )

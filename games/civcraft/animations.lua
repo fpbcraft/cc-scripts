@@ -58,6 +58,19 @@ function Animations.new()
 			self:skip()
 		end
 	end
+	function self:setPaused(paused, now)
+		if paused and not self.pausedAt then
+			self.pausedAt = now
+		end
+		if not paused and self.pausedAt then
+			if self.active then
+				local elapsed = math.max(0, now - self.pausedAt)
+				self.active.start, self.active.finish =
+					self.active.start + elapsed, self.active.finish + elapsed
+			end
+			self.pausedAt = nil
+		end
+	end
 	function self:ingest(stream, onscreen, live)
 		if not stream then
 			return
@@ -69,10 +82,11 @@ function Animations.new()
 		then
 			self:skip()
 			self.feed, self.cursor = {}, 0
+			self.lastTurnSeq, self.deferredSeq, self.awaitingRecap = nil, nil, false
 		end
 		self.campaign, self.observer = stream.campaign, stream.observer
 		for _, event in ipairs(stream.entries or {}) do
-			if event.seq > self.cursor then
+			if event.seq > self.cursor and not event.ownAutoExplore then
 				self.feed[#self.feed + 1] = copy(event)
 				if
 					live
@@ -95,7 +109,7 @@ function Animations.new()
 			return
 		end
 		for _, event in ipairs(events) do
-			if visual[event.type] then
+			if visual[event.type] and not event.ownAutoExplore then
 				self.pending[#self.pending + 1] = copy(event)
 			end
 		end
@@ -105,6 +119,9 @@ function Animations.new()
 		trim(self.pending, Animations.maxPending)
 	end
 	function self:frame(now, round)
+		if self.pausedAt then
+			return { hidden = {}, sprites = {}, effects = {} }, false
+		end
 		-- Advance by elapsed wall time, without blocking simulation or replaying old frames.
 		now = math.max(now, self.lastTime or now)
 		self.lastTime = now

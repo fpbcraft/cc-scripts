@@ -4,9 +4,28 @@ local Values = dofile("/games/civcraft/ai_economy_values.lua")
 local Production = {}
 
 local function inventory(view, player, systems, currentCity)
-	local result = { cities = 0, settlers = 0, soldiers = 0, engineers = 0, scouts = 0 }
+	local result = {
+		cities = 0,
+		settlers = 0,
+		soldiers = 0,
+		engineers = 0,
+		scouts = 0,
+		siege = 0,
+		healers = 0,
+		naval = 0,
+	}
 	local function count(id)
 		local stats = systems.units[id] or {}
+		if stats.naval then
+			result.naval = result.naval + 1
+			return
+		end
+		if stats.siege then
+			result.siege = result.siege + 1
+		end
+		if stats.healer then
+			result.healers = result.healers + 1
+		end
 		local key = id == "settler" and "settlers"
 			or stats.engineer and "engineers"
 			or (id == "scout" or id == "explorer") and "scouts"
@@ -48,11 +67,22 @@ local function unitValue(id, stats, counts, context, player, canExpand)
 		return counts.scouts < 1 and 35 or 0
 	end
 	if stats.naval then
-		return 0
-	end -- Fleet roles are assigned by the tactical planner.
+		return counts.naval < ((player.aiPlan or {}).needsFleet or 0) and (90 + stats.strength * 3)
+			or 0
+	end
+	local campaign = (player.aiPlan or {}).campaign or {}
+	if stats.siege and campaign.needsSiege and counts.siege < 1 then
+		return 260 + stats.strength * 3
+	end
+	if stats.healer and campaign.needsSupport and counts.healers < 1 then
+		return 180
+	end
 	local need = math.max(
 		0,
-		math.min(context.goal == "conquest" and 8 or 6, counts.cities + 1) - counts.soldiers
+		math.min(
+			context.goal == "conquest" and 8 or 6,
+			counts.cities + 1 + (context.goal == "conquest" and 2 or 0)
+		) - counts.soldiers
 	)
 	if need == 0 then
 		return 0
@@ -105,6 +135,9 @@ function Production.ranked(view, player, city, systems, canExpand)
 			end
 			if id == "station" and counts.cities >= 2 then
 				value = value + (context.specialization == "infrastructure" and 100 or 60)
+			end
+			if id == "shipyard" and ((player.aiPlan or {}).needsFleet or 0) > 0 then
+				value = value + 100
 			end
 			add("building", id, value)
 		end

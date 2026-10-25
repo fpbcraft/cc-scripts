@@ -13,8 +13,6 @@ function Playback.command(ui, action)
 		preferences.speed = ({ normal = "fast", fast = "off", off = "normal" })[preferences.speed]
 	elseif action == "reducedMotion" then
 		preferences.reducedMotion = not preferences.reducedMotion
-	elseif action == "automaticPlayback" then
-		preferences.automatic = not preferences.automatic
 	elseif action == "skipPlayback" then
 		if ui.playback then
 			ui.playback:skip()
@@ -43,32 +41,6 @@ function Playback.summary(event)
 		.. (point and " @ " .. point.x .. "," .. point.y or "")
 end
 
-local function onscreen(ui, event)
-	local viewport = ui.mapViewport
-	if not viewport then
-		return false
-	end
-	local function contains(point)
-		if not point then
-			return false
-		end
-		local x = (point.x - 0.5 + ((point.y - 1) % 2) * 0.5) * viewport.tile - ui.panX
-		local y = ((point.y - 1) * 0.75 + 0.5) * viewport.tile - ui.panY
-		return x >= 0 and y >= 0 and x <= viewport.w and y <= viewport.h
-	end
-	if contains(event.target) or contains(event.start) then
-		return true
-	end
-	for _, path in ipairs(event.paths or {}) do
-		for _, point in ipairs(path) do
-			if contains(point) then
-				return true
-			end
-		end
-	end
-	return false
-end
-
 function Playback.update(ui, state, observer, opts)
 	local key = observer or "lobby"
 	local playback = ui.observerPlayback[key]
@@ -80,37 +52,51 @@ function Playback.update(ui, state, observer, opts)
 	ui.localPlayback = opts.localMode == true
 	local preferences = ui.animationPreferences
 	playback:setSpeed(preferences.reducedMotion and "off" or preferences.speed)
-	playback.automatic = preferences.automatic
-	local visible = state
-		and state.phase == "game"
-		and not opts.handoff
-		and not opts.paused
-		and opts.screen ~= "title"
-	local switching = ui.playbackObserver ~= observer or ui.playbackConcealed
-	playback:ingest(state and state.eventStream, function(event)
-		return onscreen(ui, event)
-	end, visible and not switching and ui.panel == "context")
-	ui.playbackObserver, ui.playbackConcealed = observer, not visible
+	playback.automatic = true
+	local visible = state and state.phase == "game" and not opts.handoff and opts.screen ~= "title"
+	local now = os.epoch and os.epoch("utc") / 1000 or os.clock()
+	local stream = state and state.eventStream
+	local baseline = stream
+			and stream.campaign == playback.campaign
+			and stream.observer == playback.observer
+			and playback.cursor
+		or 0
+	playback:ingest(state and state.eventStream, function()
+		return true
+	end, visible)
 	if not visible then
+		if state and state.phase == "game" and playback.deferredSeq == nil then
+			playback.deferredSeq = baseline
+		end
 		playback:skip()
+		playback:setPaused(true, now)
 		ui.animationFrame = nil
 		return
 	end
-	if ui.localPlayback and playback.awaitingRecap then
+	if playback.awaitingRecap or playback.deferredSeq ~= nil then
 		local events = {}
+		local baseline = playback.awaitingRecap and playback.lastTurnSeq or playback.deferredSeq
 		for _, event in ipairs(playback.feed) do
-			if event.seq > (playback.lastTurnSeq or 0) and event.type ~= "order" then
+			if event.seq > (baseline or 0) and event.type ~= "order" then
 				events[#events + 1] = event
 			end
 		end
-		ui.recap = #events > 0
-				and { observer = observer, campaign = playback.campaign, events = events }
-			or nil
-		playback.awaitingRecap = false
+		playback:play(events)
+		playback.awaitingRecap, playback.deferredSeq = false, nil
 	end
-	ui.animationTime = os.epoch and os.epoch("utc") / 1000 or os.clock()
-	ui.animationFrame = playback:frame(ui.animationTime, state.round)
-	if ui.animationFrame.event and ui.lastPlaybackEvent ~= ui.animationFrame.event then
+	local ready = not opts.paused
+		and ui.panel == "context"
+		and not ui.productionConfirm
+		and not ui.endConfirm
+		and not ui.disbandConfirm
+	playback:setPaused(not ready, now)
+	ui.animationTime = now
+	ui.animationFrame = ready and playback:frame(now, state.round) or nil
+	if
+		ui.animationFrame
+		and ui.animationFrame.event
+		and ui.lastPlaybackEvent ~= ui.animationFrame.event
+	then
 		ui.lastPlaybackEvent = ui.animationFrame.event
 		ui:feedback(Playback.summary(ui.animationFrame.event))
 	end

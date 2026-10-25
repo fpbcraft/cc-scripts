@@ -97,7 +97,13 @@ function C.round(state, systems)
 		end
 		if (systems.units[u.kind] or {}).healer then
 			for _, ally in ipairs(state.units) do
-				if ally.owner == u.owner and Hex.distance(u.x, u.y, ally.x, ally.y) <= 1 then
+				local claim = World.territoryCity(state, Hex, ally.x, ally.y)
+				if
+					ally.owner == u.owner
+					and claim
+					and claim.owner == ally.owner
+					and Hex.distance(u.x, u.y, ally.x, ally.y) <= 1
+				then
 					ally.hp = math.min(100, (ally.hp or 100) + 10)
 				end
 			end

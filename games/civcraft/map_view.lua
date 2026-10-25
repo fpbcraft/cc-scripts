@@ -57,6 +57,7 @@ function V.draw(ui, state, player, rect)
 			end
 		end
 	end
+	AnimationView.center(ui, rect, size)
 	ui.panX = math.max(0, math.min(maxX, ui.panX or 0))
 	ui.panY = math.max(0, math.min(maxY, ui.panY or 0))
 	ui.mapViewport =
@@ -412,6 +413,13 @@ function V.draw(ui, state, player, rect)
 					if destination.attack then
 						Icons.marker(r, "attack", px + size * 0.65, py + size * 0.25)
 					end
+				end
+				if (ui.destinationThreats or {})[World.key(x, y)] then
+					local dx, dy = px + size * 0.25, py + size * 0.55
+					r:fill(dx - 2, dy - 2, 5, 7, 0)
+					r:line(dx - 1, dy - 1, dx, dy + 2, 18)
+					r:line(dx + 1, dy - 1, dx, dy + 2, 18)
+					r:fill(dx, dy + 4, 1, 1, 18)
 				end
 			end
 			if not overlays.yields and size >= 16 then

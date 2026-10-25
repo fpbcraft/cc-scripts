@@ -49,7 +49,12 @@ local function projectMove(event, observer)
 	if #paths == 0 then
 		return nil
 	end
-	return { type = "move", actor = VisibilityEvents.actor(event.actor), paths = paths }
+	return {
+		type = "move",
+		actor = VisibilityEvents.actor(event.actor),
+		paths = paths,
+		ownAutoExplore = event.autoExplore == true and event.actor.owner == observer or nil,
+	}
 end
 
 local function projectCombat(event, observer)

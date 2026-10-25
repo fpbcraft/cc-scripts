@@ -2,34 +2,28 @@ local Panels = dofile("/games/civcraft/panels.lua")
 local Playback = dofile("/games/civcraft/playback_ui.lua")
 local Feed = {}
 
-function Feed.draw(ui, rect, recap)
+function Feed.draw(ui, rect)
 	local r = ui.r
-	r:text(rect.x + 4, rect.y + 4, recap and "TURN RECAP" or "OBSERVED EVENTS", 8, 1, rect.w - 48)
+	r:text(rect.x + 4, rect.y + 4, "OBSERVED EVENTS", 8, 1, rect.w - 48)
 	r:button(rect.x + rect.w - 42, rect.y + 1, 38, 11, "CLOSE", function()
-		if recap then
-			ui.recap = nil
-		end
 		ui.panel = "context"
 	end)
-	local events = recap and ui.recap and ui.recap.events or ui.playback and ui.playback.feed or {}
+	local events = ui.playback and ui.playback.feed or {}
 	local rows = {
 		{
-			text = recap and "Observed since your previous turn ended."
-				or "Events retain what you could see at action time.",
+			text = "Events retain what you could see at action time.",
 		},
 		{
 			buttons = {
 				{
 					label = "PLAY ALL",
 					run = function()
-						ui.recap = nil
 						Playback.watch(ui, events)
 					end,
 				},
 				{
 					label = "SKIP",
 					run = function()
-						ui.recap = nil
 						ui:command("skipPlayback")
 						ui.panel = "context"
 					end,
@@ -54,7 +48,6 @@ function Feed.draw(ui, rect, recap)
 				{
 					label = "WATCH",
 					run = function()
-						ui.recap = nil
 						Playback.watch(ui, { event }, true)
 					end,
 				},

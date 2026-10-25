@@ -1,6 +1,7 @@
 local Empire = dofile("/games/civcraft/empire_menu.lua")
 local Codex = dofile("/games/civcraft/encyclopedia.lua")
 local EventFeed = dofile("/games/civcraft/event_feed.lua")
+local Danger = dofile("/games/civcraft/danger_view.lua")
 local HUD = dofile("/games/civcraft/hud.lua")
 local Inspector = dofile("/games/civcraft/inspector.lua")
 local Map = dofile("/games/civcraft/map_view.lua")
@@ -24,6 +25,7 @@ local function modal(ui, rect, preserve)
 	end
 end
 function G.draw(ui, state, player)
+	Danger.update(ui, state, player)
 	local r = ui.r
 	local w, h = r.w, r.h
 	local wide = w >= 220 and h >= 140
@@ -324,9 +326,9 @@ function G.draw(ui, state, player)
 		end, { primary = true })
 		r:icon("endTurn", v.x + 17, v.y + 3, 1)
 		r.buttons[#r.buttons].label = "CONFIRM"
-	elseif ui.panel == "events" or ui.panel == "recap" then
+	elseif ui.panel == "events" then
 		modal(ui, rect)
-		EventFeed.draw(ui, rect, ui.panel == "recap")
+		EventFeed.draw(ui, rect)
 	elseif ui.panel == "report" then
 		local dw, dh = math.min(w - 20, 280), math.min(math.floor(h * 0.7), 140)
 		local box = { x = math.floor((w - dw) / 2), y = math.floor((h - dh) / 2), w = dw, h = dh }

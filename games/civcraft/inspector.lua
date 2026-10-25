@@ -326,6 +326,12 @@ function I.draw(ui, state, player, rect, modal)
 			text("EMBARKED", 13)
 		end
 		text("RANGE " .. stats.range .. " VISION " .. stats.vision)
+		if ui.source then
+			text("CYAN RING: MOVE", 13)
+			text("RED CROSS: ATTACK", 31)
+			text("AMBER !: VISIBLE THREAT", 18)
+			text("Threat damage estimates the next enemy turn.")
+		end
 		for _, line in ipairs(Panels.wrap(r, stats.ability or "", w - 10)) do
 			text(line)
 		end
@@ -342,7 +348,7 @@ function I.draw(ui, state, player, rect, modal)
 						ui.source = { x = unit.x, y = unit.y }
 						ui.reachable = Hex.reachable(state, unit, ui.playerID, Systems)
 						ui.pendingMove = nil
-						ui:feedback("CYAN RINGS MOVE / RED CROSSES ATTACK")
+						ui:feedback("CYAN MOVE / RED ATTACK / AMBER THREAT")
 						if modal then
 							ui.panel = "context"
 						end

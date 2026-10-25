@@ -287,6 +287,8 @@ function UI:tile(x, y)
 					forecast = Combat.predictOrder(self.state, awake, p, Systems)
 				end
 				self.pendingMove.forecast = forecast
+				local risk = (self.destinationThreats or {})[World.key(x, y)]
+				self.pendingMove.risk = risk
 				local summary = "COST " .. p.cost
 				if forecast then
 					summary = "HP "
@@ -295,6 +297,9 @@ function UI:tile(x, y)
 						.. (forecast.defenderHP or forecast.cityHP)
 						.. (forecast.wallHP and (" / WALL " .. forecast.wallHP) or "")
 						.. (forecast.captured and " CAPTURE" or "")
+				end
+				if risk then
+					summary = summary .. " / THREAT ~" .. risk.damage
 				end
 				self.moveOffset = 0
 				self.lastDrag = nil
@@ -362,16 +367,12 @@ function UI:draw(state, playerID, opts)
 		self.notice = ""
 		self.activeScroll = nil
 		self.selected = { x = 2, y = 2, empty = true }
-		self.recap = nil
 		for _, city in ipairs(state.cities or {}) do
 			if city.owner == playerID then
 				self.selected = { x = city.x, y = city.y }
 				break
 			end
 		end
-	end
-	if self.recap and self.recap.campaign ~= (state and state.campaignID) then
-		self.recap = nil
 	end
 	self.lastPlayer = playerID
 	if self.selected.kind == "unit" and self.selected.unitID then
@@ -539,10 +540,6 @@ function UI:draw(state, playerID, opts)
 			{
 				"REDUCED MOTION " .. (self.animationPreferences.reducedMotion and "ON" or "OFF"),
 				"reducedMotion",
-			},
-			{
-				"AUTO PLAYBACK " .. (self.animationPreferences.automatic and "ON" or "OFF"),
-				"automaticPlayback",
 			},
 			{ "MAIN MENU", "title" },
 			{ "EXIT", "exit" },
@@ -791,9 +788,6 @@ function UI:draw(state, playerID, opts)
 			self.reportOffset = 0
 		end
 	end
-	if self.recap and self.panel == "context" then
-		self.panel = "recap"
-	end
 	GameView.draw(self, state, mine or { techs = {}, name = "OBSERVER" })
 
 	r:finish()
@@ -989,9 +983,6 @@ function UI:back()
 		return true
 	end
 	if self.panel ~= "context" then
-		if self.panel == "recap" then
-			self.recap = nil
-		end
 		self.panel = "context"
 		self.pointerStart = nil
 		self.techDrag = nil
@@ -1260,7 +1251,9 @@ function UI:resize()
 	self.r:resize()
 end
 function UI:animating()
-	return self.playback and (self.playback.active ~= nil or #self.playback.pending > 0)
+	return self.playback
+		and not self.playback.pausedAt
+		and (self.playback.active ~= nil or #self.playback.pending > 0)
 end
 function UI:close()
 	self.r:close()

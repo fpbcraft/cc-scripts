@@ -13,6 +13,12 @@ function Research.ranked(view, player, systems)
 	if goal == "conquest" then
 		Values.dependencies(systems.techs, "tactics", player.techs, 25, dependencies)
 	end
+	if ((player.aiPlan or {}).campaign or {}).needsSiege then
+		Values.dependencies(systems.techs, "engineering", player.techs, 65, dependencies)
+	end
+	if ((player.aiPlan or {}).needsFleet or 0) > 0 then
+		Values.dependencies(systems.techs, "sailing", player.techs, 50, dependencies)
+	end
 	local contexts, science, coast = {}, 0, false
 	for _, city in ipairs(view.cities or {}) do
 		if city.owner == player.id then

@@ -162,7 +162,7 @@ local geography = copy(state.world)
 S.migrate(state)
 assert(u.movesLeft == 2 and city.productionIdle and city.projectProgress["unit:scout"] == 3)
 assert(equal(geography, state.world), "Rules migration rerolled the saved world")
--- Passive healing is owned-only; support healing works in neutral and hostile territory.
+-- Both passive and support healing require the recipient's owned territory.
 state, u = fixture()
 u.hp = 40
 u.healing = true
@@ -186,7 +186,12 @@ end
 assert(healerKind)
 state.units[2] = { id = 4, owner = 1, kind = healerKind, x = 14, y = 9, hp = 100 }
 C.round(state, S)
-assert(u.hp == 70)
+assert(u.hp == 60)
+u.x, u.y = 3, 4
+state.units[2].x, state.units[2].y = 4, 4
+u.actedThisRound, u.healing = true, false
+C.round(state, S)
+assert(u.hp == 70, "Support healing works for a friendly recipient inside owned land")
 -- Forecast is pure even on unmigrated HP/XP/walls, and matches actual resolution.
 local combinations = 0
 for _, kind in ipairs({ "warrior", "archer", "spearman", "diamondguard", "creeper" }) do

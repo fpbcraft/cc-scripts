@@ -109,7 +109,6 @@ for _, graphics in ipairs({ false, true }) do
 	time = 1240
 	draw()
 	assert(ui.animationFrame.sprites[1].position.x > start and scoutDraws == 1)
-	local pan = ui.panX
 	assert(click("SKIP") and not ui:animating())
 	assert(
 		commands == 0 and state.units[1].x == 8,
@@ -120,7 +119,18 @@ for _, graphics in ipairs({ false, true }) do
 	draw()
 	assert(ui.modalBounds and click("PLAY ALL"))
 	draw()
-	assert(ui:animating() and ui.panX == pan, "Play All does not move the camera")
+	local viewport = ui.mapViewport
+	local expectedPan = math.max(
+		0,
+		math.min(
+			viewport.maxX,
+			ui.animationFrame.sprites[1].position.x * viewport.tile - viewport.w / 2
+		)
+	)
+	assert(
+		ui:animating() and math.abs(ui.panX - expectedPan) < 0.00001,
+		"Playback automatically centers its current action within map bounds"
+	)
 	ui:command("skipPlayback")
 	local ownFeed = ui.playback.feed
 	draw(2, { screen = "game", handoff = true })
@@ -139,7 +149,8 @@ for _, graphics in ipairs({ false, true }) do
 		not ui:animating() and #ui.playback.feed > 0,
 		"Reduced motion keeps final state and summaries"
 	)
-	-- A new turn summarizes only this observer's events after their last end order.
+	-- A new turn plays only this observer's permitted events, without a replay question.
+	ui.animationPreferences.reducedMotion = false
 	draw(1, { screen = "game", localMode = true })
 	ui:command("end", { confirmed = true })
 	Events.emit(state, {
@@ -156,10 +167,11 @@ for _, graphics in ipairs({ false, true }) do
 	draw(1, { screen = "game", localMode = true, handoff = true })
 	assert(not ui.recap and not ui.animationFrame)
 	draw(1, { screen = "game", localMode = true })
-	assert(ui.panel == "recap" and #ui.recap.events == 1)
+	assert(ui.panel == "context" and ui:animating() and not ui.modalBounds)
+	local replay = ui.animationFrame.event
 	assert(
-		#ui.recap.events[1].paths[1] == 2 and ui.recap.events[1].paths[1][1].x == 8,
-		"Recap cannot reconstruct a hidden origin from current exploration"
+		#replay.paths[1] == 2 and replay.paths[1][1].x == 8,
+		"Automatic playback cannot reconstruct a hidden origin from current exploration"
 	)
 	assert(click("SKIP") and ui.recap == nil and #ui.playback.feed >= 2)
 	draw(1, { screen = "game", localMode = true })

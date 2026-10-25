@@ -3,7 +3,7 @@ local Preferences = {}
 local path = "/games/civcraft/data/animations.dat"
 
 function Preferences.load()
-	local result = { speed = "normal", reducedMotion = false, automatic = true }
+	local result = { speed = "normal", reducedMotion = false }
 	if not (fs and textutils and fs.exists(path)) then
 		return result
 	end
@@ -20,7 +20,6 @@ function Preferences.load()
 			result.speed = saved.speed
 		end
 		result.reducedMotion = saved.reducedMotion == true
-		result.automatic = saved.automatic ~= false
 	end
 	return result
 end

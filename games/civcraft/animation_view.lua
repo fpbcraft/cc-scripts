@@ -2,6 +2,19 @@
 local Icons = dofile("/games/civcraft/icons.lua")
 local View = {}
 local colors = { 8, 13, 11, 21 }
+function View.center(ui, rect, size)
+	local frame = ui.animationFrame
+	if not frame then
+		return
+	end
+	local position = frame.effects[1] and frame.effects[1].position
+		or frame.projectile and frame.projectile.position
+		or frame.sprites[1] and frame.sprites[1].position
+	if position then
+		ui.panX = position.x * size - rect.w / 2
+		ui.panY = position.y * size - rect.h / 2
+	end
+end
 
 local function ownerColor(state, owner)
 	for i, player in ipairs(state.players or {}) do

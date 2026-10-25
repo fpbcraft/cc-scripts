@@ -178,6 +178,23 @@ assert(not captured.players[1].techs.farming and captured.units[1].x == 1)
 assert(captured.world.geography["1:1"].biome == "plains")
 captured.units[1].hp = 0
 assert(state.units[1].hp == 100)
+timeline = Animations.new()
+timeline:play({ event })
+timeline:frame(0, 1)
+local pausedPosition = timeline:frame(0.24, 1).sprites[1].position.x
+timeline:setPaused(true, 0.24)
+assert(#timeline:frame(5, 1).sprites == 0)
+timeline:setPaused(false, 5)
+close(timeline:frame(5, 1).sprites[1].position.x, pausedPosition)
+timeline:skip()
+local automated = move(1, route)
+automated.ownAutoExplore = true
+timeline:ingest(stream({ automated }), function()
+	return true
+end, true)
+assert(#timeline.feed == 0 and #timeline.pending == 0, "Own auto-exploration never enters replay")
+timeline:play({ automated })
+assert(not select(2, timeline:frame(6, 1)))
 print(
 	"CIVCRAFT: interpolation, fog gaps, combat timing, skips, bounded replay and detached rendering passed."
 )
