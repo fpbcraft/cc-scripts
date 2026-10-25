@@ -269,6 +269,41 @@ function R:cog(cx, cy, large, spin)
   self:rect(cx - 1, cy - 1, 3, 3, 13)
   self:rect(cx, cy, 1, 1, 1)
 end
+-- Inventory glyphs use just 7x7 pixels: real sprites instead of a
+-- colored square containing the part's name.
+function R:toolIcon(x, y, kind)
+  if kind == "G" or kind == "O" then
+    self:rect(x + 1, y + 1, 5, 5, 7)
+    self:rect(x + 2, y + 2, 3, 3, 6)
+    for _, tooth in ipairs({ { 3, 0 }, { 3, 6 }, { 0, 3 }, { 6, 3 } }) do
+      self:rect(x + tooth[1], y + tooth[2], 1, 1, 6)
+    end
+    self:rect(x + 3, y + 3, 1, 1, 1)
+  elseif kind == "I" then
+    self:rect(x + 2, y, 3, 7, 4)
+    self:rect(x + 3, y, 1, 7, 13)
+    self:rect(x + 1, y + 1, 5, 1, 6)
+    self:rect(x + 1, y + 5, 5, 1, 6)
+  elseif kind == "Q" then
+    self:rect(x, y, 7, 7, 13)
+    self:rect(x + 1, y + 1, 5, 5, 2)
+    self:rect(x + 2, y + 2, 3, 3, 7)
+  elseif kind == "V" then
+    self:rect(x, y + 1, 7, 5, 7)
+    self:rect(x + 1, y + 2, 5, 3, 2)
+    self:rect(x + 1, y + 3, 1, 1, 13)
+    self:rect(x + 5, y + 3, 1, 1, 13)
+  elseif kind == "D" then
+    self:rect(x, y + 2, 7, 3, 4)
+    for n = 1, 5, 2 do
+      self:rect(x + n, y + 3, 1, 1, 13)
+    end
+  else
+    self:rect(x + 1, y, 5, 7, 13)
+    self:rect(x + 2, y + 1, 3, 5, 2)
+    self:rect(x + 3, y, 1, 7, kind == "C" and 8 or 6)
+  end
+end
 -- A directional hook uses only six pixels. The color and shape both indicate
 -- direction so users are not dependent on color perception alone.
 function R:spinMark(x, y, sign)
@@ -296,6 +331,7 @@ function R:piece(x, y, size, tile, light)
   local spin = motionFor(tile, light)
   local cx, cy = x + math.floor(size / 2), y + math.floor(size / 2)
   if tile.kind == "M" then
+    self:shaft(x, y, cx, cy, tile, spin)
     self:rect(x + 1, y + 1, size - 2, size - 2, light and light.correct and 9 or 8)
     self:rect(x + 2, y + 2, size - 4, size - 4, 1)
     self:font(x + 3, y + 2, tile.sign > 0 and ">" or "<", tile.sign > 0 and 11 or 14)
@@ -502,19 +538,19 @@ function R:drawGame(m)
     local active = m.selected == kind
     self:rect(x, y, 38, 9, active and 6 or 12)
     self:rect(x + 1, y + 1, 36, 7, active and 3 or 1)
-    self:rect(x + 2, y + 1, 7, 7, count > 0 and E.parts[kind].color or 4)
-    self:font(x + 4, y + 2, kind, 0)
+    self:toolIcon(x + 2, y + 1, kind)
+    self:font(x + 11, y + 2, kind, active and 6 or 11)
     local alias = ({
-      I = "SHAFT",
+      I = "SHFT",
       G = "COG",
-      O = "LARGE",
+      O = "LRGE",
       Q = "BOX",
-      D = "CHAIN",
+      D = "CHN",
       V = "BELT",
-      Z = "SHIFT",
-      C = "CLUTCH",
+      Z = "SHFT",
+      C = "CLCH",
     })[kind]
-    self:fontFit(x + 11, y + 2, alias, count > 0 and 15 or 4, 20)
+    self:fontFit(x + 17, y + 2, alias, count > 0 and 15 or 4, 14)
     self:font(x + 31, y + 2, countText, count > 0 and 9 or 4)
     self:add(x, y, 38, 9, "tool", kind)
   end
