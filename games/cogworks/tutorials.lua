@@ -72,15 +72,20 @@ T.lessons = {
     },
   },
 }
+-- Lessons are attached to the first *accessible* stage where a component
+-- matters, not an arbitrary chapter boundary. Skipped optional previews
+-- are retaught at the next mandatory encounter.
 T.introductions = {
   [1] = { "I" },
-  [9] = { "Q" },
-  [17] = { "G" },
-  [25] = { "O" },
-  [33] = { "D" },
-  [41] = { "V" },
-  [49] = { "Z", "C", "R", "B" },
-  [57] = { "Q", "O", "V", "R" },
+  [2] = { "Q" },
+  [3] = { "G" },
+  [7] = { "O" },
+  [17] = { "O" },
+  [25] = { "D" },
+  [26] = { "V" },
+  [41] = { "Z", "B" },
+  [42] = { "R" },
+  [43] = { "C" },
 }
 T.descriptions = {
   I = "STRAIGHT AXIAL SHAFT; SAME RPM AND SPIN",
