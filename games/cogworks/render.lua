@@ -345,7 +345,13 @@ function R:cog(cx, cy, large, spin, maxRadius)
     self:rect(tx, ty, 2, 2, tooth == 0 and spin and 15 or 6)
   end
   if spin then
-    self:line(cx, cy, rounded(cx + math.cos(angle) * core), rounded(cy + math.sin(angle) * core), spin.sign > 0 and 11 or 14)
+    self:line(
+      cx,
+      cy,
+      rounded(cx + math.cos(angle) * core),
+      rounded(cy + math.sin(angle) * core),
+      spin.sign > 0 and 11 or 14
+    )
     self:line(
       cx,
       cy,
@@ -368,7 +374,13 @@ function R:toolIcon(x, y, kind)
     self:rect(x + 3 - radius, y + 3 - radius, radius * 2 + 1, radius * 2 + 1, 7)
     for tooth = 0, 7 do
       local theta = tooth * math.pi / 4
-      self:rect(rounded(x + 3 + math.cos(theta) * (radius + 1)), rounded(y + 3 + math.sin(theta) * (radius + 1)), 1, 1, 6)
+      self:rect(
+        rounded(x + 3 + math.cos(theta) * (radius + 1)),
+        rounded(y + 3 + math.sin(theta) * (radius + 1)),
+        1,
+        1,
+        6
+      )
     end
     self:rect(x + 3, y + 3, 1, 1, 1)
   elseif kind == "R" then
