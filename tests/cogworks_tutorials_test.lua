@@ -14,7 +14,7 @@ end
 local saved = {}
 local S = {}
 function S.newProgress()
-  return { campaignVersion = 4, unlocked = 1, level = 1, best = {}, sessions = {}, awards = {}, tutorials = {} }
+  return { campaignVersion = 5, unlocked = 8, level = 1, best = {}, sessions = {}, awards = {}, tutorials = {} }
 end
 function S.loadSettings()
   return { animations = true, showPorts = true, lastSlot = 1 }
@@ -35,10 +35,10 @@ end
 package.loaded["games.cogworks.storage"] = S
 local A = require("games.cogworks.app")
 assert(#T.forLevel(1) == 1 and T.forLevel(1)[1].key == "I")
-assert(T.forLevel(2)[1].key == "Q" and T.forLevel(4)[1].key == "G")
-assert(T.forLevel(6)[1].key == "D" and T.forLevel(7)[1].key == "Z")
-assert(T.forLevel(8)[1].key == "C" and T.forLevel(9)[1].key == "O")
-assert(T.forLevel(11)[1].key == "V")
+assert(T.forLevel(9)[1].key == "Q" and T.forLevel(17)[1].key == "G")
+assert(T.forLevel(25)[1].key == "O" and T.forLevel(33)[1].key == "D")
+assert(T.forLevel(41)[1].key == "V" and T.forLevel(49)[1].key == "Z")
+assert(T.forLevel(57)[1].key == "Q" and #T.forLevel(64) == 0)
 local app = A.new()
 app:enter(1, false)
 assert(app.scene == "briefing" and app.briefing.number == 1)
@@ -49,8 +49,12 @@ assert(app.scene == "game" and saved[1].tutorials.I, "Tutorial was saved")
 app:openLevel(1)
 app:act("beginLevel")
 assert(app.scene == "game", "Already seen lesson not repeated")
-app.progress.unlocked = #E.levels
-app:openLevel(11)
+for i = 1, 40 do
+  app.progress.best[i] = 1
+  app.progress.awards[i] = { sealed = true, master = true, precision = true }
+end
+app.progress.unlocked = 48
+app:openLevel(41)
 app:act("beginLevel")
 assert(app.scene == "tutorial" and app.tutorial.steps[1].key == "V")
 app:act("tutorialSkip")
@@ -63,6 +67,7 @@ assert(app.scene == "game", "Ponder replay returns to game")
 local fresh = A.new({ dev = true })
 fresh:act("devLevels")
 assert(fresh.scene == "levels" and fresh.devSession and fresh.slot == nil)
+fresh:act("chapter", 8)
 fresh:act("level", #E.levels)
 assert(fresh.scene == "briefing" and fresh.game.number == #E.levels)
 fresh:act("beginLevel")
@@ -71,6 +76,7 @@ assert(fresh.scene == "game", "Developer may skip directly to last stage")
 assert(not fresh:save(), "Developer session never changes campaign slots")
 fresh:act("pause")
 fresh:act("levels")
+fresh:act("chapter", 1)
 fresh:act("level", 2)
 assert(fresh.game.number == 2, "Developer can jump between any stages")
 local free = A.new()
