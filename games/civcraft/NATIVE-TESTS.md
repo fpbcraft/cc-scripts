@@ -85,3 +85,10 @@ This combines with the hotseat `--war` response/save scenario. Run
 `/tests/civcraft_diplomacy_test.lua` separately for offer ownership, atomic
 funding, defense choices, armistices, counters, obligations, observation privacy,
 promise movement and expiry scenarios.
+
+The conversation driver now navigates Basalt tabs, agreement menus and trade
+review dialogs. With `--conversation` or `--war`, its isolated map fixture places
+capitals within normal sight so first contact is established through revelation.
+It never assigns contact flags or bypasses host diplomacy validation. Run
+`civcraft_contacts_test.lua` and `civcraft_conversation_ui_test.lua` in the isolated
+computer for contact privacy, actual widget input and counteroffer checks.

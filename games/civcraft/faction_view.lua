@@ -1,3 +1,4 @@
+local Contacts = dofile("/games/civcraft/contacts.lua")
 local Colors = dofile("/games/civcraft/faction_colors.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
@@ -21,106 +22,112 @@ function Factions.draw(ui, state, observer, rect)
 	end
 	for index, player in ipairs(state.players or {}) do
 		local own = player.id == observer.id
-		local civilization = Systems.civ(player.civ)
-		text(player.name .. (own and " (YOU)" or ""), Colors.players[index] or 8)
-		text(civilization.name .. " / " .. (player.ai and "AI" or "HUMAN"))
-		text("BONUS: " .. civilization.bonus)
-		if state.diplomacy then
-			text("REPUTATION: " .. ((state.diplomacy.reputation or {})[player.id] or 0))
-			if not own then
-				local pending = 0
-				for _, offer in ipairs(state.diplomacy.offers or {}) do
-					if
-						offer.from == player.id
-						and offer.to == observer.id
-						and offer.status == "pending"
-					then
-						pending = pending + 1
+		if Contacts.knows(state, observer.id, player.id) then
+			local civilization = Systems.civ(player.civ)
+			text(player.name .. (own and " (YOU)" or ""), Colors.players[index] or 8)
+			text(civilization.name .. " / " .. (player.ai and "AI" or "HUMAN"))
+			text("BONUS: " .. civilization.bonus)
+			if state.diplomacy then
+				text("REPUTATION: " .. ((state.diplomacy.reputation or {})[player.id] or 0))
+				if not own then
+					local pending = 0
+					for _, offer in ipairs(state.diplomacy.offers or {}) do
+						if
+							offer.from == player.id
+							and offer.to == observer.id
+							and offer.status == "pending"
+						then
+							pending = pending + 1
+						end
+					end
+					if pending > 0 then
+						text("PENDING DIPLOMATIC CHOICES: " .. pending, 9)
+					end
+					rows[#rows + 1] = {
+						buttons = {
+							{
+								label = "TALK " .. player.name,
+								run = function()
+									ui.conversationTarget, ui.conversationOffset, ui.panel =
+										player.id, 0, "conversation"
+								end,
+							},
+						},
+					}
+					local war = Diplomacy.war(state, observer.id, player.id)
+					text(
+						war
+								and (war.active and "AT WAR" or "WAR STARTS ROUND " .. war.activatesRound)
+							or "AT PEACE"
+					)
+					if not war and Scheduler.canAct(state, observer.id) then
+						rows[#rows + 1] = {
+							buttons = {
+								{
+									label = "ANNOUNCE WAR: " .. player.name,
+									run = function()
+										ui:command(
+											"declareWar",
+											{ target = player.id, kind = "normal" }
+										)
+									end,
+								},
+							},
+						}
+						text(
+							"Normal war starts next round. Surprise War starts now: -50 reputation, -75 defender trust; all remaining actions before a response.",
+							9
+						)
+						rows[#rows + 1] = {
+							buttons = {
+								{
+									label = "SURPRISE WAR: " .. player.name,
+									run = function()
+										ui:command(
+											"declareWar",
+											{ target = player.id, kind = "surprise" }
+										)
+									end,
+								},
+							},
+						}
 					end
 				end
-				if pending > 0 then
-					text("PENDING DIPLOMATIC CHOICES: " .. pending, 9)
-				end
-				rows[#rows + 1] = {
-					buttons = {
-						{
-							label = "TALK " .. player.name,
-							run = function()
-								ui.conversationTarget, ui.conversationOffset, ui.panel =
-									player.id, 0, "conversation"
-							end,
-						},
-					},
-				}
-				local war = Diplomacy.war(state, observer.id, player.id)
-				text(
-					war and (war.active and "AT WAR" or "WAR STARTS ROUND " .. war.activatesRound)
-						or "AT PEACE"
-				)
-				if not war and Scheduler.canAct(state, observer.id) then
-					rows[#rows + 1] = {
-						buttons = {
-							{
-								label = "ANNOUNCE WAR: " .. player.name,
-								run = function()
-									ui:command(
-										"declareWar",
-										{ target = player.id, kind = "normal" }
-									)
-								end,
-							},
-						},
-					}
-					text(
-						"Normal war starts next round. Surprise War starts now: -50 reputation, -75 defender trust; all remaining actions before a response.",
-						9
-					)
-					rows[#rows + 1] = {
-						buttons = {
-							{
-								label = "SURPRISE WAR: " .. player.name,
-								run = function()
-									ui:command(
-										"declareWar",
-										{ target = player.id, kind = "surprise" }
-									)
-								end,
-							},
-						},
-					}
+			end
+			if player.ai then
+				text("PERSONALITY: " .. Personalities.forCivilization(player.civ).archetype:upper())
+			end
+			local age = own and Systems.age(player) or player.age
+			text("AGE: " .. (age and Systems.ages[age] and Systems.ages[age].name or "UNKNOWN"))
+			local cities, units = 0, 0
+			for _, city in ipairs(state.cities or {}) do
+				if
+					city.owner == player.id
+					and (own or World.known(observer, city.x, city.y) == "visible")
+				then
+					cities = cities + 1
 				end
 			end
-		end
-		if player.ai then
-			text("PERSONALITY: " .. Personalities.forCivilization(player.civ).archetype:upper())
-		end
-		local age = own and Systems.age(player) or player.age
-		text("AGE: " .. (age and Systems.ages[age] and Systems.ages[age].name or "UNKNOWN"))
-		local cities, units = 0, 0
-		for _, city in ipairs(state.cities or {}) do
-			if
-				city.owner == player.id
-				and (own or World.known(observer, city.x, city.y) == "visible")
-			then
-				cities = cities + 1
+			for _, unit in ipairs(state.units or {}) do
+				if
+					unit.owner == player.id
+					and (own or World.known(observer, unit.x, unit.y) == "visible")
+				then
+					units = units + 1
+				end
 			end
+			text(
+				(own and "TOTAL" or "CURRENTLY VISIBLE")
+					.. ": "
+					.. cities
+					.. " CITIES, "
+					.. units
+					.. " UNITS"
+			)
+		else
+			text("UNDISCOVERED CIVILIZATION", 5)
+			text("Explore until you encounter its units or a settlement to establish contact.")
 		end
-		for _, unit in ipairs(state.units or {}) do
-			if
-				unit.owner == player.id
-				and (own or World.known(observer, unit.x, unit.y) == "visible")
-			then
-				units = units + 1
-			end
-		end
-		text(
-			(own and "TOTAL" or "CURRENTLY VISIBLE")
-				.. ": "
-				.. cities
-				.. " CITIES, "
-				.. units
-				.. " UNITS"
-		)
 		rows[#rows + 1] = { text = "" }
 	end
 	local group = Scheduler.group(state, observer.id)

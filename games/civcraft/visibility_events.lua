@@ -106,6 +106,7 @@ local function projectCombat(event, observer)
 end
 
 local notices = {
+	contact = true,
 	found = true,
 	disband = true,
 	rail = true,

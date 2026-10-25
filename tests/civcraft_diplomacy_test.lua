@@ -49,6 +49,13 @@ local function fixture()
 			buildings = {},
 		}
 	end
+	-- These scenarios begin after all participants have made contact.
+	for _, participant in ipairs(state.players) do
+		participant.contacts = {}
+		for _, other in ipairs(state.players) do
+			participant.contacts[other.id] = true
+		end
+	end
 	Systems.migrate(state)
 	World.reveal(state, Hex, Systems)
 	return state

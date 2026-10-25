@@ -162,3 +162,33 @@ All 65 regression scripts pass. New scenarios cover transaction validation, doub
 Remaining foundation concerns: physical monitor and live rednet verification, plus the remaining requirements in FOLLOWUPS-v0.9.md. Native CraftOS-PC event, rendering and save checks complement the automated suite. Public city/unit ratings resolve the earlier hidden-army forecast mismatch; event-time path projection resolves replay visibility, and detached local display snapshots separate simulation from cooperative rendering.
 
 The full roadmap is not complete. Target-server CC:Tweaked and live rednet validation is still required; do not treat these commits as a v0.9 release.
+
+### Conversation redesign and first contact
+
+Seeing a foreign civilization's city or unit establishes persistent, mutual first
+contact. Only the two participants receive a first-contact notice; foreign contact
+networks remain private. Conversation, proactive offers and war declarations are
+host-validated against contact, and joint-war offers require both parties to know
+the named opponent. Unmet factions display placeholders in the faction screen.
+Existing campaigns discover contacts from their current normal vision, without
+revealing hidden map information.
+
+The conversation UI now embeds real Basalt TabControl, List, Input, Dropdown and
+Dialog widgets in the existing text/graphics canvas and event loop. Talk, Deals,
+Agreements and Messages are separate tabs; relationship explanations, treaty
+consequences, message responses and trade reviews open focused modal dialogs.
+The trade editor supports numeric keyboard/paste input and editable counteroffers.
+Compact graphics use shorter captions and scroll only the relevant editor;
+large screens use a centered bounded panel. Escape closes the active dialog first.
+Hotseat and campaign changes destroy the private widget tree and trade draft.
+The pinned, unmodified upstream runtime and provenance live under `vendor/`.
+
+New contact tests verify private one-time notices, persistence, city/unit encounters,
+zero/negative computer IDs and rejected unseen diplomacy. Six layout scenarios
+exercise actual widgets, numeric editing, review/send, treaties, messages,
+counteroffers and private draft clearing. Native CraftOS-PC runs those scenarios
+and a host-mode full session with contact, commerce/trade, settings, research,
+campaign options and save reload; the hotseat session also exercises Surprise War.
+Native contact fixtures put capitals in actual sight rather than bypassing contact
+validation. Graphics review captures the actual renderer with instrumented displays;
+it does not establish physical monitor or live modem behavior.

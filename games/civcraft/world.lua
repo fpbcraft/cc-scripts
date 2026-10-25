@@ -1,6 +1,7 @@
 -- Seeded hex geography, strategic deposits, private discovery and territory.
 -- World state is authoritative and saved; map presets never reroll on reload.
 local Biomes = dofile("/games/civcraft/biomes.lua")
+local Contacts = dofile("/games/civcraft/contacts.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
@@ -313,6 +314,7 @@ function W.reveal(state, hex, systems, pendingNotices)
 			end
 		end
 		p.visible = visible
+		Contacts.observe(state, p, pendingNotices)
 		local memory = mapMemory(p, world)
 		for tileKey in pairs(visible) do
 			memory.landmarks[tileKey] = landmarkView((world.landmarks or {})[tileKey])

@@ -1022,7 +1022,9 @@ local function ui()
 		if e ~= "timer" then
 			trace("event", e)
 		end
-		if e == "monitor_touch" and display ~= term.current() and a == displaySide then
+		if view.conversationEvent and view:conversationEvent(e, a, b) then
+			draw()
+		elseif e == "monitor_touch" and display ~= term.current() and a == displaySide then
 			view:tap(b, c)
 			draw()
 		elseif e == "mouse_click" and (not d or d == displaySide) then

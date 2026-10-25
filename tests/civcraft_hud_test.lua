@@ -93,6 +93,7 @@ state.units = {
 	{ owner = 2, kind = "scout", x = 3, y = 5 },
 	{ owner = 2, kind = "scout", x = 10, y = 9 },
 }
+player.contacts = { [2] = true }
 state.players[2].gold = 123456
 state.players[2].aiPlan = { primaryGoal = "SECRET CAMPAIGN" }
 lines = {}

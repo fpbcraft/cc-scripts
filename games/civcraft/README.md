@@ -260,7 +260,7 @@ per water hex; embarked units cannot attack or found cities.
 
 ## Display and modems
 
-Designed for **3×3 through 5×5 Advanced Monitors** at scale 0.5, including rectangular arrangements. Compact layouts preserve both side panels and page long lists. The program selects the largest monitor on each machine, or falls back to a colour-capable computer terminal. Monitor taps and terminal mouse clicks are supported. The renderer uses native pixel graphics when available and standard CC colour text otherwise. No graphics mod, Basalt, Pine3D or extra dependency is required.
+Designed for **3×3 through 5×5 Advanced Monitors** at scale 0.5, including rectangular arrangements. Compact layouts preserve both side panels and page long lists. The program selects the largest monitor on each machine, or falls back to a colour-capable computer terminal. Monitor taps and terminal mouse clicks are supported. The renderer uses native pixel graphics when available and standard CC colour text otherwise. No graphics mod or Pine3D is required. Diplomacy uses a bundled, pinned Basalt 2.5 runtime; the normal CivCraft installer includes it, so no separate dependency installation is needed.
 
 Each machine needs a peripheral modem for networked play; wired modems need to be part of the same wired network. CC:Tweaked does **not** offer unlimited-range normal wireless networking—distance and dimensions matter.
 

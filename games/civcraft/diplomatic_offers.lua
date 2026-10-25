@@ -1,5 +1,6 @@
 local Memory = dofile("/games/civcraft/diplomatic_memory.lua")
 local Events = dofile("/games/civcraft/events.lua")
+local Contacts = dofile("/games/civcraft/contacts.lua")
 local Offers = {}
 local labels = {
 	openBorders = "OPEN BORDERS",
@@ -116,6 +117,9 @@ function Offers.propose(state, sender, request, systems, diplomacy)
 		return false, "Diplomacy is unavailable"
 	end
 	local recipient, kind = request.target, request.kind
+	if not Contacts.knows(state, sender, recipient) then
+		return false, "Discover this civilization before making offers"
+	end
 	if
 		not player(state, sender)
 		or not player(state, recipient)
@@ -162,6 +166,8 @@ function Offers.propose(state, sender, request, systems, diplomacy)
 		terms.enemy = input.enemy
 		if
 			not player(state, terms.enemy)
+			or not Contacts.knows(state, sender, terms.enemy)
+			or not Contacts.knows(state, recipient, terms.enemy)
 			or terms.enemy == recipient
 			or terms.enemy == sender
 			or not diplomacy.war(state, sender, terms.enemy)

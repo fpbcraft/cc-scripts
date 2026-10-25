@@ -18,8 +18,16 @@ for _, graphics in ipairs({ false, true }) do
 			diplomacy = Diplomacy.new(),
 			scheduler = Scheduler.new(),
 			players = {
-				{ id = 1, name = "ONE", civ = "forge", techs = {} },
-				{ id = 2, name = "TWO", civ = "iron", ai = true, ready = true, techs = {} },
+				{ id = 1, name = "ONE", civ = "forge", techs = {}, contacts = { [2] = true } },
+				{
+					id = 2,
+					name = "TWO",
+					civ = "iron",
+					ai = true,
+					ready = true,
+					techs = {},
+					contacts = { [1] = true },
+				},
 			},
 			cities = {
 				{ id = 1, owner = 1, x = 3, y = 4, population = 2, buildings = {} },
@@ -92,7 +100,7 @@ for _, graphics in ipairs({ false, true }) do
 						found[button.label] = button
 					end
 				end
-				if offset >= ui.pageMax then
+				if offset >= (ui.pageMax or 0) then
 					break
 				end
 				offset = math.min(ui.pageMax, offset + ui.pageCapacity)
@@ -105,22 +113,92 @@ for _, graphics in ipairs({ false, true }) do
 		assert(factions["TALK TWO"])
 		factions["TALK TWO"].fn()
 		assert(ui.panel == "conversation" and ui.conversationTarget == 2)
-		local buttons = scan("conversationOffset")
-		assert(
-			buttons.GREET
-				and buttons["OFFER COMMERCE"]
-				and buttons["PROMISE TO WITHDRAW"]
-				and buttons["SEND TRADE"]
-		)
-		buttons.GREET.fn()
+		local function click(label)
+			draw()
+			for _, button in ipairs(ui.r.buttons) do
+				assert(
+					button.x >= 0
+						and button.y >= 0
+						and button.x + button.w <= ui.r.w
+						and button.y + button.h <= ui.r.h
+				)
+				if button.label == label then
+					button.fn(button.x + button.w / 2, button.y + button.h / 2)
+					return
+				end
+			end
+			error(
+				"Missing control: "
+					.. label
+					.. " mode="
+					.. tostring(graphics)
+					.. " size="
+					.. size[1]
+					.. "x"
+					.. size[2]
+					.. " canvas="
+					.. ui.r.w
+					.. "x"
+					.. ui.r.h
+					.. " rows="
+					.. tostring(ui.conversationSurface and ui.conversationSurface.rows)
+			)
+		end
+		click("GREET")
 		assert(calls[#calls] == "diplomaticTalk" and state.diplomacy.relations["2:1"].trust == 2)
-		buttons["SEND TRADE"].fn()
+		click("DEALS")
+		click("YOU GIVE GOLD")
+		local surface = ui.conversationSurface
+		ui:conversationEvent("key", surface.keys.home)
+		ui:conversationEvent("key", surface.keys.delete)
+		ui:conversationEvent("key", surface.keys.delete)
+		ui:conversationEvent("paste", "25q")
+		draw()
+		assert(
+			ui.trade.gold == 25 and ui.conversationSurface == surface,
+			"Numeric input filters text and survives redraws"
+		)
+		assert(ui:conversationEvent("key", 16), "Typing Q stays inside diplomacy")
+		click("REVIEW TRADE")
+		click("SEND TRADE")
 		assert(
 			state.diplomacy.offers[1].status == "accepted"
-				and state.players[1].gold == 90
-				and state.players[2].gold == 110,
-			"Conversation terms flow through host validation and an explained AI response"
+				and state.players[1].gold == 75
+				and state.players[2].gold == 125,
+			"Review dialog sends the exact draft through host validation"
 		)
+		click("AGREEMENTS")
+		click("PROPOSE")
+		local model = ui.conversationModel
+		click("COMMERCE")
+		click("VIEW")
+		click("SEND OFFER")
+		assert(state.diplomacy.treaties[1].kind == "commerce")
+		click("MESSAGES")
+		click("VIEW MESSAGE")
+		assert(model.surface.modal.visible)
+		ui:back()
+		assert(not model.surface.modal.visible and ui.panel == "conversation")
+		state.players[2].ai, state.players[2].ready = false, false
+		local incomingTrade = {
+			action = "diplomaticOffer",
+			target = 1,
+			kind = "trade",
+			terms = { gold = 5, requestGold = 3 },
+		}
+		assert(Actions.apply(state, 2, incomingTrade, Systems))
+		click("VIEW MESSAGE")
+		click("COUNTER")
+		draw()
+		assert(ui.trade.gold == 3 and ui.trade.requestGold == 5)
+		click("REVIEW TRADE")
+		click("SEND TRADE")
+		assert(state.diplomacy.offers[#state.diplomacy.offers].from == 1)
+		assert(
+			state.diplomacy.offers[#state.diplomacy.offers].terms.gold == 3,
+			"Counter editor reverses the actual parties' terms"
+		)
+
 		ui.trade = { gold = 777, askResource = "diamond", askAmount = 12 }
 		ui:draw(World.forPlayer(state, 2), 2, { handoff = true })
 		assert(

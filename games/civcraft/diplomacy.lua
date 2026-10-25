@@ -1,4 +1,5 @@
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
+local Contacts = dofile("/games/civcraft/contacts.lua")
 local Memory = dofile("/games/civcraft/diplomatic_memory.lua")
 local Offers = dofile("/games/civcraft/diplomatic_offers.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
@@ -94,6 +95,9 @@ function Diplomacy.canAttack(state, a, b)
 end
 
 function Diplomacy.declare(state, attacker, defender, kind)
+	if not Contacts.knows(state, attacker, defender) then
+		return false, "Discover this civilization before diplomacy"
+	end
 	if state.phase ~= "game" then
 		return false, "Game not running"
 	end
@@ -349,6 +353,9 @@ function Diplomacy.join(state, ally, enemy, supporting)
 end
 
 function Diplomacy.talk(state, actor, target, topic)
+	if not Contacts.knows(state, actor, target) then
+		return false, "Discover this civilization before talking"
+	end
 	local topics = {
 		greeting = { 2, 0, 5, "Exchanged a friendly greeting" },
 		apologize = { 5, -5, 10, "Apologized for strained relations; lasting breaches remain" },

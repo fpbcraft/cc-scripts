@@ -187,7 +187,11 @@ for _, point in ipairs(observed.paths[1]) do
 end
 assert(Events.forPlayer(state, 3).lastSeq == 0)
 local view = World.forPlayer(state, 1)
-assert(#view.units == 0 and #view.eventStream.entries == 1 and not view.eventJournal)
+assert(#view.units == 0 and #view.eventStream.entries == 2 and not view.eventJournal)
+assert(
+	view.eventStream.entries[2].type == "contact",
+	"First contact follows the movement that established it"
+)
 assert(state.players[2].explored["9:6"], "Travel must reveal intermediate terrain to its owner")
 local order = state.eventJournal.order
 assert(not Actions.apply(state, 2, { action = "move", sx = 16, sy = 6, x = 1, y = 1 }, Systems))

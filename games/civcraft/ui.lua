@@ -5,6 +5,7 @@ local Personalities = dofile("/games/civcraft/ai_personalities.lua")
 local CampaignOptions = dofile("/games/civcraft/campaign_options.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
+local Conversation = dofile("/games/civcraft/conversation_view.lua")
 local GameView = dofile("/games/civcraft/game_view.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
@@ -372,6 +373,7 @@ function UI:draw(state, playerID, opts)
 		self.placement = nil
 		self.actionPage = 1
 		self.techModel = nil
+		Conversation.close(self)
 		self.conversationTarget = nil
 		self.conversationOffset = 0
 		self.trade = nil
@@ -1054,6 +1056,9 @@ function UI:confirmMove()
 	return false
 end
 function UI:back()
+	if self.panel == "conversation" then
+		return Conversation.back(self)
+	end
 	if self.settingsOpen then
 		self.settingsOpen = false
 		return true
@@ -1143,6 +1148,14 @@ function UI:pan(dx, dy)
 	return true
 end
 function UI:pointerDown(x, y)
+	if self.panel == "conversation" and self.conversationSurface then
+		local px, py = self.r:touch(x, y)
+		if px then
+			self.conversationSurface:mouse("mouse_click", 1, px, py)
+		end
+		self.conversationPointer = true
+		return true
+	end
 	local rx, ry = self.r:touch(x, y)
 	local v = self.mapViewport
 	self.pointerStart = nil
@@ -1190,6 +1203,14 @@ function UI:pointerDown(x, y)
 	return self:tap(x, y)
 end
 function UI:pointerUp()
+	if self.conversationPointer then
+		local s = self.conversationSurface
+		if s and s.lastMouse then
+			s:mouse("mouse_up", 1, s.lastMouse.x, s.lastMouse.y)
+		end
+		self.conversationPointer = nil
+		return
+	end
 	local start = self.pointerStart
 	if start and not self.pointerDragged then
 		self:tap(start.x, start.y)
@@ -1202,6 +1223,13 @@ function UI:pointerUp()
 	self.techDrag = nil
 end
 function UI:drag(x, y)
+	if self.conversationPointer and self.conversationSurface then
+		local px, py = self.r:touch(x, y)
+		if px then
+			self.conversationSurface:mouse("mouse_drag", 1, px, py)
+		end
+		return true
+	end
 	local px, py = self.r:touch(x, y)
 	if px then
 		for _, bar in ipairs(self.r.scrollbars or {}) do
@@ -1269,6 +1297,13 @@ function UI:drag(x, y)
 	return true
 end
 function UI:scroll(delta, x, y)
+	if self.panel == "conversation" and self.conversationSurface then
+		local px, py = self.r:touch(x, y)
+		if px then
+			self.conversationSurface:mouse("mouse_scroll", delta, px, py)
+		end
+		return true
+	end
 	local px, py = self.r:touch(x, y)
 	for _, bar in ipairs(self.r.scrollbars or {}) do
 		local area = bar.area
@@ -1359,7 +1394,22 @@ function UI:animating()
 		and not self.playback.pausedAt
 		and (self.playback.active ~= nil or #self.playback.pending > 0)
 end
+function UI:conversationEvent(event, a, b)
+	if self.panel ~= "conversation" or not self.conversationSurface then
+		return false
+	end
+	if event ~= "key" and event ~= "key_up" and event ~= "char" and event ~= "paste" then
+		return false
+	end
+	if event == "key" and a == self.conversationSurface.keys.escape then
+		Conversation.back(self)
+	else
+		self.conversationSurface:key(event, a, b)
+	end
+	return true
+end
 function UI:close()
+	Conversation.close(self)
 	self.r:close()
 end
 return UI

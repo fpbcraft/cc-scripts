@@ -18,6 +18,13 @@ in the design draft. Keep this list alongside the main roadmap until verified.
   units. Keep the connected research tree on small screens.
 - Increase map preset dimensions further, preserving existing saved worlds.
 - [x] Add Civilization-style conversations with AI factions.
+- [x] Require discovery of another civilization before conversations or proactive
+  diplomacy, enforced by the host as well as the faction UI. Persist first contact
+  from visible foreign cities/units without revealing the other side's map.
+- [x] Redesign conversations into focused tabs/submenus and detail dialogs instead
+  of one scrolling stream. Use suitable Basalt 2.5 components (tabs, lists,
+  inputs and dialogs); keep overview, deal editing, agreements and messages
+  separate. Validate compact and large text/graphics screens visually.
 - Wake units automatically for accepted orders. Verify every applicable action.
 - [x] Remove green player/faction colors and preserve visibility on terrain.
 - [x] Add a top-right faction/player details button.
@@ -55,3 +62,29 @@ before the defender responds. Previously spent movement and attacks stay spent.
 
 Existing implementation already covers accepted-order wake and deterministic
 combat previews; these still need the final integrated interaction checks.
+
+## Further interaction and combat requirements
+
+- Replace separate Next Idle Unit and End Turn controls with one primary button.
+  Its label must describe the next action: select an idle unit, choose city
+  production, choose research, or end the turn only when no required task remains.
+  Explicit No Production satisfies a city's production reminder.
+- Add a unit Skip Turn order. It ignores that unit for this turn's idle reminders
+  and clears at its next eligible turn; it is distinct from persistent Sleep.
+- Implement Civ6-style [zone of control](https://civilization.fandom.com/wiki/Zone_of_control_%28Civ6%29):
+  hostile military/city control restricts movement after entering controlled
+  terrain, with appropriate domain and unit exceptions. Use shared legality for
+  pathfinding, human/AI orders, queued movement and visible previews. Preserve
+  legal attacks and avoid exposing hidden enemies through previews.
+- Give embarked land units a larger water movement allowance when they begin
+  their eligible turn in water. They may initiate melee attacks onto land.
+  Land-based melee units cannot initiate attacks against embarked units, but may
+  retaliate when attacked; ranged units may attack them. Keep forecasts, AI,
+  reachability and actual combat consistent.
+- Reserve faction colors separately from every terrain color. Borders, units and
+  city markers must remain legible on each biome, including text fallback;
+  validate strong outlines/contrast as well as distinct palette entries.
+- Compact inspectors must separate city Overview, Jobs, Tiles and Production
+  into focused views, and unit actions from secondary details. Keep relevant
+  actions accessible without paging through unrelated information. Move status
+  feedback (for example Order Accepted) into the empty strip below the map.

@@ -97,6 +97,25 @@ end
 
 dofile = function(path)
 	local module = native(path)
+	if path == "/games/civcraft/world.lua" and (includeConversation or includeWar) then
+		local generate = module.generate
+		module.generate = function(...)
+			local world = generate(...)
+			-- A contact scenario: nearby capitals are actually seen by normal revelation.
+			-- No contact flags or diplomacy validation are bypassed.
+			local positions =
+				{ { x = 4, y = 6 }, { x = 6, y = 6 }, { x = 5, y = 8 }, { x = 7, y = 8 } }
+			for index = 1, #world.starts do
+				world.starts[index] = positions[index]
+			end
+			for y = 4, 10 do
+				for x = 3, 9 do
+					world.tiles[module.key(x, y)] = "plains"
+				end
+			end
+			return world
+		end
+	end
 	if path ~= "/games/civcraft/ui.lua" then
 		return module
 	end
@@ -213,14 +232,21 @@ dofile = function(path)
 				includeConversation
 				and stage == 2
 				and not options.handoff
-				and conversationStep < 7
+				and conversationStep < 14
 			then
 				local labels = {
 					"FACTIONS",
 					includeHost and "TALK AI 2" or "TALK PLAYER 3",
 					"GREET",
-					"OFFER COMMERCE",
+					"AGREEMENTS",
+					"PROPOSE",
+					"COMMERCE",
+					"VIEW",
+					"SEND OFFER",
+					"DEALS",
+					"REVIEW TRADE",
 					"SEND TRADE",
+					"TALK",
 					"CLOSE",
 					"CLOSE",
 				}
