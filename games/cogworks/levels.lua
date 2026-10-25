@@ -62,11 +62,11 @@ return {
     { p("I", 2, 3, 1), p("Q", 3, 3, 0) }
   ),
   level(
-    "CHAIN CORNER",
-    "ENCASED CHAIN DRIVES ROUTE POWER WITHOUT INVERSION.",
-    s(1, 3, 1), { m(3, 5, 0, 1, 1) },
-    { p("I", 2, 3, 1), p("D", 3, 3, 0), p("I", 3, 4, 0) },
-    { blocks = { { 4, 3 }, { 4, 4 } } }
+    "CHAIN LINK",
+    "CONNECT SIDE-BY-SIDE CHAIN DRIVES ON PARALLEL SHAFTS.",
+    s(1, 3, 1), { m(5, 4, 3, 1, 1) },
+    { p("I", 2, 3, 1), p("D", 3, 3, 1), p("D", 3, 4, 1), p("I", 4, 4, 1) },
+    { blocks = { { 4, 3 } } }
   ),
   level(
     "REDSTONE REVERSE",
@@ -104,8 +104,8 @@ return {
   level(
     "BRANCHING WORKS",
     "COMBINE A REVERSING GEARBOX WITH A CHAIN DRIVE.",
-    s(1, 3, 1), { m(3, 2, 2, 1, -1), m(4, 3, 3, 1, -1), m(4, 5, 3, 1, -1) },
-    { p("I", 2, 3, 1), p("Q", 3, 3, 0), p("I", 3, 4, 0), p("D", 3, 5, 0) }
+    s(1, 3, 1), { m(3, 2, 2, 1, -1), m(4, 3, 3, 1, -1), m(4, 5, 0, 1, -1) },
+    { p("I", 2, 3, 1), p("Q", 3, 3, 0), p("D", 3, 4, 0), p("D", 4, 4, 0) }
   ),
   level(
     "COUNTER ROTATION",
