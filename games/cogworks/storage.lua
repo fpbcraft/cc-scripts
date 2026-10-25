@@ -5,7 +5,7 @@ S.ROOT = "/games/cogworks"
 S.DIR = S.ROOT .. "/saves"
 S.SETTINGS = S.ROOT .. "/settings.dat"
 S.LEGACY = S.ROOT .. "/save.dat"
-S.VERSION = 3
+S.VERSION = 4
 local function ensure(path)
   if not fs.exists(path) then
     fs.makeDir(path)
@@ -83,7 +83,12 @@ function S.normalize(data)
   if type(data) ~= "table" then
     return p
   end
-  p.unlocked = clamp(data.unlocked, 1, 30, 1)
+  -- The previous thirty-level campaign used incompatible mechanics and layouts.
+  -- Preserve its on-disk file as a backup but start a fresh v4 campaign.
+  if data.campaignVersion ~= S.VERSION then
+    return p
+  end
+  p.unlocked = clamp(data.unlocked, 1, require("games.cogworks.levels") and #require("games.cogworks.levels"), 1)
   p.level = clamp(data.level, 1, p.unlocked, 1)
   p.best = type(data.best) == "table" and data.best or {}
   p.sessions = type(data.sessions) == "table" and data.sessions or {}
@@ -93,13 +98,6 @@ function S.normalize(data)
       if type(key) == "string" and value == true then
         p.tutorials[key] = true
       end
-    end
-  end
-  -- Pre-construction saves may contain incompatible level-4+ layouts.
-  if data.campaignVersion ~= 2 and data.campaignVersion ~= S.VERSION then
-    for i = 4, 12 do
-      p.sessions[i] = nil
-      p.best[i] = nil
     end
   end
   return p
