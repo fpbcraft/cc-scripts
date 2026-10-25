@@ -1176,8 +1176,22 @@ function R:drawText(m)
         local readout = motion and ((motion.sign > 0 and ">" or "<") .. (speedLabel(motion.rate) or "?")) or ""
         local readoutColor = motion and (motion.sign > 0 and colors.lightBlue or colors.orange) or fg
         label(px, py, slots[1] and "  ^  " or "     ", fg, color, columnWidth - 1)
-        label(px, py + 1, (slots[4] and "<" or " ") .. " " .. labelText .. (slots[2] and ">" or " "), fg, color, columnWidth - 1)
-        label(px, py + 2, (readout .. "    "):sub(1, 4) .. (slots[3] and "v" or " "), readoutColor, color, columnWidth - 1)
+        label(
+          px,
+          py + 1,
+          (slots[4] and "<" or " ") .. " " .. labelText .. (slots[2] and ">" or " "),
+          fg,
+          color,
+          columnWidth - 1
+        )
+        label(
+          px,
+          py + 2,
+          (readout .. "    "):sub(1, 4) .. (slots[3] and "v" or " "),
+          readoutColor,
+          color,
+          columnWidth - 1
+        )
         self:add(px, py, columnWidth - 1, 3, "cell", x, y)
       end
     end
@@ -1216,8 +1230,14 @@ function R:drawText(m)
       )
     end
     btn(1, h - 5, 12, "REMOVE", "tool", "erase")
-    btn(15, h - 5, 12, g.sandbox and ("SIZE " .. g.width) or "ROTATE", g.sandbox and "sandboxSize" or nil,
-      g.sandbox and (5 + g.width % 6) or nil)
+    btn(
+      15,
+      h - 5,
+      12,
+      g.sandbox and ("SIZE " .. g.width) or "ROTATE",
+      g.sandbox and "sandboxSize" or nil,
+      g.sandbox and (5 + g.width % 6) or nil
+    )
     btn(1, h - 4, 12, g.sandbox and "CLEAR" or "SAVE", g.sandbox and "clearSandbox" or "save")
     btn(15, h - 4, 12, "PAUSE", "pause")
     if result.win then
