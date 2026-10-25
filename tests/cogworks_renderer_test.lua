@@ -32,10 +32,10 @@ local model = {
   },
   slots = { { number = 1, empty = true }, { number = 2, empty = true }, { number = 3, empty = true } },
 }
-local gfx = { mode = 0, clears = 0, pixels = 0, flushes = 0, palette = {}, batches = 0 }
+local gfx = { mode = 0, clears = 0, pixels = 0, flushes = 0, palette = {}, batches = 0, width = 400, height = 260 }
 function gfx.getSize(mode)
   if mode == 2 then
-    return 400, 260
+    return gfx.width, gfx.height
   end
   return 70, 40
 end
@@ -54,7 +54,7 @@ function gfx.setFrozen(value)
   end
 end
 function gfx.drawPixels(x, y, fill, w, h)
-  assert(x >= 0 and y >= 0 and x + w <= 400 and y + h <= 260, "Pixel out of bounds")
+  assert(x >= 0 and y >= 0 and x + w <= gfx.width and y + h <= gfx.height, "Pixel out of bounds")
   assert(w > 0 and h > 0, "Invalid pixel rectangle")
   if type(fill) == "table" then
     assert(#fill == h, "One bitmap row per pixel row")
@@ -64,6 +64,10 @@ function gfx.drawPixels(x, y, fill, w, h)
     gfx.batches = gfx.batches + 1
   else
     assert(fill >= 0 and fill < 16, "Invalid palette index")
+    if x == 0 and y == 0 and w == gfx.width and h == gfx.height then
+      assert(fill == 0, "Full-screen clear uses blueprint background ink")
+      gfx.clears = gfx.clears + 1
+    end
   end
   gfx.pixels = gfx.pixels + 1
 end
@@ -115,9 +119,31 @@ local function click(action, arg)
 end
 r:draw(model)
 assert(gfx.batches == 1, "Title screen uploads one batched bitmap to the monitor")
+assert(gfx.clears == 1, "Graphics startup clears the complete physical monitor surface")
 click("slots")
 click("settings")
 click("exit")
+-- monitor_touch delivers 1-based character cells, whereas hit() receives
+-- actual pixels. Exercise multiple title actions after real character mapping.
+local function monitorHit(action)
+  for _, item in ipairs(r.targets) do
+    if item.action == action then
+      local px = r.ox + r.scale * (item.x + item.w / 2)
+      local py = r.oy + r.scale * (item.y + item.h / 2)
+      local cw, ch = gfx.getSize()
+      local col = math.floor(px / r.pw * cw) + 1
+      local line = math.floor(py / r.ph * ch) + 1
+      local found = r:hitTouch(col, line)
+      assert(found == action, "Character monitor_touch should hit " .. action)
+      return
+    end
+  end
+  error("Missing monitor action: " .. action)
+end
+monitorHit("slots")
+monitorHit("settings")
+monitorHit("exit")
+assert(r:hitTouch(0, 2) == nil and r:hitTouch(71, 20) == nil, "Reject out of bounds touches")
 model.scene = "slots"
 r:draw(model)
 click("slot", 1)
@@ -249,6 +275,13 @@ assert(
 r:resize()
 model.scene = "title"
 r:draw(model)
+local firstFullDraws = gfx.clears
+-- A monitor_resize must fully clear old pixels/letterbox areas before drawing.
+gfx.width, gfx.height = 440, 240
+r:resize()
+r:draw(model)
+assert(gfx.clears == firstFullDraws + 1, "Resize clears old pixels, text and white letterbox strips")
+monitorHit("slots")
 local afterFullDraw = gfx.pixels
 r:draw(model)
 assert(gfx.pixels == afterFullDraw, "No-op draw must not send redundant monitor pixels")
