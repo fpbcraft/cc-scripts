@@ -684,6 +684,9 @@ function R:drawGame(m)
   local g, result = m.game, m.result
   self:page(g.sandbox and "COGWORKS  SANDBOX" or ("COGWORKS  " .. string.format("%02d/%02d", g.number, #E.levels)))
   self:font(77, 5, "MV " .. g.moves, 4)
+  -- Quick visible animation control: saves may have animations disabled.
+  self:button(98, 2, 20, 11, m.settings.animations and "RUN" or "OFF", "toggleAnimations", nil,
+    m.settings.animations and 9 or 8)
   self:button(120, 2, 28, 11, g.sandbox and "CLEAR" or "SAVE", g.sandbox and "clearSandbox" or "save")
   self:button(150, 2, 36, 11, "PAUSE", "pause")
   self:button(188, 2, 11, 11, "?", "help")
