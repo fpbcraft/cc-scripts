@@ -100,13 +100,33 @@ local function start()
         break
       elseif event == "monitor_touch" and a == name then
         local action, x, y = renderer:hitTouch(b, c)
-        -- Vanilla Advanced Monitors offer only tap; select occupied cells and
-        -- expose small rotate/remove buttons on that cell.
+        -- CC:Tweaked reports character-cell coordinates. Other monitor
+        -- implementations may report graphics pixels; try those only if
+        -- character-cell hit testing did not find a control.
+        if not action and renderer.mode == "graphics" then
+          action, x, y = renderer:hit(b, c)
+        end
         if action == "cell" then
           action = app.selected == "erase" and "remove" or "inspect"
         end
         if not act(action, x, y) then
           break
+        end
+      elseif not computerMode and (event == "mouse_click" or event == "monitor_mouse_click") then
+        -- CraftOS monitor windows can expose a mouse_click event instead of
+        -- vanilla monitor_touch. Pixel graphics input uses pixel coordinates.
+        if event == "mouse_click" or a == name then
+          local mx, my = event == "mouse_click" and b or c, event == "mouse_click" and c or d
+          local action, x, y = renderer:hit(mx, my)
+          if not action then
+            action, x, y = renderer:hitTouch(mx, my)
+          end
+          if action == "cell" then
+            action = app.selected == "erase" and "remove" or "inspect"
+          end
+          if not act(action, x, y) then
+            break
+          end
         end
       elseif event == "monitor_left_click" and a == name then
         -- FPB Monitor Input companion sends normalized 0..1 screen positions.
