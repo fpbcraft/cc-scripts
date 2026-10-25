@@ -390,7 +390,15 @@ function R:drawSpans(g, result)
           else
             local mx = math.floor((x1 + x2) / 2)
             local my = math.floor((y1 + y2) / 2)
-            self:rect(mx - 1, my - 1, 3, 3, powered and 6 or (link.chain and 11 or 14))
+            if link.chain then
+              self:rect(mx - 2, my - 1, 5, 3, 4)
+              self:rect(mx, my, 1, 1, powered and 11 or 13)
+            else
+              -- Visible contact teeth bridge the adjacent rims; this is NOT a shaft.
+              self:rect(mx - 2, my, 2, 2, 7)
+              self:rect(mx, my - 1, 2, 2, powered and 6 or 7)
+              self:rect(mx + 2, my, 1, 2, 7)
+            end
           end
         end
       end
@@ -443,7 +451,7 @@ end
 function R:page(title, subtitle)
   self:rect(0, 0, 200, 120, 0)
   self:rect(0, 0, 200, 15, 1)
-  self:rect(0, 14, 200, 1, 7)
+  self:rect(0, 14, 200, 1, 6)
   self:fontFit(7, 5, title, 6, 184)
   if subtitle and subtitle ~= "" then
     self:fontFit(10, 19, subtitle, 11, 180)
@@ -464,7 +472,7 @@ function R:drawGame(m)
       local px = self.boardX + (x - 1) * self.cell
       local py = self.boardY + (y - 1) * self.cell
       self:rect(px, py, 14, 14, 2)
-      self:rect(px + 6, py + 6, 2, 2, 3)
+      self:rect(px + 6, py + 6, 1, 1, 3)
       local tile = E.get(g, x, y)
       if tile then
         self:piece(px + 1, py + 1, 13, tile, result.lights[tile.id])
@@ -479,7 +487,8 @@ function R:drawGame(m)
       self:add(px, py, 14, 14, "cell", x, y)
     end
   end
-  self:rect(114, 16, 83, 97, 1)
+  self:rect(114, 16, 83, 93, 1)
+  self:rect(114, 16, 83, 1, 12)
   self:font(117, 19, "PARTS", 11)
   self:font(163, 19, g.sandbox and "FREE" or (result.correct .. "/" .. result.goals), result.win and 9 or 15)
   -- Two columns keep the eight Create-style mechanisms visible.
@@ -491,8 +500,8 @@ function R:drawGame(m)
     local count = g.remaining[kind] or 0
     local countText = count == math.huge and "++" or tostring(count)
     local active = m.selected == kind
-    self:rect(x, y, 38, 9, active and 6 or 3)
-    self:rect(x + 1, y + 1, 36, 7, active and 2 or 1)
+    self:rect(x, y, 38, 9, active and 6 or 12)
+    self:rect(x + 1, y + 1, 36, 7, active and 3 or 1)
     self:rect(x + 2, y + 1, 7, 7, count > 0 and E.parts[kind].color or 4)
     self:font(x + 4, y + 2, kind, 0)
     local alias = ({
@@ -547,11 +556,20 @@ function R:drawGame(m)
   end
   self:drawSpans(g, result)
   self:rect(0, 109, 200, 11, 1)
-  self:rect(0, 109, 200, 1, 7)
+  self:rect(0, 109, 200, 1, 6)
   local selected = E.parts[m.selected]
   local info = selected and (selected.name .. " - " .. T.descriptions[m.selected])
     or (T.descriptions[m.selected] or "SELECT A PART TO PLACE")
-  self:fontFit(3, 110, info, 11, 194)
+  -- Permanent, color-and-shape-coded legend. Motion remains readable even
+  -- with animation disabled or an attached low-resolution monitor.
+  self:font(3, 110, "CW", 11)
+  self:font(13, 110, ">", 11)
+  self:font(19, 110, "CCW", 14)
+  self:font(33, 110, "<", 14)
+  self:font(43, 110, "1X", 15)
+  self:font(56, 110, "2X", 11)
+  self:font(69, 110, "0.5", 14)
+  self:fontFit(89, 110, info, 5, 109)
   local status = m.message
   if status == "" then
     if result.win then
@@ -563,10 +581,10 @@ function R:drawGame(m)
     elseif m.hasLeftInput then
       status = "LEFT: PLACE/TURN   RIGHT: REMOVE"
     else
-      status = "CW = CLOCKWISE  /  CCW = COUNTERCLOCKWISE"
+      status = "BLUE > CW  /  ORANGE < CCW  /  BADGE = SPEED"
     end
   end
-  self:fontFit(3, 115, status, result.win and 9 or 5, 160)
+  self:fontFit(3, 115, status, result.win and 9 or 5, result.win and 160 or 195)
   if result.win then
     self:button(166, 114, 32, 6, "NEXT", "next")
   end
