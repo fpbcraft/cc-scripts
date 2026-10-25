@@ -3,7 +3,7 @@
 > **Campaign redesign:** [Discovery-Driven 64-Level Campaign Design](CAMPAIGN_DESIGN.md)
 > specifies the intended puzzle insights and variations. This branch now contains
 > a **playable first implementation**: 64 distinct solver-verified layouts,
-> including 22 bespoke circuits and 42 authored variations of proven kinetic
+> including 34 bespoke circuits and 30 authored variations of proven kinetic
 > constructions. Further manual playtesting and refining the remixes against
 > their design briefs remains necessary.
 
@@ -103,7 +103,7 @@ all 64 reference solutions with the actual kinetic simulator; it also
 checks both authored bonuses, fixed-piece protections, board diversity,
 and progression without needing to complete optional chapter exams.
 
-The 42 levels derived from earlier proven kinetic layouts are **intentional
+The 30 levels derived from earlier proven kinetic layouts are **intentional
 first-pass variations, not yet final playtested puzzles**. Their discovery
 quality and authored twists should be checked during in-game playtesting
 and revised where a familiar solution still works trivially.
