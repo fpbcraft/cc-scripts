@@ -87,11 +87,11 @@ local cog = E.get(wheel, 2, 4)
 r.frame = 0
 r.buffer = {}
 r:piece(20, 20, 13, cog, wheelInfo.lights[cog.id])
-assert(r.buffer[27] and r.buffer[27][31] == 14, "Powered CCW cog has a moving amber rim marker")
+assert(r.buffer[27] and r.buffer[27][31] == 15, "HTML-style first gear tooth is bright white at frame zero")
 r.frame = 1
 r.buffer = {}
 r:piece(20, 20, 13, cog, wheelInfo.lights[cog.id])
-assert(r.buffer[27][31] ~= 14, "CCW rim marker moves between successive frames")
+assert(r.buffer[27][31] ~= 15, "Highlighted tooth must move to a new location on the next frame")
 local pixels = 0
 for _, row in pairs(r.buffer) do
   for _, ink in pairs(row) do
@@ -101,23 +101,42 @@ for _, row in pairs(r.buffer) do
   end
 end
 assert(pixels > 0, "Rotation marker remains visible after stepping to next frame")
-local twoPositions = {}
-local previousLine = r.line
-function r:line(x1, y1, x2, y2, color)
-  twoPositions[#twoPositions + 1] = { x2, y2, color }
-  return previousLine(self, x1, y1, x2, y2, color)
+-- Pixel geometry matches the approved 200x120 HTML prototype:
+-- radius 3/4, eight protruding 2x2 teeth, and a blue/orange steel spoke.
+local function gearFrame(large, spin, frame)
+  r.frame = frame
+  r.buffer = {}
+  r:cog(35, 35, large, spin)
+  return r.buffer
 end
+local function pixel(frame, x, y)
+  return frame[y + 1] and frame[y + 1][x + 1] or 0
+end
+local small = gearFrame(false, { rate = 1, sign = 1 }, 0)
+local large = gearFrame(true, { rate = 1, sign = 1 }, 0)
+assert(pixel(small, 39, 35) == 15, "Small cog highlighted tooth lies four pixels from its center")
+assert(pixel(large, 40, 35) == 15, "Large cog highlighted tooth lies five pixels from its center")
+assert(pixel(small, 41, 35) == 0 and pixel(large, 41, 35) == 15, "Large cog rim must be visibly wider")
+assert(pixel(small, 34, 34) == 13, "Steel center cap is drawn over the rotating brass face")
+local forward = gearFrame(false, { rate = 1, sign = 1 }, 1)
+local reverse = gearFrame(false, { rate = 1, sign = -1 }, 1)
+assert(pixel(forward, 39, 35) ~= 15, "At 1X the highlighted tooth travels between successive frames")
+assert(pixel(forward, 39, 37) == 15, "CW tooth travels down from the rightmost starting position")
+assert(pixel(reverse, 39, 33) == 15, "CCW tooth travels up from the rightmost starting position")
+local slow = gearFrame(false, { rate = 0.5, sign = 1 }, 1)
+local fast = gearFrame(false, { rate = 2, sign = 1 }, 1)
+assert(pixel(slow, 39, 36) == 15, "Half-speed cog advances a shorter angle per frame")
+assert(pixel(fast, 38, 38) == 15, "Double-speed cog advances a longer angle per frame")
 r.frame = 0
-r:cog(35, 35, false, { rate = 2, sign = 1 })
-r.frame = 4
-r:cog(35, 35, false, { rate = 2, sign = 1 })
-assert(#twoPositions >= 2, "Cogwheel animation draws rotating spokes")
-assert(
-  twoPositions[1][1] ~= twoPositions[#twoPositions][1] or twoPositions[1][2] ~= twoPositions[#twoPositions][2],
-  "Powered cog spokes change angle from frame to frame"
-)
-r.frame = 0
-r.line = previousLine
+r.buffer = {}
+r:toolIcon(10, 10, "G")
+local smallIcon = r.buffer
+r.buffer = {}
+r:toolIcon(10, 10, "O")
+local largeIcon = r.buffer
+assert(pixel(smallIcon, 10, 10) == 0, "Small palette cog has distinct exposed corners")
+assert(pixel(largeIcon, 10, 10) ~= 0, "Large palette cog extends to full icon bounds")
+r.buffer = {}
 local function click(action, arg)
   for _, v in ipairs(r.targets) do
     if v.action == action and (arg == nil or v.arg == arg) then
