@@ -1032,7 +1032,7 @@ function R:drawBriefing(m)
       self:rect(x, y - 1, 31, 6, 2)
       self:rect(x + 1, y, 6, 5, E.parts[part.kind].color)
       self:font(x + 2, y, part.kind, 0)
-      local labels = { I = "SHFT", G = "COG", O = "LG", Q = "BOX", D = "CHN", V = "BELT", Z = "SHIFT", C = "CLTCH" }
+      local labels = { I = "SHFT", G = "COG", O = "LG", Q = "BOX", D = "CHN", V = "BELT", Z = "SHIFT", C = "CLTCH", R = "DUST", B = "BLOCK" }
       self:fontFit(x + 9, y, labels[part.kind], 15, 16)
       self:font(x + 26, y, tostring(part.count), 6)
     end
@@ -1040,16 +1040,10 @@ function R:drawBriefing(m)
   self:rect(0, 107, 200, 13, 1)
   self:rect(0, 107, 200, 1, 7)
   local extras = {}
-  if b.bonus.sealed then
-    extras[#extras + 1] = "SEAL"
+  for _, objective in ipairs(b.bonus or {}) do
+    extras[#extras + 1] = objective.name
   end
-  if b.bonus.fullFactory then
-    extras[#extras + 1] = "STOCK"
-  end
-  if b.bonus.precision then
-    extras[#extras + 1] = "PAR"
-  end
-  local bonus = #extras > 0 and ("BONUS " .. table.concat(extras, "/")) or "BUILD TO BEGIN"
+  local bonus = #extras > 0 and ("BONUS " .. table.concat(extras, " / ")) or "BUILD TO BEGIN"
   self:fontFit(9, 111, bonus, 11, 121)
   self:rect(131, 112, 4, 4, motion and tick % 8 < 4 and 9 or 6)
   -- Entire screen is a usable tap target, with a prominent START button.
