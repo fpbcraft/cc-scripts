@@ -1,104 +1,284 @@
 -- Install manifests: the only source of managed file lists and legacy data paths.
-local P={schema=2,storeVersion="2.0.0",packages={}}
-P.packages.cogworks={
- id="cogworks",source="games/cogworks",root="/games/cogworks",legacy="/cogworks",entry="main.lua",
- files={"README.md","app.lua","briefing.lua","display.lua","engine.lua","expansion.lua","levels.lua","main.lua","render.lua","storage.lua","terminal_view.lua","tutorials.lua"},
- libraries={"loader","display","terminal_view"},
- data={"saves","save.dat","settings.dat"},
- startup=false,lowDisk=false,basalt=false,
+local P = { schema = 2, storeVersion = "2.0.0", packages = {} }
+P.packages.cogworks = {
+  id = "cogworks",
+  source = "games/cogworks",
+  root = "/games/cogworks",
+  legacy = "/cogworks",
+  entry = "main.lua",
+  files = {
+    "README.md",
+    "app.lua",
+    "briefing.lua",
+    "display.lua",
+    "engine.lua",
+    "expansion.lua",
+    "levels.lua",
+    "main.lua",
+    "render.lua",
+    "storage.lua",
+    "terminal_view.lua",
+    "tutorials.lua",
+  },
+  libraries = { "loader", "display", "terminal_view" },
+  data = { "saves", "save.dat", "settings.dat" },
+  startup = false,
+  lowDisk = false,
+  basalt = false,
 }
-P.packages.railbreak={
- id="railbreak",source="games/railbreak",root="/games/railbreak",legacy="/railbreak",entry="main.lua",
- files={"QUICKSTART.txt","README.md","classic.lua","content/catalog.lua","core/util.lua","display.lua","game/commands.lua","game/kinetics.lua","game/processing.lua","game/state.lua","main.lua","platform/storage.lua","render/canvas.lua","terminal_view.lua","train/art.lua","train/catalog.lua","train/info.lua","train/render.lua","train/rules.lua","train/state.lua","train/storage.lua","train/ui.lua","ui/app.lua"},
- libraries={"loader","display","terminal_view","canvas"},
- data={"data"},
- startup=false,lowDisk=false,basalt=false,
+P.packages.railbreak = {
+  id = "railbreak",
+  source = "games/railbreak",
+  root = "/games/railbreak",
+  legacy = "/railbreak",
+  entry = "main.lua",
+  files = {
+    "QUICKSTART.txt",
+    "README.md",
+    "classic.lua",
+    "content/catalog.lua",
+    "core/util.lua",
+    "display.lua",
+    "game/commands.lua",
+    "game/kinetics.lua",
+    "game/processing.lua",
+    "game/state.lua",
+    "main.lua",
+    "platform/storage.lua",
+    "render/canvas.lua",
+    "terminal_view.lua",
+    "train/art.lua",
+    "train/catalog.lua",
+    "train/info.lua",
+    "train/render.lua",
+    "train/rules.lua",
+    "train/state.lua",
+    "train/storage.lua",
+    "train/ui.lua",
+    "ui/app.lua",
+  },
+  libraries = { "loader", "display", "terminal_view", "canvas" },
+  data = { "data" },
+  startup = false,
+  lowDisk = false,
+  basalt = false,
 }
-P.packages.shattered={
- id="shattered",source="games/shattered",root="/games/shattered",legacy="/shattered",entry="shattered.lua",
- files={"QUICKSTART.txt","README.md","display.lua","expanse-v5/content.lua","expanse-v5/events.lua","expanse-v5/render.lua","expanse-v5/sim.lua","expanse-v5/theme.lua","expanse-v5/ui.lua","shattered.lua","terminal_view.lua"},
- libraries={"loader","display","terminal_view"},
- data={"v5-save.dat","v5-save.dat.bak","v5-settings.dat"},
- startup=false,lowDisk=false,basalt=false,
+P.packages.shattered = {
+  id = "shattered",
+  source = "games/shattered",
+  root = "/games/shattered",
+  legacy = "/shattered",
+  entry = "shattered.lua",
+  files = {
+    "QUICKSTART.txt",
+    "README.md",
+    "display.lua",
+    "expanse-v5/content.lua",
+    "expanse-v5/events.lua",
+    "expanse-v5/render.lua",
+    "expanse-v5/sim.lua",
+    "expanse-v5/theme.lua",
+    "expanse-v5/ui.lua",
+    "shattered.lua",
+    "terminal_view.lua",
+  },
+  libraries = { "loader", "display", "terminal_view" },
+  data = { "v5-save.dat", "v5-save.dat.bak", "v5-settings.dat" },
+  startup = false,
+  lowDisk = false,
+  basalt = false,
 }
-P.packages.ironspire={
- id="ironspire",source="games/ironspire",root="/games/ironspire",legacy="/ironspire",entry="main.lua",
- files={"README.md","main.lua","map.lua","render.lua"},
- libraries={"loader","canvas"},
- data={"data"},
- startup=false,lowDisk=false,basalt=false,
+P.packages.ironspire = {
+  id = "ironspire",
+  source = "games/ironspire",
+  root = "/games/ironspire",
+  legacy = "/ironspire",
+  entry = "main.lua",
+  files = { "README.md", "main.lua", "map.lua", "render.lua" },
+  libraries = { "loader", "canvas" },
+  data = { "data" },
+  startup = false,
+  lowDisk = false,
+  basalt = false,
 }
-P.packages.civcraft={
- id="civcraft",source="games/civcraft",root="/games/civcraft",legacy="/civcraft",entry="game.lua",
- files={"README.md","ai.lua","economy.lua","hostiles.lua","landmarks.lua","railways.lua","victory.lua","villages.lua","audio.lua","combat.lua","content.lua","encyclopedia.lua","empire_menu.lua","game.lua","game_view.lua","hex.lua","hud.lua","icons.lua","inspector.lua","map_view.lua","minimap.lua","panels.lua","render.lua","reports.lua","saves.lua","systems.lua","terrain_view.lua","tech_tree.lua","ui.lua","world.lua"},
- libraries={"loader"},
- data={"data"},
- startup=false,lowDisk=false,basalt=false,
+P.packages.civcraft = {
+  id = "civcraft",
+  source = "games/civcraft",
+  root = "/games/civcraft",
+  legacy = "/civcraft",
+  entry = "game.lua",
+  files = {
+    "README.md",
+    "ai.lua",
+    "economy.lua",
+    "hostiles.lua",
+    "landmarks.lua",
+    "railways.lua",
+    "victory.lua",
+    "villages.lua",
+    "audio.lua",
+    "combat.lua",
+    "content.lua",
+    "encyclopedia.lua",
+    "empire_menu.lua",
+    "game.lua",
+    "game_view.lua",
+    "hex.lua",
+    "hud.lua",
+    "icons.lua",
+    "inspector.lua",
+    "map_view.lua",
+    "minimap.lua",
+    "panels.lua",
+    "render.lua",
+    "reports.lua",
+    "saves.lua",
+    "systems.lua",
+    "terrain_view.lua",
+    "tech_tree.lua",
+    "ui.lua",
+    "world.lua",
+  },
+  libraries = { "loader" },
+  data = { "data" },
+  startup = false,
+  lowDisk = false,
+  basalt = false,
 }
-P.packages.airship={
- id="airship",source="apps/airship",root="/apps/airship",legacy="/fpb-airship",entry="autopilot.lua",
- files={"README.md","autopilot.lua","ui.lua"},
- libraries={"loader"},
- data={".airship_avionics_route",".airship_avionics_presets",".airship_avionics_burners_settings",".airship_autopilot_avionics_burners_calibration",".airship_autopilot_avionics_calibration","airship_autopilot_debug.log",".airship_autopilot_control_error"},
- startup=true,lowDisk=false,basalt=true,
+P.packages.airship = {
+  id = "airship",
+  source = "apps/airship",
+  root = "/apps/airship",
+  legacy = "/fpb-airship",
+  entry = "autopilot.lua",
+  files = { "README.md", "autopilot.lua", "ui.lua" },
+  libraries = { "loader" },
+  data = {
+    ".airship_avionics_route",
+    ".airship_avionics_presets",
+    ".airship_avionics_burners_settings",
+    ".airship_autopilot_avionics_burners_calibration",
+    ".airship_autopilot_avionics_calibration",
+    "airship_autopilot_debug.log",
+    ".airship_autopilot_control_error",
+  },
+  startup = true,
+  lowDisk = false,
+  basalt = true,
 }
-P.packages.factory={
- id="factory",source="apps/factory",root="/apps/factory",legacy="/fpb-factory",entry="main.lua",
- files={"README.md","auth.lua","completions.lua","core.lua","devices.lua","graph_metrics.lua","layout.lua","main.lua","remote.lua","ui.lua"},
- libraries={"loader","auth"},
- data={"data"},
- startup=true,lowDisk=true,basalt=true,
+P.packages.factory = {
+  id = "factory",
+  source = "apps/factory",
+  root = "/apps/factory",
+  legacy = "/fpb-factory",
+  entry = "main.lua",
+  files = {
+    "README.md",
+    "auth.lua",
+    "completions.lua",
+    "core.lua",
+    "devices.lua",
+    "graph_metrics.lua",
+    "layout.lua",
+    "main.lua",
+    "remote.lua",
+    "ui.lua",
+  },
+  libraries = { "loader", "auth" },
+  data = { "data" },
+  startup = true,
+  lowDisk = true,
+  basalt = true,
 }
-P.packages.node={
- id="node",source="apps/node",root="/apps/node",legacy="/fpb-node",entry="main.lua",
- files={"README.md","export_pairing.lua","main.lua","pairing.lua","ui.lua","unpair.lua","auth.lua"},
- libraries={"loader","auth"},
- data={"config.db"},
- startup=true,lowDisk=true,basalt=false,
+P.packages.node = {
+  id = "node",
+  source = "apps/node",
+  root = "/apps/node",
+  legacy = "/fpb-node",
+  entry = "main.lua",
+  files = { "README.md", "export_pairing.lua", "main.lua", "pairing.lua", "ui.lua", "unpair.lua", "auth.lua" },
+  libraries = { "loader", "auth" },
+  data = { "config.db" },
+  startup = true,
+  lowDisk = true,
+  basalt = false,
 }
-P.packages.fpbstore={
- id="fpbstore",source="apps/fpbstore",root="/apps/fpbstore",legacy="/fpbstore",entry="main.lua",
- files={"README.md","catalog.lua","launcher.lua","main.lua","manager.lua"},
- libraries={"loader","packages"},
- data={"installed"},
- startup=false,lowDisk=false,basalt=false,
+P.packages.fpbstore = {
+  id = "fpbstore",
+  source = "apps/fpbstore",
+  root = "/apps/fpbstore",
+  legacy = "/fpbstore",
+  entry = "main.lua",
+  files = { "README.md", "catalog.lua", "launcher.lua", "main.lua", "manager.lua" },
+  libraries = { "loader", "packages" },
+  data = { "installed" },
+  startup = false,
+  lowDisk = false,
+  basalt = false,
 }
-P.apps={
+P.apps = {
   {
-   version="1.0.0",id="cogworks",name="COGWORKS",subtitle="KINETIC LAB",
-   description="30 tactile Create-inspired machinery puzzles.",
-   icon="C",genre="PUZZLE",
+    version = "1.0.0",
+    id = "cogworks",
+    name = "COGWORKS",
+    subtitle = "KINETIC LAB",
+    description = "30 tactile Create-inspired machinery puzzles.",
+    icon = "C",
+    genre = "PUZZLE",
   },
   {
-   version="2.0.8",id="railbreak",name="RAILBREAK",subtitle="KINETIC FRONTIER",
-   description="Run a railway, manage cargo and improve your trains.",
-   icon="R",genre="STRATEGY",
+    version = "2.0.8",
+    id = "railbreak",
+    name = "RAILBREAK",
+    subtitle = "KINETIC FRONTIER",
+    description = "Run a railway, manage cargo and improve your trains.",
+    icon = "R",
+    genre = "STRATEGY",
   },
   {
-   version="5.6",id="shattered",name="SHATTERED EXPANSE",subtitle="FOUR EMPIRES",
-   description="A space 4X with exploration, diplomacy and events.",
-   icon="S",genre="4X / RPG",
+    version = "5.6",
+    id = "shattered",
+    name = "SHATTERED EXPANSE",
+    subtitle = "FOUR EMPIRES",
+    description = "A space 4X with exploration, diplomacy and events.",
+    icon = "S",
+    genre = "4X / RPG",
   },
   {
-   version="0.2.0",id="ironspire",name="IRONSPIRE",subtitle="CLOCKWORK ASCENT",
-   description="Solo deckbuilding roguelike with card battles and branching routes.",
-   icon="I",genre="DECKBUILDER",
+    version = "0.2.0",
+    id = "ironspire",
+    name = "IRONSPIRE",
+    subtitle = "CLOCKWORK ASCENT",
+    description = "Solo deckbuilding roguelike with card battles and branching routes.",
+    icon = "I",
+    genre = "DECKBUILDER",
   },
   {
-   version="0.8.0",id="civcraft",name="CIVCRAFT",subtitle="POCKET CIVILIZATION",
-   description="Local hotseat or networked 2-4 player civilization-building 4X.",
-   icon="V",genre="4X / STRATEGY",
+    version = "0.8.0",
+    id = "civcraft",
+    name = "CIVCRAFT",
+    subtitle = "POCKET CIVILIZATION",
+    description = "Local hotseat or networked 2-4 player civilization-building 4X.",
+    icon = "V",
+    genre = "4X / STRATEGY",
   },
- }
-for _,app in ipairs(P.apps)do
- local spec=P.packages[app.id]
- app.root=spec.root;app.entry=spec.root..'/'..spec.entry
- app.installer='installers/'..app.id..'.lua'
- app.category='Games';app.managedFiles={};app.saves={}
- for _,file in ipairs(spec.files)do app.managedFiles[#app.managedFiles+1]=file end
- for _,name in ipairs(spec.libraries)do
-  app.managedFiles[#app.managedFiles+1]='_lib/fpb/'..name..'.lua'
- end
- for _,file in ipairs(spec.data)do app.saves[#app.saves+1]=spec.root..'/'..file end
+}
+for _, app in ipairs(P.apps) do
+  local spec = P.packages[app.id]
+  app.root = spec.root
+  app.entry = spec.root .. "/" .. spec.entry
+  app.installer = "installers/" .. app.id .. ".lua"
+  app.category = "Games"
+  app.managedFiles = {}
+  app.saves = {}
+  for _, file in ipairs(spec.files) do
+    app.managedFiles[#app.managedFiles + 1] = file
+  end
+  for _, name in ipairs(spec.libraries) do
+    app.managedFiles[#app.managedFiles + 1] = "_lib/fpb/" .. name .. ".lua"
+  end
+  for _, file in ipairs(spec.data) do
+    app.saves[#app.saves + 1] = spec.root .. "/" .. file
+  end
 end
 return P
