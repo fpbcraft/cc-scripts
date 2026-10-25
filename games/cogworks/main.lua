@@ -231,7 +231,7 @@ local function start()
           redraw()
         end
         -- Peripheral monitor graphics need fewer pushes than native CraftOS-PC.
-        timer = os.startTimer(app.scene == "briefing" and 0.15 or (computerMode and 0.2 or 0.3))
+        timer = os.startTimer(app.scene == "briefing" and 0.15 or 0.2)
       elseif event == "char" then
         local char = tostring(a):lower()
         local n = tonumber(char)
