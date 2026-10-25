@@ -59,7 +59,7 @@ textutils = {
   end,
 }
 local S = require("games.cogworks.storage")
-assert(S.VERSION == 5 and not S.has(2), "Updated campaign save schema")
+assert(S.VERSION == 6 and not S.has(2), "Updated campaign save schema")
 local old = {
   campaignVersion = 3,
   unlocked = 30,
@@ -92,4 +92,4 @@ local loaded = S.loadSettings()
 assert(not loaded.animations and not loaded.showPorts and loaded.lastSlot == 3)
 files[S.path(2)] = "invalid lua"
 assert(not S.load(2) and S.load(1).level == 2, "Corrupted slot stays isolated")
-print("COGWORKS: campaign-v5 migration, slots, settings and corruption isolation passed.")
+print("COGWORKS: campaign-v6 migration, slots, settings and corruption isolation passed.")
