@@ -1032,7 +1032,18 @@ function R:drawBriefing(m)
       self:rect(x, y - 1, 31, 6, 2)
       self:rect(x + 1, y, 6, 5, E.parts[part.kind].color)
       self:font(x + 2, y, part.kind, 0)
-      local labels = { I = "SHFT", G = "COG", O = "LG", Q = "BOX", D = "CHN", V = "BELT", Z = "SHIFT", C = "CLTCH", R = "DUST", B = "BLOCK" }
+      local labels = {
+        I = "SHFT",
+        G = "COG",
+        O = "LG",
+        Q = "BOX",
+        D = "CHN",
+        V = "BELT",
+        Z = "SHIFT",
+        C = "CLTCH",
+        R = "DUST",
+        B = "BLOCK",
+      }
       self:fontFit(x + 9, y, labels[part.kind], 15, 16)
       self:font(x + 26, y, tostring(part.count), 6)
     end
