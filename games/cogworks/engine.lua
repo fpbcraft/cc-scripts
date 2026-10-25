@@ -578,32 +578,131 @@ function E.evaluate(g)
     win = (not g.sandbox or g.editor) and not jam and goals > 0 and goals == correct,
   }
 end
+-- Authored two-slot bonus predicates; each predicate is evaluated against the
+-- *actual* powered graph, not the author's saved reference.
 function E.challenges(g, result)
-  if g.sandbox or g.custom then
-    return {}
+  if g.sandbox or g.custom or g.editor then return {} end
+  local stage = levels[g.number]
+  local bonuses = stage.bonuses or {}
+  local placed, gears, gearboxes, dust, blocks = 0, 0, 0, 0, 0
+  local cw, ccw, energizedFixed = false, false, 0
+  for _, tile in ipairs(g.tiles) do
+    if not tile.fixed and tile.kind ~= "R" and tile.kind ~= "B" then
+      placed = placed + 1
+    end
+    if not tile.fixed and (tile.kind == "G" or tile.kind == "O") then gears = gears + 1 end
+    if not tile.fixed and tile.kind == "Q" then gearboxes = gearboxes + 1 end
+    if not tile.fixed and tile.kind == "R" then dust = dust + 1 end
+    if not tile.fixed and tile.kind == "B" then blocks = blocks + 1 end
+    local light = result.lights[tile.id]
+    if light and light.powered then
+      cw = cw or light.sign == 1
+      ccw = ccw or light.sign == -1
+      if tile.fixed and E.parts[tile.kind] then
+        energizedFixed = energizedFixed + 1
+      end
+    end
+  end
+  local function poweredLink(typeName, minimum)
+    for _, tile in ipairs(g.tiles) do
+      local light = result.lights[tile.id]
+      if light and light.powered then
+        for _, link in ipairs(E.meshes(g, tile)) do
+          local other = result.lights[link.tile.id]
+          if link[typeName] and other and other.powered then
+            local span = math.abs(tile.x - link.tile.x) + math.abs(tile.y - link.tile.y)
+            if span >= (minimum or 1) then return true end
+          end
+        end
+      end
+    end
+    return false
+  end
+  local function diagonal()
+    for _, tile in ipairs(g.tiles) do
+      if (tile.kind == "G" or tile.kind == "O") and result.lights[tile.id].powered then
+        for _, link in ipairs(E.meshes(g, tile)) do
+          if link.tile.kind ~= tile.kind and math.abs(tile.x - link.tile.x) == 1
+            and math.abs(tile.y - link.tile.y) == 1 and result.lights[link.tile.id].powered then
+            return true
+          end
+        end
+      end
+    end
+    return false
+  end
+  local function occupiesZone(predicate)
+    for _, tile in ipairs(g.tiles) do
+      if not tile.fixed and predicate(tile) then return true end
+    end
+    return false
   end
   local list = {}
-  local par = 0
-  for _, tile in ipairs(levels[g.number].build) do
-    par = par + 1 + (tile.r or 0)
-  end
-  par = par + #(levels[g.number].toggles or {})
-  local function add(id, name, description, earned)
+  for _, spec in ipairs(bonuses) do
+    local goal = spec.value or 0
+    local typeName = spec.type
+    local achieved = false
+    local progress = nil
+    if typeName == "budget" then
+      achieved, progress = placed <= goal, tostring(placed) .. "/" .. goal
+    elseif typeName == "moves" then
+      achieved, progress = g.moves <= goal, tostring(g.moves) .. "/" .. goal
+    elseif typeName == "exact_parts" then
+      achieved, progress = placed == goal, tostring(placed) .. "/" .. goal
+    elseif typeName == "clean" then
+      achieved = result.unpowered == 0
+    elseif typeName == "full_stock" then
+      achieved = result.remaining == 0 and result.unpowered == 0
+    elseif typeName == "no_gearbox" then
+      achieved = gearboxes == 0
+    elseif typeName == "gear_limit" then
+      achieved, progress = gears <= goal, tostring(gears) .. "/" .. goal
+    elseif typeName == "belt_span" then
+      achieved = poweredLink("belt", goal)
+    elseif typeName == "chain_link" then
+      achieved = poweredLink("chain", 1)
+    elseif typeName == "diagonal" then
+      achieved = diagonal()
+    elseif typeName == "dual_rotation" then
+      achieved = cw and ccw
+    elseif typeName == "redstone_limit" then
+      achieved, progress = dust <= goal, tostring(dust) .. "/" .. goal
+    elseif typeName == "single_block" then
+      achieved, progress = blocks <= 1, tostring(blocks) .. "/1"
+    elseif typeName == "fixed_power" then
+      achieved = energizedFixed >= goal
+    elseif typeName == "no_belt" then
+      achieved = not occupiesZone(function(tile) return tile.kind == "V" end)
+    elseif typeName == "no_chain" then
+      achieved = not occupiesZone(function(tile) return tile.kind == "D" end)
+    elseif typeName == "clear_zone" then
+      achieved = not occupiesZone(function(tile)
+        return tile.x >= spec.x1 and tile.x <= spec.x2 and tile.y >= spec.y1 and tile.y <= spec.y2
+      end)
+    elseif typeName == "use_cell" then
+      local tile = E.get(g, spec.x, spec.y)
+      achieved = tile ~= nil and not tile.fixed and result.lights[tile.id].powered
+    elseif typeName == "no_kind" then
+      achieved = not occupiesZone(function(tile) return tile.kind == spec.kind end)
+    elseif typeName == "mechanical_override" then
+      local tile = E.get(g, spec.x, spec.y)
+      achieved = tile and (tile.kind == "Z" or tile.kind == "C") and not result.switches[tile.id] or false
+    elseif typeName == "signal_sharing" then
+      local count = 0
+      for _, tile in ipairs(g.tiles) do
+        if (tile.kind == "Z" or tile.kind == "C") and result.switches[tile.id] then
+          count = count + 1
+        end
+      end
+      achieved = count >= 2
+    end
     list[#list + 1] = {
-      id = id,
-      name = name,
-      description = description,
-      earned = result.win and earned or false,
+      id = spec.id,
+      name = spec.name,
+      description = spec.description or spec.name,
+      earned = result.win and not not achieved,
+      progress = progress,
     }
-  end
-  if g.number >= 2 then
-    add("sealed", "NO IDLE PARTS", "EVERY PLACED PART GETS POWER", result.unpowered == 0)
-  end
-  if g.number >= 3 then
-    add("master", "USE EVERY PART", "ALL STOCK USED AND POWERED", result.remaining == 0 and result.unpowered == 0)
-  end
-  if g.number >= 5 then
-    add("precision", "PRECISION", "AT MOST " .. par .. " MOVES", g.moves <= par)
   end
   return list
 end
