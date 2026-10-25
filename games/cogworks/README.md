@@ -1,5 +1,11 @@
 # COGWORKS: Kinetic Lab
 
+> **Campaign redesign (proposal):** [Discovery-Driven 64-Level Campaign Design](CAMPAIGN_DESIGN.md)
+> specifies all 64 hand-authored puzzle concepts, branching chapters, remixes,
+> varied bonuses, fixed machinery and the editor/pack acceptance criteria.
+> The currently generated 64-level layouts are **implementation placeholders**;
+> this document does not describe already playable replacement levels.
+
 A touchscreen-first construction puzzle for CC:Tweaked, based on the rotational
 transmission mechanics in the Minecraft [Create mod](https://github.com/Creators-of-Create/Create/wiki).
 
