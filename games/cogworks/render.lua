@@ -290,56 +290,82 @@ local function speedLabel(rate)
   end
   return string.format("%.1f", rate)
 end
--- True rotational animation: phase depends on the signed speed rather than
--- marching dots translating outward along the shaft.
+-- The shaft's highlight alternates across its upper/lower (or left/right)
+-- faces. This communicates *axial rotation*, not motion along a conveyor.
+-- The phase is signed and linked to kinetic speed.
 function R:shaft(x, y, cx, cy, tile, spin)
   local active = spin ~= nil
-  local base = active and 13 or 4
-  local phase = active and math.floor(self.frame * math.min(spin.rate, 8) * spin.sign / 2) or 0
+  local phase = active and math.floor(self.frame * math.min(spin.rate, 4)) * spin.sign or 0
+  local edge = phase % 4
   for dir = 0, 3 do
     if E.hasPort(tile, dir) then
       local dx, dy = DX[dir + 1], DY[dir + 1]
       local ex, ey = cx + dx * 5, cy + dy * 5
       if dx ~= 0 then
         local sx = math.min(cx, ex)
-        self:rect(sx, cy - 1, math.abs(cx - ex) + 1, 3, 4)
-        self:rect(sx, cy, math.abs(cx - ex) + 1, 1, base)
+        local length = math.abs(cx - ex) + 1
+        self:rect(sx, cy - 1, length, 3, 4)
+        self:rect(sx, cy, length, 1, 13)
         if active then
-          self:rect(sx + (phase % (math.abs(cx - ex) + 1)), cy - 1, 1, 1, spin.sign > 0 and 11 or 14)
+          self:rect(sx, cy - 1, length, 1, edge < 2 and 11 or 7)
+          self:rect(sx, cy + 1, length, 1, edge >= 2 and 11 or 7)
         end
       else
         local sy = math.min(cy, ey)
-        self:rect(cx - 1, sy, 3, math.abs(cy - ey) + 1, 4)
-        self:rect(cx, sy, 1, math.abs(cy - ey) + 1, base)
+        local length = math.abs(cy - ey) + 1
+        self:rect(cx - 1, sy, 3, length, 4)
+        self:rect(cx, sy, 1, length, 13)
         if active then
-          self:rect(cx - 1, sy + (phase % (math.abs(cy - ey) + 1)), 1, 1, spin.sign > 0 and 11 or 14)
+          self:rect(cx - 1, sy, 1, length, edge < 2 and 11 or 7)
+          self:rect(cx + 1, sy, 1, length, edge >= 2 and 11 or 7)
         end
       end
       self:rect(ex, ey, 2, 2, 7)
     end
   end
 end
--- Eight coarse teeth plus rotating spokes fit into a 13px CraftOS cell.
--- Large and small cogs have genuinely different rim radii.
-function R:cog(cx, cy, large, spin)
-  local radius = large and 4 or 3
-  local rim = spin and 6 or 7
-  self:rect(cx - radius + 1, cy - radius + 1, radius * 2 - 1, radius * 2 - 1, 7)
-  self:rect(cx - radius + 2, cy - radius + 2, radius * 2 - 3, radius * 2 - 3, rim)
-  local phase = spin and self.frame * math.min(spin.rate, 4) * spin.sign * 0.31 or 0
+-- The gear has a stationary dark bevel and a rotating brass face. Eight
+-- identical teeth alone cannot show direction: a distinctive steel spoke and
+-- a light-colored pin travel around the hub on a stepped eight-phase orbit.
+-- One turn takes eight frames at 1X, four at 2X, sixteen at 0.5X.
+function R:cog(cx, cy, large, spin, maxRadius)
+  local r = math.min(large and 5 or 4, maxRadius or 5)
+  local face = large and 7 or 6
+  -- Chunky but rounded gear body; clear background corners keep it distinct
+  -- from the square gearbox even at small monitor resolutions.
+  self:rect(cx - r + 1, cy - r, 2 * r - 1, 1, 7)
+  self:rect(cx - r + 1, cy + r, 2 * r - 1, 1, 7)
+  self:rect(cx - r, cy - r + 1, 1, 2 * r - 1, 7)
+  self:rect(cx + r, cy - r + 1, 1, 2 * r - 1, 7)
+  self:rect(cx - r + 1, cy - r + 1, 2 * r - 1, 2 * r - 1, face)
   for tooth = 0, 7 do
-    local angle = tooth * math.pi / 4 + phase
-    local tx = math.floor(cx + math.cos(angle) * (radius + 1) + 0.5)
-    local ty = math.floor(cy + math.sin(angle) * (radius + 1) + 0.5)
-    self:rect(tx, ty, 2, 2, rim)
+    local theta = tooth * math.pi / 4
+    local tx = math.floor(cx + math.cos(theta) * (r + 0.4) + 0.5)
+    local ty = math.floor(cy + math.sin(theta) * (r + 0.4) + 0.5)
+    self:rect(tx, ty, 1, 1, 6)
   end
+  local phase = spin and math.floor(self.frame * math.min(spin.rate, 4)) * spin.sign or 0
+  local direction = math.pi / 4 * phase
   if spin then
-    local theta = self.frame * math.min(spin.rate, 4) * spin.sign * 0.72
-    local sx = math.floor(cx + math.cos(theta) * (radius - 1) + 0.5)
-    local sy = math.floor(cy + math.sin(theta) * (radius - 1) + 0.5)
-    self:line(cx, cy, sx, sy, spin.sign > 0 and 11 or 14)
+    -- Draw two different spokes so 180-degree rotation remains visible.
+    local arm = math.max(2, r - 1)
+    local dx1, dy1 = math.cos(direction) * arm, math.sin(direction) * arm
+    self:line(cx, cy, math.floor(cx + dx1 + 0.5), math.floor(cy + dy1 + 0.5), 15)
+    local direction2 = direction + math.pi * 0.75
+    self:line(
+      cx,
+      cy,
+      math.floor(cx + math.cos(direction2) * arm + 0.5),
+      math.floor(cy + math.sin(direction2) * arm + 0.5),
+      13
+    )
+    -- An amber index pin is intentionally asymmetrical and visibly moves,
+    -- even when the repeated teeth look unchanged between adjacent frames.
+    local px = math.floor(cx + math.cos(direction) * r + 0.5)
+    local py = math.floor(cy + math.sin(direction) * r + 0.5)
+    self:rect(px, py, 1, 1, spin.sign > 0 and 11 or 14)
   else
-    self:line(cx - 1, cy, cx + 1, cy, 4)
+    self:line(cx - r + 2, cy, cx + r - 2, cy, 4)
   end
   self:rect(cx - 1, cy - 1, 3, 3, 13)
   self:rect(cx, cy, 1, 1, 1)
@@ -421,22 +447,8 @@ function R:compactPiece(x, y, size, tile, light)
   end
   local color = spin and 6 or 7
   if tile.kind == "G" or tile.kind == "O" then
-    local r = math.min(tile.kind == "O" and 3 or 2, math.floor(size / 2) - 1)
-    self:rect(cx - r, cy - r, r * 2 + 1, r * 2 + 1, color)
-    local phase = spin and self.frame * spin.rate * spin.sign * 0.72 or 0
-    for tooth = 0, 3 do
-      local angle = tooth * math.pi / 2 + phase
-      self:rect(math.floor(cx + math.cos(angle) * (r + 1)), math.floor(cy + math.sin(angle) * (r + 1)), 1, 1, color)
-    end
-    if spin then
-      self:rect(
-        math.floor(cx + math.cos(phase) * r),
-        math.floor(cy + math.sin(phase) * r),
-        1,
-        1,
-        spin.sign > 0 and 11 or 14
-      )
-    end
+    local radius = math.max(2, math.floor(size / 2) - 1)
+    self:cog(cx, cy, tile.kind == "O", spin, radius)
   else
     self:rect(cx - 2, cy - 2, 5, 5, tile.kind == "I" and 13 or color)
     self:rect(cx - 1, cy - 1, 3, 3, tile.kind == "C" and light and light.redstone and 8 or 2)
@@ -449,7 +461,7 @@ function R:compactPiece(x, y, size, tile, light)
     end
   end
   self:rect(cx, cy, 1, 1, 1)
-  if spin then
+  if spin and tile.kind ~= "G" and tile.kind ~= "O" then
     self:rect(x, y + math.floor(size / 2), 1, 2, spin.sign > 0 and 11 or 14)
   end
 end
@@ -543,9 +555,9 @@ function R:piece(x, y, size, tile, light)
   elseif tile.kind == "I" then
     self:rect(cx - 1, cy - 1, 3, 3, 13)
   end
-  if spin then
-    -- Direction is an edge marker, leaving teeth and spokes unobstructed.
-    self:rect(x, y + math.floor(size / 2), 1, 3, spin.sign > 0 and 11 or 14)
+  if spin and tile.kind ~= "G" and tile.kind ~= "O" then
+    -- Distinct CW/CCW ink remains outside the mechanism face.
+    self:rect(x, y + math.floor(size / 2), 1, 2, spin.sign > 0 and 11 or 14)
   end
 end
 -- Draw belts/chains across every intervening cell, including stone. Draw over
