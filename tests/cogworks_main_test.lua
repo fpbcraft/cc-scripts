@@ -40,8 +40,12 @@ end
 -- Even a larger monochrome monitor must not displace a usable Advanced
 -- Monitor, and the latter must run automatically at half text scale.
 local plain = {
-  getSize = function() return 90, 50 end,
-  isColor = function() return false end,
+  getSize = function()
+    return 90, 50
+  end,
+  isColor = function()
+    return false
+  end,
 }
 peripheral = {
   getNames = function()
