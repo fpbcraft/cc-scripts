@@ -7,7 +7,8 @@ function View.center(ui, rect, size)
 	if not frame then
 		return
 	end
-	local position = frame.effects[1] and frame.effects[1].position
+	local position = frame.focus
+		or frame.effects[1] and frame.effects[1].position
 		or frame.projectile and frame.projectile.position
 		or frame.sprites[1] and frame.sprites[1].position
 	if position then

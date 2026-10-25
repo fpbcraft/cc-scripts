@@ -51,7 +51,7 @@ function G.draw(ui, state, player)
 	if not compactHeader then
 		r:text(4, 3, "CIVCRAFT", 8, 1, 40)
 	end
-	local infoX = compactHeader and 4 or 12 + r:textWidth("CIVCRAFT")
+	local infoX = compactHeader and (w < 120 and 1 or 4) or 12 + r:textWidth("CIVCRAFT")
 	r:text(
 		infoX,
 		3,
@@ -66,7 +66,7 @@ function G.draw(ui, state, player)
 			),
 		7,
 		1,
-		w - 82 - infoX
+		w - 93 - infoX
 	)
 	HUD.resources(ui, state, player)
 	local turnStatus
@@ -137,6 +137,13 @@ function G.draw(ui, state, player)
 			end,
 		},
 		{
+			"EVENT LOG",
+			"contract",
+			function()
+				ui:openHistory()
+			end,
+		},
+		{
 			"PAUSE",
 			"pause",
 			function()
@@ -144,7 +151,7 @@ function G.draw(ui, state, player)
 			end,
 		},
 	}) do
-		iconButton(w - 80 + (i - 1) * 13, 1, 12, action[1], action[2], action[3])
+		iconButton(w - 91 + (i - 1) * 13, 1, 12, action[1], action[2], action[3])
 	end
 	Map.draw(
 		ui,
@@ -365,6 +372,10 @@ function G.draw(ui, state, player)
 	elseif ui.panel == "factions" then
 		modal(ui, rect)
 		Factions.draw(ui, state, player, rect)
+	elseif ui.panel == "history" then
+		local historyRect = { x = 2, y = 2, w = w - 4, h = h - 4 }
+		modal(ui, historyRect)
+		EventFeed.history(ui, historyRect)
 	elseif ui.panel == "events" then
 		modal(ui, rect)
 		EventFeed.draw(ui, rect)

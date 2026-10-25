@@ -108,19 +108,25 @@ function Queue.submit(state, unit, x, y, append, systems)
 		member.standby, member.healing, member.autoExplore, member.skippedTurn =
 			false, false, false, nil
 	end
-	Events.notice(state, "order", nil, "Movement route queued", unit.owner)
+	Events.notice(state, "order", unit, "Movement route queued", unit.owner)
 	return true
 end
 local function pause(state, unit, queue, reason)
 	queue.paused = reason or "Movement route blocked"
-	Events.notice(state, "order", nil, queue.paused .. "; reassign or cancel the route", unit.owner)
+	Events.notice(
+		state,
+		"order",
+		unit,
+		queue.paused .. "; reassign or cancel the route",
+		unit.owner
+	)
 end
 local function nextLeg(state, unit, queue, systems)
 	table.remove(queue.goals, 1)
 	local goal = queue.goals[1]
 	if not goal then
 		unit.moveQueue = nil
-		Events.notice(state, "order", nil, "Movement route completed", unit.owner)
+		Events.notice(state, "order", unit, "Movement route completed", unit.owner)
 		return false
 	end
 	local path, reason =

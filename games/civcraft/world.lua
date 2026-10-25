@@ -513,6 +513,7 @@ function W.forPlayer(state, id, afterSeq)
 		observerID = id,
 		campaignID = state.campaignID,
 		eventStream = Events.forPlayer(state, id, afterSeq),
+		eventHistory = Events.history(state, id),
 		phase = state.phase,
 		round = state.round,
 		turn = state.turn,
@@ -586,7 +587,7 @@ function W.forPlayer(state, id, afterSeq)
 					elseif record then
 						view.world.resources[k] = record.resource or nil
 					end
-					view.world.observedOwners[k] = W.observedOwner(state, observer, x, y) or false
+					view.world.observedOwners[k] = W.observedOwner(state, observer, x, y)
 					view.world.landmarks[k], view.world.rails[k] =
 						W.observedFeatures(state, observer, x, y)
 				end

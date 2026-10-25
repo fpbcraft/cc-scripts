@@ -133,6 +133,33 @@ function UI:command(action, params)
 		self.dispatch(action, params or {})
 	end
 end
+function UI:openHistory()
+	self.panel = "history"
+	self.historyRequestID, self.historyLoading = (self.historyRequestID or 0) + 1, false
+	self.historyPage, self.historyCursors, self.historyOffset = self.state.eventHistory, {}, 0
+	if not self.historyPage then
+		self:requestHistory()
+	end
+end
+function UI:requestHistory(before)
+	self.historyRequestID = (self.historyRequestID or 0) + 1
+	self.historyLoading = true
+	self:command("eventHistory", { before = before, requestID = self.historyRequestID })
+end
+function UI:receiveHistory(page, requestID)
+	if
+		type(page) ~= "table"
+		or not self.state
+		or page.observer ~= self.playerID
+		or page.campaign ~= (self.state.campaignID or "legacy")
+		or requestID ~= self.historyRequestID
+		or self.panel ~= "history"
+	then
+		return false
+	end
+	self.historyPage, self.historyOffset, self.historyLoading = page, 0, false
+	return true
+end
 function UI:endWarnings()
 	return TurnTasks.pending(self.state, self.playerID, Systems)
 end
@@ -416,6 +443,8 @@ function UI:draw(state, playerID, opts)
 		self.conversationOffset = 0
 		self.trade = nil
 		self.factionOffset = 0
+		self.historyPage, self.historyCursors, self.historyLoading = nil, {}, false
+		self.historyRequestID = (self.historyRequestID or 0) + 1
 		self.workCity = nil
 		self.worldReady = false
 		self.panX = 0

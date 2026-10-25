@@ -198,3 +198,32 @@ assert(not select(2, timeline:frame(6, 1)))
 print(
 	"CIVCRAFT: interpolation, fog gaps, combat timing, skips, bounded replay and detached rendering passed."
 )
+
+-- Every turn-recap event holds its observed opening pose, even under backlog acceleration.
+timeline = Animations.new()
+local nextEvent = move(2, { { { x = 8, y = 2 }, { x = 9, y = 2 } } })
+timeline:play({ event, nextEvent }, true)
+local waiting = timeline:frame(10, 1)
+assert(
+	waiting.waiting and waiting.progress == 0 and #waiting.effects == 0 and not waiting.projectile
+)
+close(timeline:frame(10.2, 1).sprites[1].position.x, waiting.sprites[1].position.x)
+timeline:setPaused(true, 10.2)
+timeline:setPaused(false, 20.2)
+assert(timeline:frame(20.2, 1).waiting, "Pause menus cannot consume the opening delay")
+assert(not timeline:frame(20.4, 1).waiting and timeline.active.event.seq == 1)
+local finish = timeline.active.finish
+assert(
+	timeline:frame(finish + 0.001, 1).waiting and timeline.active.event.seq == 2,
+	"The next event gets its own delay rather than sharing the first event's"
+)
+timeline:setSpeed("fast")
+timeline:play({ event }, true)
+timeline:frame(30, 1)
+close(timeline.active.start - 30, Animations.leadIn / 2)
+timeline:setSpeed("off")
+assert(not timeline.active and #timeline.pending == 0)
+assert(not event.replayLeadIn, "Presentation metadata never mutates the saved event")
+print(
+	"CIVCRAFT: serial replay lead-ins, paused timing, fast/off preferences and event immutability passed."
+)

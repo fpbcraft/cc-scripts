@@ -115,6 +115,7 @@ P.packages.civcraft = {
 		"animation_view.lua",
 		"animations.lua",
 		"event_feed.lua",
+		"event_summary.lua",
 		"playback_ui.lua",
 		"presentation.lua",
 		"command_queue.lua",

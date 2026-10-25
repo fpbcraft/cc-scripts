@@ -54,11 +54,11 @@ in the design draft. Keep this list alongside the main roadmap until verified.
   last observed state. Do not show unseen units, new cities or other changes.
   Re-entering vision updates the remembered state. Check local, hotseat, remote
   snapshots and event playback against the same observation rules.
-- Add a top-right Event Log button. List the observer's known events in reverse
+- [x] Add a top-right Event Log button. List the observer's known events in reverse
   chronological order, newest first, with no hidden actions or action-count
   leakage. Keep compact observer-filtered history separately from the bounded
   replay window so older known events remain reachable by scrolling/pagination.
-- Add a short pause before each replayed event at the start of a turn so the
+- [x] Add a short pause before each replayed event at the start of a turn so the
   player can parse successive actions. Pause/reduced-motion/speed preferences
   must remain coherent; simulation must not wait on presentation.
 

@@ -163,7 +163,7 @@ local function apply(state, id, req, Systems)
 		or req.action == "researchTech"
 		or req.action == "queue"
 	then
-		local ok, why
+		local ok, why, orderedCity
 		if req.action == "researchTech" then
 			ok, why = Systems.research(p, req.id)
 		else
@@ -172,6 +172,7 @@ local function apply(state, id, req, Systems)
 			if not c or c.owner ~= id then
 				return false, "Select an owned city"
 			end
+			orderedCity = c
 			if req.action == "workTile" then
 				ok, why = Systems.workTile(state, c, tonumber(req.x), tonumber(req.y))
 			elseif req.action == "assign" then
@@ -194,7 +195,15 @@ local function apply(state, id, req, Systems)
 			end
 		end
 		if ok then
-			Events.notice(state, "order", nil, req.action, id)
+			local detail = req.action
+			if req.action == "researchTech" then
+				detail = "Research selected: " .. Systems.label("tech", req.id)
+			elseif req.action == "queue" then
+				local project = orderedCity.project
+				detail = "Production selected: "
+					.. (project and Systems.label(project.kind, project.id) or "No production")
+			end
+			Events.notice(state, "order", orderedCity, detail, id)
 		end
 		return ok, why
 	end
@@ -239,7 +248,7 @@ local function apply(state, id, req, Systems)
 			member.skippedTurn = TurnTasks.stamp(state, id)
 			member.standby, member.healing, member.autoExplore = false, false, false
 		end
-		Events.notice(state, "order", nil, "Skipped unit for this turn", id)
+		Events.notice(state, "order", u, "Skipped unit for this turn", id)
 		return true
 	elseif req.action == "standby" then
 		if not u or u.owner ~= id then
@@ -255,7 +264,7 @@ local function apply(state, id, req, Systems)
 				member.autoExplore = false
 			end
 		end
-		Events.notice(state, "order", nil, req.action, id)
+		Events.notice(state, "order", u, req.action, id)
 		return true
 	elseif req.action == "autoExplore" then
 		if not u or u.owner ~= id then
@@ -264,13 +273,13 @@ local function apply(state, id, req, Systems)
 		if req.value == false then
 			u.autoExplore = false
 			u.skippedTurn = nil
-			Events.notice(state, "order", nil, req.action, id)
+			Events.notice(state, "order", u, req.action, id)
 			return true
 		end
 		local ok, why = Systems.autoExplore(state, u, Hex)
 		if ok then
 			u.skippedTurn = nil
-			Events.notice(state, "order", nil, req.action, id)
+			Events.notice(state, "order", u, req.action, id)
 		end
 		return ok, why
 	elseif req.action == "cancelRoute" then
@@ -278,7 +287,7 @@ local function apply(state, id, req, Systems)
 			return false, "Select an owned unit"
 		end
 		Queue.cancel(state, u)
-		Events.notice(state, "order", nil, "Movement route cancelled", id)
+		Events.notice(state, "order", u, "Movement route cancelled", id)
 		return true
 	elseif req.action == "queueMove" then
 		local moving = Stacks.at(state.units, tonumber(req.sx), tonumber(req.sy), req.unitID)

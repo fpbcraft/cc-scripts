@@ -1,5 +1,6 @@
 local Animations = dofile("/games/civcraft/animations.lua")
 local Preferences = dofile("/games/civcraft/animation_preferences.lua")
+local Summary = dofile("/games/civcraft/event_summary.lua")
 local Playback = {}
 
 function Playback.attach(ui)
@@ -26,20 +27,7 @@ function Playback.command(ui, action)
 	return true
 end
 
-function Playback.summary(event)
-	local actor = event.actor
-	local name = actor and (actor.name or actor.kind) or ""
-	local result = event.result or {}
-	local label = (result.captured or result.capturedSettler) and "CAPTURE" or event.type:upper()
-	local point = event.target
-		or event.start
-		or event.paths and event.paths[1] and event.paths[1][1]
-	return label
-		.. " "
-		.. name
-		.. (event.content and " " .. event.content or "")
-		.. (point and " @ " .. point.x .. "," .. point.y or "")
-end
+Playback.summary = Summary.text
 
 function Playback.update(ui, state, observer, opts)
 	local key = observer or "lobby"
@@ -81,7 +69,7 @@ function Playback.update(ui, state, observer, opts)
 				events[#events + 1] = event
 			end
 		end
-		playback:play(events)
+		playback:play(events, true)
 		playback.awaitingRecap, playback.deferredSeq = false, nil
 	end
 	local ready = not opts.paused
@@ -115,7 +103,7 @@ function Playback.watch(ui, events, follow)
 	if not ui.playback then
 		return
 	end
-	ui.playback:play(events)
+	ui.playback:play(events, true)
 	ui.panel = "context"
 	if follow and events[1] then
 		local event = events[1]

@@ -153,9 +153,9 @@ All 65 regression scripts pass. New scenarios cover transaction validation, doub
 
 09. Council elections, resolutions and diplomatic victory.
 10. Remaining display integration, faction diplomacy controls and larger map presets.
-    Remaining 25 October requirements include the top-right reverse-chronological
-    Event Log and replay pauses. Frozen grey fog memory is implemented below. Capture, attached
-    escorts, queued movement and sharp zoom labels are implemented below.
+    Remaining work includes larger presets and the final integrated interaction
+    audit. Frozen grey fog, event history, replay pauses, capture, attached escorts,
+    queued movement and sharp zoom labels are implemented below.
 11. AI difficulty variants after the Prince baseline.
 12. Save/integration/fuzz/performance/network validation and release metadata.
 
@@ -458,3 +458,39 @@ map pixels before/after unseen city destruction, check grey city pixels and
 read-only last-seen labels, and exercise detached local and network snapshots.
 Native CraftOS-PC rule and full-session scenarios pass; physical-monitor and
 live-modem behavior remain separate validation boundaries.
+
+### Persistent observed Event Log and paced replays
+
+A top-right Event Log opens a focused full-screen list, newest first. Fixed Recent,
+Newer and Older controls remain visible even on a 51x19 terminal; body pagination
+handles long entries. Compact summaries retain every newly observed event after
+the bounded replay window expires, including known actions that do not animate.
+The log records observer-local sequence and round, readable text and observed
+movement endpoints; it stores no unrestricted event frames, hidden route segments,
+foreign private data or global action counts. Saved history is independent of the
+128-event/eight-round replay journal. Earlier saves seed their retained events and
+state clearly when the already-pruned past is unavailable.
+
+Snapshots include only the latest twenty compact records. Older pages use a
+read-only host request (maximum fifty per page), keyed to the authenticated sender
+and campaign. The response echoes a bounded request token. Pagination does not
+create events, change readiness, spend actions, advance a war group or publish
+new game revisions. The client rejects wrong-observer, wrong-campaign, stale-token,
+closed-panel and superseded requests. Hotseat/campaign changes discard private
+pages and cursor history. The existing recent replay feed remains separate;
+older text-only history cannot invent replay geometry. Sparse observed-owner
+projection avoids transmitting unowned entries for every explored tile.
+
+Each automatic turn-recap event holds its observed opening pose for 350 ms before
+animation, centering the camera first. Fast mode uses 175 ms; reduced-motion/off
+mode skips animation. Backlog acceleration cannot remove the gap. Pause menus
+preserve the remaining lead-in; live manual actions keep their immediate feedback.
+Timing runs only in presentation and never delays simulation or changes budgets.
+
+The 75-file regression suite passes, including archival retention across replay
+pruning, reverse-page continuity, private history, legacy migration, compact
+text/graphics controls, request isolation and serial/paused/fast/off replay timing.
+Native CraftOS-PC passes the history rules and a full mouse-driven host-loop
+session with `--history`, including a read-only refresh, fog, routes, diplomacy,
+Surprise War responses, hotseat, research/settings/campaign options and save reload.
+Live rednet and physical monitor validation remain outstanding.

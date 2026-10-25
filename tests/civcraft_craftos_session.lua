@@ -7,10 +7,15 @@ local includeAI, includeSettings, includeResearch, includeCampaign = false, fals
 local includeWar = false
 local includeHost = false
 local includeConversation = false
+local includeHistory = false
+local historyVerified = false
 local includeRoutes = false
 local routeRecord
 local routeResumed = false
 for _, argument in ipairs({ ... }) do
+	if argument == "--history" then
+		includeHistory = true
+	end
 	if argument == "--routes" then
 		includeRoutes = true
 	end
@@ -191,6 +196,7 @@ dofile = function(path)
 		local researchStep = 0
 		local campaignStep = 0
 		local warStep, responseStep = 0, 0
+		local historyStep, historySeq = 0, nil
 		local conversationStep = 0
 		local routeStep, routeUnit, routeGoal = 0, nil, nil
 		view.draw = function(self, state, observer, options)
@@ -369,6 +375,25 @@ dofile = function(path)
 				}
 				if tap(self, labels[conversationStep + 1]) then
 					conversationStep = conversationStep + 1
+				else
+					tap(self, "NEXT")
+				end
+				return
+			end
+			if includeHistory and stage == 2 and not options.handoff and historyStep < 3 then
+				local labels = { "EVENT LOG", "RECENT", "CLOSE" }
+				if historyStep == 1 then
+					assert(self.panel == "history" and #self.historyPage.entries > 0)
+					historySeq = self.historyPage.lastSeq
+				elseif historyStep == 2 then
+					assert(
+						not self.historyLoading and self.historyPage.lastSeq == historySeq,
+						"The host serves private history without creating an action or changing the turn"
+					)
+					historyVerified = true
+				end
+				if tap(self, labels[historyStep + 1]) then
+					historyStep = historyStep + 1
 				else
 					tap(self, "NEXT")
 				end
@@ -618,6 +643,7 @@ if includeRoutes then
 	end
 	assert(resumed, "Native queued actor survives the save reload")
 end
+assert(not includeHistory or historyVerified, "Native history refresh must complete")
 local Events = native("/games/civcraft/events.lua")
 assert(Events.forPlayer(state, state.players[1].id).lastSeq > 0)
 assert(Events.forPlayer(state, state.players[2].id).lastSeq > 0)
@@ -638,6 +664,7 @@ output.write(textutils.serialize({
 	hostModeAI = includeHost,
 	conversationFlow = includeConversation,
 	queuedRouteFlow = includeRoutes,
+	eventHistoryFlow = historyVerified,
 	queuedRouteResumed = routeResumed,
 }))
 output.close()

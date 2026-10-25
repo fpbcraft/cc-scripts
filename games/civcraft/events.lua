@@ -3,6 +3,7 @@
 	Observer-local sequence numbers conceal even the count of hidden actions.
 ]]
 local VisibilityEvents = dofile("/games/civcraft/visibility_events.lua")
+local Summary = dofile("/games/civcraft/event_summary.lua")
 local MAX_EVENTS = 128
 local MAX_ROUNDS = 8
 local Events = { version = 1, maxEvents = MAX_EVENTS, maxRounds = MAX_ROUNDS }
@@ -32,6 +33,17 @@ local function journal(state)
 	return state.eventJournal
 end
 
+local function history(stream)
+	if not stream.history then
+		stream.history = { version = 1, entries = {} }
+		for _, entry in ipairs(stream.entries or {}) do
+			stream.history.entries[#stream.history.entries + 1] = Summary.compact(entry)
+		end
+	end
+	assert(stream.history.version == 1, "Unsupported event history version")
+	return stream.history.entries
+end
+
 function Events.emit(state, event)
 	local storage = journal(state)
 	storage.order = storage.order + 1
@@ -43,11 +55,13 @@ function Events.emit(state, event)
 				stream = { seq = 0, entries = {} }
 				storage.streams[player.id] = stream
 			end
+			local archive = history(stream)
 			stream.seq = stream.seq + 1
 			projected.version = Events.version
 			projected.seq = stream.seq
 			projected.round = state.round or 1
 			stream.entries[#stream.entries + 1] = copy(projected)
+			archive[#archive + 1] = Summary.compact(projected)
 			trim(stream.entries, state.round or 1)
 		end
 	end
@@ -114,6 +128,70 @@ function Events.forPlayer(state, observer, afterSeq)
 		truncated = cursor < firstSeq - 1,
 		entries = entries,
 	}
+end
+
+-- Compact history persists independently of replay retention; only one bounded page is transmitted.
+function Events.history(state, observer, beforeSeq, limit)
+	local registered = false
+	for _, player in ipairs(state.players or {}) do
+		if player.id == observer then
+			registered = true
+		end
+	end
+	if not registered then
+		return nil
+	end
+	local stream = state.eventJournal and state.eventJournal.streams[observer]
+	local entries = stream and history(stream) or {}
+	local lastSeq = stream and stream.seq or 0
+	local cursor = tonumber(beforeSeq) or lastSeq + 1
+	if cursor ~= cursor then
+		cursor = lastSeq + 1
+	end
+	cursor = math.max(1, math.min(lastSeq + 1, math.floor(cursor)))
+	limit = math.max(1, math.min(50, math.floor(tonumber(limit) or 20)))
+	local low, high = 1, #entries + 1
+	while low < high do
+		local middle = math.floor((low + high) / 2)
+		if entries[middle].seq < cursor then
+			low = middle + 1
+		else
+			high = middle
+		end
+	end
+	local result = {
+		observer = observer,
+		campaign = state.campaignID or "legacy",
+		before = cursor,
+		lastSeq = lastSeq,
+		entries = {},
+		missingEarlier = entries[1] ~= nil and entries[1].seq > 1,
+	}
+	for index = low - 1, math.max(1, low - limit), -1 do
+		result.entries[#result.entries + 1] = copy(entries[index])
+	end
+	if low - limit > 1 then
+		result.nextBefore = entries[low - limit].seq
+	end
+	return result
+end
+
+function Events.historyReply(state, sender, request)
+	if
+		type(request) ~= "table"
+		or request.campaignID ~= state.campaignID
+		or type(request.requestID) ~= "number"
+		or request.requestID % 1 ~= 0
+		or request.requestID < 0
+		or request.requestID > 1000000000
+	then
+		return nil
+	end
+	local page = Events.history(state, sender, request.before)
+	if not page then
+		return nil
+	end
+	return { type = "eventHistory", requestID = request.requestID, history = page }
 end
 
 function Events.merge(previous, incoming, round)

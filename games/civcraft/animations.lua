@@ -1,6 +1,6 @@
 -- Presentation timing consumes only frozen observer events, never simulation data.
 local Frame = dofile("/games/civcraft/animation_frame.lua")
-local Animations = { maxPending = 32, maxFeed = 128, maxRounds = 8 }
+local Animations = { maxPending = 32, maxFeed = 128, maxRounds = 8, leadIn = 0.35 }
 local visual = {
 	move = true,
 	combat = true,
@@ -103,14 +103,16 @@ function Animations.new()
 		trim(self.feed, Animations.maxFeed)
 		trim(self.pending, Animations.maxPending)
 	end
-	function self:play(events)
+	function self:play(events, leadIn)
 		self:skip()
 		if self.speed == "off" then
 			return
 		end
 		for _, event in ipairs(events) do
 			if visual[event.type] and not event.ownAutoExplore then
-				self.pending[#self.pending + 1] = copy(event)
+				local queued = copy(event)
+				queued.replayLeadIn = leadIn == true
+				self.pending[#self.pending + 1] = queued
 			end
 		end
 		table.sort(self.pending, function(a, b)
@@ -141,7 +143,10 @@ function Animations.new()
 			local rate = self.speed == "fast" and 2 or 1
 			rate = rate * math.min(3, 1 + #self.pending / 8)
 			local seconds = Frame.duration(event) / rate
-			self.active = { event = event, start = now, finish = now + seconds }
+			local delay = event.replayLeadIn
+					and Animations.leadIn / (self.speed == "fast" and 2 or 1)
+				or 0
+			self.active = { event = event, start = now + delay, finish = now + delay + seconds }
 		end
 		local frame = { hidden = {}, sprites = {}, effects = {} }
 		if self.active then
@@ -151,8 +156,14 @@ function Animations.new()
 			end
 			local active = self.active
 			frame.event = active.event
-			frame.progress = (now - active.start) / (active.finish - active.start)
+			frame.waiting = now < active.start
+			frame.progress = math.max(0, (now - active.start) / (active.finish - active.start))
 			Frame.paint(frame, active.event, frame.progress)
+			if frame.waiting then
+				frame.focus = frame.effects[1] and frame.effects[1].position
+					or frame.sprites[1] and frame.sprites[1].position
+				frame.effects, frame.projectile = {}, nil
+			end
 		end
 		return frame, self.active ~= nil
 	end

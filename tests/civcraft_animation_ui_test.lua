@@ -170,6 +170,10 @@ for _, graphics in ipairs({ false, true }) do
 	assert(not ui.recap and not ui.animationFrame)
 	draw(1, { screen = "game", localMode = true })
 	assert(ui.panel == "context" and ui:animating() and not ui.modalBounds)
+	assert(
+		ui.animationFrame.waiting and ui.animationFrame.progress == 0,
+		"Automatic turn replays pause at the observed start before moving"
+	)
 	local replay = ui.animationFrame.event
 	assert(
 		#replay.paths[1] == 2 and replay.paths[1][1].x == 8,

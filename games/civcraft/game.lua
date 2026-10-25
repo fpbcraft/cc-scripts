@@ -613,6 +613,20 @@ local function draw()
 	trace("draw.end")
 end
 local function dispatch(action, params)
+	if action == "eventHistory" then
+		local observer = localMode and activeID() or myId
+		if localHost then
+			view:receiveHistory(Events.history(state, observer, params.before), params.requestID)
+		else
+			rednet.send(hostId, {
+				action = "eventHistory",
+				before = params.before,
+				requestID = params.requestID,
+				campaignID = snapshot and snapshot.campaignID,
+			}, PROTOCOL)
+		end
+		return
+	end
 	if action == "exit" then
 		exitRequested = true
 		return
@@ -880,7 +894,7 @@ view = UI.new(display, function(action, params)
 	if localHost then
 		local accepted, reason = commandQueue:submit(function()
 			dispatch(action, params)
-		end)
+		end, action ~= "eventHistory")
 		if not accepted then
 			message = reason
 		end
@@ -968,6 +982,11 @@ local function server()
 							acknowledged[id] = { campaign = state.campaignID, seq = seq }
 						end
 					end
+				elseif player(id) and req.action == "eventHistory" then
+					local reply = Events.historyReply(state, id, req)
+					if reply then
+						rednet.send(id, reply, PROTOCOL)
+					end
 				elseif player(id) then
 					local ok, why = apply(id, req)
 					rednet.send(
@@ -976,11 +995,11 @@ local function server()
 						PROTOCOL
 					)
 				end
-			end, req.action ~= "ackEvents")
+			end, req.action ~= "ackEvents" and req.action ~= "eventHistory")
 			if not accepted then
 				rednet.send(id, { type = "result", ok = false, message = reason }, PROTOCOL)
 			end
-			if req.action ~= "ackEvents" then
+			if req.action ~= "ackEvents" and req.action ~= "eventHistory" then
 				publish()
 			end
 		end
@@ -1008,6 +1027,8 @@ local function clientListener()
 						ackCampaign, ackSeq = accepted.campaignID, cursor
 					end
 				end
+			elseif packet.type == "eventHistory" then
+				changed = view:receiveHistory(packet.history, packet.requestID)
 			elseif packet.type == "result" then
 				message =
 					tostring(packet.message or (packet.ok and "Order accepted" or "Order rejected"))
