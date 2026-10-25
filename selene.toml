@@ -1,0 +1,19 @@
+# Selene's Lua 5.3 standard plus CC:Tweaked's CraftOS APIs.
+std = "cc-tweaked"
+
+[lints]
+# Existing code contains legitimately unused locals and intentional shadowing.
+# Enforce correctness while retaining those behaviours in the format-only migration.
+unused_variable = "allow"
+shadowing = "allow"
+unscoped_variables = "allow"
+global_usage = "allow"
+mixed_table = "allow"
+multiple_statements = "allow"
+high_cyclomatic_complexity = "allow"
+
+undefined_variable = "deny"
+duplicate_keys = "deny"
+almost_swapped = "deny"
+divide_by_zero = "deny"
+bad_string_escape = "deny"
