@@ -1,0 +1,28 @@
+name: Temporary Cogworks campaign StyLua formatter
+on:
+  push:
+    branches: ['feat/cogworks-64-campaign-editor']
+permissions:
+  contents: write
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/cogworks-64-campaign-editor
+          persist-credentials: true
+      - uses: JohnnyMorganz/stylua-action@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: 2.6.0
+          args: .
+      - name: Commit formatted Lua
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add .
+            git commit -m 'style(cogworks): enforce StyLua on campaign and level editor'
+            git push origin HEAD:feat/cogworks-64-campaign-editor
+          fi
