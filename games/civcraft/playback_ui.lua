@@ -85,6 +85,7 @@ function Playback.update(ui, state, observer, opts)
 		playback.awaitingRecap, playback.deferredSeq = false, nil
 	end
 	local ready = not opts.paused
+		and not ui.settingsOpen
 		and ui.panel == "context"
 		and not ui.productionConfirm
 		and not ui.endConfirm

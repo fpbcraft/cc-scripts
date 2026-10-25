@@ -95,6 +95,12 @@ All 59 repository regression scripts passed. Focused scenarios verify exact fore
 
 Confirmed scheduler choice: a Surprise War attacker uses **all remaining legal actions** before the defender responds. Spent movement and attacks remain spent.
 
+## Device settings followup
+
+A dedicated Settings screen is accessible from the title and pause menus. It persists master sound, independent title music, speaker volume, Normal/Fast/Off animations, reduced motion and Auto/Text display preference. Changing display mode recreates the renderer while preserving buffered input and activation/diagnostic callbacks. Settings suspend animation timing and return to the existing title/pause screen without changing the campaign. Device audio actions do not trigger host-state publications.
+
+Focused text/graphics checks cover every control, persistence, independent music/effects, volume gain, display fallback and Back. Native CraftOS-PC passed the settings scenarios and a full mouse-driven session with AI, animation-speed changes and two renderer recreations, including settings/AI-plan/save reload. Native headless validation remains a text-backend check; physical monitor and GUI pixel validation are still separate release work.
+
 ## Lua style and upstream integration
 
 The user's governing guide is the [Roblox Lua style guide](https://roblox.github.io/lua-style-guide/), replacing the earlier LuaRocks reference. After rebasing, the user authorized updating `.stylua.toml` to align with the Roblox guide: tabs displayed at four columns, a 100-column target, double-quoted strings and expanded blocks. `.editorconfig` and repository documentation match; the repository was reformatted with AST verification. Modified code follows the guide's readability, expanded blocks, double-quoted strings and camelCase naming where introduced; existing save/API names remain compatible. New code remains ordinary Lua, without Luau-only syntax.

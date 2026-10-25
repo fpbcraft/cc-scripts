@@ -46,3 +46,10 @@ the isolated computer. Run `/tests/civcraft_craftos_session.lua --ai` to configu
 a third AI through the session commands and execute its real turn alongside the
 two human turns. Its session result also verifies AI-plan reload. This variant
 still overwrites only the isolated profile's save slot 1.
+
+Add `--settings` to that full-session command to open Settings with real mouse
+input, change animation speed, cycle the display preference twice and continue
+through the campaign. `settingsReload` in the session result confirms the saved
+preferences. `tests/civcraft_settings_test.lua` separately checks all settings,
+including independent sound/music and volume gain, with instrumented displays
+and a speaker.

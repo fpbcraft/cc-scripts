@@ -185,7 +185,11 @@ local SMALL_FONT = {
 	["'"] = { "010", "010", "000", "000", "000" },
 }
 
-function R.new(mon)
+function R.new(mon, options)
+	options = options or {}
+	if options.forceText and mon.setGraphicsMode then
+		pcall(mon.setGraphicsMode, 0)
+	end
 	local cw, ch = mon.getSize()
 	local self = setmetatable({
 		m = mon,
@@ -198,7 +202,7 @@ function R.new(mon)
 		sx = 0.5,
 		sy = 1 / 3,
 	}, R)
-	if mon.setGraphicsMode and mon.drawPixels then
+	if not options.forceText and mon.setGraphicsMode and mon.drawPixels then
 		local success = pcall(mon.setGraphicsMode, 2)
 		if success then
 			local got, pw, ph = pcall(mon.getSize, 2)

@@ -6,6 +6,7 @@ local Hex = dofile("/games/civcraft/hex.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
 local Playback = dofile("/games/civcraft/playback_ui.lua")
 local Renderer = dofile("/games/civcraft/render.lua")
+local Settings = dofile("/games/civcraft/settings_view.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local World = dofile("/games/civcraft/world.lua")
 local UI = {}
@@ -28,7 +29,6 @@ local function where(list, x, y)
 end
 function UI.new(m, dispatch)
 	local self = setmetatable({
-		r = Renderer.new(m),
 		dispatch = dispatch,
 		mapMode = "terrain",
 		panX = 0,
@@ -44,6 +44,7 @@ function UI.new(m, dispatch)
 		workCity = nil,
 	}, UI)
 	Playback.attach(self)
+	self.r = Renderer.new(m, { forceText = self.animationPreferences.display == "text" })
 	return self
 end
 function UI:message(s)
@@ -77,6 +78,9 @@ function UI:turnProgress(title, detail)
 	r:finish()
 end
 function UI:command(action, params)
+	if Settings.command(self, action) then
+		return
+	end
 	if Playback.command(self, action) then
 		return
 	end
@@ -452,9 +456,19 @@ function UI:draw(state, playerID, opts)
 		r:finish()
 		return
 	end
+	if self.settingsOpen then
+		Settings.draw(self, opts)
+		r:finish()
+		return
+	end
 	if opts.screen == "title" then
 		r:fill(0, 0, w, h, 0)
 		if h < 180 or w < 220 then
+			r:button(w - 15, 1, 12, 10, nil, function()
+				self:command("settings")
+			end)
+			r:icon("gear", w - 14, 1, 1)
+			r.buttons[#r.buttons].label = "SETTINGS"
 			r:center(3, "CIVCRAFT", 8, 1)
 			r:center(11, "SELECT A SAVE SLOT", 6)
 			if opts.slots then
@@ -482,6 +496,9 @@ function UI:draw(state, playerID, opts)
 			r:finish()
 			return
 		end
+		r:button(w - 57, 4, 52, 12, "SETTINGS", function()
+			self:command("settings")
+		end)
 		r:center(math.floor(h * 0.10), "CIVCRAFT", 8, w >= 155 and 3 or 2)
 		r:center(math.floor(h * 0.23), "HEX EMPIRES / EXPLORE / CONQUER", 7)
 		local bw = math.min(w - 20, math.max(100, math.floor(w * 0.72)))
@@ -535,12 +552,7 @@ function UI:draw(state, playerID, opts)
 		for _, action in ipairs({
 			{ "RESUME", "resume" },
 			{ "SAVE", "save" },
-			{ opts.audio == false and "AUDIO OFF" or "AUDIO ON", "audio" },
-			{ "ANIMATIONS " .. self.animationPreferences.speed:upper(), "animationSpeed" },
-			{
-				"REDUCED MOTION " .. (self.animationPreferences.reducedMotion and "ON" or "OFF"),
-				"reducedMotion",
-			},
+			{ "SETTINGS", "settings" },
 			{ "MAIN MENU", "title" },
 			{ "EXIT", "exit" },
 		}) do
@@ -954,6 +966,10 @@ function UI:confirmMove()
 	return false
 end
 function UI:back()
+	if self.settingsOpen then
+		self.settingsOpen = false
+		return true
+	end
 	if self.placement then
 		self.placement = nil
 		self.pendingMove = nil

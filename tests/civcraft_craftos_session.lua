@@ -3,9 +3,18 @@
 	overwritten. Rendering and input handling are real. The UI is instrumented to enqueue and
 	acknowledge mouse events at actual button coordinates.
 ]]
-local includeAI = ... == "--ai"
+local includeAI, includeSettings = false, false
+for _, argument in ipairs({ ... }) do
+	if argument == "--ai" then
+		includeAI = true
+	end
+	if argument == "--settings" then
+		includeSettings = true
+	end
+end
 local native = dofile
 local stage = 0
+local settingsExpectedSpeed, settingsExpectedDisplay
 local renderer
 local queued = false
 local function tap(view, label)
@@ -74,10 +83,38 @@ dofile = function(path)
 		end
 		local draw = view.draw
 		local aiConfigured = false
+		local settingsStep = 0
 		view.draw = function(self, state, observer, options)
 			draw(self, state, observer, options)
 			renderer = self.r.mode
 			if queued then
+				return
+			end
+			if
+				includeSettings
+				and stage == 0
+				and options.screen == "title"
+				and settingsStep < 5
+			then
+				local label
+				if settingsStep == 0 then
+					settingsExpectedDisplay = self.animationPreferences.display
+					label = "SETTINGS"
+				elseif settingsStep == 1 then
+					settingsExpectedSpeed = ({ normal = "fast", fast = "off", off = "normal" })[self.animationPreferences.speed]
+					label = "ANIMATIONS " .. self.animationPreferences.speed:upper()
+				elseif settingsStep == 2 then
+					label = "DISPLAY " .. self.animationPreferences.display:upper()
+				elseif settingsStep == 3 then
+					label = "DISPLAY " .. self.animationPreferences.display:upper()
+				else
+					label = "CLOSE"
+				end
+				if tap(self, label) then
+					settingsStep = settingsStep + 1
+				else
+					tap(self, "NEXT")
+				end
 				return
 			end
 			if includeAI and not aiConfigured and stage == 1 and state.phase == "lobby" then
@@ -167,6 +204,14 @@ if includeAI then
 		"Native game session must execute and persist the third player's economic AI"
 	)
 end
+if includeSettings then
+	local preferences = native("/games/civcraft/animation_preferences.lua").load()
+	assert(
+		preferences.display == settingsExpectedDisplay
+			and preferences.speed == settingsExpectedSpeed,
+		"Native settings must persist across renderer recreation"
+	)
+end
 local Events = native("/games/civcraft/events.lua")
 assert(Events.forPlayer(state, state.players[1].id).lastSeq > 0)
 assert(Events.forPlayer(state, state.players[2].id).lastSeq > 0)
@@ -178,6 +223,7 @@ output.write(textutils.serialize({
 	round = state.round,
 	saveReload = true,
 	aiPlanReload = includeAI,
+	settingsReload = includeSettings,
 }))
 output.close()
 print(

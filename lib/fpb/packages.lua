@@ -165,6 +165,7 @@ P.packages.civcraft = {
 		"render.lua",
 		"reports.lua",
 		"saves.lua",
+		"settings_view.lua",
 		"systems.lua",
 		"terrain_view.lua",
 		"tech_tree.lua",

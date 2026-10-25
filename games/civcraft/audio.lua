@@ -11,7 +11,7 @@ local effects = {
 	error = { 6 },
 }
 function A.new()
-	local self = setmetatable({ enabled = true, volume = 0.3, step = 1 }, A)
+	local self = setmetatable({ enabled = true, music = true, volume = 1, step = 1 }, A)
 	for _, name in ipairs(peripheral.getNames()) do
 		if peripheral.getType(name) == "speaker" then
 			self.speaker = peripheral.wrap(name)
@@ -26,6 +26,10 @@ function A.new()
 			file.close()
 			if type(saved) == "table" then
 				self.enabled = saved.enabled ~= false
+				self.music = saved.music ~= false
+				if type(saved.volume) == "number" and saved.volume > 0 and saved.volume <= 1 then
+					self.volume = saved.volume
+				end
 			end
 		end
 	end
@@ -33,7 +37,7 @@ function A.new()
 end
 function A:note(instrument, note, volume)
 	if self.enabled and self.speaker and self.speaker.playNote then
-		pcall(self.speaker.playNote, instrument, volume or self.volume, note)
+		pcall(self.speaker.playNote, instrument, math.min(3, (volume or 0.3) * self.volume), note)
 	end
 end
 function A:effect(name)
@@ -42,7 +46,7 @@ function A:effect(name)
 	end
 end
 function A:update(screen)
-	if screen == "title" and self.enabled and self.speaker and os.startTimer then
+	if screen == "title" and self.enabled and self.music and self.speaker and os.startTimer then
 		self:note("harp", melody[self.step], 0.22)
 		if self.step % 4 == 1 then
 			self:note("bass", math.max(0, melody[self.step] - 12), 0.18)
@@ -53,18 +57,33 @@ function A:update(screen)
 		self.timer = nil
 	end
 end
-function A:toggle(screen)
-	self.enabled = not self.enabled
+function A:save()
 	local path = "/games/civcraft/data"
 	if not fs.exists(path) then
 		fs.makeDir(path)
 	end
 	local file = fs.open(path .. "/audio.dat", "w")
 	if file then
-		file.write(textutils.serialize({ enabled = self.enabled }))
+		file.write(
+			textutils.serialize({ enabled = self.enabled, music = self.music, volume = self.volume })
+		)
 		file.close()
 	end
+end
+function A:toggle(screen)
+	self.enabled = not self.enabled
+	self:save()
 	self:update(screen)
 	return self.enabled
+end
+function A:toggleMusic(screen)
+	self.music = not self.music
+	self:save()
+	self:update(screen)
+end
+function A:cycleVolume(screen)
+	self.volume = self.volume <= 0.5 and 0.7 or self.volume <= 0.85 and 1 or 0.35
+	self:save()
+	self:update(screen)
 end
 return A

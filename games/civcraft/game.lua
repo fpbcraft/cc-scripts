@@ -497,6 +497,8 @@ local function draw()
 		slots = localMode and appScreen == "title" and Saves.list() or nil,
 		deleteConfirm = deleteConfirm,
 		audio = audio.enabled,
+		music = audio.music,
+		volume = audio.volume,
 	})
 	trace("draw.end")
 end
@@ -616,6 +618,14 @@ local function dispatch(action, params)
 	end
 	if action == "audio" then
 		audio:toggle(appScreen)
+		return
+	end
+	if action == "music" then
+		audio:toggleMusic(appScreen)
+		return
+	end
+	if action == "volume" then
+		audio:cycleVolume(appScreen)
 		return
 	end
 	if action == "pause" then
@@ -749,6 +759,10 @@ local function dispatch(action, params)
 	end
 end
 view = UI.new(display, function(action, params)
+	if action == "audio" or action == "music" or action == "volume" then
+		dispatch(action, params)
+		return
+	end
 	if localHost then
 		local accepted, reason = commandQueue:submit(function()
 			dispatch(action, params)
@@ -952,7 +966,9 @@ local function ui()
 			view:resize()
 			draw()
 		elseif e == "key" and keys and (a == keys.q or a == keys.escape) then
-			if a ~= keys.escape or not view:back() then
+			if view.settingsOpen then
+				view:back()
+			elseif a ~= keys.escape or not view:back() then
 				gamePaused = not gamePaused
 			end
 			draw()

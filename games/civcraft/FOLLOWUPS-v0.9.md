@@ -23,7 +23,7 @@ in the design draft. Keep this list alongside the main roadmap until verified.
 - Add a top-right faction/player details button.
 - Show the predicted result when attacking a unit; keep the prediction shared
   with authoritative resolution.
-- Add a persistent Settings menu accessible from the title and pause screens,
+- [x] Add a persistent Settings menu accessible from the title and pause screens,
   covering sound/music, volume, animation/accessibility and display preferences.
 
 Surprise War first strike: the attacker uses **all remaining legal actions**
