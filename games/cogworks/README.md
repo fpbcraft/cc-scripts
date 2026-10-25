@@ -124,6 +124,11 @@ speed ratio. Existing diagonal large/small gearing remains supported.
 
 Animation frames are buffered and sent to CC:Graphics as a **single bitmap
 upload of the changed region** instead of thousands of peripheral calls.
+Cogwheels now display rotating contrasting spokes, an asymmetric rim marker,
+stepping teeth and a recessed center; shafts animate their rolling faces
+rather than scrolling dots along the shaft. The workshop's **RUN/OFF** header
+button toggles animation without navigating to Settings. Attached-monitor
+animations target five updates per second.
 This aims to resolve attached-monitor stalls, but physical testing is still
 required.
 
