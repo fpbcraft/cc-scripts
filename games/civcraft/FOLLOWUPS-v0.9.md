@@ -14,7 +14,7 @@ in the design draft. Keep this list alongside the main roadmap until verified.
   its own civilization's territory.
 - [x] Move Research into the top-right controls and Next Idle Unit next to End Turn.
   Limit the bottom bar to the inspector width and give the map the freed height.
-- Expand technology descriptions and add Codex links for unlocked buildings and
+- [x] Expand technology descriptions and add Codex links for unlocked buildings and
   units. Keep the connected research tree on small screens.
 - Increase map preset dimensions further, preserving existing saved worlds.
 - Add Civilization-style conversations with AI factions.

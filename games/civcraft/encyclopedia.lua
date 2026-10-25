@@ -1,6 +1,7 @@
 -- Content-derived entries stay in sync with the simulation's costs and unlocks.
 local Systems = dofile("/games/civcraft/systems.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
+local ResearchDetails = dofile("/games/civcraft/research_details.lua")
 local E = {}
 local mechanics = {
 	{
@@ -226,6 +227,9 @@ function E.describe(category, entry, player)
 		}
 	else
 		lines = { "Science cost: " .. record.cost, "Unlock: " .. title(record.unlock or "none") }
+		for _, paragraph in ipairs(ResearchDetails.paragraphs(Systems, entry.id)) do
+			lines[#lines + 1] = paragraph
+		end
 		local needs = {}
 		for _, id in ipairs(record.requires or {}) do
 			needs[#needs + 1] = (Systems.techs[id] or {}).name or title(id)

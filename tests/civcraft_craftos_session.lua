@@ -3,13 +3,16 @@
 	overwritten. Rendering and input handling are real. The UI is instrumented to enqueue and
 	acknowledge mouse events at actual button coordinates.
 ]]
-local includeAI, includeSettings = false, false
+local includeAI, includeSettings, includeResearch = false, false, false
 for _, argument in ipairs({ ... }) do
 	if argument == "--ai" then
 		includeAI = true
 	end
 	if argument == "--settings" then
 		includeSettings = true
+	end
+	if argument == "--research" then
+		includeResearch = true
 	end
 end
 local native = dofile
@@ -41,8 +44,16 @@ local function tap(view, label)
 				end
 			end
 			local trace = assert(fs.open("/session-input.log", "a"))
+			local available = {}
+			for _, candidate in ipairs(view.r.buttons) do
+				available[#available + 1] = candidate.label
+			end
 			trace.writeLine(textutils.serialize({
 				stage = stage,
+				techSelected = view.techModel and view.techModel.selected,
+				techOffset = view.techModel and view.techModel.offset,
+				techPageMax = view.techModel and view.techModel.pageMax,
+				available = available,
 				label = label,
 				mode = view.r.mode,
 				width = view.r.w,
@@ -84,6 +95,7 @@ dofile = function(path)
 		local draw = view.draw
 		local aiConfigured = false
 		local settingsStep = 0
+		local researchStep = 0
 		view.draw = function(self, state, observer, options)
 			draw(self, state, observer, options)
 			renderer = self.r.mode
@@ -135,6 +147,25 @@ dofile = function(path)
 				and self.panel == "report"
 			then
 				tap(self, "CLOSE")
+				return
+			end
+			if includeResearch and stage == 2 and not options.handoff and researchStep < 8 then
+				local labels = {
+					"TECH TREE",
+					"agriculture",
+					"DETAILS",
+					"CODEX WHEAT FARM",
+					"CLOSE",
+					"TECH TREE",
+					"RESEARCH",
+					"CLOSE",
+				}
+				local label = labels[researchStep + 1]
+				if tap(self, label) or label == "DETAILS" and tap(self, "DETAILS / CODEX") then
+					researchStep = researchStep + 1
+				else
+					tap(self, label == "RESEARCH" and "PREV" or "NEXT")
+				end
 				return
 			end
 			local label
@@ -198,6 +229,12 @@ assert(success, reason)
 assert(completed and stage == 11, "Session did not traverse both players and return to round two")
 local state = native("/games/civcraft/saves.lua").load(1)
 assert(state and state.round == 2 and state.activeIndex == 1 and state.campaignID)
+if includeResearch then
+	assert(
+		state.players[1].researchTarget == "agriculture" or state.players[1].techs.agriculture,
+		"Native graph, details and Codex flow must preserve the selected research order"
+	)
+end
 if includeAI then
 	assert(
 		state.players[3].ai and state.players[3].aiPlan and state.players[3].aiPlan.version == 1,
@@ -224,6 +261,7 @@ output.write(textutils.serialize({
 	saveReload = true,
 	aiPlanReload = includeAI,
 	settingsReload = includeSettings,
+	researchFlow = includeResearch,
 }))
 output.close()
 print(

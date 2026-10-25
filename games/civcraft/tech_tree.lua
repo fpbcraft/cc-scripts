@@ -1,5 +1,6 @@
 -- CIVCRAFT research canvas: connected prerequisite DAG with icon/name nodes
 -- and a dedicated detail inspector. Coordinates are renderer virtual pixels.
+local Details = dofile("/games/civcraft/research_details.lua")
 local T = {}
 local function clip(s, n)
 	return tostring(s or ""):upper():sub(1, math.max(0, n))
@@ -31,12 +32,130 @@ end
 local function ageName(systems, tier)
 	return systems.ages and systems.ages[tier] and systems.ages[tier].name or ("TIER " .. tier)
 end
-local function compact(r, systems, player, rect, model, research, onClose)
+local function smallGraph(r, systems, player, rect, model)
+	local x, y, w, h = rect.x + 3, rect.y + 14, rect.w - 6, rect.h - 31
+	local zoom = clamp(model.zoom, 0.65, 1.5)
+	local nw, nh = math.floor(48 * zoom), math.floor(15 * zoom)
+	local sx, sy = math.floor(66 * zoom), math.floor(26 * zoom)
+	model.dragArea = { x = x, y = y, w = w, h = h }
+	model.dragMode = "graph"
+	model.maxPanX = math.max(0, (extent(systems, "tier") - 1) * sx + nw + 6 - w)
+	model.maxPanY = math.max(0, (extent(systems, "lane") - 1) * sy + nh + 6 - h)
+	if not model.smallGraphInitialized then
+		local selected = systems.techs[model.selected]
+		model.panX = (selected.tier - 1) * sx
+		model.panY = (selected.lane - 1) * sy
+		model.smallGraphInitialized = true
+	end
+	model.panX = clamp(model.panX, 0, model.maxPanX)
+	model.panY = clamp(model.panY, 0, model.maxPanY)
+	local function pos(id)
+		local tech = systems.techs[id]
+		return x + 3 + (tech.tier - 1) * sx - model.panX, y + 3 + (tech.lane - 1) * sy - model.panY
+	end
+	local function stroke(ax, ay, bx, by, color)
+		local steps = math.max(1, math.ceil(math.max(math.abs(bx - ax), math.abs(by - ay))))
+		for i = 0, steps do
+			local px, py = ax + (bx - ax) * i / steps, ay + (by - ay) * i / steps
+			if px >= x and px < x + w and py >= y and py < y + h then
+				r:fill(px, py, 1, 1, color)
+			end
+		end
+	end
+	r:fill(x, y, w, h, 0)
+	for _, id in ipairs(systems.techOrder) do
+		local bx, by = pos(id)
+		for _, req in ipairs(systems.techs[id].requires) do
+			local ax, ay = pos(req)
+			local middle = (ax + nw + bx) / 2
+			local color = (player.techs or {})[req] and 11 or 4
+			stroke(ax + nw, ay + nh / 2, middle, ay + nh / 2, color)
+			stroke(middle, ay + nh / 2, middle, by + nh / 2, color)
+			stroke(middle, by + nh / 2, bx, by + nh / 2, color)
+		end
+	end
+	for _, id in ipairs(systems.techOrder) do
+		local px, py = pos(id)
+		if px >= x and py >= y and px + nw <= x + w and py + nh <= y + h then
+			local selected = id == model.selected
+			r:button(px, py, nw, nh, nil, function()
+				model.selected = id
+			end, { selected = selected, primary = player.researchTarget == id })
+			r:text(
+				px + 2,
+				py + math.floor((nh - 5) / 2),
+				systems.techs[id].name,
+				(player.techs or {})[id] and 11 or 7,
+				selected and 3 or 1,
+				nw - 4
+			)
+			r.buttons[#r.buttons].label = id
+		end
+	end
+	local controls = {
+		{
+			"LEFT",
+			function()
+				model.panX = clamp(model.panX - sx, 0, model.maxPanX)
+			end,
+		},
+		{
+			"RIGHT",
+			function()
+				model.panX = clamp(model.panX + sx, 0, model.maxPanX)
+			end,
+		},
+		{
+			"UP",
+			function()
+				model.panY = clamp(model.panY - sy, 0, model.maxPanY)
+			end,
+		},
+		{
+			"DOWN",
+			function()
+				model.panY = clamp(model.panY + sy, 0, model.maxPanY)
+			end,
+		},
+		{
+			"ZOOM+",
+			function()
+				model.zoom = clamp(model.zoom + 0.2, 0.65, 1.5)
+			end,
+		},
+		{
+			"ZOOM-",
+			function()
+				model.zoom = clamp(model.zoom - 0.2, 0.65, 1.5)
+			end,
+		},
+	}
+	local width = math.floor(w / #controls)
+	for index, action in ipairs(controls) do
+		r:button(
+			x + (index - 1) * width,
+			rect.y + rect.h - 14,
+			width - 1,
+			11,
+			width >= 26 and action[1] or ({ "<", ">", "^", "v", "+", "-" })[index],
+			action[2]
+		)
+		r.buttons[#r.buttons].label = action[1]
+	end
+	return model
+end
+local function compact(r, systems, player, rect, model, research, onClose, openCodex)
 	local x, y, w, h = rect.x, rect.y, rect.w, rect.h
 	r:fill(x, y, w, h, 1)
 	r:outline(x, y, w, h, 8)
-	r:text(x + 3, y + 3, "TECHNOLOGY", 8, 1, w - 42)
+	r:text(x + 3, y + 3, "TECH", 8, 1, w - 80)
 	r:button(x + w - 37, y + 1, 35, 11, "CLOSE", onClose)
+	if not model.detail then
+		r:button(x + w - 78, y + 1, 39, 11, "DETAILS", function()
+			model.detail, model.offset = true, 0
+		end)
+		return smallGraph(r, systems, player, rect, model)
+	end
 	local rows = {}
 	local tier = clamp(model.tier or 1, 1, extent(systems, "tier"))
 	rows[#rows + 1] = { text = ageName(systems, tier) }
@@ -69,8 +188,27 @@ local function compact(r, systems, player, rect, model, research, onClose)
 				rows[#rows + 1] = { text = line }
 			end
 		end
+		for _, paragraph in ipairs(Details.paragraphs(systems, model.selected)) do
+			for _, line in ipairs(Panels.wrap(r, paragraph, w - 20)) do
+				rows[#rows + 1] = { text = line }
+			end
+		end
+		for _, entry in ipairs(Details.unlocks(systems, model.selected)) do
+			rows[#rows + 1] = {
+				buttons = {
+					{
+						label = "CODEX " .. entry.record.name,
+						run = function()
+							if openCodex then
+								openCodex(entry.category, entry.id)
+							end
+						end,
+					},
+				},
+			}
+		end
 		local allowed = systems.canResearch(player, model.selected)
-		rows[#rows + 1] = {
+		table.insert(rows, 2, {
 			buttons = {
 				{
 					label = allowed and "RESEARCH"
@@ -83,46 +221,7 @@ local function compact(r, systems, player, rect, model, research, onClose)
 					style = { primary = allowed },
 				},
 			},
-		}
-	else
-		rows[#rows + 1] = {
-			buttons = {
-				{
-					label = "PREV TIER",
-					run = function()
-						model.tier = clamp(tier - 1, 1, extent(systems, "tier"))
-						model.offset = 0
-					end,
-				},
-				{
-					label = "NEXT TIER",
-					run = function()
-						model.tier = clamp(tier + 1, 1, extent(systems, "tier"))
-						model.offset = 0
-					end,
-				},
-			},
-		}
-		for _, id in ipairs(systems.techOrder) do
-			if systems.techs[id].tier == tier then
-				rows[#rows + 1] = {
-					buttons = {
-						{
-							label = systems.techs[id].name,
-							run = function()
-								model.selected = id
-								model.detail = true
-								model.offset = 0
-							end,
-							style = {
-								selected = player.techs[id],
-								primary = player.researchTarget == id,
-							},
-						},
-					},
-				}
-			end
-		end
+		})
 	end
 	Panels.rows(r, { x = x + 3, y = y + 14, w = w - 6, h = h - 17 }, rows, model)
 	model.dragArea = { x = x + 3, y = y + 14, w = w - 13, h = h - 29 }
@@ -130,7 +229,7 @@ local function compact(r, systems, player, rect, model, research, onClose)
 	model.maxPanY = model.pageMax or 0
 	return model
 end
-function T.draw(r, systems, player, rect, model, research, onClose)
+function T.draw(r, systems, player, rect, model, research, onClose, openCodex)
 	model = model or {}
 	model.zoom = model.zoom or 1
 	model.dragArea = nil
@@ -150,8 +249,8 @@ function T.draw(r, systems, player, rect, model, research, onClose)
 		model.selected = model.selected or systems.techOrder[1]
 	end
 	local x, y, w, h = rect.x, rect.y, rect.w, rect.h
-	if r.mode == "text" or w < 300 or h < 210 then
-		return compact(r, systems, player, rect, model, research, onClose)
+	if model.detail or r.mode == "text" or w < 300 or h < 210 then
+		return compact(r, systems, player, rect, model, research, onClose, openCodex)
 	end
 	r:fill(x, y, w, h, 1)
 	r:outline(x, y, w, h, 8)
@@ -171,54 +270,8 @@ function T.draw(r, systems, player, rect, model, research, onClose)
 	local wide = w >= 155
 	local inspectorW = wide and math.max(62, math.floor(w * 0.34)) or 0
 	local graphW = w - 10 - inspectorW - (wide and 6 or 0)
-	local tier = math.max(1, math.min(extent(systems, "tier"), model.tier or 1))
 	local chosen = systems.techs[model.selected]
-	if r.mode == "text" then
-		graphW = w - 10
-		graphH = math.max(20, h - header - 65)
-		r:fill(graphX, graphY, graphW, graphH, 0)
-		local row = 0
-		for _, id in ipairs(systems.techOrder) do
-			local item = systems.techs[id]
-			if item.tier == tier then
-				local sy = graphY + 2 + row * 13
-				row = row + 1
-				if sy + 11 < graphY + graphH then
-					r:button(graphX + 2, sy, graphW - 4, 11, item.name, function()
-						model.selected = id
-					end, { selected = model.selected == id })
-				end
-			end
-		end
-		r:text(x + 7, graphY + graphH + 3, clip(chosen.name, 22), 7)
-		r:text(
-			x + 7,
-			graphY + graphH + 10,
-			"COST "
-				.. systems.techCost(model.selected)
-				.. " / "
-				.. ((player.researchProgress or {})[model.selected] or 0),
-			6
-		)
-		r:button(x + 4, y + h - 15, math.floor(w / 4) - 4, 12, "PREV", function()
-			model.tier = clamp(tier - 1, 1, extent(systems, "tier"))
-		end)
-		r:button(x + math.floor(w / 4), y + h - 15, math.floor(w / 4) - 4, 12, "NEXT", function()
-			model.tier = clamp(tier + 1, 1, extent(systems, "tier"))
-		end)
-		r:button(
-			x + math.floor(w / 2),
-			y + h - 15,
-			math.floor(w / 4) - 4,
-			12,
-			"RESEARCH",
-			function()
-				research(model.selected)
-			end
-		)
-		r:button(x + math.floor(3 * w / 4), y + h - 15, math.floor(w / 4) - 4, 12, "CLOSE", onClose)
-		return model
-	end
+
 	r:fill(graphX, graphY, graphW, graphH, 0)
 	r:outline(graphX, graphY, graphW, graphH, 3)
 	local zoom = clamp(model.zoom, 0.65, 1.5)
@@ -337,6 +390,9 @@ function T.draw(r, systems, player, rect, model, research, onClose)
 		local estimate = rate > 0 and (math.max(1, math.ceil((cost - progress) / rate)) .. " TURNS")
 			or "NO SCIENCE"
 		r:text(dx + 7, graphY + 119, "EST " .. estimate, 6, 1, dw - 13)
+		r:button(dx + 5, graphY + graphH - 38, dw - 10, 14, "DETAILS / CODEX", function()
+			model.detail, model.offset = true, 0
+		end)
 		if not researched then
 			r:button(
 				dx + 5,

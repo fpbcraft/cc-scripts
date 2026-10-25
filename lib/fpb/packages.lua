@@ -156,6 +156,7 @@ P.packages.civcraft = {
 		"empire_menu.lua",
 		"game.lua",
 		"game_view.lua",
+		"research_details.lua",
 		"faction_view.lua",
 		"hex.lua",
 		"hud.lua",

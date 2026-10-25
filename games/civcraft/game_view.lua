@@ -378,6 +378,8 @@ function G.draw(ui, state, player)
 				ui:command("researchTech", { id = id })
 			end, function()
 				ui.panel = "context"
+			end, function(category, id)
+				ui:openCodex(category, id)
 			end)
 		end)
 	elseif ui.panel == "inspector" then

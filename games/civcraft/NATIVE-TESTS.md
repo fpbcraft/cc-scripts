@@ -53,3 +53,9 @@ through the campaign. `settingsReload` in the session result confirms the saved
 preferences. `tests/civcraft_settings_test.lua` separately checks all settings,
 including independent sound/music and volume gain, with instrumented displays
 and a speaker.
+
+Add `--research` to traverse the compact technology graph, open a technology's
+description, follow its building Codex link, return to research and choose it
+using real mouse input. `researchFlow` records that the selected research order
+survives the round boundary and save reload. The driver preserves and navigates
+the detail scroll position when reopening research.
