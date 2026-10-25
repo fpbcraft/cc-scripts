@@ -76,6 +76,7 @@ assert(
 assert(files[S.LEGACY], "Preserve legacy file for backup")
 local current = S.newProgress()
 current.level, current.unlocked, current.best[2] = 2, 8, 12
+current.best[1] = 10
 current.tutorials.G = true
 assert(S.save(1, current), "Can save new campaign")
 local reloaded = S.load(1)
