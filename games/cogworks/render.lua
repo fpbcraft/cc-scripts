@@ -167,48 +167,60 @@ function R:rect(x, y, w, h, color)
     end
   end
 end
+-- CC:Graphics uses the CraftOS-PC drawPixels API and supports indexed
+-- bitmap rows. Upload one changed rectangle per frame instead of invoking
+-- thousands of peripheral methods and freezing the server-side monitor.
 function R:flush()
-  local before = self.previousBuffer
+  local old = self.previousBuffer
   local current = self.buffer
-  local changed = 0
+  local left, top, right, bottom = 200, 120, -1, -1
+  for y = 0, 119 do
+    local row = current[y + 1] or {}
+    local prior = old and old[y + 1] or nil
+    for x = 0, 199 do
+      if (row[x + 1] or 0) ~= (prior and prior[x + 1] or 0) or not old then
+        left = math.min(left, x)
+        top = math.min(top, y)
+        right = math.max(right, x)
+        bottom = math.max(bottom, y)
+      end
+    end
+  end
+  if right < left then
+    self.previousBuffer = current
+    return 0
+  end
+  local x1 = math.max(0, math.floor(self.ox + left * self.scale))
+  local y1 = math.max(0, math.floor(self.oy + top * self.scale))
+  local x2 = math.min(self.pw, math.ceil(self.ox + (right + 1) * self.scale))
+  local y2 = math.min(self.ph, math.ceil(self.oy + (bottom + 1) * self.scale))
+  local width, height = x2 - x1, y2 - y1
+  if width <= 0 or height <= 0 then
+    self.previousBuffer = current
+    return 0
+  end
+  local rows = {}
+  for py = y1, y2 - 1 do
+    local sy = math.max(0, math.min(119, math.floor((py - self.oy) / self.scale)))
+    local source = current[sy + 1] or {}
+    local bytes = {}
+    for px = x1, x2 - 1 do
+      local sx = math.max(0, math.min(199, math.floor((px - self.ox) / self.scale)))
+      bytes[#bytes + 1] = string.char(source[sx + 1] or 0)
+    end
+    rows[#rows + 1] = table.concat(bytes)
+  end
   local mon = self.m
   if mon.setFrozen then
     pcall(mon.setFrozen, true)
   end
-  if not before then
-    mon.drawPixels(0, 0, 0, self.pw, self.ph)
-  end
-  for y = 0, 119 do
-    local row = current[y + 1] or {}
-    local old = before and before[y + 1] or nil
-    local x = 0
-    while x < 200 do
-      local color = row[x + 1] or 0
-      if old and color == (old[x + 1] or 0) then
-        x = x + 1
-      else
-        local start = x
-        repeat
-          x = x + 1
-        until x >= 200
-          or (row[x + 1] or 0) ~= color
-          or (old and (row[x + 1] or 0) == (old[x + 1] or 0))
-        local x1 = math.max(0, math.floor(self.ox + start * self.scale))
-        local x2 = math.min(self.pw, math.floor(self.ox + x * self.scale))
-        local y1 = math.max(0, math.floor(self.oy + y * self.scale))
-        local y2 = math.min(self.ph, math.floor(self.oy + (y + 1) * self.scale))
-        if x2 > x1 and y2 > y1 then
-          mon.drawPixels(x1, y1, color, x2 - x1, y2 - y1)
-          changed = changed + 1
-        end
-      end
-    end
-  end
+  -- One batched draw request, including on remote Minecraft monitors.
+  mon.drawPixels(x1, y1, rows, width, height)
   if mon.setFrozen then
     pcall(mon.setFrozen, false)
   end
   self.previousBuffer = current
-  return changed
+  return 1
 end
 function R:font(x, y, str, color)
   str = tostring(str):upper()
