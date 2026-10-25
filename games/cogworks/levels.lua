@@ -432,6 +432,89 @@ end
 for i = 9, 64 do
   authored[i] = makePlan(i, plans[i - 8])
 end
+
+-- Bespoke discovery boards. These are hand-wired networks, NOT transformations
+-- of the old seed missions. They replace motifs where the chapter's central
+-- insight requires an entirely different topology, multiple targets, a real
+-- shaft/belt crossing, or a meaningful redstone control route.
+local function override(number, definition)
+  authored[number] = definition
+end
+override(20, level("TWO CLOCKS", "ONE TRUNK, TWO OUTPUT RATES; SPLIT BEFORE GEARING.", 7, 7,
+  p("S", 1, 3, 1), { p("M", 4, 3, 3, 1, -1), p("M", 4, 6, 0, 2, 1) },
+  { p("I", 2, 3, 1), p("Q", 3, 3, 0), p("G", 4, 5, 0) },
+  { p("O", 3, 4, 0) }, { { 6, 3 } }, { "diagonal", "dual_rotation" }))
+override(23, level("MIRROR CLOCKS", "THE SAME SPLIT, BUT THIS TIME THE LOWER PRESS MUST SLOW DOWN.", 7, 7,
+  p("S", 1, 3, 1), { p("M", 4, 3, 3, 1, -1), p("M", 4, 6, 0, 0.5, 1) },
+  { p("I", 2, 3, 1), p("Q", 3, 3, 0), p("O", 4, 5, 0) },
+  { p("G", 3, 4, 0) }, { { 5, 5 } }, { "diagonal", "fixed_power" }))
+override(24, level("CLOCKMAKER CERTIFICATION", "THREE SPEEDS AND DIRECTIONS FROM ONE FIXED CLOCKWORK.", 8, 7,
+  p("S", 1, 3, 1), { p("M", 3, 2, 2, 1, -1), p("M", 4, 3, 3, 1, -1), p("M", 4, 6, 0, 2, 1) },
+  { p("I", 2, 3, 1), p("G", 4, 5, 0) },
+  { p("Q", 3, 3, 0), p("O", 3, 4, 0) }, { { 6, 5 } }, { "diagonal", "fixed_power" }))
+override(28, level("CROSSING THE LINE", "THE SHAFT PASSES THROUGH THE LIVE BELT, NOT THROUGH A PULLEY.", 6, 6,
+  p("S", 1, 3, 1), { p("M", 5, 4, 3, 1, 1), p("M", 5, 5, 3, 1, -1) },
+  { p("Q", 2, 4, 0), p("I", 3, 3, 1), p("I", 3, 4, 1), p("I", 4, 4, 1), p("V", 4, 5, 1) },
+  { p("Q", 2, 3, 0), p("V", 4, 3, 1) }, { { 5, 2 } }, { "belt_cross", "fixed_power" }))
+override(42, level("WIRE IT UP", "REDSTONE DUST BRIDGES A GAP TO THE FIXED SHIFT.", 6, 6,
+  p("S", 1, 3, 1), { p("M", 5, 3, 3, 1, -1) },
+  { p("I", 2, 3, 1), p("I", 4, 3, 1), p("R", 3, 4), p("B", 3, 5) },
+  { p("Z", 3, 3, 1) }, { { 4, 4 } }, { "redstone_limit", "fixed_power" }))
+override(44, level("TWO DIFFERENT COMMANDS", "POWER THE UPPER SHIFT WHILE LEAVING THE LOWER SHIFT ALONE.", 7, 6,
+  p("S", 1, 3, 1), { p("M", 3, 1, 2, 1, 1), p("M", 3, 5, 0, 1, -1) },
+  { p("I", 2, 3, 1), p("B", 2, 2) },
+  { p("Q", 3, 3, 0), p("Z", 3, 2, 0), p("Z", 3, 4, 0) },
+  { { 4, 4 } }, { "single_block", "fixed_power" }))
+override(45, level("SIGNAL ROUTING", "THE DIRECT DUST ROUTE WOULD OVERLAP A MACHINE.", 7, 7,
+  p("S", 1, 3, 1), { p("M", 5, 3, 3, 1, -1) },
+  { p("I", 2, 3, 1), p("I", 4, 3, 1),
+    p("R", 3, 4), p("R", 3, 5), p("R", 4, 5), p("B", 5, 5) },
+  { p("Z", 3, 3, 1) }, { { 4, 4 }, { 5, 4 } }, { "redstone_limit", "fixed_power" }))
+override(47, level("ONE BLOCK TOO MANY", "FAMILIAR SHIFTS, BUT THE OPPOSITE ONE MUST REVERSE.", 7, 6,
+  p("S", 1, 3, 1), { p("M", 3, 1, 2, 1, -1), p("M", 3, 5, 0, 1, 1) },
+  { p("I", 2, 3, 1), p("B", 2, 4) },
+  { p("Q", 3, 3, 0), p("Z", 3, 2, 0), p("Z", 3, 4, 0) },
+  { { 4, 4 } }, { "single_block", "dual_rotation" }))
+override(48, level("CONTROL ENGINEER", "TWO SELECTIVE SHIFTS AND A THIRD DIRECT PRESS.", 8, 7,
+  p("S", 1, 3, 1), { p("M", 3, 1, 2, 1, 1), p("M", 3, 5, 0, 1, -1),
+    p("M", 4, 3, 3, 1, -1) },
+  { p("I", 2, 3, 1), p("Z", 3, 4, 0), p("B", 2, 2) },
+  { p("Q", 3, 3, 0), p("Z", 3, 2, 0) }, { { 5, 4 } },
+  { "single_block", "fixed_power" }))
+override(52, level("FAULTY CONTROLS", "MOVE REDSTONE TO THE CORRECT SHIFT; DO NOT REPLACE THE SHAFTS.", 8, 8,
+  p("S", 1, 3, 1), { p("M", 3, 1, 2, 1, 1), p("M", 3, 5, 0, 1, -1) },
+  { p("I", 2, 3, 1), p("B", 2, 2) },
+  { p("Q", 3, 3, 0), p("Z", 3, 2, 0), p("Z", 3, 4, 0) },
+  { { 4, 4 } }, { "single_block", "fixed_power" }))
+authored[52].redstone = { p("B", 2, 4) }
+authored[52].removeRedstone = { { 2, 4 } }
+override(59, level("CRANE BAY", "A LIVE SHAFT CUTS BETWEEN TWO FUNCTIONING PULLEYS.", 9, 9,
+  p("S", 1, 4, 1), { p("M", 5, 5, 3, 1, 1), p("M", 5, 6, 3, 1, -1) },
+  { p("Q", 2, 5, 0), p("I", 3, 4, 1), p("I", 3, 5, 1), p("I", 4, 5, 1), p("V", 4, 6, 1) },
+  { p("Q", 2, 4, 0), p("V", 4, 4, 1) },
+  { { 6, 5 }, { 3, 7 } }, { "belt_cross", "fixed_power" }))
+override(60, level("THE PISTON CHOIR", "A SMALL JUNCTION SERVES FOUR PRESSES WITH DIFFERENT SIGNS.", 7, 7,
+  p("S", 1, 4, 1), { p("M", 3, 2, 2, 1, 1), p("M", 4, 3, 3, 1, 1),
+    p("M", 4, 4, 3, 1, -1), p("M", 3, 5, 0, 1, -1) },
+  { p("I", 2, 4, 1) }, { p("Q", 3, 4, 0), p("Q", 3, 3, 0) },
+  { { 5, 4 } }, { "budget", "dual_rotation" }))
+override(62, level("THE OVERRIDE CIRCUIT", "KEEP ONE GEASHIFT DARK WHILE THE OTHER SHIFTS.", 8, 8,
+  p("S", 1, 3, 1), { p("M", 3, 1, 2, 1, 1), p("M", 3, 5, 0, 1, -1),
+    p("M", 4, 3, 3, 1, -1) },
+  { p("I", 2, 3, 1), p("B", 1, 1), p("R", 2, 1), p("R", 2, 2) },
+  { p("Q", 3, 3, 0), p("Z", 3, 2, 0), p("Z", 3, 4, 0) },
+  { { 4, 4 } }, { "redstone_limit", "fixed_power" }))
+override(64, level("THE GRAND COMMISSION", "POWER FOUR PRESSES: BELT CROSS, CHAIN, GEARS AND SELECTIVE REDSTONE.", 10, 10,
+  p("S", 1, 5, 1), { p("M", 6, 5, 3, 1, 1), p("M", 4, 4, 0, 1, -1),
+    p("M", 6, 7, 3, 1, -1), p("M", 8, 8, 3, 2, -1) },
+  { p("I", 2, 5, 1), p("Z", 5, 5, 1), p("B", 5, 3), p("R", 5, 4),
+    p("I", 3, 4, 0), p("D", 4, 3, 0), p("Q", 3, 6, 0), p("I", 4, 6, 1),
+    p("Q", 3, 7, 0), p("I", 4, 7, 1), p("I", 5, 7, 1),
+    p("V", 5, 9, 1), p("G", 7, 8, 1) },
+  { p("Q", 3, 5, 0), p("C", 4, 5, 1), p("D", 3, 3, 0),
+    p("V", 5, 6, 1), p("O", 6, 9, 1) },
+  { { 2, 9 }, { 7, 6 }, { 4, 8 } }, { "full", "exact" }))
+
 -- Two named, parameterized bonus challenges belong to each individual
 -- stage. Only two can award points, even if the engine knows many predicates.
 local names = {
@@ -444,6 +527,7 @@ local names = {
   no_gear_extra = { "MINIMAL GEARING", "NO EXTRA COGWHEELS", "gear_limit" },
   gear_limit = { "MINIMAL GEARING", "LIMIT NEW COGWHEELS", "gear_limit" },
   belt_span = { "BELT SPECIALIST", "USE A LIVE BELT TRANSMISSION", "belt_span" },
+  belt_cross = { "THE CROSSOVER", "POWER A SHAFT THROUGH A LIVE BELT SPAN", "belt_cross" },
   chain_link = { "CHAIN REACTION", "USE LIVE CHAIN TRANSMISSION", "chain_link" },
   diagonal = { "DIAGONAL THINKING", "USE POWERED MIXED-SIZE DIAGONAL COGS", "diagonal" },
   dual_rotation = { "DUAL ROTATION", "HAVE BOTH CW AND CCW RUNNING", "dual_rotation" },
