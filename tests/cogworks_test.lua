@@ -61,8 +61,12 @@ for index, data in ipairs(E.levels) do
   assert(not E.restore(restored, { { x = -1, y = 1, kind = "I", r = 0 } }), "Reject malformed saved coordinates")
   eq(#E.snapshot(restored), before, "Invalid restore must be atomic")
   for _, part in ipairs(data.build) do
+    local active = E.get(manual, part.x, part.y).engaged
     if E.remove(manual, part.x, part.y) then
       assert(E.place(manual, part.x, part.y, part.kind, part.r), "Refunded part cannot be reused")
+      if active then
+        assert(E.toggle(manual, part.x, part.y), "Reapply powered redstone after reinstalling switch")
+      end
       break
     end
   end
