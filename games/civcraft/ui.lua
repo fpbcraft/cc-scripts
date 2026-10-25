@@ -307,7 +307,9 @@ function UI:tile(x, y)
 				self.pendingMove.forecast = forecast
 				local risk = (self.destinationThreats or {})[World.key(x, y)]
 				self.pendingMove.risk = risk
-				local summary = "COST " .. p.cost
+				local summary = "COST "
+					.. p.cost
+					.. (p.zoneStop and " / ZONE OF CONTROL: STOP" or "")
 				if forecast then
 					summary = "HP "
 						.. forecast.attackerHP

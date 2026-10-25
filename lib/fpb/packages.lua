@@ -170,6 +170,8 @@ P.packages.civcraft = {
 		"vendor/BASALT-LICENSE.txt",
 		"turn_scheduler.lua",
 		"turn_tasks.lua",
+		"zone_control.lua",
+		"hostility.lua",
 		"campaign_options.lua",
 		"faction_view.lua",
 		"hex.lua",

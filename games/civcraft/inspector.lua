@@ -347,6 +347,7 @@ function I.draw(ui, state, player, rect, modal)
 		if ui.source then
 			text("CYAN RING: MOVE", 13)
 			text("RED CROSS: ATTACK", 31)
+			text("AMBER RING: CONTROL STOP", 8)
 			text("AMBER !: VISIBLE THREAT", 18)
 			text("Threat damage estimates the next enemy turn.")
 		end

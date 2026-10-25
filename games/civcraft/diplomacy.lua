@@ -4,6 +4,7 @@ local Memory = dofile("/games/civcraft/diplomatic_memory.lua")
 local Offers = dofile("/games/civcraft/diplomatic_offers.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
 local Perception = dofile("/games/civcraft/diplomatic_perception.lua")
+local Hostility = dofile("/games/civcraft/hostility.lua")
 local Diplomacy = {}
 local function cityCount(state, id)
 	local count = 0
@@ -79,20 +80,7 @@ function Diplomacy.war(state, a, b)
 	end
 end
 
-function Diplomacy.canAttack(state, a, b)
-	if a == b or a == nil or b == nil then
-		return false
-	end
-	if not registered(state, a) or not registered(state, b) then
-		return true
-	end
-	-- Saves from before formal diplomacy retain their existing combat rules.
-	if not state.diplomacy then
-		return true
-	end
-	local war = Diplomacy.war(state, a, b)
-	return war ~= nil and war.active == true
-end
+Diplomacy.canAttack = Hostility.canAttack
 
 function Diplomacy.declare(state, attacker, defender, kind)
 	if not Contacts.knows(state, attacker, defender) then

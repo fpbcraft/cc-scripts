@@ -71,7 +71,7 @@ combat previews; these still need the final integrated interaction checks.
   Explicit No Production satisfies a city's production reminder.
 - [x] Add a unit Skip Turn order. It ignores that unit for this turn's idle reminders
   and clears at its next eligible turn; it is distinct from persistent Sleep.
-- Implement Civ6-style [zone of control](https://civilization.fandom.com/wiki/Zone_of_control_%28Civ6%29):
+- [x] Implement Civ6-style [zone of control](https://civilization.fandom.com/wiki/Zone_of_control_%28Civ6%29):
   hostile military/city control restricts movement after entering controlled
   terrain, with appropriate domain and unit exceptions. Use shared legality for
   pathfinding, human/AI orders, queued movement and visible previews. Preserve

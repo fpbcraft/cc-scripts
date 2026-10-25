@@ -8,6 +8,7 @@ local UnitMovement = dofile("/games/civcraft/unit_movement.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local VisibilityEvents = dofile("/games/civcraft/visibility_events.lua")
 local World = dofile("/games/civcraft/world.lua")
+local Zone = dofile("/games/civcraft/zone_control.lua")
 local C = {}
 local function at(list, x, y)
 	for _, v in ipairs(list or {}) do
@@ -206,6 +207,17 @@ function C.predictOrder(state, unit, order, systems)
 	local attacker = copy(unit)
 	attacker.standby = false
 	attacker.healing = false
+	if not order.ranged and order.path then
+		local locked = Zone.locked(state, unit, systems)
+		local zones = Zone.map(state, unit, systems, Hex)
+		for index = 2, #order.path - 1 do
+			if locked then
+				return nil, "Approach crosses an enemy zone of control"
+			end
+			local point = order.path[index]
+			locked = zones[point.x .. ":" .. point.y] == true
+		end
+	end
 	if not order.ranged and order.path and #order.path > 1 then
 		local approach = order.path[#order.path - 1]
 		attacker.x, attacker.y = approach.x, approach.y
@@ -226,7 +238,11 @@ function C.attack(state, unit, target, systems)
 	if target.path and not result.ranged and #target.path > 2 then
 		local first = target.path[1]
 		if unit.x == first.x and unit.y == first.y then
-			UnitMovement.walk(state, unit, target.path, systems, #target.path - 1)
+			local spent, completed, reason =
+				UnitMovement.walk(state, unit, target.path, systems, #target.path - 1)
+			if not completed then
+				return spent > 0, reason, { interrupted = true, spent = spent }
+			end
 		end
 	end
 	C.migrate(state)
@@ -308,6 +324,9 @@ function C.attack(state, unit, target, systems)
 	end
 	Events.emit(state, event)
 	World.reveal(state, Hex, systems)
+	if not result.ranged and unit.hp > 0 then
+		Zone.enter(state, unit, systems, Hex)
+	end
 	return true,
 		captured and "City captured"
 			or ("Dealt " .. damage .. " HP; received " .. retaliation .. " HP"),

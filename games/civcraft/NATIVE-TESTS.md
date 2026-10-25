@@ -98,3 +98,9 @@ human units, chooses No Production for idle cities and assigns research before
 ending. `turnTasks` verifies those accepted orders in the saved campaign. The
 response scenario uses the same task workflow during the defender's unspent-action
 window. The driver allows 45 seconds for the longer sequence of real mouse events.
+
+Run `civcraft_zone_control_test.lua` in its own isolated computer for movement
+locks, civilian costs, domain/peace exceptions, hidden-guard discovery and aborted
+attack approaches. It asserts actual frozen replay endpoints and preserves an
+unused attack on interruption. Full-session success also verifies startup and
+existing turn/diplomacy flows with control enabled.

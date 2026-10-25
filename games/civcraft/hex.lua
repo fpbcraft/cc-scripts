@@ -1,6 +1,7 @@
 -- Odd-row offset pointy hexes. All geometry/pathfinding uses the same rules.
 local Biomes = dofile("/games/civcraft/biomes.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
+local Zone = dofile("/games/civcraft/zone_control.lua")
 local H = { width = 12, height = 8 }
 local function dims(state)
 	local world = state and state.world
@@ -191,6 +192,8 @@ function H.reachable(state, unit, owner, Systems)
 	local distance = { [start] = 0 }
 	local fringe = { { x = unit.x, y = unit.y, cost = 0 } }
 	local attacks = {}
+	local zones = Zone.map(state, unit, Systems, H)
+	local stopped = { [start] = Zone.locked(state, unit, Systems) }
 	local previous = {}
 	local function visible(x, y)
 		if stats.hostile or unit.villageGuard then
@@ -236,6 +239,12 @@ function H.reachable(state, unit, owner, Systems)
 				local total = moveCost and cur.cost + moveCost
 				local u = occupant(state, nx, ny)
 				local c = settlement(state, nx, ny)
+				if u and not Zone.visible(state, unit, u, Systems) then
+					u = nil
+				end
+				if c and not Zone.visible(state, unit, c, Systems) then
+					c = nil
+				end
 				local enemy = (u and u.owner ~= owner) or (c and c.owner ~= owner)
 				if stats.naval and c and c.owner ~= owner then
 					moveCost = 1
@@ -271,10 +280,19 @@ function H.reachable(state, unit, owner, Systems)
 								}
 							end
 						end
-					elseif not u and (not c or c.owner == owner) then
+					elseif
+						not stopped[cur.y * w + cur.x]
+						and not u
+						and (not c or c.owner == owner)
+					then
 						local idx = ny * w + nx
 						if not distance[idx] or total < distance[idx] then
+							local controlled = zones[nx .. ":" .. ny]
+							if controlled and Zone.civilian(unit, Systems) then
+								total = budget
+							end
 							distance[idx] = total
+							stopped[idx] = controlled
 							previous[idx] = { x = cur.x, y = cur.y }
 							fringe[#fringe + 1] = { x = nx, y = ny, cost = total }
 						end
@@ -287,7 +305,13 @@ function H.reachable(state, unit, owner, Systems)
 		for x = 1, w do
 			local idx = y * w + x
 			if idx ~= start and distance[idx] then
-				out[#out + 1] = { x = x, y = y, cost = distance[idx], path = route(x, y) }
+				out[#out + 1] = {
+					x = x,
+					y = y,
+					cost = distance[idx],
+					path = route(x, y),
+					zoneStop = stopped[idx] or false,
+				}
 			end
 			if attacks[idx] then
 				out[#out + 1] = attacks[idx]

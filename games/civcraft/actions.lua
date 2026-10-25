@@ -12,6 +12,7 @@ local UnitMovement = dofile("/games/civcraft/unit_movement.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
+local Zone = dofile("/games/civcraft/zone_control.lua")
 local TurnTasks = dofile("/games/civcraft/turn_tasks.lua")
 local A = {}
 
@@ -49,6 +50,7 @@ function A.apply(state, id, req, Systems)
 	if not eligible and req.action ~= "diplomaticReply" and req.action ~= "diplomaticCounter" then
 		return false, waiting
 	end
+	local outcome
 	local function at(list, x, y)
 		for _, item in ipairs(list or {}) do
 			if item.x == x and item.y == y then
@@ -269,19 +271,31 @@ function A.apply(state, id, req, Systems)
 		moving.standby = false
 		moving.healing = false
 		if legal.attack then
-			local ok, why = Combat.attack(state, moving, legal, Systems)
+			local ok, why, result = Combat.attack(state, moving, legal, Systems)
 			if not ok then
 				moving.standby = asleep
 				moving.healing = healing
 				return false, why
 			end
 			log((p.name or tostring(id)) .. ": " .. why)
+			if result and result.interrupted then
+				outcome = why
+			end
+			local cost = result and result.interrupted and result.spent or legal.cost
 			moving.movesLeft = legal.ranged and 0
-				or math.max(0, (moving.movesLeft or Systems.units[moving.kind].move) - legal.cost)
+				or math.max(0, (moving.movesLeft or Systems.units[moving.kind].move) - cost)
 		else
-			UnitMovement.walk(state, moving, legal.path, Systems)
+			local spent, completed, reason = UnitMovement.walk(state, moving, legal.path, Systems)
+			if spent == 0 and not completed then
+				moving.standby, moving.healing = asleep, healing
+				return false, reason
+			end
+			if not completed then
+				outcome = reason
+				log(reason)
+			end
 			moving.movesLeft =
-				math.max(0, (moving.movesLeft or Systems.units[moving.kind].move) - legal.cost)
+				math.max(0, (moving.movesLeft or Systems.units[moving.kind].move) - spent)
 			moving.actedThisRound = true
 			moving.healing = false
 			moving.autoExplore = false
@@ -289,6 +303,9 @@ function A.apply(state, id, req, Systems)
 		moving.standby = false
 		moving.healing = false
 		moving.skippedTurn = nil
+		if Zone.locked(state, moving, Systems) and Zone.civilian(moving, Systems) then
+			moving.movesLeft = 0
+		end
 		moving.moved = moving.movesLeft <= 0
 	elseif req.action == "disband" then
 		if not u or u.owner ~= id or (req.unitID and req.unitID ~= u.id) then
@@ -407,6 +424,6 @@ function A.apply(state, id, req, Systems)
 	end
 	Hostiles.clear(state, Systems)
 	World.reveal(state, Hex, Systems)
-	return true
+	return true, outcome
 end
 return A

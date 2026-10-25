@@ -408,7 +408,9 @@ function V.draw(ui, state, player, rect)
 								yy,
 								1,
 								1,
-								destination.attack and 31 or (n % 4 == 0 and 7 or 13)
+								destination.attack and 31
+									or destination.zoneStop and 8
+									or (n % 4 == 0 and 7 or 13)
 							)
 						end
 					end

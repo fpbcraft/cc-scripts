@@ -154,6 +154,14 @@ Names appear above cities and in city navigation, and remain stable in saves.
   costs, vision and attack ranges. Scouts reveal farther, naval vessels travel
   on water, and settlers found cities at least three hexes apart. Fog hides
   unexplored land and enemy units outside current sight.
+- **Zone of control:** Hostile melee land units control adjacent passable land,
+  combat ships control adjacent water, and cities control both. Entering control
+  stops further movement for the current turn; military units can still attack
+  with remaining movement. Civilians and support units exhaust their remaining
+  movement on entry. Mounted units ignore control. Amber destination rings mark
+  stops. A fresh turn may leave a zone it started in. Discovering a hidden guard
+  can interrupt a route or attack approach; the unit stops at its actual position
+  and retains any unused attack. Current maps have no river-edge control rules.
 - **Manage cities:** Each citizen works a tile and has a Food, Industry or Science
   assignment. Jobs and worked tiles share the same population pool. **JOBS +**
   automatically chooses a free owned tile of that yield type; **-** unworks one

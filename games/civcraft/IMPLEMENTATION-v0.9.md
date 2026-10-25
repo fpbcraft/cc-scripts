@@ -246,3 +246,38 @@ resolves decisions through actual mouse input instead of End Anyway. Both the
 hotseat/Surprise War and host-with-AI sessions pass, including real trades,
 settings/research/campaign controls and save reload. The host result also asserts
 saved skip orders and resolved human production/research (`turnTasks = true`).
+
+### Zone of control and discovered-route interruption
+
+Known hostile melee land units control adjacent passable land. Naval combat units
+control water; cities control both domains. Ordinary ranged land units, civilian
+and support units do not exert control. Mounted units ignore control. A military
+unit entering control retains movement for a legal attack but cannot move again
+in that turn window; civilian/support entry spends the remaining movement.
+Starting a fresh normal turn or Surprise War response removes the prior movement
+lock without granting any movement beyond the scheduler's existing budget.
+Current geography has no river-edge representation, so river exceptions are not
+claimed. Escort-specific inherited exceptions will accompany the escort feature.
+
+The same control map governs human/AI reachability and pure approach forecasting.
+Movement resolves each actual step, revealing normally before considering newly
+observed control. Hidden units and cities no longer block an ostensibly unknown
+preview through authoritative-only occupancy checks. A newly discovered obstacle
+or control zone can stop the actual route. Shared actions charge the traversed
+terrain and applicable civilian control penalty, retain an unused attack when an
+approach is interrupted, and return an interruption reason. Frozen move events
+end at the actual position; an aborted approach creates no combat event. Amber
+rings and the selected destination summary identify known stopping tiles.
+Optional `unit.zoneEnteredTurn` survives saved/private own-unit state and expires
+by turn-window identity. No new field reveals a hidden foreign control source.
+
+Attack eligibility is extracted into pure `hostility.lua`, shared by diplomacy
+and control, so pathfinding does not reload the full negotiation dependency graph.
+A native full-session startup initially hit the watchdog with that redundant
+loading; it passes after the extraction. Native CraftOS-PC also passes the
+control-rule scenarios. Regression scenarios cover attack-after-entry, forecast
+parity, civilian exhaustion, cavalry, naval/land domains, peace, private snapshots,
+unseen guard discovery, actual travel charging and interrupted attack approaches.
+The complete native hotseat/AI/Surprise War session passes settings, research,
+campaign controls, conversations, turn decisions and save reload. Physical
+monitors and live remote-client transport remain release validation.

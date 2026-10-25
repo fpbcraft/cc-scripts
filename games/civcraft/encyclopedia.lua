@@ -78,7 +78,7 @@ local mechanics = {
 mechanics[#mechanics + 1] = {
 	id = "standby",
 	name = "SLEEP AND TURN CHECKS",
-	text = "SLEEP UNIT keeps a unit on standby across rounds. Wake it with WAKE UNIT before issuing orders. Ending a turn asks for confirmation when awake units have movement left, cities lack production, or research is unassigned. END ANYWAY deliberately skips these orders.",
+	text = "SLEEP UNIT keeps a unit on standby across rounds. Valid new orders wake it automatically. SKIP TURN ignores a unit only for its current turn without spending movement; accepted new orders clear that skip. The single footer button guides Unit Orders, Production and Research before becoming End Turn. No Production satisfies an idle city. A Surprise War response uses a fresh reminder window and only unspent actions.",
 }
 mechanics[#mechanics + 1] = {
 	id = "reports",
@@ -88,12 +88,12 @@ mechanics[#mechanics + 1] = {
 mechanics[#mechanics + 1] = {
 	id = "empire",
 	name = "EMPIRE AND IDLE UNITS",
-	text = "The city icon at the top right opens EMPIRE. End-turn reminders offer GO TO buttons for cities without production. Its unit and city lists center the map on your selection. The shield/arrow icon jumps to the next awake unit with movement left. These controls only select; MOVE / ATTACK still activates orders. CITY and UNIT in the inspector switch between a city and its garrison.",
+	text = "EMPIRE at the top right lists your units and cities and centers the map on a selection. The primary Unit Orders button cycles through awake units with movement left, excluding skipped and auto-exploring units. Navigation only selects; Move / Attack activates orders. City and Unit in the inspector switch between a city and its garrison.",
 }
 mechanics[#mechanics + 1] = {
 	id = "icons",
 	name = "ACTION BAR ICONS",
-	text = "Bottom left: connected nodes open TECH TREE and shield/arrow selects NEXT IDLE UNIT. The labeled END TURN button is at the bottom right. Left sidebar: plus/minus zoom and fullscreen opens WORLD OVERVIEW. Top right: city opens EMPIRE, book opens CODEX, clipboard opens REPORT, and pause opens the pause menu.",
+	text = "The single button below the inspector guides remaining unit, production and research decisions, then becomes End Turn. Left sidebar: plus/minus zoom and fullscreen opens World Overview. Top right: Tech Tree, Factions, Empire, Codex, Report and Pause. Status feedback appears below the map. City tabs separate Info, Jobs, Tiles and Production.",
 }
 mechanics[#mechanics + 1] = {
 	id = "gold",
@@ -101,9 +101,14 @@ mechanics[#mechanics + 1] = {
 	text = "Each city earns two gold plus its population each round. Markets add three, bazaars three and banks five. Every unit pays its listed upkeep. A treasury can temporarily cover negative income, but unpaid units disband if gold runs out. DISBAND in the unit inspector lets you reduce upkeep voluntarily after confirmation. The top bar shows stocks and projected changes; click it for the full ledger. Owned iron, horses and saltpeter deposits add one stock per round; specialized units consume two stock on completion.",
 }
 mechanics[#mechanics + 1] = {
+	id = "zonecontrol",
+	name = "ZONE OF CONTROL",
+	text = "Visible hostile melee land units control adjacent passable land; combat ships control adjacent water, and hostile cities control both. Ordinary ranged land units and civilians do not exert control. Entering control stops further movement for this turn, but a military unit may still attack with remaining movement. Civilian and support units spend their remaining movement on entry. Mounted units ignore control. A new turn may leave a zone it started in. Amber movement rings mark stopping tiles. Newly discovered hostile control may interrupt an otherwise valid route; only actual travel is charged and replayed. Current maps do not model river-edge control exceptions.",
+}
+mechanics[#mechanics + 1] = {
 	id = "health",
 	name = "HEALTH LEVELS AND HEALING",
-	text = "Units have 100 HP. Combat grants XP: attacks give three, defending gives two, defeating a unit adds five, and city attacks give four. Each ten total XP per level increases level and adds two strength. Injuries reduce effective strength. FORTIFY / HEAL skips orders and restores 20 HP per round only in owned territory. Units that did not act also recover only on owned land. Adjacent support crews can heal outside owned territory. A valid movement or attack order wakes a sleeping unit.",
+	text = "Units have 100 HP. Combat grants XP: attacks give three, defending gives two, defeating a unit adds five, and city attacks give four. Each ten total XP per level increases level and adds two strength. Injuries reduce effective strength. FORTIFY / HEAL skips orders and restores 20 HP per round only in owned territory. Units that did not act also recover only on owned land. Support healing also requires the receiving unit to be inside its own territory. A valid movement or attack order wakes a sleeping unit.",
 }
 mechanics[#mechanics + 1] = {
 	id = "citycombat",
