@@ -4,6 +4,7 @@ local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Zone = dofile("/games/civcraft/zone_control.lua")
 local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
+local EscortPaths = dofile("/games/civcraft/escort_paths.lua")
 local H = { width = 12, height = 8 }
 local function dims(state)
 	local world = state and state.world
@@ -178,6 +179,10 @@ function H.reachable(state, unit, owner, Systems)
 	local out = {}
 	if not unit or unit.owner ~= owner or unit.moved then
 		return out
+	end
+	local companion = Stacks.partner(state, unit)
+	if companion then
+		return EscortPaths.reachable(state, unit, companion, owner, Systems, H, Zone, H.reachable)
 	end
 	local budget = unit.movesLeft
 	if budget == nil then

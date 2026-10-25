@@ -1,20 +1,31 @@
 -- Control uses only the moving civilization's current observations.
 local Hostility = dofile("/games/civcraft/hostility.lua")
 local Tasks = dofile("/games/civcraft/turn_tasks.lua")
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local Zone = {}
 local function stats(unit, systems)
 	return systems and systems.units and (systems.units[unit.kind] or systems.units.warrior) or {}
 end
-function Zone.ignores(unit, systems)
+function Zone.ignores(unit, systems, state)
 	local kind = stats(unit, systems)
-	return kind.mounted or kind.air or kind.ignoreZoneControl or unit.kind == "horseman"
+	local other = state and unit.kind == "settler" and Stacks.partner(state, unit)
+	local guard = other and stats(other, systems) or {}
+	return kind.mounted
+		or kind.air
+		or kind.ignoreZoneControl
+		or kind.navalRaider
+		or unit.kind == "horseman"
+		or guard.mounted
+		or guard.ignoreZoneControl
+		or guard.navalRaider
+		or other and other.kind == "horseman"
 end
 function Zone.civilian(unit, systems)
 	local kind = stats(unit, systems)
 	return (kind.strength or 0) <= 0 or kind.engineer or kind.support
 end
 function Zone.locked(state, unit, systems)
-	return not Zone.ignores(unit, systems)
+	return not Zone.ignores(unit, systems, state)
 		and unit.zoneEnteredTurn == Tasks.stamp(state, unit.owner)
 end
 function Zone.visible(state, unit, entity, systems)
@@ -30,7 +41,7 @@ function Zone.visible(state, unit, entity, systems)
 end
 function Zone.map(state, unit, systems, hex)
 	local result = {}
-	if Zone.ignores(unit, systems) then
+	if Zone.ignores(unit, systems, state) then
 		return result
 	end
 	local function add(entity, domain)

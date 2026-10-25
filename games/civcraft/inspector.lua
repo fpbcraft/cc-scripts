@@ -382,8 +382,32 @@ function I.draw(ui, state, player, rect, modal)
 		end
 	elseif unit and unit.owner == ui.playerID then
 		local stats = Systems.units[unit.kind] or Systems.units.warrior
+		local partner = Stacks.partner(state, unit)
+		local available = cohabitant and Stacks.canLink(state, unit, cohabitant, Systems)
+
 		Combat.unit(unit)
 		text(Systems.label("unit", unit.kind) .. " LV" .. unit.level, 7)
+		if partner or available then
+			rows[#rows + 1] = {
+				buttons = {
+					{
+						label = partner and "DETACH ESCORT" or "ATTACH ESCORT",
+						run = function()
+							ui:command(partner and "detachEscort" or "attachEscort", {
+								x = unit.x,
+								y = unit.y,
+								unitID = unit.id,
+								partnerID = cohabitant and cohabitant.id,
+							})
+							ui.source, ui.pendingMove, ui.reachable = nil, nil, {}
+						end,
+					},
+				},
+			}
+		end
+		if partner then
+			text("LINKED / OTHER MOVE " .. (partner.movesLeft or 0), 13)
+		end
 		text("HP " .. unit.hp .. "/100", unit.hp < 35 and 31 or 13)
 		text(
 			"ATK "

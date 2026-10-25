@@ -204,25 +204,55 @@ function A.apply(state, id, req, Systems)
 	local c, u = cityAt(x, y), unitAt(x, y)
 	if req.action == "research" or req.action == "warrior" or req.action == "settler" then
 		return false, "Use research and city production projects"
+	elseif req.action == "attachEscort" or req.action == "detachEscort" then
+		if not u or u.owner ~= id then
+			return false, "Select an owned unit"
+		end
+		local other = req.action == "attachEscort" and Stacks.byID(state, req.partnerID)
+			or Stacks.partner(state, u)
+		if req.action == "attachEscort" then
+			local ok, reason = Stacks.link(state, u, other, Systems)
+			if not ok then
+				return false, reason
+			end
+		else
+			Stacks.unlink(state, u)
+		end
+		for _, member in ipairs({ u, other }) do
+			member.standby, member.healing, member.autoExplore, member.skippedTurn =
+				false, false, false, nil
+		end
+		Events.notice(
+			state,
+			"order",
+			nil,
+			req.action == "attachEscort" and "Escort attached" or "Escort detached",
+			id
+		)
+		return true
 	elseif req.action == "skipTurn" then
 		if not u or u.owner ~= id or req.unitID and req.unitID ~= u.id then
 			return false, "Select an owned unit"
 		end
-		u.skippedTurn = TurnTasks.stamp(state, id)
-		u.standby, u.healing, u.autoExplore = false, false, false
+		for _, member in ipairs({ u, Stacks.partner(state, u) }) do
+			member.skippedTurn = TurnTasks.stamp(state, id)
+			member.standby, member.healing, member.autoExplore = false, false, false
+		end
 		Events.notice(state, "order", nil, "Skipped unit for this turn", id)
 		return true
 	elseif req.action == "standby" then
 		if not u or u.owner ~= id then
 			return false, "Select an owned unit"
 		end
-		u.skippedTurn = nil
-		u.standby = req.value == true
-		if not u.standby then
-			u.healing = false
-		end
-		if u.standby then
-			u.autoExplore = false
+		for _, member in ipairs({ u, Stacks.partner(state, u) }) do
+			member.skippedTurn = nil
+			member.standby = req.value == true
+			if not member.standby then
+				member.healing = false
+			end
+			if member.standby then
+				member.autoExplore = false
+			end
 		end
 		Events.notice(state, "order", nil, req.action, id)
 		return true
@@ -312,6 +342,7 @@ function A.apply(state, id, req, Systems)
 		if not u or u.owner ~= id or (req.unitID and req.unitID ~= u.id) then
 			return false, "Select an owned unit"
 		end
+		Stacks.unlink(state, u)
 		for i = #state.units, 1, -1 do
 			if state.units[i] == u then
 				table.remove(state.units, i)
@@ -393,6 +424,7 @@ function A.apply(state, id, req, Systems)
 				return false, "Cities need 3 hex spacing"
 			end
 		end
+		Stacks.unlink(state, u)
 		for i, v in ipairs(state.units) do
 			if v == u then
 				table.remove(state.units, i)

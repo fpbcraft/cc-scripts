@@ -15,7 +15,23 @@ local Tactics = dofile("/games/civcraft/ai_tactics.lua")
 local Workers = dofile("/games/civcraft/ai_workers.lua")
 local Presentation = dofile("/games/civcraft/presentation.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local A = {}
+
+local function attachAssignedEscort(state, player, unit, systems)
+	local role = unit.aiRole or {}
+	local other = role.name == "settlerEscort" and Stacks.byID(state, role.escortID)
+	if other and Stacks.canLink(state, unit, other, systems) then
+		return Actions.apply(state, player.id, {
+			action = "attachEscort",
+			unitID = unit.id,
+			partnerID = other.id,
+			x = unit.x,
+			y = unit.y,
+		}, systems)
+	end
+	return false
+end
 
 function A.knowledge(state, player)
 	return Presentation.capture(state, player.id)
@@ -46,6 +62,13 @@ end
 function A.military(state, player, unit, systems)
 	local failed, acted = {}, false
 	for _ = 1, 8 do
+		if Stacks.partner(state, unit) then
+			-- The settler chooses the destination; its guard follows through shared rules.
+			break
+		end
+		if attachAssignedEscort(state, player, unit, systems) then
+			return true
+		end
 		if (unit.movesLeft or 0) <= 0 then
 			break
 		end
@@ -185,6 +208,13 @@ function A.choose(state, player, city, systems)
 	return false
 end
 function A.settle(state, player, unit, systems)
+	if not Stacks.partner(state, unit) then
+		for _, guard in ipairs(state.units) do
+			if guard.owner == player.id and (guard.aiRole or {}).escortID == unit.id then
+				attachAssignedEscort(state, player, guard, systems)
+			end
+		end
+	end
 	for _ = 1, 16 do
 		if (unit.movesLeft or 0) <= 0 then
 			break

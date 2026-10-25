@@ -1,4 +1,5 @@
 -- CIVCRAFT 4X data & deterministic mechanics, no dependencies on UI/peripherals.
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local M = {}
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
@@ -261,6 +262,7 @@ function M.migrate(state)
 		end
 	end
 	Combat.migrate(state)
+	Stacks.migrate(state)
 	state.version = 6
 	return state
 end
@@ -634,6 +636,10 @@ function M.autoExplore(state, unit, hex)
 	unit.autoExplore = true
 	unit.standby = false
 	while (unit.movesLeft or 0) > 0 and not unit.moved do
+		local companion = Stacks.partner(state, unit)
+		if companion and (companion.moved or (companion.movesLeft or 0) <= 0) then
+			break
+		end
 		World.reveal(state, hex, M)
 		local scout = {}
 		for k, v in pairs(unit) do
@@ -826,6 +832,7 @@ function M.production(state, hex)
 				if unit.owner == p.id then
 					p.gold = p.gold + ((M.units[unit.kind] or {}).upkeep or 1)
 					Events.notice(state, "disband", unit)
+					Stacks.unlink(state, unit)
 					table.remove(state.units, index)
 					if p.gold >= 0 then
 						break

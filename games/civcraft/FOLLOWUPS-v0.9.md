@@ -37,7 +37,7 @@ in the design draft. Keep this list alongside the main roadmap until verified.
   and one protecting unit to share a hex; the protecting unit takes combat first.
   A winning melee attack captures the remaining settler. Captures transfer
   ownership without fresh movement or the previous owner's private AI plans.
-- Attach/detach a settler and protecting unit as an escort group that moves
+- [x] Attach/detach a settler and protecting unit as an escort group that moves
   together. Linked movement must be legal and affordable for both units.
 - Allow distant destinations and multiple future movement orders. Persist each
   unit's route/queue and execute only its affordable legal movement at the start

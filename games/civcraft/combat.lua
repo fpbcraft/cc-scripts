@@ -20,6 +20,7 @@ local function at(list, x, y)
 	end
 end
 local function remove(state, unit)
+	Stacks.unlink(state, unit)
 	for i = #state.units, 1, -1 do
 		if state.units[i] == unit then
 			table.remove(state.units, i)
@@ -155,6 +156,15 @@ function C.predict(state, unit, target, systems)
 	if not ranged and not stats.naval and Hex.terrain(target.x, target.y, state) == "water" then
 		return nil, "Land melee units cannot initiate attacks against units on water"
 	end
+	if
+		not ranged
+		and Stacks.settler(state.units, target.x, target.y)
+		and (
+			Stacks.partner(state, unit) or Stacks.partner(state, Stacks.byID(state, unit.id) or {})
+		)
+	then
+		return nil, "Detach the escort before capturing another settler"
+	end
 	if not city and defender.kind == "settler" and not ranged then
 		return {
 			damage = 0,
@@ -169,6 +179,7 @@ function C.predict(state, unit, target, systems)
 			defenderDied = false,
 		}
 	end
+
 	local offense = C.power(attacker, systems, false, state)
 	local defense
 	if city then
@@ -250,6 +261,7 @@ function C.predictOrder(state, unit, order, systems)
 end
 
 function C.attack(state, unit, target, systems)
+	local companion, approachSpent = Stacks.partner(state, unit), 0
 	local result, why
 	if target.path then
 		result, why = C.predictOrder(state, unit, target, systems)
@@ -264,9 +276,27 @@ function C.attack(state, unit, target, systems)
 		if unit.x == first.x and unit.y == first.y then
 			local spent, completed, reason =
 				UnitMovement.walk(state, unit, target.path, systems, #target.path - 1)
+			approachSpent = spent
 			if not completed then
 				return spent > 0, reason, { interrupted = true, spent = spent }
 			end
+		end
+	end
+	if companion and not result.ranged then
+		local cost = Hex.moveCost(
+			target.x,
+			target.y,
+			state,
+			companion,
+			systems,
+			companion.x,
+			companion.y,
+			companion.movesLeft
+		)
+		if not cost or cost > companion.movesLeft then
+			return approachSpent > 0,
+				"Escort cannot follow the attack",
+				{ interrupted = true, spent = approachSpent }
 		end
 	end
 	C.migrate(state)
@@ -355,7 +385,17 @@ function C.attack(state, unit, target, systems)
 	if unit.hp <= 0 then
 		remove(state, unit)
 	end
+	local following, notices
+	if not result.ranged and unit.hp > 0 then
+		following, notices = UnitMovement.followAttack(state, unit, companion, systems)
+	end
 	Events.emit(state, event)
+	if following then
+		Events.emit(state, following)
+	end
+	for _, notice in ipairs(notices or {}) do
+		Events.emit(state, notice)
+	end
 	World.reveal(state, Hex, systems)
 	if not result.ranged and unit.hp > 0 then
 		Zone.enter(state, unit, systems, Hex)

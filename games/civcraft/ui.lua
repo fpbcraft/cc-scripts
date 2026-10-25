@@ -311,6 +311,7 @@ function UI:tile(x, y)
 				self.pendingMove.risk = risk
 				local summary = "COST "
 					.. p.cost
+					.. (p.escortCost and " / ESCORT " .. p.escortCost or "")
 					.. (p.zoneStop and " / ZONE OF CONTROL: STOP" or "")
 				if forecast then
 					summary = "HP "

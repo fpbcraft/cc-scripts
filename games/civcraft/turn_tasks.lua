@@ -1,4 +1,5 @@
 -- Required turn decisions, shared by the primary button and end-turn reminders.
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local Tasks = {}
 
 function Tasks.stamp(state, owner)
@@ -7,7 +8,8 @@ function Tasks.stamp(state, owner)
 end
 
 function Tasks.idle(state, unit, owner)
-	return unit.owner == owner
+	return not (unit.kind == "settler" and Stacks.partner(state, unit))
+		and unit.owner == owner
 		and not unit.standby
 		and not unit.autoExplore
 		and unit.skippedTurn ~= Tasks.stamp(state, owner)

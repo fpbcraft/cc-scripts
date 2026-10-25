@@ -257,7 +257,8 @@ in that turn window; civilian/support entry spends the remaining movement.
 Starting a fresh normal turn or Surprise War response removes the prior movement
 lock without granting any movement beyond the scheduler's existing budget.
 Current geography has no river-edge representation, so river exceptions are not
-claimed. Escort-specific inherited exceptions will accompany the escort feature.
+claimed. Linked settlers inherit mounted/naval-raider escort immunity; other
+formations stop when either member enters control.
 
 The same control map governs human/AI reachability and pure approach forecasting.
 Movement resolves each actual step, revealing normally before considering newly
@@ -333,9 +334,8 @@ Human and AI commands carry explicit unit IDs on shared tiles, including movemen
 founding, standby, healing, exploration and rail orders. Stale or foreign identities
 cannot silently select the other unit. Inspectors switch between guard and settler;
 a city/guard/settler tile cycles the selector in a single row on compact displays.
-The map prioritizes the protector and adds a separate small settler marker. This
-slice establishes shared tiles and protection; attach/detach and linked escort
-movement remain explicitly unfinished.
+The map prioritizes the protector and adds a separate small settler marker.
+Linked movement and its additional restrictions are described below.
 
 As the module graph grew, native startup exceeded CraftOS's watchdog while the
 same source modules were repeatedly loaded through absolute `dofile` calls. The
@@ -351,3 +351,34 @@ Capture tests exercise melee/ranged distinctions, guard priority and death, city
 capture, stack limits, former-owner permissions, captured-plan privacy, explicit
 shared-tile selection in text/graphics and AI capture ranking. Native tests remain
 headless/instrumented rather than physical-monitor or live remote-client proof.
+
+### Attached settler escorts
+
+Owned settlers can attach to a co-located military land unit or ship through the
+inspector, and either member can detach. Mutual unit IDs persist in owner snapshots
+and saves. Attachment wakes both units without refreshing movement or attacks.
+Invalid saved links are discarded without changing budgets. Founding, disbanding,
+bankruptcy, capture and combat death clear the other member's link.
+
+Either member can lead a move. Reachability keeps nondominated pairs of terrain
+costs, so a cheaper route for one member does not conceal the only affordable route
+for the other. Each step must be passable and affordable for both members; water
+allowances, landing costs, discovered obstacles and zone-of-control stops apply
+individually. Mounted and naval-raider escorts pass their control immunity to their
+settler. Both actors receive separate frozen movement events with their actual
+endpoints; automatic-exploration suppression applies to both events.
+
+A melee guard can advance after combat only when its settler can follow. A ranged
+guard may attack without moving a spent companion. An attached guard cannot capture
+an additional settler, which would create three occupants; detaching first leaves
+its original settler behind. Protection priority does not depend on attachment.
+Skip Turn and Sleep apply to the pair, and the primary turn control represents
+the formation once. The compact text/graphics inspector exposes Attach/Detach
+without adding a separate persistent panel. AI-assigned escorts attach through
+the same host action when they meet their settler, then let the settler lead.
+
+`civcraft_escorts_test.lua` covers ownership and stale links, projections, both
+leaders' costs, a route requiring a nondominated cost pair, spent companions,
+ranged/melee combat, capture capacity, removal, sea movement, control immunity,
+unknown-route interruption, AI attachment and actual compact inspector controls.
+Queued future movement remains a separate unfinished follow-up.

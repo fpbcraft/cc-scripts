@@ -115,4 +115,11 @@ an ended defender a second movement budget.
 with real core rules and instrumented text/graphics displays. It installs the
 same CivCraft-specific internal module cache as `game.lua`; it does not change
 the CraftOS watchdog. `civcraft_module_cache_test.lua` checks isolation, failure
-recovery and external-script behavior. Linked escorts remain a separate follow-up.
+recovery and external-script behavior.
+
+`civcraft_escorts_test.lua` runs linked movement, attack/removal cleanup, sea and
+control rules, assigned AI attachment, cost-pair routing and compact inspector
+controls in an isolated CraftOS profile. Both text and graphics controls use
+instrumented monitors; this does not establish physical-monitor behavior. For
+full-session tests, run the driver in the installed loader environment with
+`_lib/fpb/loader.lua`, so entry-point globals and the module cache match installation.

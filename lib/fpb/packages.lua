@@ -174,6 +174,7 @@ P.packages.civcraft = {
 		"hostility.lua",
 		"movement_budget.lua",
 		"unit_stacks.lua",
+		"escort_paths.lua",
 		"module_cache.lua",
 		"campaign_options.lua",
 		"faction_view.lua",
