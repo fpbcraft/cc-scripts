@@ -382,3 +382,13 @@ leaders' costs, a route requiring a nondominated cost pair, spent companions,
 ranged/melee combat, capture capacity, removal, sea movement, control immunity,
 unknown-route interruption, AI attachment and actual compact inspector controls.
 Queued future movement remains a separate unfinished follow-up.
+
+### Sharp labels immediately after zooming
+
+Fractional camera offsets caused a one-pixel bitmap stroke to span two pixels:
+rectangle drawing covers both floor(origin) and ceil(origin + width). Text now
+snaps its graphics origin to the pixel grid before drawing any stroke, matching
+sprite blitting. It remains sharp on the first frame after zooming or panning.
+The scaled-row cache keys exact source rows and did not require invalidation.
+Renderer tests compare the complete source and uploaded frames for fractional
+origins at normal and enlarged text scales, with both warm and cold row caches.

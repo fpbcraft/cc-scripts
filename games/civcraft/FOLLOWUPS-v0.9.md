@@ -44,9 +44,10 @@ in the design draft. Keep this list alongside the main roadmap until verified.
   of its next eligible turn. Respect terrain, occupancy, fog, combat limits and
   war-group scheduling; do not regenerate movement. Provide cancel/replace and
   interruption feedback, including for attached settler escorts.
-- Fix city-name and other label blur immediately after zooming. Invalidate or
-  rebuild the relevant scaled rendering caches before the next frame; panning
-  must not be required to restore sharp text.
+- [x] Fix city-name and other label blur immediately after zooming. Bitmap text
+  snaps fractional camera origins to the pixel grid before drawing strokes. The
+  first uploaded frame stays sharp with either warm or cold scaling caches;
+  panning is not required.
 - Keep explored tiles outside vision visible, greyed out and frozen at their
   last observed state. Do not show unseen units, new cities or other changes.
   Re-entering vision updates the remembered state. Check local, hotseat, remote

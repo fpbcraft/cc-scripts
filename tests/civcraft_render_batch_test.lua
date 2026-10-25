@@ -113,6 +113,30 @@ for _, fraction in ipairs({ 0.1, 0.5, 0.9 }) do
 	)
 end
 assert(r.buffer[13][13] == string.char(0), "The central hole of a cog stays dark")
+local function label(x, y, scale)
+	r:begin()
+	r:text(x, y, "AMETHYST", 7, scale)
+	local rows = {}
+	for index, row in ipairs(r.buffer) do
+		rows[index] = table.concat(row)
+	end
+	r:finish()
+	return table.concat(rows), table.concat(pixels)
+end
+for _, scale in ipairs({ 1, 2 }) do
+	local alignedGlyphs, alignedFrame = label(10, 10, scale)
+	for _, offset in ipairs({ { 0.37, 0.62 }, { 0.9, 0.1 }, { 0.5, 0.5 } }) do
+		local glyphs, frame = label(10 + offset[1], 10 + offset[2], scale)
+		assert(glyphs == alignedGlyphs, "Fractional zoom origins must not thicken city-name glyphs")
+		assert(
+			frame == alignedFrame,
+			"The first fractional-origin frame stays sharp with cached rows"
+		)
+		r.scaledRows = nil
+		local _, freshFrame = label(10 + offset[1], 10 + offset[2], scale)
+		assert(freshFrame == alignedFrame, "Cache invalidation does not change label sharpness")
+	end
+end
 local writes = 0
 local t = {
 	getSize = function()

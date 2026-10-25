@@ -505,6 +505,8 @@ function R:text(x, y, txt, color, scale, maxWidth)
 		end
 		return
 	end
+	-- Camera zoom/panning can leave fractional origins. Keep bitmap strokes one pixel wide.
+	x, y = math.floor(x), math.floor(y)
 	local big = scale >= 2
 	local glyphs = big and FONT or SMALL_FONT
 	local stride = big and 6 * scale or 4
