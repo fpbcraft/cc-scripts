@@ -868,7 +868,6 @@ function R:drawGame(m)
       self:rect(117, y, 4, 4, done and 9 or (bonus.earned and 6 or 5))
       self:fontFit(124, y, label, done and 9 or (bonus.earned and 6 or 5), 70)
     end
-
   end
   if m.inspected then
     local chosen = E.get(g, m.inspected.x, m.inspected.y)
@@ -1194,15 +1193,16 @@ function R:drawLevels(m)
       hint = "NEED " .. math.max(0, 6 - prev.points) .. " PTS  " .. math.max(0, 4 - prev.main) .. " CLEARS"
     end
     self:fontFit(x + 4, y + 10, hint, active and 11 or 8, 82)
-    if active then self:add(x, y, 89, 19, "chapter", i) end
+    if active then
+      self:add(x, y, 89, 19, "chapter", i)
+    end
   end
   self:button(70, 110, 60, 10, "BACK", "back")
 end
 function R:drawChapter(m)
   local chapter = m.chapters[m.levelChapter]
   local status = Campaign.stats(m.progress, m.levelChapter)
-  local summary = string.format("%s  %d/6 PTS  %d/4 CLEARS",
-    chapter.name, status.points, status.main)
+  local summary = string.format("%s  %d/6 PTS  %d/4 CLEARS", chapter.name, status.points, status.main)
   self:page("CH " .. m.levelChapter .. " / " .. chapter.name, summary)
   for step = 1, 8 do
     local i = chapter.first + step - 1
@@ -1219,12 +1219,21 @@ function R:drawChapter(m)
     local a = awarded[first.id] and "+" or "-"
     local b = awarded[second.id] and "+" or "-"
     local extra = step == 7 and " REMIX" or (step == 8 and " TEST" or "")
-    local subtitle = (cleared and "[X]" or "[ ]") .. " CLEAR  "
-      .. a .. first.name:sub(1, 6) .. " "
-      .. b .. second.name:sub(1, 6) .. extra
-    if not active then subtitle = "LOCKED  " .. stage.role:upper() end
+    local subtitle = (cleared and "[X]" or "[ ]")
+      .. " CLEAR  "
+      .. a
+      .. first.name:sub(1, 6)
+      .. " "
+      .. b
+      .. second.name:sub(1, 6)
+      .. extra
+    if not active then
+      subtitle = "LOCKED  " .. stage.role:upper()
+    end
     self:fontFit(x + 3, y + 10, subtitle, active and (cleared and 9 or 11) or 8, 85)
-    if active then self:add(x, y, 90, 19, "level", i) end
+    if active then
+      self:add(x, y, 90, 19, "level", i)
+    end
   end
   self:button(70, 110, 60, 10, "CHAPTERS", "back")
 end
