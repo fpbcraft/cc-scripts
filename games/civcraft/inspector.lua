@@ -6,6 +6,7 @@ local Panels = dofile("/games/civcraft/panels.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local World = dofile("/games/civcraft/world.lua")
+local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
 local I = {}
 local function at(list, x, y)
 	for _, item in ipairs(list or {}) do
@@ -338,12 +339,19 @@ function I.draw(ui, state, player, rect, modal)
 				.. Combat.power(unit, Systems, true, state)
 		)
 		text("XP " .. unit.xp .. "/" .. (unit.level * 10))
-		text("MOVE " .. (unit.movesLeft or 0) .. "/" .. stats.move)
+		local allowance = unit.movementAllowanceRound == state.round and unit.turnMovementAllowance
+			or stats.move
+		text("MOVE " .. (unit.movesLeft or 0) .. "/" .. allowance)
 		text("UPKEEP " .. (stats.upkeep or 1) .. " GOLD")
 		if not stats.naval and Hex.terrain(unit.x, unit.y, state) == "water" then
 			text("EMBARKED", 13)
 		end
-		text("RANGE " .. stats.range .. " VISION " .. stats.vision)
+		text(
+			"RANGE "
+				.. MovementBudget.attackRange(state, unit, stats, Hex)
+				.. " VISION "
+				.. stats.vision
+		)
 		if ui.source then
 			text("CYAN RING: MOVE", 13)
 			text("RED CROSS: ATTACK", 31)

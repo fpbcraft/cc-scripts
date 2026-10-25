@@ -568,6 +568,8 @@ function W.forPlayer(state, id, afterSeq)
 					level = u.level,
 					villageGuard = u.villageGuard and true or nil,
 					publicAttack = CombatStrength.unit(u, Content, false, state),
+					publicEmbarked = not (Content.units[u.kind] or {}).naval
+						and W.terrain(state.world, u.x, u.y) == "water",
 					publicDefense = CombatStrength.unit(u, Content, true, state),
 				}
 			end

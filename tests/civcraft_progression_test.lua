@@ -2,6 +2,7 @@ local native = dofile
 dofile = function(path)
 	return native(path:gsub("^/games/civcraft/", "games/civcraft/"))
 end
+local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
 local S = dofile("games/civcraft/systems.lua")
 local W = dofile("games/civcraft/world.lua")
 local H = dofile("games/civcraft/hex.lua")
@@ -75,8 +76,19 @@ local function simulate(firstID, secondID, expected)
 		V.check(state, true)
 		for _, u in ipairs(state.units) do
 			local stats = S.units[u.kind]
-			u.movesLeft = stats.hostile and 0 or stats.move
-			u.moved = stats.hostile or false
+			local owner
+			for _, participant in ipairs(state.players) do
+				if participant.id == u.owner then
+					owner = participant
+				end
+			end
+			MovementBudget.reset(
+				{ round = state.round + 1, world = state.world },
+				u,
+				stats,
+				owner,
+				H
+			)
 		end
 		W.reveal(state, H, S)
 		if state.phase == "over" then

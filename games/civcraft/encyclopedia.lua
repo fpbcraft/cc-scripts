@@ -52,7 +52,7 @@ local mechanics = {
 	{
 		id = "naval",
 		name = "NAVAL UNITS",
-		text = "Ships travel on water rather than land. Build them in a coastal city with a shipyard beside a free water hex. Navigation lets land units embark for two movement points per water hex; embarked land units cannot attack or found cities. Some ships require an owned strategic deposit and research. Mariner ships receive one extra movement point each round.",
+		text = "Ships travel on water rather than land. Build them in a coastal city with a shipyard beside a free water hex. Navigation permits embarkation at two movement points per water hex on a land-start turn. A unit starting a new round at sea receives at least six movement points and spends one per water hex. Landing spends the remaining allowance. Embarked combat units, including archers, use adjacent melee attacks against land and receive retaliation. Land melee cannot initiate attacks against units on water; land ranged units can fire at embarked targets without Navigation. Sea movement is not refreshed by loading or a Surprise War response. Settlers cannot found cities while embarked. Some ships require an owned strategic deposit and research. Mariner ships receive one extra movement point each round.",
 	},
 	{
 		id = "fog",

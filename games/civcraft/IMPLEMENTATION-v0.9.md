@@ -281,3 +281,37 @@ unseen guard discovery, actual travel charging and interrupted attack approaches
 The complete native hotseat/AI/Surprise War session passes settings, research,
 campaign controls, conversations, turn decisions and save reload. Physical
 monitors and live remote-client transport remain release validation.
+
+### Embarked movement and coastal combat
+
+A navigation-enabled land unit starting the normal round reset at sea receives
+at least six movement points and pays one per water hex. Land-start embarkation
+retains its two-point water cost and grants no mid-turn movement. Landing spends
+the remaining allowance, preventing the sea budget from funding a land march.
+The round reset and inspector share the recorded allowance. Optional sea-rate
+and allowance fields persist without replenishing movement on migration/load.
+A newly eligible Surprise War response beginning at sea changes only its water
+rate; it never grants another allowance. A per-round response marker prevents
+repeated activation from changing a response that began on land.
+
+Embarked combat units, including normally ranged units, use adjacent melee
+attacks against land targets. Surviving defenders retaliate normally. Land melee
+cannot initiate attacks against embarked units or ships; land ranged units can
+fire on embarked targets without Navigation. A surviving amphibious attacker
+can capture a coastal city. Melee landings use the same remaining-budget rule
+for forecasts and actual movement. Naval vessels retain their native allowances
+and existing coastal-city behavior.
+
+Shared movement-range helpers drive reachability, combat forecasting/resolution
+and visible-enemy threat estimates. Observed embarked status is public; threat
+forecasting infers sea travel from that observation without transmitting hidden
+foreign technologies. The seeded progression harness now uses the same next-round
+movement reset as the host rather than resetting every unit to its land stat.
+
+Dedicated scenarios cover six water steps, partial sea travel followed by landing,
+no extra movement inland, embarkation/load/response budgets, amphibious archers,
+melee shore restrictions, ranged fire without Navigation, public threat parity,
+forecast damage/retaliation parity and coastal capture. Native CraftOS-PC passes
+those rules and the full hotseat/AI/Surprise War session with turn decisions,
+settings, research, conversations and save reload. Instrumented text/graphics UI
+coverage does not establish physical monitor or live remote-client behavior.

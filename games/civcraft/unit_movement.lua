@@ -40,7 +40,16 @@ function UnitMovement.walk(state, unit, path, systems, lastPoint)
 				blocked = true
 			end
 		end
-		local cost = Hex.moveCost(position.x, position.y, state, unit, systems, unit.x, unit.y)
+		local cost = Hex.moveCost(
+			position.x,
+			position.y,
+			state,
+			unit,
+			systems,
+			unit.x,
+			unit.y,
+			(unit.movesLeft or 0) - spent
+		)
 		if blocked or not cost then
 			completed, reason = false, "Route blocked by a discovered obstacle"
 			break

@@ -2,6 +2,7 @@
 local Biomes = dofile("/games/civcraft/biomes.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Zone = dofile("/games/civcraft/zone_control.lua")
+local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
 local H = { width = 12, height = 8 }
 local function dims(state)
 	local world = state and state.world
@@ -103,7 +104,7 @@ local function statsFor(unit, Systems)
 		})[unit.kind]
 		or { move = 1, strength = 2 }
 end
-function H.moveCost(x, y, state, unit, Systems, fromX, fromY)
+function H.moveCost(x, y, state, unit, Systems, fromX, fromY, remaining)
 	local t = H.terrain(x, y, state)
 	local stats = statsFor(unit, Systems)
 	if stats.naval then
@@ -111,14 +112,18 @@ function H.moveCost(x, y, state, unit, Systems, fromX, fromY)
 	end
 	if t == "water" then
 		for _, p in ipairs(state and state.players or {}) do
-			if p.id == unit.owner and (p.techs or {}).navigation then
-				return 2
+			if p.id == unit.owner and ((p.techs or {}).navigation or unit.publicEmbarked) then
+				return unit.waterMovementRound == state.round and 1 or 2
 			end
 		end
 		return nil
 	end
 	if t == "mountain" then
 		return nil
+	end
+	if fromX and H.terrain(fromX, fromY, state) == "water" then
+		-- Landing spends the remaining allowance; a sea bonus cannot fund a land march.
+		return math.max(1, remaining or unit.movesLeft or stats.move or 1)
 	end
 	local rails = state and state.world and state.world.rails or {}
 	if
@@ -187,6 +192,7 @@ function H.reachable(state, unit, owner, Systems)
 		return out
 	end
 	local stats = statsFor(unit, Systems)
+	local attackRange = MovementBudget.attackRange(state, unit, stats, H)
 	local w, h = dims(state)
 	local start = unit.y * w + unit.x
 	local distance = { [start] = 0 }
@@ -235,7 +241,8 @@ function H.reachable(state, unit, owner, Systems)
 		if cur.cost == distance[cur.y * w + cur.x] then
 			for _, nextHex in ipairs(H.neighbours(cur.x, cur.y, state)) do
 				local nx, ny = nextHex.x, nextHex.y
-				local moveCost = H.moveCost(nx, ny, state, unit, Systems, cur.x, cur.y)
+				local moveCost =
+					H.moveCost(nx, ny, state, unit, Systems, cur.x, cur.y, budget - cur.cost)
 				local total = moveCost and cur.cost + moveCost
 				local u = occupant(state, nx, ny)
 				local c = settlement(state, nx, ny)
@@ -261,12 +268,8 @@ function H.reachable(state, unit, owner, Systems)
 							)
 							and (stats.strength or 0) > 0
 							and (not unit.attackedRound or unit.attackedRound ~= state.round)
-							and (stats.range or 1) == 1
-							and (stats.naval or (not state.world or H.terrain(unit.x, unit.y, state) ~= "water" and H.terrain(
-								nx,
-								ny,
-								state
-							) ~= "water"))
+							and attackRange == 1
+							and (stats.naval or not state.world or H.terrain(nx, ny, state) ~= "water")
 							and (not u or u.owner ~= owner)
 						then
 							if not attacks[ny * w + nx] or total < attacks[ny * w + nx].cost then
@@ -275,7 +278,7 @@ function H.reachable(state, unit, owner, Systems)
 									y = ny,
 									cost = total,
 									attack = true,
-									ranged = (stats.range or 1) > 1,
+									ranged = attackRange > 1,
 									path = route(nx, ny, cur),
 								}
 							end
@@ -320,7 +323,7 @@ function H.reachable(state, unit, owner, Systems)
 	end
 	-- Ranged strikes do not teleport the unit into an enemy tile.
 	if
-		(stats.range or 1) > 1
+		attackRange > 1
 		and (stats.strength or 0) > 0
 		and (not unit.attackedRound or unit.attackedRound ~= state.round)
 		and (stats.naval or H.terrain(unit.x, unit.y, state) ~= "water")

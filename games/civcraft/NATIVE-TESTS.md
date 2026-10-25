@@ -104,3 +104,9 @@ locks, civilian costs, domain/peace exceptions, hidden-guard discovery and abort
 attack approaches. It asserts actual frozen replay endpoints and preserves an
 unused attack on interruption. Full-session success also verifies startup and
 existing turn/diplomacy flows with control enabled.
+
+Run `civcraft_embarkation_test.lua` in an isolated profile for sea allowances,
+landing and response budgets, amphibious forecast/resolution parity, coastal
+capture, shore attack restrictions and observed-enemy danger estimates. The
+normal full session also exercises the response activation hook without granting
+an ended defender a second movement budget.

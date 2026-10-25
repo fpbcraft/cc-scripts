@@ -681,7 +681,8 @@ function M.autoExplore(state, unit, hex)
 				unit,
 				M,
 				best.path[i - 1].x,
-				best.path[i - 1].y
+				best.path[i - 1].y,
+				unit.movesLeft - spent
 			)
 			if not cost or spent + cost > unit.movesLeft then
 				break

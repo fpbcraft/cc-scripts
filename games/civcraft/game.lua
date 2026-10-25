@@ -8,6 +8,7 @@ end
 -- Host: /games/civcraft/game.lua host [--new]  Join: /games/civcraft/game.lua join [host ID]
 local args = { ... }
 local MODE = args[1] or "local"
+local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
 local PROTOCOL = "fpbcraft.civcraft.v2"
 local localMode = MODE == "local"
 local SAVE = "/games/civcraft/data/save.dat"
@@ -278,11 +279,7 @@ local function nextTurn()
 	for _, u in ipairs(state.units) do
 		local owner = player(u.owner)
 		local base = Systems.units[u.kind] or Systems.units.warrior
-		u.movesLeft = (base.hostile or u.villageGuard) and 0
-			or base.move
-				+ (owner and owner.civ == "nomad" and u.kind == "scout" and 1 or 0)
-				+ (owner and owner.civ == "mariner" and base.naval and 1 or 0)
-		u.moved = base.hostile == true or u.villageGuard ~= nil
+		MovementBudget.reset(state, u, base, owner, Hex)
 	end
 	World.reveal(state, Hex, Systems)
 	DiplomaticPerception.promises(state, Hex, World, Systems.units)
@@ -325,6 +322,17 @@ pumpActors = function()
 			end
 			if Scheduler.canAct(state, participant.id) then
 				for _, unit in ipairs(state.units) do
+					if
+						unit.owner == participant.id and state.scheduler.reactions[participant.id]
+					then
+						MovementBudget.response(
+							state,
+							unit,
+							Systems.units[unit.kind] or Systems.units.warrior,
+							participant,
+							Hex
+						)
+					end
 					if
 						unit.owner == participant.id
 						and unit.autoExplore

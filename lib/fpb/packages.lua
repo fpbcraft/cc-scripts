@@ -172,6 +172,7 @@ P.packages.civcraft = {
 		"turn_tasks.lua",
 		"zone_control.lua",
 		"hostility.lua",
+		"movement_budget.lua",
 		"campaign_options.lua",
 		"faction_view.lua",
 		"hex.lua",

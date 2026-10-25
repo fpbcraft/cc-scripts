@@ -76,7 +76,7 @@ combat previews; these still need the final integrated interaction checks.
   terrain, with appropriate domain and unit exceptions. Use shared legality for
   pathfinding, human/AI orders, queued movement and visible previews. Preserve
   legal attacks and avoid exposing hidden enemies through previews.
-- Give embarked land units a larger water movement allowance when they begin
+- [x] Give embarked land units a larger water movement allowance when they begin
   their eligible turn in water. They may initiate melee attacks onto land.
   Land-based melee units cannot initiate attacks against embarked units, but may
   retaliate when attacked; ranged units may attack them. Keep forecasts, AI,

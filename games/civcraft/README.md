@@ -272,8 +272,15 @@ combat formulas, healing, siege and experience rules.
 
 Scouts and explorers can **AUTO EXPLORE** along safe routes, continuing on new
 rounds until stopped or no frontier remains. Coastal cities need a **SHIPYARD**
-to build naval units. **NAVIGATION** permits land units to embark at two moves
-per water hex; embarked units cannot attack or found cities.
+to build naval units. **NAVIGATION** permits land units to embark at two movement points per water
+hex during a land-start turn. Starting a normal round at sea grants at least six
+movement points and reduces water travel to one point per hex. Landing consumes
+the remaining allowance, so it cannot fund extra movement inland. Embarked
+combat units, including archers, make adjacent melee attacks onto land and receive
+normal retaliation. Land melee cannot initiate attacks against units on water;
+land ranged units may fire at embarked targets without Navigation. Settlers
+cannot found cities at sea. Loading never refreshes movement. A Surprise War
+response starting at sea uses the faster rate with only its unspent movement.
 
 ## Display and modems
 

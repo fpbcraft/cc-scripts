@@ -9,6 +9,7 @@ local Villages = dofile("/games/civcraft/villages.lua")
 local VisibilityEvents = dofile("/games/civcraft/visibility_events.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Zone = dofile("/games/civcraft/zone_control.lua")
+local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
 local C = {}
 local function at(list, x, y)
 	for _, v in ipairs(list or {}) do
@@ -149,7 +150,10 @@ function C.predict(state, unit, target, systems)
 	if not Diplomacy.canAttack(state, unit.owner, city and city.owner or defender.owner) then
 		return nil, "Declare war before attacking this civilization"
 	end
-	local ranged = (stats.range or 1) > 1
+	local ranged = MovementBudget.attackRange(state, unit, stats, Hex) > 1
+	if not ranged and not stats.naval and Hex.terrain(target.x, target.y, state) == "water" then
+		return nil, "Land melee units cannot initiate attacks against units on water"
+	end
 	local offense = C.power(attacker, systems, false, state)
 	local defense
 	if city then

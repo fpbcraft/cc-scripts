@@ -3,6 +3,7 @@ local Combat = dofile("/games/civcraft/combat.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local World = dofile("/games/civcraft/world.lua")
+local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
 local Threats = {}
 local function copy(value)
 	local result = {}
@@ -34,18 +35,16 @@ function Threats.build(state, player, systems)
 			local stats = systems.units[enemy.kind] or systems.units.warrior
 			local simulated = copy(enemy)
 			simulated.moved, simulated.attackedRound = false, nil
-			simulated.movesLeft = stats.move or 1
-			for _, owner in ipairs(view.players) do
-				if
-					owner.id == enemy.owner
-					and (
-						owner.civ == "nomad" and enemy.kind == "scout"
-						or owner.civ == "mariner" and stats.naval
-					)
-				then
-					simulated.movesLeft = simulated.movesLeft + 1
+			local owner
+			for _, participant in ipairs(view.players) do
+				if participant.id == enemy.owner then
+					owner = participant
 				end
 			end
+			local allowance, sea = MovementBudget.nextRound(view, simulated, stats, owner, Hex)
+			simulated.movesLeft = allowance
+			simulated.waterMovementRound = sea and view.round or nil
+
 			local positions = { { x = enemy.x, y = enemy.y, cost = 0 } }
 			for _, move in ipairs(Hex.reachable(view, simulated, enemy.owner, systems)) do
 				if not move.attack and move.cost < simulated.movesLeft then
@@ -90,12 +89,32 @@ function Threats.at(map, x, y, unit, excluded)
 			local reaches = false
 			for _, point in ipairs(entry.positions) do
 				local distance = Hex.distance(x, y, point.x, point.y)
-				if distance > 0 and distance <= entry.range then
+				local stats = map.systems.units[entry.actor.kind] or {}
+				local range = entry.city and 2
+					or MovementBudget.attackRange(map.view, point, stats, Hex)
+				if distance > 0 and distance <= range then
 					local cost = entry.city
-						or Hex.moveCost(x, y, map.view, entry.actor, map.systems, point.x, point.y)
+						or range > 1 and 1
+						or Hex.moveCost(
+							x,
+							y,
+							map.view,
+							entry.actor,
+							map.systems,
+							point.x,
+							point.y,
+							entry.moves - point.cost
+						)
 					if
-						cost and (entry.city or entry.range > 1 or point.cost + cost <= entry.moves)
+						not entry.city
+						and range <= 1
+						and not stats.naval
+						and Hex.terrain(x, y, map.view) == "water"
 					then
+						cost = nil
+					end
+
+					if cost and (entry.city or range > 1 or point.cost + cost <= entry.moves) then
 						reaches = true
 						break
 					end
