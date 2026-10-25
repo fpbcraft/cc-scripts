@@ -408,6 +408,10 @@ function I.draw(ui, state, player, rect, modal)
 		if partner then
 			text("LINKED / OTHER MOVE " .. (partner.movesLeft or 0), 13)
 		end
+		local route = unit.moveQueue or partner and partner.moveQueue
+		if route then
+			text(route.paused and "ROUTE PAUSED" or "WAYPOINTS " .. #route.goals, 13)
+		end
 		text("HP " .. unit.hp .. "/100", unit.hp < 35 and 31 or 13)
 		text(
 			"ATK "
@@ -460,6 +464,37 @@ function I.draw(ui, state, player, rect, modal)
 				},
 			},
 		}
+		local queue = unit.moveQueue or partner and partner.moveQueue
+		local routeButtons = {
+			{
+				label = queue and "ADD WAYPOINT" or "QUEUE MOVES",
+				run = function()
+					ui.placement, ui.cityStrikeSource, ui.pendingMove = nil, nil, nil
+					ui.source = {
+						x = unit.x,
+						y = unit.y,
+						unitID = unit.id,
+						queue = true,
+						append = queue ~= nil,
+					}
+					ui.reachable = {}
+					ui:feedback(queue and "CHOOSE NEXT WAYPOINT" or "CHOOSE ROUTE DESTINATION")
+					if modal then
+						ui.panel = "context"
+					end
+				end,
+			},
+		}
+		if queue then
+			routeButtons[#routeButtons + 1] = {
+				label = "CANCEL ROUTE",
+				run = function()
+					ui:command("cancelRoute", { x = unit.x, y = unit.y, unitID = unit.id })
+					ui.source, ui.pendingMove, ui.reachable = nil, nil, {}
+				end,
+			}
+		end
+		rows[#rows + 1] = { buttons = routeButtons }
 		rows[#rows + 1] = {
 			buttons = {
 				{

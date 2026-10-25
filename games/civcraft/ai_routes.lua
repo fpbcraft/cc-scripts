@@ -44,7 +44,11 @@ function Routes.from(view, unit, systems, options)
 	options = options or {}
 	local costs, previous, blocked = {}, {}, {}
 	for _, other in ipairs(view.units or {}) do
-		if other.id ~= unit.id and (other.owner ~= unit.owner or not options.ignoreFriendly) then
+		if
+			other.id ~= unit.id
+			and (other.owner ~= unit.owner or not options.ignoreFriendly)
+			and not (options.canEnter and options.canEnter(other.x, other.y))
+		then
 			blocked[World.key(other.x, other.y)] = true
 		end
 	end
@@ -71,15 +75,20 @@ function Routes.from(view, unit, systems, options)
 					and not blocked[key]
 					and (not options.allow or options.allow(nextPoint))
 				then
-					local step = Hex.moveCost(
-						nextPoint.x,
-						nextPoint.y,
-						view,
-						unit,
-						systems,
-						current.x,
-						current.y
-					)
+					local step
+					if options.step then
+						step = options.step(current, nextPoint)
+					else
+						step = Hex.moveCost(
+							nextPoint.x,
+							nextPoint.y,
+							view,
+							unit,
+							systems,
+							current.x,
+							current.y
+						)
+					end
 					local cost = step and current.cost + step
 					if
 						cost

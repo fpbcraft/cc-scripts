@@ -15,6 +15,7 @@ local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local Zone = dofile("/games/civcraft/zone_control.lua")
 local TurnTasks = dofile("/games/civcraft/turn_tasks.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
+local Queue = dofile("/games/civcraft/queued_routes.lua")
 local A = {}
 
 function A.validateIntent(state, request)
@@ -27,7 +28,7 @@ function A.validateIntent(state, request)
 	return true
 end
 
-function A.apply(state, id, req, Systems)
+local function apply(state, id, req, Systems)
 	if type(req) ~= "table" then
 		return false, "Invalid order"
 	end
@@ -272,6 +273,24 @@ function A.apply(state, id, req, Systems)
 			Events.notice(state, "order", nil, req.action, id)
 		end
 		return ok, why
+	elseif req.action == "cancelRoute" then
+		if not u or u.owner ~= id then
+			return false, "Select an owned unit"
+		end
+		Queue.cancel(state, u)
+		Events.notice(state, "order", nil, "Movement route cancelled", id)
+		return true
+	elseif req.action == "queueMove" then
+		local moving = Stacks.at(state.units, tonumber(req.sx), tonumber(req.sy), req.unitID)
+		if not moving or moving.owner ~= id then
+			return false, "Select an owned unit"
+		end
+		local ok, why = Queue.submit(state, moving, x, y, req.append == true, Systems)
+		if ok then
+			local _, leader = Queue.get(state, moving)
+			Queue.run(state, id, Systems, A.apply, leader)
+		end
+		return ok, why
 	elseif req.action == "move" then
 		local sx, sy = tonumber(req.sx), tonumber(req.sy)
 		local moving = sx and sy and unitAt(sx, sy)
@@ -458,5 +477,33 @@ function A.apply(state, id, req, Systems)
 	Hostiles.clear(state, Systems)
 	World.reveal(state, Hex, Systems)
 	return true, outcome
+end
+local replacesRoute = {
+	move = true,
+	skipTurn = true,
+	standby = true,
+	heal = true,
+	autoExplore = true,
+	buildRail = true,
+	envoy = true,
+	found = true,
+	disband = true,
+	attachEscort = true,
+	detachEscort = true,
+}
+function A.apply(state, id, request, systems)
+	local unit = type(request) == "table" and Stacks.byID(state, request.unitID)
+	if not unit and type(request) == "table" and replacesRoute[request.action] then
+		unit = Stacks.at(
+			state.units,
+			tonumber(request.sx or request.x),
+			tonumber(request.sy or request.y)
+		)
+	end
+	local ok, why, result = apply(state, id, request, systems)
+	if ok and unit and replacesRoute[request.action] and not unit.executingQueue then
+		Queue.cancel(state, unit)
+	end
+	return ok, why, result
 end
 return A

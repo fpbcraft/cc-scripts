@@ -7,7 +7,13 @@ local includeAI, includeSettings, includeResearch, includeCampaign = false, fals
 local includeWar = false
 local includeHost = false
 local includeConversation = false
+local includeRoutes = false
+local routeRecord
+local routeResumed = false
 for _, argument in ipairs({ ... }) do
+	if argument == "--routes" then
+		includeRoutes = true
+	end
 	if argument == "--ai" then
 		includeAI = true
 	end
@@ -186,6 +192,7 @@ dofile = function(path)
 		local campaignStep = 0
 		local warStep, responseStep = 0, 0
 		local conversationStep = 0
+		local routeStep, routeUnit, routeGoal = 0, nil, nil
 		view.draw = function(self, state, observer, options)
 			draw(self, state, observer, options)
 			renderer = self.r.mode
@@ -255,6 +262,68 @@ dofile = function(path)
 				and self.panel == "report"
 			then
 				tap(self, "CLOSE")
+				return
+			end
+			if includeRoutes and stage == 2 and not options.handoff and routeStep < 5 then
+				if routeStep == 0 then
+					local Hex = dofile("/games/civcraft/hex.lua")
+					local Routes = dofile("/games/civcraft/queued_routes.lua")
+					local Systems = dofile("/games/civcraft/systems.lua")
+					for _, unit in ipairs(state.units) do
+						if unit.owner == observer and unit.kind == "warrior" then
+							for y = 1, state.world.height do
+								for x = 1, state.world.width do
+									if Hex.distance(unit.x, unit.y, x, y) == 3 then
+										local path =
+											Routes.preview(state, unit, x, y, false, Systems)
+										if path and #path > unit.movesLeft + 1 then
+											routeUnit, routeGoal = unit.id, { x = x, y = y }
+											break
+										end
+									end
+								end
+								if routeGoal then
+									break
+								end
+							end
+							if routeGoal then
+								self:focus("unit", unit)
+								break
+							end
+						end
+					end
+					assert(
+						routeGoal,
+						"Native route scenario needs a known distant land destination"
+					)
+					routeStep = 1
+					os.queueEvent("term_resize")
+				elseif routeStep == 1 then
+					if tap(self, "QUEUE MOVES") then
+						routeStep = 2
+					elseif not tap(self, "DETAILS") then
+						tap(self, "NEXT")
+					end
+				elseif routeStep == 2 then
+					self:tile(routeGoal.x, routeGoal.y)
+					assert(self.pendingMove and self.pendingMove.queued)
+					routeStep = 3
+					os.queueEvent("term_resize")
+				elseif routeStep == 3 then
+					if tap(self, "CONFIRM") then
+						routeStep = 4
+					end
+				else
+					for _, unit in ipairs(state.units) do
+						if unit.id == routeUnit then
+							assert(unit.moveQueue and unit.movesLeft == 0)
+							routeRecord = { id = unit.id, x = unit.x, y = unit.y, goal = routeGoal }
+						end
+					end
+					assert(routeRecord, "Native route command must retain a future leg")
+					routeStep = 5
+					os.queueEvent("term_resize")
+				end
 				return
 			end
 			if includeResearch and stage == 2 and not options.handoff and researchStep < 8 then
@@ -503,18 +572,51 @@ for _, participant in ipairs(state.players) do
 			"Human turn workflow assigns research"
 		)
 		local skipped = false
+		local routed = false
 		for _, unit in ipairs(state.units) do
 			if unit.owner == participant.id and unit.skippedTurn then
 				skipped = true
 			end
+			if
+				includeRoutes
+				and routeRecord
+				and unit.owner == participant.id
+				and unit.id == routeRecord.id
+			then
+				routed = true
+			end
 		end
-		assert(skipped, "Human turn workflow saves the actual Skip Turn order")
+		assert(skipped or routed, "Human turn workflow saves an actual Skip Turn or route order")
 		for _, city in ipairs(state.cities) do
 			if city.owner == participant.id then
 				assert(city.project or city.productionIdle, "Human cities resolve production")
 			end
 		end
 	end
+end
+if includeRoutes then
+	assert(routeRecord)
+	local resumed = false
+	for _, unit in ipairs(state.units) do
+		if unit.id == routeRecord.id then
+			local eligible = native("/games/civcraft/turn_scheduler.lua").canAct(state, unit.owner)
+			if eligible then
+				assert(
+					unit.x ~= routeRecord.x or unit.y ~= routeRecord.y,
+					"The host must resume a saved movement route when the next eligible turn starts"
+				)
+				routeResumed = true
+			else
+				assert(
+					unit.moveQueue and unit.movesLeft > 0,
+					"A route waits for its war-group activation without spending the new round budget"
+				)
+			end
+			assert(unit.x == routeRecord.goal.x and unit.y == routeRecord.goal.y or unit.moveQueue)
+			resumed = true
+		end
+	end
+	assert(resumed, "Native queued actor survives the save reload")
 end
 local Events = native("/games/civcraft/events.lua")
 assert(Events.forPlayer(state, state.players[1].id).lastSeq > 0)
@@ -535,6 +637,8 @@ output.write(textutils.serialize({
 	responseSaved = responseSaved,
 	hostModeAI = includeHost,
 	conversationFlow = includeConversation,
+	queuedRouteFlow = includeRoutes,
+	queuedRouteResumed = routeResumed,
 }))
 output.close()
 print(

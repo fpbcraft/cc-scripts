@@ -10,6 +10,7 @@ dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local args = { ... }
 local MODE = args[1] or "local"
 local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
+local QueuedRoutes = dofile("/games/civcraft/queued_routes.lua")
 local PROTOCOL = "fpbcraft.civcraft.v2"
 local localMode = MODE == "local"
 local SAVE = "/games/civcraft/data/save.dat"
@@ -344,6 +345,8 @@ pumpActors = function()
 						Systems.autoExplore(state, unit, Hex)
 					end
 				end
+				-- Allowances already exist; queued orders can only spend those budgets.
+				QueuedRoutes.run(state, participant.id, Systems, Actions.apply)
 				if participant.ai then
 					if not participant.ready then
 						participant.turnBaseline = Reports.capture(state, participant)

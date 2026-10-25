@@ -69,8 +69,10 @@ function Stacks.partner(state, unit)
 end
 function Stacks.unlink(state, unit)
 	local other = unit.escortID and Stacks.byID(state, unit.escortID)
+	unit.moveQueue = nil
 	unit.escortID = nil
 	if other and other.escortID == unit.id then
+		other.moveQueue = nil
 		other.escortID = nil
 	end
 end
@@ -131,6 +133,8 @@ function Stacks.canEnterGroup(state, unit, partner, x, y, visible)
 			if
 				other ~= unit
 				and other ~= partner
+				and other.id ~= unit.id
+				and other.id ~= partner.id
 				and other.x == x
 				and other.y == y
 				and (other.owner == unit.owner or not visible or visible(other))

@@ -153,9 +153,9 @@ All 65 regression scripts pass. New scenarios cover transaction validation, doub
 
 09. Council elections, resolutions and diplomatic victory.
 10. Remaining display integration, faction diplomacy controls and larger map presets.
-    New 25 October requirements also include settler capture/stacked escorts,
-    queued multi-turn movement, immediate sharp labels after zoom, frozen grey
-    fog memory, the top-right reverse-chronological Event Log and replay pauses.
+    Remaining 25 October requirements include frozen grey fog memory, the
+    top-right reverse-chronological Event Log and replay pauses. Capture, attached
+    escorts, queued movement and sharp zoom labels are implemented below.
 11. AI difficulty variants after the Prince baseline.
 12. Save/integration/fuzz/performance/network validation and release metadata.
 
@@ -381,7 +381,7 @@ the same host action when they meet their settler, then let the settler lead.
 leaders' costs, a route requiring a nondominated cost pair, spent companions,
 ranged/melee combat, capture capacity, removal, sea movement, control immunity,
 unknown-route interruption, AI attachment and actual compact inspector controls.
-Queued future movement remains a separate unfinished follow-up.
+Queued future movement is described below.
 
 ### Sharp labels immediately after zooming
 
@@ -392,3 +392,39 @@ sprite blitting. It remains sharp on the first frame after zooming or panning.
 The scaled-row cache keys exact source rows and did not require invalidation.
 Renderer tests compare the complete source and uploaded frames for fractional
 origins at normal and enlarged text scales, with both warm and cold row caches.
+
+### Saved movement routes and waypoints
+
+Move/Attack accepts a destination beyond the current allowance by previewing a
+route through explored terrain. Queue Moves also lets a spent unit issue future
+orders; Add Waypoint appends destinations (up to sixteen). Existing routes can be
+cancelled in the inspector or replaced by a new normal move/route. Accepted manual
+Skip Turn, Sleep, Heal, exploration or other unit orders cancel the old route;
+rejected orders preserve it. Detaching, capture or unit removal clears group
+intentions. Owned snapshots and saves retain route progress; foreign projections
+omit waypoints, progress stamps and future destinations.
+
+Issuing a route spends only currently available movement, then resumes once per
+eligible normal/response turn window. The host runs these orders after existing
+allowances and sea-response rules, using shared movement actions for every step.
+Ready players and inactive war-group members wait; loading never refills budgets.
+Both members of an escort must afford each step. Control entry stops the group
+until its next window. Newly occupied or impassable routes pause with a private
+notice and become an idle decision; automatic orders never initiate combat.
+Users can reassign or cancel a paused route. Unexplored destinations receive an
+explicit exploration message instead of exposing hidden terrain or occupancy.
+
+The bounded weighted planner shares the AI route heap through optional step and
+occupancy policies; existing AI defaults are unchanged. Saved version 1 queues
+validate bounds, shape, waypoint count and cursor without granting movement. The
+queue tests cover round-by-round spending, multiple waypoints, replacement and
+cancellation, failed orders, fog and foreign privacy, automatic capture rejection,
+war eligibility, response budgets, malformed saves, escorts and sea landing.
+Actual compact text/graphics controls assign, append, confirm and cancel routes.
+
+Native CraftOS-PC rule tests pass. The full-session driver adds `--routes` and
+issues the order through the actual inspector/confirmation dispatch before
+ending turns and reloading the save. Peaceful sessions assert host-driven route
+resumption in round two; Surprise War sessions assert that an inactive war-group
+member retains its new allowance and pending route while waiting for activation.
+Physical monitors and live rednet clients remain unverified.

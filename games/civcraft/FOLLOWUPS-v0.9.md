@@ -39,11 +39,13 @@ in the design draft. Keep this list alongside the main roadmap until verified.
   ownership without fresh movement or the previous owner's private AI plans.
 - [x] Attach/detach a settler and protecting unit as an escort group that moves
   together. Linked movement must be legal and affordable for both units.
-- Allow distant destinations and multiple future movement orders. Persist each
+- [x] Allow distant destinations and multiple future movement orders. Persist each
   unit's route/queue and execute only its affordable legal movement at the start
   of its next eligible turn. Respect terrain, occupancy, fog, combat limits and
   war-group scheduling; do not regenerate movement. Provide cancel/replace and
-  interruption feedback, including for attached settler escorts.
+  interruption feedback, including for attached settler escorts. Routes use
+  explored terrain, never automatically attack, and pause for explicit replanning
+  when obstructed. Up to 16 waypoints may be queued.
 - [x] Fix city-name and other label blur immediately after zooming. Bitmap text
   snaps fractional camera origins to the pixel grid before drawing strokes. The
   first uploaded frame stays sharp with either warm or cold scaling caches;

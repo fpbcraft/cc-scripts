@@ -1,5 +1,6 @@
 -- CIVCRAFT 4X data & deterministic mechanics, no dependencies on UI/peripherals.
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
+local Queue = dofile("/games/civcraft/queued_routes.lua")
 local M = {}
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
@@ -263,6 +264,7 @@ function M.migrate(state)
 	end
 	Combat.migrate(state)
 	Stacks.migrate(state)
+	Queue.migrate(state)
 	state.version = 6
 	return state
 end

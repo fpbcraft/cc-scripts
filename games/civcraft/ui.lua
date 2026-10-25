@@ -16,6 +16,7 @@ local Systems = dofile("/games/civcraft/systems.lua")
 local TurnTasks = dofile("/games/civcraft/turn_tasks.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local World = dofile("/games/civcraft/world.lua")
+local QueuedRoutes = dofile("/games/civcraft/queued_routes.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local UI = {}
 UI.__index = UI
@@ -280,7 +281,7 @@ function UI:tile(x, y)
 		self.cityPanel = "overview"
 	end
 	if self.source and not (x == self.source.x and y == self.source.y) then
-		for _, p in ipairs(self.reachable or {}) do
+		for _, p in ipairs(not self.source.queue and self.reachable or {}) do
 			if p.x == x and p.y == y then
 				local unit =
 					Stacks.at(self.state.units, self.source.x, self.source.y, self.source.unitID)
@@ -329,6 +330,30 @@ function UI:tile(x, y)
 				self:feedback(summary .. " - CONFIRM")
 				return
 			end
+		end
+		local unit = Stacks.at(self.state.units, self.source.x, self.source.y, self.source.unitID)
+		if unit then
+			local path, reason =
+				QueuedRoutes.preview(self.state, unit, x, y, self.source.append, Systems)
+			if path and #path > 1 then
+				self.pendingMove = {
+					queued = true,
+					append = self.source.append,
+					sx = unit.x,
+					sy = unit.y,
+					x = x,
+					y = y,
+					unitID = unit.id,
+					player = self.playerID,
+					path = path,
+				}
+				self:feedback(
+					(self.source.append and "APPEND WAYPOINT" or "ASSIGN ROUTE") .. " - CONFIRM"
+				)
+			else
+				self:feedback(reason or "Choose another route destination")
+			end
+			return
 		end
 	end
 	self.source = nil
@@ -429,7 +454,8 @@ function UI:draw(state, playerID, opts)
 						u.x == self.source.x
 						and u.y == self.source.y
 						and u.owner == playerID
-						and not u.moved
+						and (not self.source.unitID or u.id == self.source.unitID)
+						and (self.source.queue or not u.moved)
 					then
 						return true
 					end
@@ -1053,6 +1079,18 @@ function UI:confirmMove()
 	end
 	local unit = Stacks.at(self.state.units, order.sx, order.sy, order.unitID)
 	if unit and unit.owner == self.playerID and unit.id == order.unitID then
+		if order.queued then
+			self:command("queueMove", {
+				sx = order.sx,
+				sy = order.sy,
+				x = order.x,
+				y = order.y,
+				unitID = order.unitID,
+				append = order.append == true,
+			})
+			self.source, self.reachable = nil, {}
+			return true
+		end
 		for _, destination in ipairs(Hex.reachable(self.state, unit, self.playerID, Systems)) do
 			if destination.x == order.x and destination.y == order.y then
 				local request = {

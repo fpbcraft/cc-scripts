@@ -1,8 +1,10 @@
 local native = dofile
 local ui, scoutDraws
+local instrumented = setmetatable({}, { __mode = "k" })
 dofile = function(path)
 	local module = native(path:gsub("^/games/civcraft/", "games/civcraft/"))
-	if path == "/games/civcraft/icons.lua" then
+	if path == "/games/civcraft/icons.lua" and not instrumented[module] then
+		instrumented[module] = true
 		local draw = module.draw
 		module.draw = function(r, kind, ...)
 			local viewport = ui and ui.mapViewport
