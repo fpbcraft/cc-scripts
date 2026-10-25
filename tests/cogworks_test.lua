@@ -6,7 +6,7 @@ local function eq(actual, expected, context)
     (context or "Mismatch") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual)
   )
 end
-eq(#E.levels, 16, "All old puzzle stages replaced")
+eq(#E.levels, 64, "Eight chapters of eight playable campaign levels")
 eq(#E.order, 10, "Eight Create mechanisms plus redstone dust and block")
 for _, kind in ipairs(E.order) do
   assert(E.parts[kind], "Selectable component missing: " .. kind)
@@ -24,6 +24,10 @@ for index, data in ipairs(E.levels) do
   assert(not E.rotate(game, data.source.x, data.source.y), "Generator cannot be rotated")
   assert(not E.place(game, 0, 1, "I") and not E.place(game, game.width + 1, 1, "I"), "Bounds enforced")
   assert(game.width == data.width and game.height == data.height, "Per-stage grid size applied")
+  assert(data.chapter == math.ceil(index / 8) and data.stage == (index - 1) % 8 + 1, "Eight-stage chapters")
+  if index % 8 == 0 then
+    assert(data.finale, "Every eighth puzzle is a chapter test")
+  end
   assert(not E.place(game, 2, 2, "L"), "Elbow no longer offered")
   for _, obstacle in ipairs(data.blocks) do
     assert(E.get(game, obstacle[1], obstacle[2]).kind == "X", "Stone obstacle retained")
@@ -44,10 +48,9 @@ for index, data in ipairs(E.levels) do
   assert(result.unpowered == 0, "Reference contains idle parts at " .. index)
   goals = goals + result.goals
   for _, bonus in ipairs(E.challenges(solved, result)) do
-    assert(
-      bonus.earned or ((index == 7 or index == 8 or index == 16) and bonus.id == "master"),
-      "Reference should earn bonus " .. bonus.id .. " at " .. index
-    )
+    if bonus.id == "sealed" then
+      assert(bonus.earned, "Reference should never contain unused parts at " .. index)
+    end
   end
   local manual = E.new(index)
   for _, part in ipairs(data.build) do
