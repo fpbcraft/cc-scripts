@@ -15,6 +15,19 @@ local args = { ... }
 if args[1] == "--test-api" then
   return { app = App, engine = E, renderer = Renderer }
 end
+local dev = false
+local preferredMonitor = nil
+for _, arg in ipairs(args) do
+  if arg == "--dev" then
+    dev = true
+  elseif arg:sub(1, 2) == "--" then
+    error("Unknown option: " .. arg)
+  elseif not preferredMonitor then
+    preferredMonitor = arg
+  else
+    error("Only one monitor can be selected")
+  end
+end
 local function selectMonitor(preferred)
   if preferred then
     local m = peripheral.wrap(preferred)
@@ -34,7 +47,7 @@ local function selectMonitor(preferred)
   return chosen, name
 end
 local function start()
-  local monitor, name = selectMonitor(args[1])
+  local monitor, name = selectMonitor(preferredMonitor)
   local mode
   local native = nil
   if not monitor then
@@ -50,7 +63,7 @@ local function start()
   local renderer, app
   local ok, reason = xpcall(function()
     renderer = Renderer.new(monitor)
-    app = App.new()
+    app = App.new({ dev = dev })
     local function redraw()
       renderer:draw(app:model())
       Display.present(monitor, mode)
@@ -131,6 +144,8 @@ local function start()
           act("tool", E.order[10])
         elseif char == "x" then
           act("tool", "erase")
+        elseif char == "t" then
+          act("tool", "switch")
         elseif char == "s" then
           act("save")
         elseif char == "n" then
