@@ -2,6 +2,7 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 local E = require("games.cogworks.engine")
 local R = require("games.cogworks.render")
 local B = require("games.cogworks.briefing")
+local Campaign = require("games.cogworks.chapters")
 colors = {
   black = 32768,
   white = 1,
@@ -23,6 +24,10 @@ local model = {
   game = game,
   result = E.evaluate(game),
   progress = progress,
+  chapters = Campaign.chapters,
+  objectives = 0,
+  levelChapter = 8,
+  catalogPage = 1,
   slot = 1,
   selected = "I",
   message = "",
@@ -231,8 +236,13 @@ click("settings")
 click("title")
 model.scene = "levels"
 r:draw(model)
-click("level", 1)
+click("chapter", 1)
+click("chapter", 8)
+click("back")
+model.scene = "chapter"
+r:draw(model)
 click("level", #E.levels)
+click("level", #E.levels - 7)
 click("back")
 model.scene = "settings"
 r:draw(model)
@@ -334,12 +344,44 @@ assert(gfx.batches == beforeAnimated + 1, "Two consecutive animated frames uploa
 model.scene = "title"
 model.dev = true
 r:draw(model)
+click("editor")
+click("packs")
 click("devLevels")
 model.scene = "levels"
 model.game = nil
 model.devSession = true
 r:draw(model)
+click("chapter", 8)
+model.scene = "chapter"
+r:draw(model)
 click("level", #E.levels)
+local editor = E.editor(7, 7)
+model.game, model.result, model.scene = editor, E.evaluate(editor), "editor"
+model.selected, model.inspected = "I", nil
+r:draw(model)
+click("editorTool", "S")
+click("editorTool", "M")
+click("editorTool", "X")
+click("editorFix")
+click("editorRate")
+click("editorSpin")
+click("editorTest")
+click("editorSave")
+click("editorMenu")
+model.scene = "editorMenu"
+r:draw(model)
+click("editorSave")
+click("editorLoad")
+click("editorCompile")
+model.scene, model.editorFiles = "editorList", { "level-001" }
+r:draw(model)
+click("editorLoadFile", "level-001")
+model.scene, model.packFiles = "packList", { "workshop-pack" }
+r:draw(model)
+click("pack", "workshop-pack")
+model.scene, model.activePack = "packLevels", { title = "WORKSHOP PACK", levels = { E.levels[1] } }
+r:draw(model)
+click("packLevel", 1)
 local long = r:wrapBriefingTip("BUILD EVERY CONNECTION; UNUSED PORTS LEAK POWER.")
 assert(#long == 2, "Long instruction must wrap instead of truncating")
 model.settings.animations = true
