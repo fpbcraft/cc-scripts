@@ -581,7 +581,9 @@ end
 -- Authored two-slot bonus predicates; each predicate is evaluated against the
 -- *actual* powered graph, not the author's saved reference.
 function E.challenges(g, result)
-  if g.sandbox or g.custom or g.editor then return {} end
+  if g.sandbox or g.custom or g.editor then
+    return {}
+  end
   local stage = levels[g.number]
   local bonuses = stage.bonuses or {}
   local placed, gears, gearboxes, dust, blocks = 0, 0, 0, 0, 0
@@ -590,10 +592,18 @@ function E.challenges(g, result)
     if not tile.fixed and tile.kind ~= "R" and tile.kind ~= "B" then
       placed = placed + 1
     end
-    if not tile.fixed and (tile.kind == "G" or tile.kind == "O") then gears = gears + 1 end
-    if not tile.fixed and tile.kind == "Q" then gearboxes = gearboxes + 1 end
-    if not tile.fixed and tile.kind == "R" then dust = dust + 1 end
-    if not tile.fixed and tile.kind == "B" then blocks = blocks + 1 end
+    if not tile.fixed and (tile.kind == "G" or tile.kind == "O") then
+      gears = gears + 1
+    end
+    if not tile.fixed and tile.kind == "Q" then
+      gearboxes = gearboxes + 1
+    end
+    if not tile.fixed and tile.kind == "R" then
+      dust = dust + 1
+    end
+    if not tile.fixed and tile.kind == "B" then
+      blocks = blocks + 1
+    end
     local light = result.lights[tile.id]
     if light and light.powered then
       cw = cw or light.sign == 1
@@ -611,7 +621,9 @@ function E.challenges(g, result)
           local other = result.lights[link.tile.id]
           if link[typeName] and other and other.powered then
             local span = math.abs(tile.x - link.tile.x) + math.abs(tile.y - link.tile.y)
-            if span >= (minimum or 1) then return true end
+            if span >= (minimum or 1) then
+              return true
+            end
           end
         end
       end
@@ -622,8 +634,12 @@ function E.challenges(g, result)
     for _, tile in ipairs(g.tiles) do
       if (tile.kind == "G" or tile.kind == "O") and result.lights[tile.id].powered then
         for _, link in ipairs(E.meshes(g, tile)) do
-          if link.tile.kind ~= tile.kind and math.abs(tile.x - link.tile.x) == 1
-            and math.abs(tile.y - link.tile.y) == 1 and result.lights[link.tile.id].powered then
+          if
+            link.tile.kind ~= tile.kind
+            and math.abs(tile.x - link.tile.x) == 1
+            and math.abs(tile.y - link.tile.y) == 1
+            and result.lights[link.tile.id].powered
+          then
             return true
           end
         end
@@ -633,7 +649,9 @@ function E.challenges(g, result)
   end
   local function occupiesZone(predicate)
     for _, tile in ipairs(g.tiles) do
-      if not tile.fixed and predicate(tile) then return true end
+      if not tile.fixed and predicate(tile) then
+        return true
+      end
     end
     return false
   end
@@ -672,9 +690,13 @@ function E.challenges(g, result)
     elseif typeName == "fixed_power" then
       achieved = energizedFixed >= goal
     elseif typeName == "no_belt" then
-      achieved = not occupiesZone(function(tile) return tile.kind == "V" end)
+      achieved = not occupiesZone(function(tile)
+        return tile.kind == "V"
+      end)
     elseif typeName == "no_chain" then
-      achieved = not occupiesZone(function(tile) return tile.kind == "D" end)
+      achieved = not occupiesZone(function(tile)
+        return tile.kind == "D"
+      end)
     elseif typeName == "clear_zone" then
       achieved = not occupiesZone(function(tile)
         return tile.x >= spec.x1 and tile.x <= spec.x2 and tile.y >= spec.y1 and tile.y <= spec.y2
@@ -683,7 +705,9 @@ function E.challenges(g, result)
       local tile = E.get(g, spec.x, spec.y)
       achieved = tile ~= nil and not tile.fixed and result.lights[tile.id].powered
     elseif typeName == "no_kind" then
-      achieved = not occupiesZone(function(tile) return tile.kind == spec.kind end)
+      achieved = not occupiesZone(function(tile)
+        return tile.kind == spec.kind
+      end)
     elseif typeName == "mechanical_override" then
       local tile = E.get(g, spec.x, spec.y)
       achieved = tile and (tile.kind == "Z" or tile.kind == "C") and not result.switches[tile.id] or false
