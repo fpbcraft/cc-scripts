@@ -143,8 +143,46 @@ function E.sandbox(width, height)
   add(g, { kind = "S", x = 1, y = 3, r = 1 }, true)
   return g
 end
+-- Editor games use the same simulation as campaign play, but permit placing
+-- fixed sources, goals and obstacles. All authored geometry is serialized
+-- as data and validated before being loaded in playable packs.
+function E.editor(width, height)
+  local g = E.sandbox(width or 7, height or width or 7)
+  g.editor = true
+  g.name = "UNNAMED WORKSHOP"
+  add(g, { kind = "M", x = g.width, y = 3, r = 3, speed = 1, sign = 1 }, true)
+  return g
+end
+function E.fromDefinition(data, solved)
+  local g = {
+    number = 0, width = data.width, height = data.height, name = data.name, tip = data.tip,
+    tiles = {}, map = {}, stock = copy(data.stock or {}), remaining = copy(data.stock or {}),
+    moves = 0, sandbox = false, custom = true,
+  }
+  add(g, data.source, true)
+  for _, goal in ipairs(data.goals or {}) do
+    add(g, goal, true)
+  end
+  for _, fixture in ipairs(data.fixtures or {}) do
+    add(g, fixture, true)
+  end
+  for _, v in ipairs(data.blocks or {}) do
+    add(g, { kind = "X", x = v[1], y = v[2] }, true)
+  end
+  for _, wire in ipairs(data.redstone or {}) do
+    add(g, wire, false)
+  end
+  if solved then
+    for _, piece in ipairs(data.build or {}) do
+      assert(g.remaining[piece.kind] and g.remaining[piece.kind] > 0, "Invalid custom inventory")
+      g.remaining[piece.kind] = g.remaining[piece.kind] - 1
+      add(g, piece, false)
+    end
+  end
+  return g
+end
 function E.place(g, x, y, kind, rotation)
-  if not E.inside(x, y, g) or not E.parts[kind] or E.get(g, x, y) then
+  if not E.inside(x, y, g) or not (E.parts[kind] or g.editor and (kind == "S" or kind == "M" or kind == "X")) or E.get(g, x, y) then
     return false
   end
   if not g.sandbox and (g.remaining[kind] or 0) < 1 then
@@ -153,13 +191,26 @@ function E.place(g, x, y, kind, rotation)
   if not g.sandbox then
     g.remaining[kind] = g.remaining[kind] - 1
   end
-  add(g, { kind = kind, x = x, y = y, r = (rotation or 0) % 4 }, false)
+  if g.editor and kind == "S" then
+    for _, tile in ipairs(g.tiles) do
+      if tile.kind == "S" then
+        E.remove(g, tile.x, tile.y)
+        break
+      end
+    end
+  end
+  local special = g.editor and (kind == "S" or kind == "M" or kind == "X")
+  add(g, {
+    kind = kind, x = x, y = y, r = (rotation or 0) % 4,
+    speed = kind == "M" and (g.goalRate or 1) or nil,
+    sign = kind == "M" and (g.goalSign or 1) or nil,
+  }, special)
   g.moves = g.moves + 1
   return true
 end
 function E.remove(g, x, y)
   local tile = E.get(g, x, y)
-  if not tile or tile.fixed then
+  if not tile or tile.fixed and not g.editor then
     return false
   end
   g.map[tile.id] = nil
@@ -177,7 +228,7 @@ function E.remove(g, x, y)
 end
 function E.rotate(g, x, y)
   local tile = E.get(g, x, y)
-  if not tile or tile.fixed or tile.kind == "R" or tile.kind == "B" then
+  if not tile or (tile.fixed and not g.editor) or tile.kind == "R" or tile.kind == "B" then
     return false
   end
   tile.r = (tile.r + 1) % 4
@@ -186,7 +237,7 @@ function E.rotate(g, x, y)
 end
 function E.move(g, x, y, tx, ty)
   local tile = E.get(g, x, y)
-  if not tile or tile.fixed or not E.inside(tx, ty, g) or E.get(g, tx, ty) then
+  if not tile or tile.fixed and not g.editor or not E.inside(tx, ty, g) or E.get(g, tx, ty) then
     return false
   end
   g.map[tile.id] = nil
@@ -508,11 +559,11 @@ function E.evaluate(g)
     unpowered = unpowered,
     remaining = remaining,
     complete = not jam and goals == correct,
-    win = not g.sandbox and not jam and goals > 0 and goals == correct,
+    win = (not g.sandbox or g.editor) and not jam and goals > 0 and goals == correct,
   }
 end
 function E.challenges(g, result)
-  if g.sandbox then
+  if g.sandbox or g.custom then
     return {}
   end
   local list = {}
