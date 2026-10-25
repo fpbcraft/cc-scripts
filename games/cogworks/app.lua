@@ -14,7 +14,7 @@ local function countAward(awards)
   end
   return n
 end
-function A.new()
+function A.new(options)
   local self = setmetatable({
     scene = "title",
     settings = S.loadSettings(),
@@ -30,6 +30,9 @@ function A.new()
     inspected = nil,
     tutorial = nil,
     briefing = nil,
+    dev = options and options.dev == true or false,
+    devSession = false,
+    levelReturn = "pause",
   }, A)
   return self
 end
@@ -80,7 +83,7 @@ function A:finishTutorial()
   self:save()
 end
 function A:openLevel(index)
-  assert(self.progress and index >= 1 and index <= self.progress.unlocked)
+  assert(self.progress and index >= 1 and index <= (self.devSession and #E.levels or self.progress.unlocked))
   self.game = E.new(index)
   local session = self.progress.sessions[index]
   if type(session) == "table" and E.restore(self.game, session.parts) then
@@ -95,6 +98,7 @@ function A:openLevel(index)
   self.scene = "briefing"
 end
 function A:enter(slot, newGame)
+  self.devSession = false
   assert(slot >= 1 and slot <= 3)
   self.slot = slot
   self.progress = newGame and self.store.newProgress() or self.store.load(slot)
@@ -107,8 +111,20 @@ function A:enter(slot, newGame)
   self:openLevel(self.progress.level)
   self:save()
 end
+function A:enterSandbox()
+  self.slot = nil
+  self.devSession = false
+  self.game = E.sandbox()
+  self.progress = self.store.newProgress()
+  self.result = E.evaluate(self.game)
+  self.selected = "I"
+  self.message = ""
+  self.inspected = nil
+  self.briefing = nil
+  self.scene = "game"
+end
 function A:save()
-  if not self.slot or not self.game then
+  if not self.slot or not self.game or self.game.sandbox or self.devSession then
     return false
   end
   self.progress.level = self.game.number
@@ -127,6 +143,14 @@ function A:save()
 end
 function A:updateGame()
   self.result = E.evaluate(self.game)
+  if self.game.sandbox then
+    self.message = self.result.jam and "JAM: CONTRADICTORY ROTATION" or "FREE BUILD - NO OBJECTIVES"
+    return
+  end
+  if self.devSession then
+    self.message = self.result.win and "DEV: REFERENCE POWERED" or (self.result.jam and "JAM" or "")
+    return
+  end
   if self.result.win then
     self.progress.unlocked = math.max(self.progress.unlocked, math.min(#E.levels, self.game.number + 1))
     local earned = self.progress.awards[self.game.number]
@@ -170,6 +194,8 @@ function A:model()
     tutorial = self.tutorial,
     briefing = self.briefing,
     hasLeftInput = self.hasLeftInput or false,
+    dev = self.dev,
+    devSession = self.devSession,
   }
 end
 -- Return 'exit' only in direct response to player choosing Exit.
@@ -199,6 +225,17 @@ function A:act(action, x, y)
       end
     elseif action == "slots" then
       self.scene = "slots"
+    elseif action == "sandbox" then
+      self:enterSandbox()
+    elseif action == "devLevels" and self.dev then
+      self.devSession = true
+      self.slot = nil
+      self.game = nil
+      self.result = nil
+      self.progress = self.store.newProgress()
+      self.progress.unlocked = #E.levels
+      self.levelReturn = "title"
+      self.scene = "levels"
     elseif action == "settings" then
       self.returnScene = "title"
       self.scene = "settings"
@@ -250,6 +287,11 @@ function A:act(action, x, y)
       local tile = E.get(self.game, x, y)
       if action == "remove" or self.selected == "erase" then
         changed = E.remove(self.game, x, y)
+      elseif self.selected == "switch" then
+        changed = E.toggle(self.game, x, y)
+        if not changed then
+          self.message = "SELECT A CLUTCH OR GEARSHIFT"
+        end
       elseif tile then
         changed = E.rotate(self.game, x, y)
         if tile.kind == "M" then
@@ -269,20 +311,27 @@ function A:act(action, x, y)
         end
       end
     elseif action == "tool" then
-      if x == "erase" or E.parts[x] then
+      if x == "erase" or x == "switch" or E.parts[x] then
         self.selected = x
       end
     elseif action == "next" or action == "prev" then
       local nextIndex = self.game.number + (action == "next" and 1 or -1)
-      if nextIndex >= 1 and nextIndex <= self.progress.unlocked then
+      if
+        not self.game.sandbox
+        and nextIndex >= 1
+        and nextIndex <= (self.devSession and #E.levels or self.progress.unlocked)
+      then
         self:save()
         self:openLevel(nextIndex)
         self:save()
       else
         self.message = "LEVEL LOCKED"
       end
+    elseif action == "clearSandbox" and self.game.sandbox then
+      self.game = E.sandbox()
+      changed = true
     elseif action == "save" then
-      self.message = self:save() and "SAVED TO SLOT " .. self.slot or self.message
+      self.message = self:save() and "SAVED TO SLOT " .. self.slot or "THIS SESSION IS NOT SAVED"
     elseif action == "pause" then
       self:save()
       self.scene = "pause"
@@ -290,7 +339,7 @@ function A:act(action, x, y)
       self.returnScene = "game"
       self.scene = "help"
     elseif action == "reset" then
-      self.game = E.new(self.game.number)
+      self.game = self.game.sandbox and E.sandbox() or E.new(self.game.number)
       changed = true
     end
     if changed then
@@ -307,8 +356,14 @@ function A:act(action, x, y)
     elseif action == "help" then
       self.returnScene = "pause"
       self.scene = "help"
-    elseif action == "levels" then
+    elseif action == "levels" and not self.game.sandbox then
+      self.levelReturn = "pause"
       self.scene = "levels"
+    elseif action == "clearSandbox" and self.game.sandbox then
+      self.game = E.sandbox()
+      self.result = E.evaluate(self.game)
+      self.message = "SANDBOX CLEARED"
+      self.scene = "game"
     elseif action == "title" then
       self:save()
       self.scene = "title"
@@ -322,10 +377,11 @@ function A:act(action, x, y)
     end
   elseif scene == "levels" then
     if action == "back" then
-      self.scene = "pause"
-    elseif action == "level" and x >= 1 and x <= self.progress.unlocked then
+      self.scene = self.levelReturn
+    elseif action == "level" and x >= 1 and x <= (self.devSession and #E.levels or self.progress.unlocked) then
       self:save()
       self:openLevel(x)
+      self.levelReturn = "pause"
       self:save()
     end
   elseif scene == "confirm" then

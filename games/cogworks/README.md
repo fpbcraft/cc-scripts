@@ -1,98 +1,122 @@
 # COGWORKS: Kinetic Lab
 
-A **30-level**, touchscreen-first construction puzzle for **CC:Tweaked**, inspired by Create's mechanical engineering. Place shafts and machinery, join the ports, and meet each machine's required **clockwise/counterclockwise spin and RPM**. This is a standalone game: it does not control any real Create machinery.
+A touchscreen-first construction puzzle for CC:Tweaked, based on the rotational
+transmission mechanics in the Minecraft [Create mod](https://github.com/Creators-of-Create/Create/wiki).
 
-## Install / update
+The previous 30-stage campaign and its fictitious elbow, splitter, inline-speed
+drive and inline-reversing gear have been **removed entirely**. The new
+**16-stage campaign** introduces the actual principles of shaft axes, side-meshing
+cogs, bevel gearboxes, encased chain drives, mechanical belts and redstone
+switches. COGWORKS is a standalone game; it does **not** control Minecraft machines.
 
-Run on your Advanced Computer, with CC:Tweaked HTTP enabled:
+## Install or update
+
+On a computer with HTTP access enabled:
 
 ```lua
 wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/installers/cogworks.lua
 /games/cogworks/main.lua
 ```
 
-The installer safely stages code updates and preserves game saves in `/games/cogworks/saves/`, `/games/cogworks/settings.dat`, and the legacy `/games/cogworks/save.dat`. Add `--startup` to the installer to create autostart *only when no unrelated startup script exists*. Test a branch by running its raw installer with its branch name as the final argument.
+To try this branch before merging, run the branch's installer and pass the branch
+name as the positional ref:
 
-## Menu & save systems
+```lua
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/feat/cogworks-create-kinetics-sandbox/installers/cogworks.lua feat/cogworks-create-kinetics-sandbox
+/games/cogworks/main.lua --dev
+```
 
-The new **Title Menu** lets you Continue your last save, choose one of **three slots**, open Settings or Exit. Empty slots start a fresh campaign. Your previous pre-slot save automatically imports into slot 1 when selected, without deleting the original file.
+The installer preserves saves and settings. The new campaign uses version-4
+save data and resets old puzzle sessions/unlocks, because the old solutions are
+mechanically incompatible. Previous save files remain on disk; they are not
+deleted. Display options are preserved.
 
-The **Pause Menu** offers Resume, Save Game, Select Level (from your unlocked stages), Settings, Help, Restart Level, New Campaign and Title Menu. Restart and New Campaign require confirmation; New Campaign overwrites the current slot. Settings persist independently from save slots, currently controlling animation and open-port markers. Game boards and achievements autosave on every change; you can also save manually. Press `P` or Escape at the computer to pause and leave safely.
+## Mechanical components
 
-### Gameplay controls
+COGWORKS uses an intentionally **two-dimensional abstraction** of Create:
+rotation is described in a consistent top-down board view, with CW/CCW and
+relative RPM. Three-dimensional axis alignment and Create's stress/overstress
+budget are not simulated. The connection rules below replace the older
+generic-port mechanics.
 
-- Tap a part in the compact two-column inventory, then tap an empty board cell to **place** it.
-- Tap a placed part to **rotate** it clockwise 90 degrees. Tap a fixed machine to inspect its needed **CW / CCW** and the current spin. Tap **REMOVE** to reclaim parts.
-- **Hint has been removed.** You can solve using as little or as much stock as necessary.
-- Keyboard: `1`–`9`, `0` choose the 10 part types; `X` removes, `S` saves, `P` or `Q` pauses, `N` next, `B` back. Ctrl+T exits safely and saves.
+| Key | Part | Create-inspired interaction |
+| --- | --- | --- |
+| I | Shaft | Two opposing shaft ends, same speed and spin |
+| G | Small cogwheel | Axial shaft ends; gears on adjacent **perpendicular** cells mesh and reverse spin, without changing speed |
+| O | Large cogwheel | Axial shaft ends; same-size neighbors mesh at 1:1; diagonally meshed small/large cogwheels reverse spin and transfer at a 2:1 ratio |
+| Q | Gearbox | Accepts power from any of four sides; outputs on the other sides reverse spin (1:1 speed) |
+| D | Encased chain drive | Axial shaft ends, plus same-axis chain links to neighboring chain drives **perpendicular** to their shafts; no speed/sign change |
+| V | Belt pulley | Axial shaft ends; two parallel pulleys transmit across a clear, perpendicular span, preserving speed and spin |
+| Z | Gearshift | Acts as a straight shaft; when redstone-powered, reverses the output's spin |
+| C | Clutch | Acts as a straight shaft; when redstone-powered, disconnects the output |
 
-**Rotation clarity:** The green engine always generates **CW / 1×** power. Presses display **CW** or **CCW** on their face with their RPM underneath. Tapping a press displays what it **needs** and what it's **currently receiving**. A **gear** reverses CW ↔ CCW; a **large cog** reverses direction **and** doubles RPM. RPM and direction are independent of the physical orientation of the port.
+The **redstone switch tool** changes the state of clutches and gearshifts.
+Select SWITCH, then tap either component. Switching is separate from
+rotating: tap an ordinary placed part to rotate it, or select REMOVE to reclaim
+it. Fixed source/target/obstacle cells cannot be moved.
 
-### Nine available parts
+Power conflicts (incompatible speed/direction reaching the same shaft)
+are jams. Green/coral machine faces indicate whether a press receives the
+requested spin and speed.
 
-| Icon | Part | Mechanical behavior |
-|---|---|---|
-| I | Shaft | Straight two-port transmission |
-| L | Elbow | Turns a connection through 90° |
-| T | Splitter | Three connected ports |
-| G | Gear | Reverses spin (1:1 RPM) |
-| B / 2 | Speed Drive | Doubles RPM from marked input to output; reverse flow halves |
-| Q | Gearbox | Distributes power to four directions; unused outlets are capped |
-| O | Large Cog | Reverses spin and doubles RPM across the input/output; reverse flow halves |
-| V | Belt | Two aligned endpoints can transmit across **up to two** empty/stone cells |
-| D | Chain Drive | Two aligned endpoints transmit across **up to three** empty/stone cells |
+## Modes
 
-Belt and chain endpoints visibly connect across empty or stone cells, including the gap on level 6 and the longer span on level 23. A moving highlight indicates live power flow. Open ports can be highlighted separately in Settings.
+### Campaign
 
-Clutches have been removed because the authored puzzles only used them as ordinary shafts. **Existing saved clutch placements automatically migrate to shafts** when loading, preserving saved level progress.
+Sixteen new levels progress from straight powerlines and gearbox reversals
+through perpendicular cog teeth, chain drives, clutches/gearshifts, 2:1 gearing,
+belts and branching networks. Each level starts with a mission briefing;
+a one-time Ponder explains newly introduced parts. Complete all required
+presses at their requested relative speed and rotation without jamming
+the mechanism. Optional bonus challenges do not block advancement.
 
-### Animated level briefings
+Progress and awards are stored in three independent save slots. Each stage
+retains its own construction snapshot, including redstone state on fixed switches.
 
-Every time you enter a level (Continue, NEXT, or Select Level), a full-screen
-**mission briefing** appears before the machinery board. It displays the
-level's number and name, instructional tip, each press's required CW/CCW
-rotation, speed in X, board coordinates, and the exact inventory of available
-mechanisms. Optional bonus categories are identified separately.
+### Development mode
 
-In pixel graphics mode, large title lettering slides into place, the
-workshop conveyor and cogwheels move, and target objectives and parts
-appear in sequence. Animations never delay play: **tap anywhere or press
-START / Enter / Space** to start immediately. The Settings animation toggle
-shows a fully populated briefing without transitions. The ordinary text
-fallback offers the same objectives, inventory and START action.
+Launch with:
 
-The sequence is **briefing → first-time Ponder (when applicable) → game**.
-Briefings repeat on level entry; Ponder lessons do not.
+```lua
+/games/cogworks/main.lua --dev
+```
 
-### Mechanic lessons (Ponder)
+A **DEV: ALL LEVELS** item appears on the title screen. It lets you enter or
+jump to **any level**, even if no campaign stages are unlocked. Developer
+sessions are temporary and do not write to campaign save slots. Ordinary
+saved-game progression retains its normal unlocking rules even when launched
+with `--dev`.
 
-When a level first introduces a mechanic, a **Ponder** overlay appears with a short explanation and animated mechanism diagram. Use **NEXT / GOT IT** to read the slides or **SKIP** to dismiss. Lessons are saved per campaign slot, so returning to an already-introduced level does not repeat them, even after restarting the computer. Use the **?** help screen and **REPLAY PONDER** to view the current level's lesson again.
+To select a particular monitor as well, pass its peripheral name as a second
+argument: `/games/cogworks/main.lua --dev monitor_0`.
 
-Introductions include shafts (1), elbows (2), splitters (4), belts (6), gears (8), speed drives and gearboxes (9), large cogs (16), and chains (23). Ponder is available in both pixel graphics mode and the text fallback.
+### Sandbox
 
-A persistent strip below the board explains the selected construction part, including speed/spin and transmission range. A separate status line reports jams, current press requirements and level progress. Bonus goal spacing has been adjusted to avoid text collisions.
+Choose **FREE SANDBOX** on the title screen. All eight parts are available in
+unlimited quantities, within the 7×6 board. A generator is pre-installed.
+There are no targets, victory conditions, part limits or campaign unlocks.
+Build, rotate, switch or remove components freely, and clear the board from
+the pause menu. Sandbox sessions do not overwrite campaign saves.
 
-### Optional challenges are always visible
+## Controls
 
-The primary win condition is **power every target with the required RPM and CW/CCW rotation without a jam**. It unlocks the next level immediately. Extra objectives appear on the gameplay sidebar, without any separate bonus menu:
+- Choose a part from the sidebar, then tap an empty board cell to place it.
+- Tap a placed movable part to turn it 90 degrees.
+- Select **REMOVE** to reclaim pieces. Select **SWITCH** to toggle powered
+  clutches and gearshifts (including fixed stage fixtures).
+- Choose PAUSE for the level selector, settings, restart or title menu.
+- Keyboard: `1`–`8` selects parts, `X` selects REMOVE, `T` selects
+  SWITCH, `S` saves a campaign game, `P`/`Q` pauses, `N`/`B`
+  navigates, and Escape opens/closes Pause.
 
-- **Sealed Lines** (from level 2): no open ports or unpowered parts.
-- **Full Factory** (from level 3): place/use all stock and power/fully connect every piece.
-- **Precision** (from level 5): complete in the listed move budget.
+The game prefers a color Advanced Monitor; an attached display automatically
+takes priority. CC: Graphics mode 2 enables animated pixel art. Without it,
+the text renderer works on an appropriately sized Advanced Monitor or via
+the scrollable built-in computer viewport.
 
-Earned bonuses remain unlocked when you revisit a stage. They never block normal progression.
+## Regression tests
 
-## Visual requirements and input options
-
-- A color Advanced Computer and a color Advanced Monitor (a 3×3+ display recommended).
-- **CC: Graphics** is recommended for animated pixel graphics, compact menus, and machine sprites; without it the game remains playable using a sufficiently large Advanced Monitor in text mode.
-- The program explicitly sets the monitor text scale to `0.5` and restores the previous setting upon exit. The mode-2 renderer now uses a denser **200×120** virtual layout (rather than 128×88), and completely clears the framebuffer to avoid white margins.
-- Standard CC:Tweaked monitor events support right-click only, without button information: right-click builds/rotates, and the REMOVE tool takes parts back.
-- **Optional companion addon:** The experimental [FPB Monitor Input](https://github.com/fpbcraft/cc-scripts/pull/13) NeoForge mod (tracked in PR #13) emits normalized `monitor_left_click` events. Once COGWORKS sees a left-click, it uses **left-click to place/rotate and right-click to remove directly**, while retaining the standard fallback. The addon must be installed on *client and server* and has not yet been validated for general deployment.
-
-## Tests
-
-```bash
+```sh
 lua5.3 tests/cogworks_test.lua
 lua5.3 tests/cogworks_mechanics_test.lua
 lua5.3 tests/cogworks_briefing_test.lua
@@ -103,20 +127,13 @@ lua5.3 tests/cogworks_main_test.lua
 lua5.3 tests/cogworks_installer_test.lua
 ```
 
-The automated suite validates all 30 reference solutions, bonus achievements, real mechanical interactions, saves and settings, menus and hitboxes, monitor scaling, and safe updates. These tests do not substitute for final in-world UI testing.
+StyLua formatting and Selene linting are enforced alongside the Lua test
+suite in the repository's CI workflows. Final monitor layout and touch input
+should also be checked in CC:Tweaked.
 
-## Play without an external monitor
+## Create reference
 
-The game also runs on the computer's **built-in terminal**. Launch normally without connecting a monitor; the game automatically switches to its text-mode computer viewport. The built-in screen is smaller than the game canvas, so **arrow keys pan**, the **mouse wheel scrolls vertically**, and **left-click selects** controls or board cells. A footer shows the visible viewport position. Attaching an Advanced Monitor still uses the usual full-screen UI and touch controls.
-
-## Native CraftOS-PC / iOS graphics
-
-Without an attached monitor, the game now checks the **real computer terminal**
-for CraftOS-PC mode-2 graphics (`setGraphicsMode`, `drawPixels`) before
-creating any text-only virtual viewport. Native graphics use the emulator's
-pixel dimensions and pixel-coordinate mouse events. Attached monitors retain
-priority; ordinary CC:Tweaked computers without pixel graphics still use the
-scrollable text fallback. The graphics renderer restores text mode on exit.
-
-The game keeps its custom graphics. FPB Store uses a portable terminal launcher
-and does not require Basalt.
+[Create Cogwheels](https://github.com/Creators-of-Create/Create/wiki/Cogwheel)
+and [Generate and Convey](https://github.com/Creators-of-Create/Create/wiki/Generate-and-Convey)
+document the shaft, gearbox, chain, belt and redstone interaction rules on
+which this compact game is based.

@@ -1,55 +1,91 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 local E = require("games.cogworks.engine")
-assert(#E.order == 9, "Nine distinct construction mechanisms available")
-for _, level in ipairs({ 6, 9, 16, 23, 25, 27, 30 }) do
-  local state = E.new(level, true)
-  assert(E.evaluate(state).win, "Expanded reference not solved: " .. level)
+local function put(g, x, y, kind, rotation)
+  assert(E.place(g, x, y, kind, rotation), "Cannot place " .. kind)
+  return E.get(g, x, y)
 end
-local function find(g, kind)
-  for _, part in ipairs(g.tiles) do
-    if part.kind == kind then
-      return part
-    end
-  end
+local function state(g, tile)
+  return E.evaluate(g).lights[tile.id]
 end
--- Legacy snapshots with clutch tiles migrate to regular shafts without
--- invalidating the save slot or the level's solution.
-local legacy = E.snapshot(E.new(6, true))
-local oldClutch = nil
-for _, part in ipairs(legacy) do
-  if part.x == 2 and part.y == 2 then
-    part.kind = "C"
-    part.enabled = false
-    oldClutch = part
-    break
-  end
+local function powered(g, tile)
+  return state(g, tile).powered
 end
-assert(oldClutch, "Old level 6 contained a clutch")
-local migrated = E.new(6)
-assert(E.restore(migrated, legacy), "Legacy clutch snapshot is accepted")
-assert(E.get(migrated, 2, 2).kind == "I", "Clutch becomes a shaft")
-assert(E.evaluate(migrated).win, "Migrated reference still powers both presses")
-assert(not E.parts.C, "Clutch removed from selectable inventory")
-local gearbox = E.new(9, true)
-local box = assert(find(gearbox, "Q"))
-for d = 0, 3 do
-  assert(E.hasPort(box, d), "Four-way gearbox has all ports")
+-- Axial shafts and same-axis cogwheels pass power unchanged.
+local axial = E.sandbox()
+local shaft = put(axial, 2, 3, "I", 1)
+local cog1 = put(axial, 3, 3, "G", 1)
+local cog2 = put(axial, 4, 3, "G", 1)
+assert(E.connection(axial, shaft, 1) == cog1)
+assert(state(axial, cog2).rate == 1 and state(axial, cog2).sign == 1)
+-- Cog teeth mesh only perpendicular to their shaft axis.
+local meshing = E.sandbox()
+local first = put(meshing, 2, 3, "G", 1)
+local second = put(meshing, 2, 4, "G", 1)
+assert(powered(meshing, second) and state(meshing, second).sign == -1)
+assert(not E.connection(meshing, first, 2), "Perpendicular cog interaction is meshing, not shaft coupling")
+local isolated = put(meshing, 3, 5, "G", 0)
+assert(not powered(meshing, isolated), "Wrong axis / diagonal small cog does not mesh")
+local large = E.sandbox()
+put(large, 2, 3, "O", 1)
+local small = put(large, 3, 4, "G", 1)
+assert(
+  state(large, small).rate == 2 and state(large, small).sign == -1,
+  "Large cog drives diagonal small cog at twice the speed and opposite spin"
+)
+local reduction = E.sandbox()
+put(reduction, 2, 3, "G", 1)
+local largeOut = put(reduction, 3, 4, "O", 1)
+assert(
+  state(reduction, largeOut).rate == 0.5 and state(reduction, largeOut).sign == -1,
+  "Small cog drives diagonal large cog at half speed"
+)
+-- Every gearbox output reverses sign relative to the incoming shaft.
+local box = E.sandbox()
+local gearbox = put(box, 2, 3, "Q", 0)
+local b = state(box, gearbox)
+assert(not E.evaluate(box).jam, "Unused gearbox outlets should not jam")
+for direction = 0, 3 do
+  assert(E.hasPort(gearbox, direction), "Gearbox should have four axial ports")
+  assert(
+    b.ports[direction] and b.ports[direction].sign == (direction == 3 and 1 or -1),
+    "Output should reverse input on port " .. direction
+  )
 end
-local belt = E.new(6, true)
-local left = assert(E.get(belt, 3, 3))
-local right = assert(E.get(belt, 5, 3))
-assert(left.kind == "V" and right.kind == "V", "Belt endpoints in level 6")
-assert(E.get(belt, 4, 3).kind == "X", "Belt spans obstacle")
-assert(E.connection(belt, left, 1) == right, "Belt bridges gap")
-local chain = E.new(23, true)
-local top = assert(E.get(chain, 6, 2))
-local bottom = assert(E.get(chain, 6, 4))
-assert(top.kind == "D" and bottom.kind == "D", "Chain endpoint layout")
-assert(E.get(chain, 6, 3).kind == "X", "Chain route blocked by stone")
-assert(E.connection(chain, top, 2) == bottom, "Chain bridges a stone cell")
-local cog = E.new(16, true)
-local large = assert(find(cog, "O"))
-assert(E.evaluate(cog).win, "Large cog reference works")
-large.kind = "G"
-assert(not E.evaluate(cog).win, "Large cog speed ratio matters to goal")
-print("COGWORKS: migration, gearbox, large cog, belt and chain dynamics passed.")
+local belt = E.sandbox()
+put(belt, 2, 3, "V", 1)
+local remote = put(belt, 2, 6, "V", 1)
+assert(powered(belt, remote) and state(belt, remote).sign == 1, "Belt preserves rotation and speed across a clear span")
+assert(not E.connection(belt, E.get(belt, 2, 3), 2), "Belt is not an invisible axial shaft")
+local obstructed = E.sandbox()
+put(obstructed, 2, 3, "V", 1)
+local far = put(obstructed, 2, 6, "V", 1)
+put(obstructed, 2, 4, "I", 0)
+assert(not powered(obstructed, far), "Machinery cannot be bridged by an invisible belt")
+local chain = E.sandbox()
+local head = put(chain, 2, 3, "D", 1)
+local tail = put(chain, 2, 4, "D", 1)
+assert(powered(chain, tail) and state(chain, tail).sign == 1, "Parallel chain drives relay sideways without reversing")
+assert(not E.connection(chain, head, 2), "Chain link is not a gearbox port")
+local shift = E.sandbox()
+put(shift, 2, 3, "Z", 1)
+local shiftedOut = put(shift, 3, 3, "I", 1)
+assert(state(shift, shiftedOut).sign == 1, "Unpowered gearshift is a straight shaft")
+assert(E.toggle(shift, 2, 3))
+assert(state(shift, shiftedOut).sign == -1, "Powered gearshift reverses spin")
+local clutch = E.sandbox()
+put(clutch, 2, 3, "C", 1)
+local stopped = put(clutch, 3, 3, "I", 1)
+assert(powered(clutch, stopped))
+assert(E.toggle(clutch, 2, 3))
+assert(not powered(clutch, stopped), "Powered clutch disconnects its output")
+assert(E.toggle(clutch, 2, 3) and powered(clutch, stopped), "Clutch reconnects when switched off")
+-- Saving a fixed puzzle toggle must not silently reset its redstone state.
+local fixture = E.new(8, true)
+local restored = E.new(8)
+assert(
+  E.restore(restored, E.snapshot(fixture)) and E.evaluate(restored).win,
+  "Fixed clutch redstone state is serialized"
+)
+-- Contradictory loops are jams, not arbitrary winner-takes-all power.
+assert(not E.evaluate(E.new(16, true)).jam, "Three gearbox outputs must coexist")
+print("COGWORKS: shafts, gearbox inversion, cog mesh and ratios, belts, chains, switches passed.")
