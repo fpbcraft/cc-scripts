@@ -677,6 +677,25 @@ function E.challenges(g, result)
       achieved, progress = gears <= goal, tostring(gears) .. "/" .. goal
     elseif typeName == "belt_span" then
       achieved = poweredLink("belt", goal)
+    elseif typeName == "belt_cross" then
+      for _, tile in ipairs(g.tiles) do
+        if tile.kind == "V" and result.lights[tile.id].powered then
+          for _, link in ipairs(E.meshes(g, tile)) do
+            if link.belt and result.lights[link.tile.id].powered then
+              local stepX = link.tile.x == tile.x and 0 or (link.tile.x > tile.x and 1 or -1)
+              local stepY = link.tile.y == tile.y and 0 or (link.tile.y > tile.y and 1 or -1)
+              local x, y = tile.x + stepX, tile.y + stepY
+              while x ~= link.tile.x or y ~= link.tile.y do
+                local shaft = E.get(g, x, y)
+                if shaft and shaft.kind == "I" and result.lights[shaft.id].powered then
+                  achieved = true
+                end
+                x, y = x + stepX, y + stepY
+              end
+            end
+          end
+        end
+      end
     elseif typeName == "chain_link" then
       achieved = poweredLink("chain", 1)
     elseif typeName == "diagonal" then
