@@ -375,9 +375,13 @@ local function makePlan(i, spec)
   }
   local chosen = parseFixtureIndices(spec[4])
   local fixedCount = 0
-  for index in pairs(chosen) do fixedCount = fixedCount + 1 end
+  for index in pairs(chosen) do
+    fixedCount = fixedCount + 1
+  end
   -- Never hand the player a machine that is already fully constructed.
-  if fixedCount >= #source.build then chosen[1] = nil end
+  if fixedCount >= #source.build then
+    chosen[1] = nil
+  end
   for index, piece in ipairs(source.build) do
     local item = relocate(piece)
     if chosen[index] then
