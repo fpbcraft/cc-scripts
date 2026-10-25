@@ -735,7 +735,7 @@ function R:drawLevels(m)
   for i = 1, #E.levels do
     local x = 10 + ((i - 1) % 6) * 30
     local y = 30 + math.floor((i - 1) / 6) * 15
-    local unlocked = m.dev or i <= m.progress.unlocked
+    local unlocked = m.devSession or i <= m.progress.unlocked
     self:button(x, y, 28, 12, string.format("%02d", i), unlocked and "level" or nil, i,
       m.game and i == m.game.number and 6 or 3)
   end
@@ -834,7 +834,7 @@ function R:drawText(m)
         self:add(px, py, 5, 3, "cell", x, y)
       end
     end
-    label(2, 22, "GOALS " .. result.correct .. "/" .. result.goals .. "  CW=+ CCW=-  MV " .. g.moves, colors.lightBlue)
+    label(2, 22, g.sandbox and ("SANDBOX / FREE BUILD  MV " .. g.moves) or ("GOALS " .. result.correct .. "/" .. result.goals .. " CW=+ CCW=- MV " .. g.moves), colors.lightBlue)
     local bonuses = E.challenges(g, result)
     local awards = m.progress.awards[g.number] or {}
     for i, bonus in ipairs(bonuses) do
@@ -855,12 +855,13 @@ function R:drawText(m)
         1 + col * size,
         row,
         size,
-        (m.selected == kind and ">" or " ") .. kind .. " " .. (g.remaining[kind] or 0),
+        (m.selected == kind and ">" or " ") .. kind .. " " .. (g.sandbox and "++" or (g.remaining[kind] or 0)),
         "tool",
         kind
       )
     end
     btn(1, h - 5, 12, "REMOVE", "tool", "erase")
+    btn(15, h - 5, 12, "SWITCH", "tool", "switch")
     btn(1, h - 4, 12, "SAVE", "save")
     btn(15, h - 4, 12, "PAUSE", "pause")
     if result.win then
@@ -871,7 +872,7 @@ function R:drawText(m)
     label(1, h - 2, m.message ~= "" and m.message or g.name, colors.orange)
   elseif m.scene == "briefing" then
     local b = m.briefing
-    label(3, 3, string.format("LEVEL %02d / 30", b.number), colors.orange)
+    label(3, 3, string.format("LEVEL %02d / %02d", b.number, #E.levels), colors.orange)
     label(3, 5, b.name, colors.yellow)
     label(3, 7, b.tip, colors.lightBlue, nil, w - 4)
     label(3, 9, "OBJECTIVES: MATCH SPIN AND RPM", colors.lightBlue)
@@ -899,9 +900,14 @@ function R:drawText(m)
     btn(3, 18, 18, "SKIP", "tutorialSkip")
     btn(23, 18, 18, m.tutorial.index == #m.tutorial.steps and "GOT IT" or "NEXT", "tutorialNext")
   elseif m.scene == "title" then
-    label(3, 4, "KINETIC WORKSHOP  /  30 PUZZLES", colors.lightBlue)
-    local choices =
-      { { "CONTINUE", "continue" }, { "SAVE SLOTS", "slots" }, { "SETTINGS", "settings" }, { "EXIT", "exit" } }
+    label(3, 4, "KINETIC WORKSHOP  /  " .. #E.levels .. " PUZZLES", colors.lightBlue)
+    local choices = {
+      { "CONTINUE", "continue" }, { "SAVE SLOTS", "slots" },
+      { "FREE SANDBOX", "sandbox" }, { "SETTINGS", "settings" }, { "EXIT", "exit" },
+    }
+    if m.dev then
+      table.insert(choices, 4, { "DEV: ALL LEVELS", "devLevels" })
+    end
     local hasSave = false
     for _, slot in ipairs(m.slots) do
       if not slot.empty then
@@ -923,22 +929,26 @@ function R:drawText(m)
       local row = math.floor((i - 1) / 6)
       local x = 2 + col * 7
       local y = 4 + row * 3
-      btn(x, y, 6, string.format("%02d", i), i <= m.progress.unlocked and "level" or nil, i)
+      btn(x, y, 6, string.format("%02d", i), (m.devSession or i <= m.progress.unlocked) and "level" or nil, i)
     end
     btn(3, h - 2, 16, "BACK", "back")
   else
     local choices = {}
     if m.scene == "pause" then
-      choices = {
-        { "RESUME", "resume" },
-        { "SAVE GAME", "save" },
-        { "SELECT LEVEL", "levels" },
-        { "SETTINGS", "settings" },
-        { "HELP", "help" },
-        { "RESTART LEVEL", "restart" },
-        { "NEW CAMPAIGN", "newGame" },
-        { "TITLE MENU", "title" },
-      }
+      if m.game.sandbox then
+        choices = {
+          { "RESUME", "resume" }, { "CLEAR WORKSHOP", "clearSandbox" },
+          { "SETTINGS", "settings" }, { "HELP", "help" }, { "TITLE MENU", "title" },
+        }
+      else
+        choices = {
+          { "RESUME", "resume" }, { "SAVE GAME", "save" },
+          { "SELECT LEVEL", "levels" }, { "SETTINGS", "settings" },
+          { "HELP", "help" }, { "RESTART LEVEL", "restart" },
+          { "NEW CAMPAIGN", m.devSession and nil or "newGame" },
+          { "TITLE MENU", "title" },
+        }
+      end
     elseif m.scene == "settings" then
       choices = {
         { "ANIMATION " .. (m.settings.animations and "ON" or "OFF"), "toggleAnimations" },
@@ -949,10 +959,10 @@ function R:drawText(m)
       label(3, 5, m.pending == "newGame" and "DELETE SLOT PROGRESS?" or "RESTART LEVEL?")
       choices = { { "CANCEL", "cancel" }, { "CONFIRM", "confirm" } }
     else
-      label(2, 4, "S: SOURCE  M: TARGET   I: SHAFT")
-      label(2, 6, "L: ELBOW   T: SPLITTER   G: GEAR")
-      label(2, 8, "B: DOUBLE RPM; Q: GEARBOX")
-      label(2, 9, "Q: BOX   O: LARGE COG  V: BELT  D: CHAIN")
+      label(2, 4, "S: SOURCE  M: TARGET  I: SHAFT")
+      label(2, 6, "G: COG  O: LARGE COG  Q: GEARBOX")
+      label(2, 8, "D: CHAIN  V: BELT  Z: GEARSHIFT")
+      label(2, 9, "C: CLUTCH; SWITCH TO TOGGLE")
       choices = { { "BACK", "back" } }
       if m.scene == "help" and m.game and #T.forLevel(m.game.number) > 0 then
         table.insert(choices, 1, { "REPLAY PONDER", "replayTutorial" })
