@@ -324,54 +324,38 @@ function R:shaft(x, y, cx, cy, tile, spin)
     end
   end
 end
--- The gear has a stationary dark bevel and a rotating brass face. Eight
--- identical teeth alone cannot show direction: a distinctive steel spoke and
--- a light-colored pin travel around the hub on a stepped eight-phase orbit.
--- One turn takes eight frames at 1X, four at 2X, sixteen at 0.5X.
+-- Port of the approved Blueprint Lab HTML prototype's gear sprite.
+-- Large cogs use a 4px radius, small cogs a 3px radius, with visible 2x2
+-- teeth outside the circular-ish brass rim and a steel-centered hub.
+-- The first tooth is a moving white index marker, while the two spokes
+-- rotate continuously at the gear's actual signed speed.
+local function rounded(x)
+  return math.floor(x + 0.5)
+end
 function R:cog(cx, cy, large, spin, maxRadius)
-  local r = math.min(large and 5 or 4, maxRadius or 5)
-  local face = large and 7 or 6
-  -- Chunky but rounded gear body; clear background corners keep it distinct
-  -- from the square gearbox even at small monitor resolutions.
-  self:rect(cx - r + 1, cy - r, 2 * r - 1, 1, 7)
-  self:rect(cx - r + 1, cy + r, 2 * r - 1, 1, 7)
-  self:rect(cx - r, cy - r + 1, 1, 2 * r - 1, 7)
-  self:rect(cx + r, cy - r + 1, 1, 2 * r - 1, 7)
-  self:rect(cx - r + 1, cy - r + 1, 2 * r - 1, 2 * r - 1, face)
-  if r >= 4 then
-    self:rect(cx - r + 2, cy - r + 2, 2 * r - 3, 2 * r - 3, 2)
-    -- A dark inset separates the brass ring from moving metal spokes.
-  end
-  local phase = spin and math.floor(self.frame * math.min(spin.rate, 4)) * spin.sign or 0
+  local radius = math.min(large and 4 or 3, maxRadius or 4)
+  local core = math.max(1, radius - 1)
+  local angle = spin and self.frame * 0.44 * math.min(spin.rate, 4) * spin.sign or 0
+  self:rect(cx - radius + 1, cy - radius + 1, radius * 2 - 1, radius * 2 - 1, 7)
+  self:rect(cx - radius + 2, cy - radius + 2, math.max(1, radius * 2 - 3), math.max(1, radius * 2 - 3), 6)
   for tooth = 0, 7 do
-    -- Shift the repeated teeth by half a step between frames. The asymmetric
-    -- index pin below keeps direction unmistakable.
-    local theta = tooth * math.pi / 4 + (phase % 2) * math.pi / 8
-    local tx = math.floor(cx + math.cos(theta) * (r + 0.4) + 0.5)
-    local ty = math.floor(cy + math.sin(theta) * (r + 0.4) + 0.5)
-    self:rect(tx, ty, 1, 1, 6)
+    local theta = tooth * math.pi / 4 + angle
+    local tx = rounded(cx + math.cos(theta) * (radius + 1))
+    local ty = rounded(cy + math.sin(theta) * (radius + 1))
+    self:rect(tx, ty, 2, 2, tooth == 0 and spin and 15 or 6)
   end
-  local direction = math.pi / 4 * phase
   if spin then
-    -- Draw two different spokes so 180-degree rotation remains visible.
-    local arm = math.max(2, r - 1)
-    local dx1, dy1 = math.cos(direction) * arm, math.sin(direction) * arm
-    self:line(cx, cy, math.floor(cx + dx1 + 0.5), math.floor(cy + dy1 + 0.5), 15)
-    local direction2 = direction + math.pi * 0.75
+    self:line(cx, cy, rounded(cx + math.cos(angle) * core), rounded(cy + math.sin(angle) * core), spin.sign > 0 and 11 or 14)
     self:line(
       cx,
       cy,
-      math.floor(cx + math.cos(direction2) * arm + 0.5),
-      math.floor(cy + math.sin(direction2) * arm + 0.5),
+      rounded(cx + math.cos(angle + math.pi / 2) * core),
+      rounded(cy + math.sin(angle + math.pi / 2) * core),
       13
     )
-    -- An amber index pin is intentionally asymmetrical and visibly moves,
-    -- even when the repeated teeth look unchanged between adjacent frames.
-    local px = math.floor(cx + math.cos(direction) * r + 0.5)
-    local py = math.floor(cy + math.sin(direction) * r + 0.5)
-    self:rect(px, py, 1, 1, spin.sign > 0 and 11 or 14)
   else
-    self:line(cx - r + 2, cy, cx + r - 2, cy, 4)
+    self:line(cx, cy, cx + core, cy, 13)
+    self:line(cx, cy, cx, cy + core, 13)
   end
   self:rect(cx - 1, cy - 1, 3, 3, 13)
   self:rect(cx, cy, 1, 1, 1)
@@ -380,10 +364,11 @@ end
 -- colored square containing the part's name.
 function R:toolIcon(x, y, kind)
   if kind == "G" or kind == "O" then
-    self:rect(x + 1, y + 1, 5, 5, 7)
-    self:rect(x + 2, y + 2, 3, 3, 6)
-    for _, tooth in ipairs({ { 3, 0 }, { 3, 6 }, { 0, 3 }, { 6, 3 } }) do
-      self:rect(x + tooth[1], y + tooth[2], 1, 1, 6)
+    local radius = kind == "O" and 3 or 2
+    self:rect(x + 3 - radius, y + 3 - radius, radius * 2 + 1, radius * 2 + 1, 7)
+    for tooth = 0, 7 do
+      local theta = tooth * math.pi / 4
+      self:rect(rounded(x + 3 + math.cos(theta) * (radius + 1)), rounded(y + 3 + math.sin(theta) * (radius + 1)), 1, 1, 6)
     end
     self:rect(x + 3, y + 3, 1, 1, 1)
   elseif kind == "R" then
