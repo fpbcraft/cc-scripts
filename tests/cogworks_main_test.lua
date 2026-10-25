@@ -131,13 +131,13 @@ textutils = {
 }
 local events = {
   { "monitor_touch", "monitor_1", 6, 13 }, -- title: save slots
-  { "monitor_touch", "monitor_1", 5, 5 }, -- new game slot 1
-  { "monitor_touch", "monitor_1", 6, 18 }, -- start level from its text briefing
-  { "monitor_touch", "monitor_1", 6, 18 }, -- dismiss one-time Ponder tutorial
-  { "monitor_touch", "monitor_1", 10, 10 }, -- vanilla right click places a shaft
-  { "monitor_touch", "monitor_1", 10, 10, 2 }, -- button-aware addon removes
-  { "monitor_left_click", "monitor_1", 9.5 / 70, 9.5 / 40 }, -- optional left-click: build
-  { "monitor_touch", "monitor_1", 10, 10 }, -- now right click removes
+  { "monitor_touch", "monitor_1", 5, 5 }, -- slot one
+  { "monitor_touch", "monitor_1", 6, 18 }, -- briefing
+  { "monitor_touch", "monitor_1", 6, 18 }, -- tutorial
+  { "monitor_touch", "monitor_1", 10, 10 }, -- tap empty cell to place
+  { "monitor_touch", "monitor_1", 10, 10 }, -- tap occupied cell to inspect
+  { "char", "x" }, -- select the delete tool on a text monitor
+  { "monitor_touch", "monitor_1", 10, 10 }, -- remove occupied cell
   { "char", "q" }, -- pause
   { "monitor_touch", "monitor_1", 6, 24 }, -- title menu
   { "char", "q" }, -- exit
@@ -172,7 +172,7 @@ for _, progress in ipairs(history) do
     removed = true
   end
 end
-assert(placed and removed, "Regular touch places and explicit button 2 removes")
-assert(#history >= 5, "Additional normalized left click and right-remove are persisted")
+assert(placed and removed, "Tap selection and erase tool must work on a vanilla monitor")
+assert(#history >= 4, "Monitor placement/removal progress was persisted")
 assert(files["/games/cogworks/settings.dat"], "Settings should persist")
-print("COGWORKS: title, save, pause, exit, 0.5 scale and touch controls passed.")
+print("COGWORKS: monitor choice, tap selection, delete, save, exit and 0.5 text scale passed.")
