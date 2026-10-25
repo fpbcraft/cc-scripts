@@ -152,6 +152,24 @@ Keyboard: `1`–`9` choose parts, `0` selects redstone block,
 `X` selects REMOVE, `S` saves, `P`/`Q` pauses and
 `N`/`B` navigates; Escape opens/closes Pause.
 
+### Attached-monitor input diagnostics
+
+If a monitor displays the game but taps do not activate controls, launch with
+`--input-debug` (and optionally the monitor side):
+
+```lua
+/games/cogworks/main.lua --input-debug top
+```
+
+Try a couple of buttons, then quit with `Q`. Inspect
+`/games/cogworks/input-debug.log` on the computer. The file records raw
+touch/mouse events and their resolved button/cell targets, distinguishing
+missing input events from incorrect coordinate mapping.
+
+A monitor resize triggers an entire-surface background clear before the next
+batched redraw. This removes stale title text and light strips caused by the
+old graphics viewport moving or changing size.
+
 ## Regression tests
 
 ```sh
