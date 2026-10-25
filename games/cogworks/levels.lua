@@ -669,61 +669,188 @@ override(
 
 -- Warehouse puzzles replace the most repetitive reflected references with
 -- actual constrained routes, shared fixed parts and multi-press arrangements.
-override(9, level("BLOCKED PASSAGE", "THE DIRECT ROUTE IS A WALL; TURN THROUGH THE OPEN CORRIDOR.", 6, 6,
-  p("S", 1, 3, 1), { p("M", 5, 4, 3, 1, 1) },
-  { p("I", 2, 3, 1), p("Q", 3, 3, 0), p("Q", 3, 4, 0), p("I", 4, 4, 1) },
-  {}, { { 4, 3 }, { 4, 2 } }, { "budget", "clear_zone" }))
-override(10, level("THE WRONG CORNER", "THE INSTALLED FOUR-WAY BOX HAS A USEFUL UPPER EXIT.", 6, 6,
-  p("S", 1, 3, 1), { p("M", 4, 2, 3, 1, 1) },
-  { p("I", 2, 3, 1), p("Q", 3, 2, 0) },
-  { p("Q", 3, 3, 0) }, { { 4, 3 } }, { "fixed_power", "clean" }))
-override(11, level("A TIGHT SQUEEZE", "USE BOTH THE SHAFT AND THE TEETH OF A SINGLE PINION.", 5, 6,
-  p("S", 1, 3, 1), { p("M", 3, 3, 3, 1, 1), p("M", 4, 4, 3, 1, -1) },
-  { p("G", 2, 3, 1), p("I", 3, 4, 1) },
-  { p("G", 2, 4, 1) }, { { 4, 3 } }, { "gear_limit", "dual_rotation" }))
-override(12, level("THE UNMOVABLE GEAR", "THE FIXED GEAR MUST DO TWO DIFFERENT JOBS.", 6, 6,
-  p("S", 1, 3, 1), { p("M", 4, 3, 3, 1, 1), p("M", 5, 4, 3, 1, -1) },
-  { p("I", 2, 3, 1), p("G", 3, 4, 1), p("I", 4, 4, 1) },
-  { p("G", 3, 3, 1) }, { { 5, 3 } }, { "fixed_power", "no_gearbox" }))
-override(14, level("THE DETOUR", "AN INDIRECT GEAR PATH FITS THE LIMITED STOCK.", 7, 7,
-  p("S", 1, 3, 1), { p("M", 4, 6, 0, 1, 1) },
-  { p("I", 2, 3, 1), p("I", 3, 4, 0), p("G", 3, 5, 0), p("G", 4, 5, 0) },
-  { p("Q", 3, 3, 0) }, { { 4, 3 }, { 5, 3 } }, { "budget", "dual_rotation" }))
-override(15, level("BLOCKED PASSAGE?", "THE WALL HAS MOVED, BUT THE FIXED TOOTHED RIM IS THE OPENING.", 6, 6,
-  p("S", 1, 3, 1), { p("M", 4, 4, 3, 1, -1) },
-  { p("I", 2, 3, 1), p("G", 3, 4, 1) },
-  { p("G", 3, 3, 1) }, { { 4, 3 }, { 2, 4 } }, { "fixed_power", "no_gearbox" }))
-override(16, level("WAREHOUSE RENOVATION", "THREE PRESSES AND TWO INSTALLED BOXES, WITHOUT MOVING ANY FIXTURE.", 7, 7,
-  p("S", 1, 3, 1), { p("M", 3, 2, 2, 1, -1), p("M", 4, 3, 3, 1, -1),
-    p("M", 5, 4, 3, 1, 1) },
-  { p("I", 2, 3, 1), p("I", 4, 4, 1) },
-  { p("Q", 3, 3, 0), p("Q", 3, 4, 0) }, { { 6, 4 } },
-  { "fixed_power", "budget" }))
+override(
+  9,
+  level(
+    "BLOCKED PASSAGE",
+    "THE DIRECT ROUTE IS A WALL; TURN THROUGH THE OPEN CORRIDOR.",
+    6,
+    6,
+    p("S", 1, 3, 1),
+    { p("M", 5, 4, 3, 1, 1) },
+    { p("I", 2, 3, 1), p("Q", 3, 3, 0), p("Q", 3, 4, 0), p("I", 4, 4, 1) },
+    {},
+    { { 4, 3 }, { 4, 2 } },
+    { "budget", "clear_zone" }
+  )
+)
+override(
+  10,
+  level(
+    "THE WRONG CORNER",
+    "THE INSTALLED FOUR-WAY BOX HAS A USEFUL UPPER EXIT.",
+    6,
+    6,
+    p("S", 1, 3, 1),
+    { p("M", 4, 2, 3, 1, 1) },
+    { p("I", 2, 3, 1), p("Q", 3, 2, 0) },
+    { p("Q", 3, 3, 0) },
+    { { 4, 3 } },
+    { "fixed_power", "clean" }
+  )
+)
+override(
+  11,
+  level(
+    "A TIGHT SQUEEZE",
+    "USE BOTH THE SHAFT AND THE TEETH OF A SINGLE PINION.",
+    5,
+    6,
+    p("S", 1, 3, 1),
+    { p("M", 3, 3, 3, 1, 1), p("M", 4, 4, 3, 1, -1) },
+    { p("G", 2, 3, 1), p("I", 3, 4, 1) },
+    { p("G", 2, 4, 1) },
+    { { 4, 3 } },
+    { "gear_limit", "dual_rotation" }
+  )
+)
+override(
+  12,
+  level(
+    "THE UNMOVABLE GEAR",
+    "THE FIXED GEAR MUST DO TWO DIFFERENT JOBS.",
+    6,
+    6,
+    p("S", 1, 3, 1),
+    { p("M", 4, 3, 3, 1, 1), p("M", 5, 4, 3, 1, -1) },
+    { p("I", 2, 3, 1), p("G", 3, 4, 1), p("I", 4, 4, 1) },
+    { p("G", 3, 3, 1) },
+    { { 5, 3 } },
+    { "fixed_power", "no_gearbox" }
+  )
+)
+override(
+  14,
+  level(
+    "THE DETOUR",
+    "AN INDIRECT GEAR PATH FITS THE LIMITED STOCK.",
+    7,
+    7,
+    p("S", 1, 3, 1),
+    { p("M", 4, 6, 0, 1, 1) },
+    { p("I", 2, 3, 1), p("I", 3, 4, 0), p("G", 3, 5, 0), p("G", 4, 5, 0) },
+    { p("Q", 3, 3, 0) },
+    { { 4, 3 }, { 5, 3 } },
+    { "budget", "dual_rotation" }
+  )
+)
+override(
+  15,
+  level(
+    "BLOCKED PASSAGE?",
+    "THE WALL HAS MOVED, BUT THE FIXED TOOTHED RIM IS THE OPENING.",
+    6,
+    6,
+    p("S", 1, 3, 1),
+    { p("M", 4, 4, 3, 1, -1) },
+    { p("I", 2, 3, 1), p("G", 3, 4, 1) },
+    { p("G", 3, 3, 1) },
+    { { 4, 3 }, { 2, 4 } },
+    { "fixed_power", "no_gearbox" }
+  )
+)
+override(
+  16,
+  level(
+    "WAREHOUSE RENOVATION",
+    "THREE PRESSES AND TWO INSTALLED BOXES, WITHOUT MOVING ANY FIXTURE.",
+    7,
+    7,
+    p("S", 1, 3, 1),
+    { p("M", 3, 2, 2, 1, -1), p("M", 4, 3, 3, 1, -1), p("M", 5, 4, 3, 1, 1) },
+    { p("I", 2, 3, 1), p("I", 4, 4, 1) },
+    { p("Q", 3, 3, 0), p("Q", 3, 4, 0) },
+    { { 6, 4 } },
+    { "fixed_power", "budget" }
+  )
+)
 -- The distribution plant is about independent output branches rather than
 -- simply adding more length to the generator's shaft.
-override(33, level("BRANCH OFFICE", "REUSE A COMMON TRUNK TO POWER TWO DISTANT PRESS LINES.", 7, 7,
-  p("S", 1, 3, 1), { p("M", 5, 3, 3, 1, -1), p("M", 3, 5, 0, 1, -1) },
-  { p("I", 2, 3, 1), p("I", 4, 3, 1), p("I", 3, 4, 0) },
-  { p("Q", 3, 3, 0) }, { { 4, 4 } }, { "fixed_power", "budget" }))
-override(34, level("THREE DIFFERENT DIRECTIONS", "ONE INSTALLED JUNCTION GENERATES MULTIPLE SPINS.", 7, 7,
-  p("S", 1, 4, 1), { p("M", 4, 4, 3, 1, -1), p("M", 4, 2, 2, 1, 1),
-    p("M", 3, 5, 0, 1, -1) },
-  { p("I", 2, 4, 1), p("G", 3, 3, 0), p("G", 4, 3, 0) },
-  { p("Q", 3, 4, 0) }, { { 5, 4 } }, { "dual_rotation", "gear_limit" }))
-override(37, level("MIXED SPEED FACTORY", "MAKE HALF, NORMAL AND DOUBLE SPEED WITHOUT REJOINING THEM.", 8, 8,
-  p("S", 1, 4, 1), { p("M", 4, 1, 2, 0.5, 1), p("M", 4, 4, 3, 1, -1),
-    p("M", 4, 7, 0, 2, 1) },
-  { p("I", 2, 4, 1), p("G", 3, 3, 0), p("O", 3, 5, 0), p("G", 4, 6, 0) },
-  { p("Q", 3, 4, 0), p("O", 4, 2, 0) }, { { 5, 4 } }, { "diagonal", "dual_rotation" }))
-override(40, level("DISTRIBUTION DIRECTOR", "AN EXTREMELY COMPACT FOUR-PRESS DISTRIBUTION NETWORK.", 9, 9,
-  p("S", 1, 4, 1), { p("M", 3, 2, 2, 1, 1), p("M", 4, 3, 3, 1, 1),
-    p("M", 4, 4, 3, 1, -1), p("M", 3, 5, 0, 1, -1) },
-  { p("I", 2, 4, 1), p("Q", 3, 3, 0) },
-  { p("Q", 3, 4, 0) }, { { 5, 3 }, { 5, 5 } }, { "fixed_power", "dual_rotation" }))
-override(49, level("ONE MISSING GEAR", "THE OLD MACHINE IS NEARLY COMPLETE; FIND THE MISSING TOOTHED LINK.", 7, 7,
-  p("S", 1, 3, 1), { p("M", 3, 3, 3, 1, 1), p("M", 4, 4, 3, 1, -1) },
-  { p("G", 2, 4, 1) },
-  { p("G", 2, 3, 1), p("I", 3, 4, 1) }, { { 4, 3 } }, { "fixed_power", "gear_limit" }))
+override(
+  33,
+  level(
+    "BRANCH OFFICE",
+    "REUSE A COMMON TRUNK TO POWER TWO DISTANT PRESS LINES.",
+    7,
+    7,
+    p("S", 1, 3, 1),
+    { p("M", 5, 3, 3, 1, -1), p("M", 3, 5, 0, 1, -1) },
+    { p("I", 2, 3, 1), p("I", 4, 3, 1), p("I", 3, 4, 0) },
+    { p("Q", 3, 3, 0) },
+    { { 4, 4 } },
+    { "fixed_power", "budget" }
+  )
+)
+override(
+  34,
+  level(
+    "THREE DIFFERENT DIRECTIONS",
+    "ONE INSTALLED JUNCTION GENERATES MULTIPLE SPINS.",
+    7,
+    7,
+    p("S", 1, 4, 1),
+    { p("M", 4, 4, 3, 1, -1), p("M", 4, 2, 2, 1, 1), p("M", 3, 5, 0, 1, -1) },
+    { p("I", 2, 4, 1), p("G", 3, 3, 0), p("G", 4, 3, 0) },
+    { p("Q", 3, 4, 0) },
+    { { 5, 4 } },
+    { "dual_rotation", "gear_limit" }
+  )
+)
+override(
+  37,
+  level(
+    "MIXED SPEED FACTORY",
+    "MAKE HALF, NORMAL AND DOUBLE SPEED WITHOUT REJOINING THEM.",
+    8,
+    8,
+    p("S", 1, 4, 1),
+    { p("M", 4, 1, 2, 0.5, 1), p("M", 4, 4, 3, 1, -1), p("M", 4, 7, 0, 2, 1) },
+    { p("I", 2, 4, 1), p("G", 3, 3, 0), p("O", 3, 5, 0), p("G", 4, 6, 0) },
+    { p("Q", 3, 4, 0), p("O", 4, 2, 0) },
+    { { 5, 4 } },
+    { "diagonal", "dual_rotation" }
+  )
+)
+override(
+  40,
+  level(
+    "DISTRIBUTION DIRECTOR",
+    "AN EXTREMELY COMPACT FOUR-PRESS DISTRIBUTION NETWORK.",
+    9,
+    9,
+    p("S", 1, 4, 1),
+    { p("M", 3, 2, 2, 1, 1), p("M", 4, 3, 3, 1, 1), p("M", 4, 4, 3, 1, -1), p("M", 3, 5, 0, 1, -1) },
+    { p("I", 2, 4, 1), p("Q", 3, 3, 0) },
+    { p("Q", 3, 4, 0) },
+    { { 5, 3 }, { 5, 5 } },
+    { "fixed_power", "dual_rotation" }
+  )
+)
+override(
+  49,
+  level(
+    "ONE MISSING GEAR",
+    "THE OLD MACHINE IS NEARLY COMPLETE; FIND THE MISSING TOOTHED LINK.",
+    7,
+    7,
+    p("S", 1, 3, 1),
+    { p("M", 3, 3, 3, 1, 1), p("M", 4, 4, 3, 1, -1) },
+    { p("G", 2, 4, 1) },
+    { p("G", 2, 3, 1), p("I", 3, 4, 1) },
+    { { 4, 3 } },
+    { "fixed_power", "gear_limit" }
+  )
+)
 
 -- Two named, parameterized bonus challenges belong to each individual
 -- stage. Only two can award points, even if the engine knows many predicates.
