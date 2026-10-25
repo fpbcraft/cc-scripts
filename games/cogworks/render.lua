@@ -1209,7 +1209,7 @@ function R:drawChapter(m)
     local stage = E.levels[i]
     local col, row = (step - 1) % 2, math.floor((step - 1) / 2)
     local x, y = 7 + col * 95, 23 + row * 21
-    local cleared = m.progress.best[i] ~= nil
+    local cleared = (m.progress.best or {})[i] ~= nil
     local awarded = m.progress.awards[i] or {}
     local active = Campaign.levelUnlocked(m.progress, i, m.devSession)
     self:rect(x, y, 90, 19, active and (cleared and 9 or 12) or 3)
@@ -1534,7 +1534,7 @@ function R:drawText(m)
     label(2, 3, "CHAPTER " .. m.levelChapter .. " " .. chapter.name, colors.lightBlue)
     for step = 1, 8 do
       local i = chapter.first + step - 1
-      local clear = m.progress.best[i] ~= nil
+      local clear = (m.progress.best or {})[i] ~= nil
       local count = 0
       for _, yes in pairs(m.progress.awards[i] or {}) do
         if yes then
