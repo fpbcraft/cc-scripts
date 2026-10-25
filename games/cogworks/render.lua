@@ -84,7 +84,7 @@ local function fillText(m, x, y, w, fg, bg, text)
   m.write((tostring(text) .. (" "):rep(w)):sub(1, w))
 end
 function R.new(m)
-  local self = setmetatable({ m = m, mode = "text", frame = 0, original = {}, boardX = 5, boardY = 17, cell = 15 }, R)
+  local self = setmetatable({ m = m, mode = "text", frame = 0, original = {}, buffer = {}, boardX = 5, boardY = 17, cell = 15 }, R)
   self:enable()
   return self
 end
@@ -331,6 +331,13 @@ function R:toolIcon(x, y, kind)
       self:rect(x + tooth[1], y + tooth[2], 1, 1, 6)
     end
     self:rect(x + 3, y + 3, 1, 1, 1)
+  elseif kind == "R" then
+    self:rect(x + 3, y, 1, 7, 8)
+    self:rect(x, y + 3, 7, 1, 8)
+  elseif kind == "B" then
+    self:rect(x, y, 7, 7, 7)
+    self:rect(x + 1, y + 1, 5, 5, 8)
+    self:rect(x + 2, y + 2, 3, 3, 14)
   elseif kind == "I" then
     self:rect(x + 2, y, 3, 7, 4)
     self:rect(x + 3, y, 1, 7, 13)
@@ -514,7 +521,7 @@ function R:piece(x, y, size, tile, light)
 end
 -- Draw belts/chains across every intervening cell, including stone. Draw over
 -- the board but stop at endpoint edges so the pulley sprites stay readable.
-function R:drawSpan(x1, y1, x2, y2, kind, powered)
+function R:drawSpan(x1, y1, x2, y2, kind, powered, motion)
   local dx = x2 > x1 and 1 or (x2 < x1 and -1 or 0)
   local dy = y2 > y1 and 1 or (y2 < y1 and -1 or 0)
   local length = math.max(math.abs(x2 - x1), math.abs(y2 - y1))
@@ -529,9 +536,17 @@ function R:drawSpan(x1, y1, x2, y2, kind, powered)
     local y = y1 + dy * n
     self:line(x - dy * 2, y + dx * 2, x + dy * 2, y - dx * 2, kind == "D" and (n % 8 == 0 and 15 or 4) or 13)
   end
-  if powered then
-    for n = self.frame % 4, length, 8 do
-      self:rect(x1 + dx * n, y1 + dy * n, 2, 2, 15)
+  if powered and motion then
+    local speed = math.min(motion.rate, 8)
+    local phase = math.floor(self.frame * speed * motion.sign)
+    for n = 0, length do
+      -- Opposing strands move in opposite directions and reverse with spin.
+      if (n + phase) % 5 == 0 then
+        self:rect(x1 + dx * n - dy * 2, y1 + dy * n + dx * 2, 1, 1, 11)
+      end
+      if (n - phase) % 5 == 0 then
+        self:rect(x1 + dx * n + dy * 2, y1 + dy * n - dx * 2, 1, 1, 14)
+      end
     end
   end
 end
@@ -541,15 +556,21 @@ function R:drawSpans(g, result)
       for _, link in ipairs(E.meshes(g, tile)) do
         local other = link.tile
         if other.id > tile.id then
-          local x1 = self.boardX + (tile.x - 1) * self.cell + 7
-          local y1 = self.boardY + (tile.y - 1) * self.cell + 7
-          local x2 = self.boardX + (other.x - 1) * self.cell + 7
-          local y2 = self.boardY + (other.y - 1) * self.cell + 7
+          local center = math.floor(self.cell / 2)
+          local x1 = self.boardX + (tile.x - 1) * self.cell + center
+          local y1 = self.boardY + (tile.y - 1) * self.cell + center
+          local x2 = self.boardX + (other.x - 1) * self.cell + center
+          local y2 = self.boardY + (other.y - 1) * self.cell + center
           local powered = result.lights[tile.id].powered and result.lights[other.id].powered
+          local light = result.lights[tile.id]
+          local motion = light.ports[tile.r] or light.ports[next(light.ports)]
           if link.belt then
             local dx = x2 > x1 and 1 or (x2 < x1 and -1 or 0)
             local dy = y2 > y1 and 1 or (y2 < y1 and -1 or 0)
-            self:drawSpan(x1 + dx * 6, y1 + dy * 6, x2 - dx * 6, y2 - dy * 6, "V", powered)
+            local inset = math.min(5, math.floor(self.cell / 3))
+            self:drawSpan(
+              x1 + dx * inset, y1 + dy * inset, x2 - dx * inset, y2 - dy * inset, "V", powered, motion
+            )
           else
             local mx = math.floor((x1 + x2) / 2)
             local my = math.floor((y1 + y2) / 2)
@@ -629,25 +650,35 @@ function R:drawGame(m)
   self:button(188, 2, 11, 11, "?", "help")
   self:rect(3, 16, 109, 94, 1)
   self:rect(4, 17, 107, 92, 3)
+  self.cell = math.min(math.floor(105 / g.width), math.floor(90 / g.height))
+  self.boardX = 5 + math.floor((105 - g.width * self.cell) / 2)
+  self.boardY = 17 + math.floor((90 - g.height * self.cell) / 2)
+  self:drawSpans(g, result)
   local directions = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } }
-  for y = 1, E.HEIGHT do
-    for x = 1, E.WIDTH do
+  for y = 1, g.height do
+    for x = 1, g.width do
       local px = self.boardX + (x - 1) * self.cell
       local py = self.boardY + (y - 1) * self.cell
-      self:rect(px, py, 14, 14, 2)
-      self:rect(px + 6, py + 6, 1, 1, 3)
+      local size = self.cell - 1
+      self:rect(px, py, size, size, 2)
+      self:rect(px + math.floor(size / 2), py + math.floor(size / 2), 1, 1, 3)
       local tile = E.get(g, x, y)
       if tile then
-        self:piece(px + 1, py + 1, 13, tile, result.lights[tile.id])
+        if tile.kind == "R" or tile.kind == "B" then
+          self:redstonePiece(g, tile, result, px, py, size)
+        else
+          self:piece(px + 1, py + 1, size - 2, tile, result.lights[tile.id])
+        end
         if m.settings.showPorts and tile.kind ~= "X" then
           for d = 0, 3 do
             if E.hasPort(tile, d) and not E.connection(g, tile, d) and tile.kind ~= "Q" then
-              self:rect(px + 6 + directions[d + 1][1] * 6, py + 6 + directions[d + 1][2] * 6, 2, 2, 8)
+              local radius = math.max(2, math.floor(size / 2) - 1)
+              self:rect(px + radius + directions[d + 1][1] * radius, py + radius + directions[d + 1][2] * radius, 1, 1, 8)
             end
           end
         end
       end
-      self:add(px, py, 14, 14, "cell", x, y)
+      self:add(px, py, size, size, "cell", x, y)
     end
   end
   self:rect(114, 16, 83, 93, 1)
@@ -674,8 +705,10 @@ function R:drawGame(m)
       Q = "BOX",
       D = "CHN",
       V = "BELT",
-      Z = "SHFT",
+      Z = "REV",
       C = "CLCH",
+      R = "DUST",
+      B = "BLOK",
     })[kind]
     self:fontFit(x + 17, y + 2, alias, count > 0 and 15 or 4, 14)
     self:font(x + 31, y + 2, countText, count > 0 and 9 or 4)
@@ -691,16 +724,8 @@ function R:drawGame(m)
     "erase",
     m.selected == "erase" and 8 or 3
   )
-  self:button(
-    157,
-    77,
-    38,
-    9,
-    m.selected == "switch" and "ON/OFF" or "SWITCH",
-    "tool",
-    "switch",
-    m.selected == "switch" and 6 or 3
-  )
+  self:button(157, 77, 38, 9, g.sandbox and ("SIZE " .. g.width) or "ROTATE",
+    g.sandbox and "sandboxSize" or nil, g.sandbox and (5 + g.width % 6) or nil)
   -- Persistent bonus objectives are visible while building, not buried in
   -- a modal screen. Labels are deliberately short enough for this pane.
   self:font(117, 87, g.sandbox and "UNLIMITED PARTS" or "BONUS GOALS", 6)
@@ -717,7 +742,28 @@ function R:drawGame(m)
   if #bonuses == 0 and not g.sandbox then
     self:font(124, 94, "FROM LEVEL 2", 4)
   end
-  self:drawSpans(g, result)
+  if m.inspected then
+    local selectedTile = E.get(g, m.inspected.x, m.inspected.y)
+    if selectedTile then
+      local px = self.boardX + (selectedTile.x - 1) * self.cell
+      local py = self.boardY + (selectedTile.y - 1) * self.cell
+      local control = self.cell >= 12 and 5 or 3
+      self:rect(px, py, self.cell - 1, 1, 11)
+      self:rect(px, py, 1, self.cell - 1, 11)
+      if not selectedTile.fixed and selectedTile.kind ~= "R" and selectedTile.kind ~= "B" then
+        self:rect(px + 1, py + 1, control, control, 12)
+        self:rect(px + 2, py + 1, 1, 2, 15)
+        self:add(px + 1, py + 1, control, control, "rotate", selectedTile.x, selectedTile.y)
+      end
+      if not selectedTile.fixed then
+        local rx = px + self.cell - control - 1
+        self:rect(rx, py + 1, control, control, 8)
+        self:rect(rx + 1, py + 1, 1, 1, 15)
+        self:rect(rx + control - 2, py + control - 1, 1, 1, 15)
+        self:add(rx, py + 1, control, control, "remove", selectedTile.x, selectedTile.y)
+      end
+    end
+  end
   self:rect(0, 109, 200, 11, 1)
   self:rect(0, 109, 200, 1, 6)
   local selected = E.parts[m.selected]
@@ -732,7 +778,12 @@ function R:drawGame(m)
   self:font(43, 110, "1X", 15)
   self:font(56, 110, "2X", 11)
   self:font(69, 110, "0.5", 14)
-  self:fontFit(89, 110, info, 5, 109)
+  local inspected = m.inspected and E.get(g, m.inspected.x, m.inspected.y)
+  local light = inspected and result.lights[inspected.id]
+  local motion = light and (light.ports[inspected.r] or light.ports[next(light.ports)])
+  local statusText = motion and (inspected.kind .. " " .. (motion.sign > 0 and "CW " or "CCW ")
+    .. (speedLabel(motion.rate) or "?")) or info
+  self:fontFit(89, 110, statusText, 5, 109)
   local status = m.message
   if status == "" then
     if result.win then
