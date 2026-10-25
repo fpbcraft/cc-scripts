@@ -257,7 +257,7 @@ local function unit(id, name, tech, production, move, attack, defense, range, ex
   C.units[id] = u
 end
 unit("warrior", "Stone Guard", nil, 13, 2, 2, 2, 1, { ability = "Inexpensive early defense" })
-unit("settler", "Settler", nil, 12, 2, 0, 1, 0, { productionStep = 5, vision = 1, ability = "Found a village" })
+unit("settler", "Settler", nil, 12, 3, 0, 1, 0, { productionStep = 5, vision = 1, ability = "Found a village" })
 unit("scout", "Scout", nil, 5, 4, 1, 1, 1, { vision = 4, ability = "Forest exploration; auto explore" })
 unit("archer", "Bow Archer", "archery", 25, 2, 3, 1, 2, { ability = "Ranged fire without retaliation" })
 unit("spearman", "Shield Guard", "bronze", 23, 2, 3, 4, 1, { ability = "+2 strength against mounted units" })

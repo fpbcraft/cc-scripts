@@ -88,7 +88,7 @@ local function statsFor(unit, Systems)
     or ({
       scout = { move = 2, vision = 3, strength = 1 },
       warrior = { move = 1, strength = 2 },
-      settler = { move = 1, strength = 0 },
+      settler = { move = 3, strength = 0 },
       horseman = { move = 2, strength = 4 },
       spearman = { move = 1, strength = 3 },
     })[unit.kind]
@@ -119,6 +119,9 @@ function H.moveCost(x, y, state, unit, Systems, fromX, fromY)
       return 0.25
     end
   end
+  if unit.kind == "settler" then
+    return 1
+  end
   if t == "forest" and stats.forest then
     return 1
   end
@@ -133,7 +136,7 @@ function H.moveCost(x, y, state, unit, Systems, fromX, fromY)
     end
   end
   if t == "forest" or t == "hills" then
-    return unit.kind == "horseman" and 3 or 2
+    return 2
   end
   return 1
 end
@@ -173,6 +176,17 @@ function H.reachable(state, unit, owner, Systems)
   local fringe = { { x = unit.x, y = unit.y, cost = 0 } }
   local attacks = {}
   local previous = {}
+  local function visible(x, y)
+    if stats.hostile or unit.villageGuard then
+      return true
+    end
+    for _, p in ipairs(state.players or {}) do
+      if p.id == owner then
+        return (p.visible or {})[x .. ":" .. y] == true
+      end
+    end
+    return state.players == nil
+  end
   local function route(x, y, last)
     local points = { { x = x, y = y } }
     local index = y * w + x
@@ -214,7 +228,8 @@ function H.reachable(state, unit, owner, Systems)
         if total and total <= budget then
           if enemy then
             if
-              (stats.strength or 0) > 0
+              visible(nx, ny)
+              and (stats.strength or 0) > 0
               and (not unit.attackedRound or unit.attackedRound ~= state.round)
               and (stats.range or 1) >= 1
               and (stats.naval or (not state.world or H.terrain(unit.x, unit.y, state) ~= "water" and H.terrain(

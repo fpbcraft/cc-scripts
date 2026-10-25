@@ -31,7 +31,7 @@ local mechanics = {
   {
     id = "production",
     name = "CITY PRODUCTION",
-    text = "Open an owned city, choose PROD, then UNITS or BUILDS. Select an unlocked project. Industry is added each round; stored industry is not spent to buy it instantly. Switching retains project progress. Scouts cost five industry. Settlers start at twelve industry and cost five more for each settler the empire has finished training. Queueing or switching does not increase that count; settling or losing a settler does not reduce it. A finished unit waits if no valid spawn hex is free.",
+    text = "Open an owned city, choose PROD, then UNITS or BUILDS. Select an unlocked project. Industry is added each round; stored industry is not spent to buy it instantly. Switching retains project progress. NO PRODUCTION pauses work and reminders until you select a new project. Scouts cost five industry. Settlers start at twelve industry and cost five more for each settler the empire has finished training. Queueing or switching does not increase that count; settling or losing a settler does not reduce it. A finished unit waits if no valid spawn hex is free.",
   },
   {
     id = "research",
@@ -41,7 +41,7 @@ local mechanics = {
   {
     id = "movement",
     name = "MOVEMENT",
-    text = "Select an owned unit, then press MOVE / ATTACK in the inspector to show legal destinations. Cyan dotted borders and numbered badges show reachable movement costs; outlined red crosses mark attacks. Choose a destination to preview its route, then click it again or press the confirm icon. Gold pips identify awake units that can still move. Clicking the unit again deselects it. Cancel leaves your orders unchanged. Plains cost one movement point; forests and hills cost two, or three for horsemen. Scouts and rangers cross forests for one. Mountains block land units.",
+    text = "Select an owned unit, then press MOVE / ATTACK in the inspector to show legal destinations. Cyan dotted borders and numbered badges show reachable movement costs; outlined red crosses mark attacks. Choose a destination to preview its route, then click it again or press the confirm icon. Gold pips identify awake units that can still move. Clicking the unit again deselects it. Cancel leaves your orders unchanged. Plains cost one movement point; forests and hills cost two. Settlers have three movement points and pay one on ordinary land, but need movement remaining to found a city. Valid orders wake sleeping units. Scouts and rangers cross forests for one. Mountains block land units.",
   },
   {
     id = "combat",
@@ -102,7 +102,7 @@ mechanics[#mechanics + 1] = {
 mechanics[#mechanics + 1] = {
   id = "health",
   name = "HEALTH LEVELS AND HEALING",
-  text = "Units have 100 HP. Combat grants XP: attacks give three, defending gives two, defeating a unit adds five, and city attacks give four. Each ten total XP per level increases level and adds two strength. Injuries reduce effective strength. FORTIFY / HEAL skips orders and restores 20 HP in friendly territory, 10 in neutral land or 5 in hostile land per round. Unmoved units also recover. Wake the unit to resume orders.",
+  text = "Units have 100 HP. Combat grants XP: attacks give three, defending gives two, defeating a unit adds five, and city attacks give four. Each ten total XP per level increases level and adds two strength. Injuries reduce effective strength. FORTIFY / HEAL skips orders and restores 20 HP per round only in owned territory. Units that did not act also recover only on owned land. Adjacent support crews can heal outside owned territory. A valid movement or attack order wakes a sleeping unit.",
 }
 mechanics[#mechanics + 1] = {
   id = "citycombat",

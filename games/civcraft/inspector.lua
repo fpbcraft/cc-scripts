@@ -176,6 +176,17 @@ function I.draw(ui, state, player, rect, modal)
           },
         },
       }
+      rows[#rows + 1] = {
+        buttons = {
+          {
+            label = "NO PRODUCTION",
+            style = { selected = city.productionIdle == true },
+            run = function()
+              ui:command("queue", { cityX = city.x, cityY = city.y, kind = "none" })
+            end,
+          },
+        },
+      }
       local kind = ui.productionCategory or "unit"
       local source = kind == "wonder" and Systems.wonders or kind == "building" and Systems.buildings or Systems.units
       local list = {}
@@ -287,10 +298,6 @@ function I.draw(ui, state, player, rect, modal)
           run = function()
             ui.placement = nil
             ui.cityStrikeSource = nil
-            if unit.standby then
-              ui:feedback("Wake this unit before issuing orders.")
-              return
-            end
             if ui.mapViewport and ui.mapViewport.tile < 16 then
               ui:zoom((16 - ui.mapViewport.tile) / 4)
             end

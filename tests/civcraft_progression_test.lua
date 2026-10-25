@@ -9,7 +9,7 @@ local C = dofile("games/civcraft/combat.lua")
 local V = dofile("games/civcraft/victory.lua")
 local M = dofile("games/civcraft/hostiles.lua")
 local Villages = dofile("games/civcraft/villages.lua")
-local function simulate(secondID, expected)
+local function simulate(firstID, secondID, expected)
   local world = W.generate(75123, "standard", 2, "pangaea")
   local state = {
     ruleset = "create",
@@ -20,14 +20,8 @@ local function simulate(secondID, expected)
     nextId = 10,
     world = world,
     players = {
-      { id = 1, name = "A", civ = "scholar", techs = {}, ai = true },
-      {
-        id = secondID,
-        name = "B",
-        civ = "iron",
-        techs = {},
-        ai = true,
-      },
+      { id = firstID, name = "A", civ = "scholar", techs = {}, ai = true },
+      { id = secondID, name = "B", civ = "iron", techs = {}, ai = true },
     },
     cities = {},
     units = {},
@@ -73,5 +67,7 @@ local function simulate(secondID, expected)
   end
   print("CIVCRAFT seeded AI campaign: " .. expected .. " in round " .. state.round)
 end
-simulate(2, "END EXPEDITION")
-simulate(3, "INDUSTRIAL")
+-- Each scenario gives both empires the existing goal preference for that victory.
+-- Faster legal expansion can let an industrial rival win the mixed-goal race.
+simulate(2, 4, "END EXPEDITION")
+simulate(1, 3, "INDUSTRIAL")

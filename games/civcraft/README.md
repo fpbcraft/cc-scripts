@@ -1,5 +1,7 @@
 # CIVCRAFT v0.8.0 — Territorial Hex Civilization
 
+Implementation of the next gameplay iteration is tracked in [IMPLEMENTATION-v0.9.md](IMPLEMENTATION-v0.9.md), based on [design draft v0.9.1](ROADMAP-v0.9.md).
+
 A Civilization-inspired, turn-based hex 4X for **CC:Tweaked**, supporting local hot-seat (2–4 human/AI slots) or multiplayer over rednet. Local games use one computer or an Advanced Monitor; networked games use an authoritative host. Computers communicate through **rednet modems**, either wireless (within range) or wired (via the same wired modem network). It also works over interdimensional wireless modems. No HTTP or external web server is needed after installation.
 
 ## Diagnosing freezes

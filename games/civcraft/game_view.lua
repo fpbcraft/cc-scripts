@@ -245,7 +245,7 @@ function G.draw(ui, state, player)
           "CHANGE "
             .. pending.previous:upper()
             .. " TO "
-            .. pending.params.id:upper()
+            .. (pending.params.kind == "none" and "NO PRODUCTION" or tostring(pending.params.id):upper())
             .. "? Current progress "
             .. pending.progress
             .. " is saved.",

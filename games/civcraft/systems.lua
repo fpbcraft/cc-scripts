@@ -19,6 +19,7 @@ local Economy = dofile("/games/civcraft/economy.lua")
 local Landmarks = dofile("/games/civcraft/landmarks.lua")
 local Rails = dofile("/games/civcraft/railways.lua")
 local AI = dofile("/games/civcraft/ai.lua")
+local Actions = dofile("/games/civcraft/actions.lua")
 M.exchange = Economy.exchange
 function M.territoryCity(state, x, y)
   return World.territoryCity(state, Hex, x, y)
@@ -351,6 +352,15 @@ function M.canRecruit(p, id, state, hex, city)
 end
 -- Retain familiar action names as pure queue selection (no purchases).
 function M.queue(p, c, kind, id, state, hex, x, y)
+  if kind == "none" then
+    if c.project then
+      c.projectProgress = c.projectProgress or {}
+      c.projectProgress[c.project.kind .. ":" .. c.project.id] = c.project.progress
+    end
+    c.project = nil
+    c.productionIdle = true
+    return true
+  end
   if kind == "wonder" then
     if not Landmarks.canPlace(state, c, id, x, y, M) then
       return false, "Wonder needs its research and an empty owned land hex; one per world"
@@ -370,6 +380,7 @@ function M.queue(p, c, kind, id, state, hex, x, y)
     c.projectProgress = c.projectProgress or {}
     c.projectProgress[c.project.kind .. ":" .. c.project.id] = c.project.progress
   end
+  c.productionIdle = false
   c.project = { kind = kind, id = id, x = x, y = y, progress = (c.projectProgress or {})[kind .. ":" .. id] or 0 }
   return true
 end
@@ -618,11 +629,17 @@ function M.autoExplore(state, unit, hex)
       unit.moved = true
       break
     end
-    unit.x = destination.x
-    unit.y = destination.y
-    unit.actedThisRound = true
-    unit.movesLeft = unit.movesLeft - spent
-    unit.moved = unit.movesLeft <= 0
+    local ok = Actions.apply(
+      state,
+      unit.owner,
+      { action = "move", sx = unit.x, sy = unit.y, x = destination.x, y = destination.y },
+      M
+    )
+    if not ok then
+      unit.autoExplore = false
+      return false, "Exploration route blocked"
+    end
+    unit.autoExplore = true
   end
   World.reveal(state, hex, M)
   return true
@@ -752,27 +769,46 @@ function M.aiTurn(state, p, hex)
   if not p.researchTarget then
     local id = AI.research(p, M)
     if id then
-      M.research(p, id)
+      Actions.apply(state, p.id, { action = "researchTech", id = id }, M)
     end
   end
   for _, city in ipairs(state.cities) do
     if city.owner == p.id then
       for _, enemy in ipairs(state.units) do
-        if enemy.owner ~= p.id and Combat.strike(state, city, enemy.x, enemy.y, M) then
+        if
+          enemy.owner ~= p.id
+          and Actions.apply(
+            state,
+            p.id,
+            { action = "cityStrike", x = city.x, y = city.y, tx = enemy.x, ty = enemy.y },
+            M
+          )
+        then
           break
         end
       end
-      if not city.project then
+      if not city.project and not city.productionIdle then
         AI.choose(state, p, city, M)
       end
       if city.jobs.food > 1 and city.jobs.science < 2 then
-        M.assign(city, "food", "science", state)
+        Actions.apply(state, p.id, { action = "assign", x = city.x, y = city.y, from = "food", to = "science" }, M)
       end
     end
   end
   -- Move one unit a turn; settlers expand, warriors approach other empires.
+  local orders = {}
   for _, u in ipairs(state.units) do
-    if u.owner == p.id and not u.moved then
+    orders[#orders + 1] = u
+  end
+  for _, u in ipairs(orders) do
+    local present = false
+    for _, v in ipairs(state.units) do
+      if v == u then
+        present = true
+        break
+      end
+    end
+    if present and u.owner == p.id and not u.moved then
       local engineer = (M.units[u.kind] or {}).engineer
       if engineer then
         AI.engineer(state, p, u, M)
@@ -817,26 +853,11 @@ function M.aiTurn(state, p, hex)
             canFound = false
           end
         end
-        if
-          canFound
-          and nearest <= 5
-          and hex.terrain(u.x, u.y, state) ~= "water"
-          and hex.passable(u.x, u.y, state, u, M)
-        then
-          state.cities[#state.cities + 1] = {
-            id = state.nextId,
-            owner = p.id,
-            x = u.x,
-            y = u.y,
-            level = 1,
-            population = 2,
-            foodStore = 0,
-            jobs = { food = 1, wood = 1, science = 0 },
-            buildings = {},
-          }
-          M.nameCity(state, state.cities[#state.cities])
-          state.nextId = state.nextId + 1
-          u.consumed = true
+        if canFound and nearest <= 5 then
+          local ok = Actions.apply(state, p.id, { action = "found", x = u.x, y = u.y }, M)
+          if ok then
+            u.consumed = true
+          end
         end
       end
       if not u.consumed and #choices > 0 then
@@ -899,15 +920,7 @@ function M.aiTurn(state, p, hex)
           end)
         end
         local choice = choices[1]
-        if choice.attack then
-          Combat.attack(state, u, choice, M)
-        else
-          u.x = choice.x
-          u.y = choice.y
-          u.actedThisRound = true
-        end
-        u.moved = true
-        u.movesLeft = 0
+        Actions.apply(state, p.id, { action = "move", sx = u.x, sy = u.y, x = choice.x, y = choice.y }, M)
       end
     end
   end

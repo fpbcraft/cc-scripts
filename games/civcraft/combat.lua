@@ -130,8 +130,9 @@ function C.round(state, systems)
   for _, u in ipairs(state.units) do
     if u.healing or not u.actedThisRound then
       local claim = World.territoryCity(state, Hex, u.x, u.y)
-      local amount = claim and claim.owner == u.owner and 20 or claim and 5 or 10
-      u.hp = math.min(100, u.hp + amount)
+      if claim and claim.owner == u.owner then
+        u.hp = math.min(100, u.hp + 20)
+      end
     end
     if (systems.units[u.kind] or {}).healer then
       for _, ally in ipairs(state.units) do
@@ -151,11 +152,20 @@ function C.round(state, systems)
     end
   end
 end
-function C.attack(state, unit, target, systems)
-  C.migrate(state)
-  if unit.attackedRound and unit.attackedRound == state.round then
-    return false, "Unit already attacked this round"
+-- Pure forecast: normalize private records, never mutate the supplied state.
+local function copy(record)
+  local result = {}
+  for k, v in pairs(record or {}) do
+    result[k] = v
   end
+  return result
+end
+function C.predict(state, unit, target, systems)
+  if unit.attackedRound and unit.attackedRound == state.round then
+    return nil, "Unit already attacked this round"
+  end
+  local attacker = copy(unit)
+  C.unit(attacker)
   local stats = systems.units[unit.kind] or systems.units.warrior
   local city = at(state.cities, target.x, target.y)
   if city and city.owner == unit.owner then
@@ -163,11 +173,24 @@ function C.attack(state, unit, target, systems)
   end
   local defender = at(state.units, target.x, target.y)
   if not city and (not defender or defender.owner == unit.owner) then
-    return false, "No enemy target"
+    return nil, "No enemy target"
   end
   local ranged = (stats.range or 1) > 1
-  local offense = C.power(unit, systems, false, state)
-  local defense = city and C.cityPower(state, city, systems) or C.power(defender, systems, true, state)
+  local offense = C.power(attacker, systems, false, state)
+  local defense
+  if city then
+    city = copy(city)
+    C.city(city)
+    local units = {}
+    for _, u in ipairs(state.units) do
+      units[#units + 1] = copy(u)
+    end
+    defense = C.cityPower({ units = units, players = state.players, world = state.world }, city, systems)
+  else
+    defender = copy(defender)
+    C.unit(defender)
+    defense = C.power(defender, systems, true, state)
+  end
   if
     defender
     and ((systems.units[defender.kind] or {}).mounted or defender.kind == "horseman")
@@ -176,18 +199,54 @@ function C.attack(state, unit, target, systems)
     offense = offense + 10
   end
   local damage = C.damage(offense, defense)
-  local retaliation = 0
-  local captured = false
+  local wallDamage = 0
+  if city and city.wallHP > 0 then
+    local multiplier = stats.siege and 1 or ranged and 0.25 or 0.35
+    local hit = math.max(1, math.floor(damage * multiplier))
+    wallDamage = math.min(city.wallHP, hit)
+    damage = math.max(0, hit - wallDamage)
+  end
+  local retaliation = ranged and 0 or C.damage(defense, C.power(attacker, systems, true, state))
+  local attackerHP = math.max(0, attacker.hp - retaliation)
+  local targetHP = math.max(city and (ranged or stats.hostile) and 1 or 0, (city and city.hp or defender.hp) - damage)
+  local captured = city ~= nil and targetHP <= 0 and not ranged and attackerHP > 0
+  if city and targetHP <= 0 then
+    targetHP = captured and 100 or 1
+  end
+  if stats.explosive then
+    attackerHP = 0
+  end
+  return {
+    damage = damage,
+    retaliation = retaliation,
+    wallDamage = wallDamage,
+    attackerHP = attackerHP,
+    defenderHP = not city and targetHP or nil,
+    cityHP = city and targetHP or nil,
+    wallHP = city and (captured and 0 or city.wallHP - wallDamage) or nil,
+    attackerDied = attackerHP <= 0,
+    defenderDied = not city and targetHP <= 0 or false,
+    captured = captured,
+    ranged = ranged,
+  }
+end
+function C.attack(state, unit, target, systems)
+  local result, why = C.predict(state, unit, target, systems)
+  if not result then
+    return false, why
+  end
+  C.migrate(state)
+  local stats = systems.units[unit.kind] or systems.units.warrior
+  local city = at(state.cities, target.x, target.y)
+  if city and city.owner == unit.owner then
+    city = nil
+  end
+  local defender = at(state.units, target.x, target.y)
+  local damage, retaliation, captured, ranged = result.damage, result.retaliation, result.captured, result.ranged
   if city then
     city.lastAttackRound = state.round
-    if city.wallHP > 0 then
-      local multiplier = stats.siege and 1 or ranged and 0.25 or 0.35
-      local wallDamage = math.max(1, math.floor(damage * multiplier))
-      local used = math.min(city.wallHP, wallDamage)
-      city.wallHP = city.wallHP - used
-      damage = math.max(0, wallDamage - used)
-    end
-    city.hp = math.max((ranged or stats.hostile) and 1 or 0, city.hp - damage)
+    city.wallHP = result.wallHP
+    city.hp = result.cityHP
     if stats.hostile then
       city.foodStore = math.max(0, (city.foodStore or 0) - 5)
       for _, p in ipairs(state.players) do
@@ -197,11 +256,8 @@ function C.attack(state, unit, target, systems)
         end
       end
     end
-    if not ranged then
-      retaliation = C.damage(defense, C.power(unit, systems, true, state))
-      unit.hp = math.max(0, unit.hp - retaliation)
-    end
-    if city.hp <= 0 and not ranged and unit.hp > 0 then
+    unit.hp = result.attackerHP
+    if captured then
       local previousOwner = city.owner
       city.owner = unit.owner
       city.hp = 100
@@ -220,12 +276,9 @@ function C.attack(state, unit, target, systems)
       city.hp = 1
     end
   else
-    defender.hp = math.max(0, defender.hp - damage)
+    defender.hp = result.defenderHP
     C.experience(defender, 2)
-    if not ranged then
-      retaliation = C.damage(defense, C.power(unit, systems, true, state))
-      unit.hp = math.max(0, unit.hp - retaliation)
-    end
+    unit.hp = result.attackerHP
     if defender.hp <= 0 then
       if (systems.units[defender.kind] or {}).hostile and not stats.hostile then
         Villages.defended(state, unit.owner, defender.x, defender.y)
@@ -249,9 +302,7 @@ function C.attack(state, unit, target, systems)
   if unit.hp <= 0 then
     remove(state, unit)
   end
-  return true,
-    captured and "City captured" or ("Dealt " .. damage .. " HP; received " .. retaliation .. " HP"),
-    { damage = damage, retaliation = retaliation, captured = captured, ranged = ranged }
+  return true, captured and "City captured" or ("Dealt " .. damage .. " HP; received " .. retaliation .. " HP"), result
 end
 function C.strike(state, city, x, y, systems)
   C.migrate(state)

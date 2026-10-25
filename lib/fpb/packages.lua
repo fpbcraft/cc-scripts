@@ -109,6 +109,7 @@ P.packages.civcraft = {
   entry = "game.lua",
   files = {
     "README.md",
+    "actions.lua",
     "ai.lua",
     "economy.lua",
     "hostiles.lua",

@@ -3,6 +3,7 @@
 local Renderer = dofile("/games/civcraft/render.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
+local Combat = dofile("/games/civcraft/combat.lua")
 local GameView = dofile("/games/civcraft/game_view.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
 local UI = {}
@@ -121,7 +122,7 @@ function UI:endWarnings()
     end
   end
   for _, c in ipairs(state.cities or {}) do
-    if c.owner == self.playerID and not c.project then
+    if c.owner == self.playerID and not c.project and not c.productionIdle then
       warnings[#warnings + 1] =
         { text = (c.name or ("City " .. c.x .. "," .. c.y)) .. " has no production.", kind = "city", item = c }
     end
@@ -248,9 +249,29 @@ function UI:tile(x, y)
           unitID = unit and unit.id,
           player = self.playerID,
         }
+        local forecast
+        if p.attack and unit then
+          local awake = {}
+          for k, v in pairs(unit) do
+            awake[k] = v
+          end
+          awake.standby = false
+          awake.healing = false
+          forecast = Combat.predict(self.state, awake, p, Systems)
+        end
+        self.pendingMove.forecast = forecast
+        local summary = "COST " .. p.cost
+        if forecast then
+          summary = "HP "
+            .. forecast.attackerHP
+            .. " / TARGET "
+            .. (forecast.defenderHP or forecast.cityHP)
+            .. (forecast.wallHP and (" / WALL " .. forecast.wallHP) or "")
+            .. (forecast.captured and " CAPTURE" or "")
+        end
         self.moveOffset = 0
         self.lastDrag = nil
-        self:feedback("COST " .. p.cost .. " - CLICK DESTINATION AGAIN TO CONFIRM")
+        self:feedback(summary .. " - CONFIRM")
         return
       end
     end
@@ -732,7 +753,7 @@ function UI:nextIdleCity()
   local candidates = {}
   local current
   for _, city in ipairs(self.state.cities or {}) do
-    if city.owner == self.playerID and not city.project then
+    if city.owner == self.playerID and not city.project and not city.productionIdle then
       candidates[#candidates + 1] = city
       if
         not self.selected.empty

@@ -4,7 +4,16 @@ local World = dofile("/games/civcraft/world.lua")
 local Rails = dofile("/games/civcraft/railways.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local Landmarks = dofile("/games/civcraft/landmarks.lua")
+local Actions = dofile("/games/civcraft/actions.lua")
 local A = {}
+local function queue(state, p, city, kind, id, systems, x, y)
+  return Actions.apply(
+    state,
+    p.id,
+    { action = "queue", cityX = city.x, cityY = city.y, kind = kind, id = id, tileX = x, tileY = y },
+    systems
+  )
+end
 function A.research(p, systems)
   local goals = {
     "agriculture",
@@ -78,10 +87,10 @@ function A.choose(state, p, city, systems)
     end
   end
   if cities + settlers < 3 and systems.canRecruit(p, "settler", state, Hex, city) then
-    return systems.queue(p, city, "unit", "settler", state, Hex)
+    return queue(state, p, city, "unit", "settler", systems)
   end
   if p.techs.railways and engineers == 0 then
-    return systems.queue(p, city, "unit", "engineer", state, Hex)
+    return queue(state, p, city, "unit", "engineer", systems)
   end
   if soldiers < math.min(4, cities + 1) then
     for _, id in ipairs({ "diamondguard", "swordsman", "spearman", "archer", "warrior" }) do
@@ -89,7 +98,7 @@ function A.choose(state, p, city, systems)
         systems.canRecruit(p, id, state, Hex, city)
         and (not systems.units[id].resource or (p.stockpile[systems.units[id].resource] or 0) >= 2)
       then
-        return systems.queue(p, city, "unit", id, state, Hex)
+        return queue(state, p, city, "unit", id, systems)
       end
     end
   end
@@ -135,13 +144,13 @@ function A.choose(state, p, city, systems)
     -- Expedition empires prioritize their final projects once they unlock them.
     for _, id in ipairs({ "observatory", "eyes", "equipment", "dragon" }) do
       if systems.canBuild(p, city, id, state) then
-        return systems.queue(p, city, "building", id, state, Hex)
+        return queue(state, p, city, "building", id, systems)
       end
     end
   end
   for _, id in ipairs(order) do
     if systems.canBuild(p, city, id, state) then
-      return systems.queue(p, city, "building", id, state, Hex)
+      return queue(state, p, city, "building", id, systems)
     end
   end
   -- Optional wonders are worthwhile after the essential economy is developed.
@@ -153,7 +162,7 @@ function A.choose(state, p, city, systems)
   for _, id in ipairs(ids) do
     for _, tile in ipairs(systems.workable(state, city)) do
       if Landmarks.canPlace(state, city, id, tile.x, tile.y, systems) then
-        return systems.queue(p, city, "wonder", id, state, Hex, tile.x, tile.y)
+        return queue(state, p, city, "wonder", id, systems, tile.x, tile.y)
       end
     end
   end
@@ -215,7 +224,7 @@ function A.engineer(state, p, u, systems)
     end
     if target then
       if Rails.canBuild(state, p, u, target.x, target.y, systems) then
-        Rails.build(state, p, u, target.x, target.y, systems)
+        Actions.apply(state, p.id, { action = "buildRail", sx = u.x, sy = u.y, x = target.x, y = target.y }, systems)
         return true
       end
       local choices = Hex.reachable(state, u, p.id, systems)
@@ -230,8 +239,7 @@ function A.engineer(state, p, u, systems)
         end
       end
       if best then
-        u.x = best.x
-        u.y = best.y
+        Actions.apply(state, p.id, { action = "move", sx = u.x, sy = u.y, x = best.x, y = best.y }, systems)
       end
       u.movesLeft = 0
       u.moved = true
@@ -246,14 +254,14 @@ function A.diplomacy(state, p, systems)
   if (p.gold or 0) > 100 then
     for _, city in ipairs(state.cities) do
       if Villages.independent(city) and Villages.discovered(p, city) then
-        Villages.envoy(state, p, city)
+        Actions.apply(state, p.id, { action = "envoy", x = city.x, y = city.y }, systems)
       end
     end
   end
   if p.techs.brassworking then
     for _, id in ipairs({ "copper", "zinc" }) do
       if (p.stockpile[id] or 0) < 2 and p.gold > 40 then
-        systems.exchange(state, p, id)
+        Actions.apply(state, p.id, { action = "exchange", resource = id }, systems)
       end
     end
   end
