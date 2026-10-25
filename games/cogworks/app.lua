@@ -83,7 +83,7 @@ function A:finishTutorial()
   self:save()
 end
 function A:openLevel(index)
-  assert(self.progress and index >= 1 and index <= self.progress.unlocked)
+  assert(self.progress and index >= 1 and index <= (self.devSession and #E.levels or self.progress.unlocked))
   self.game = E.new(index)
   local session = self.progress.sessions[index]
   if type(session) == "table" and E.restore(self.game, session.parts) then
@@ -316,7 +316,7 @@ function A:act(action, x, y)
       end
     elseif action == "next" or action == "prev" then
       local nextIndex = self.game.number + (action == "next" and 1 or -1)
-      if not self.game.sandbox and nextIndex >= 1 and nextIndex <= self.progress.unlocked then
+      if not self.game.sandbox and nextIndex >= 1 and nextIndex <= (self.devSession and #E.levels or self.progress.unlocked) then
         self:save()
         self:openLevel(nextIndex)
         self:save()
@@ -371,7 +371,7 @@ function A:act(action, x, y)
   elseif scene == "levels" then
     if action == "back" then
       self.scene = self.levelReturn
-    elseif action == "level" and x >= 1 and x <= self.progress.unlocked then
+    elseif action == "level" and x >= 1 and x <= (self.devSession and #E.levels or self.progress.unlocked) then
       self:save()
       self:openLevel(x)
       self.levelReturn = "pause"
