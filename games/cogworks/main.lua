@@ -16,10 +16,13 @@ if args[1] == "--test-api" then
   return { app = App, engine = E, renderer = Renderer }
 end
 local dev = false
+local debugInput = false
 local preferredMonitor = nil
 for _, arg in ipairs(args) do
   if arg == "--dev" then
     dev = true
+  elseif arg == "--input-debug" then
+    debugInput = true
   elseif arg:sub(1, 2) == "--" then
     error("Unknown option: " .. arg)
   elseif not preferredMonitor then
@@ -69,6 +72,13 @@ local function start()
     -- Restore the original setting when Cogworks exits.
     pcall(monitor.setTextScale, 0.5)
   end
+  local inputLog = debugInput and fs.open("/games/cogworks/input-debug.log", "w") or nil
+  local function trace(message)
+    if inputLog then
+      inputLog.write(tostring(message) .. "\\n")
+    end
+  end
+  trace("COGWORKS MONITOR=" .. tostring(name) .. " MODE=" .. tostring(mode))
   local renderer, app
   local ok, reason = xpcall(function()
     renderer = Renderer.new(monitor)
@@ -93,6 +103,18 @@ local function start()
     local timer = os.startTimer(0.2)
     while true do
       local event, a, b, c, d = os.pullEventRaw()
+      if
+        event == "monitor_touch"
+        or event == "monitor_left_click"
+        or event == "monitor_mouse_click"
+        or event == "monitor_resize"
+        or event == "mouse_click"
+      then
+        trace(
+          tostring(event) .. " side=" .. tostring(a) .. " x=" .. tostring(b) .. " y=" .. tostring(c)
+            .. " extra=" .. tostring(d) .. " graphics=" .. tostring(renderer.mode)
+        )
+      end
       if event == "terminate" then
         if app then
           app:save()
@@ -109,6 +131,7 @@ local function start()
         if action == "cell" then
           action = app.selected == "erase" and "remove" or "inspect"
         end
+        trace("MONITOR HIT=" .. tostring(action) .. " part=" .. tostring(x) .. "," .. tostring(y))
         if not act(action, x, y) then
           break
         end
@@ -255,6 +278,9 @@ local function start()
   end)
   if renderer then
     renderer:close()
+  end
+  if inputLog then
+    inputLog.close()
   end
   Display.close(monitor, mode)
   if monitor.setTextScale then
