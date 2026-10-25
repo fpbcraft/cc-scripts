@@ -476,10 +476,26 @@ function R:drawGame(m)
     self:font(x + 31, y + 2, countText, count > 0 and 9 or 4)
     self:add(x, y, 38, 9, "tool", kind)
   end
-  self:button(117, 77, 38, 9, m.selected == "erase" and "ERASE" or "REMOVE", "tool", "erase",
-    m.selected == "erase" and 8 or 3)
-  self:button(157, 77, 38, 9, m.selected == "switch" and "ON/OFF" or "SWITCH", "tool", "switch",
-    m.selected == "switch" and 6 or 3)
+  self:button(
+    117,
+    77,
+    38,
+    9,
+    m.selected == "erase" and "ERASE" or "REMOVE",
+    "tool",
+    "erase",
+    m.selected == "erase" and 8 or 3
+  )
+  self:button(
+    157,
+    77,
+    38,
+    9,
+    m.selected == "switch" and "ON/OFF" or "SWITCH",
+    "tool",
+    "switch",
+    m.selected == "switch" and 6 or 3
+  )
   -- Persistent bonus objectives are visible while building, not buried in
   -- a modal screen. Labels are deliberately short enough for this pane.
   self:font(117, 87, g.sandbox and "UNLIMITED PARTS" or "BONUS GOALS", 6)
@@ -602,8 +618,7 @@ function R:drawBriefing(m)
       self:rect(x, y - 1, 31, 6, 2)
       self:rect(x + 1, y, 6, 5, E.parts[part.kind].color)
       self:font(x + 2, y, part.kind, 0)
-      local labels =
-        { I = "SHFT", G = "COG", O = "LG", Q = "BOX", D = "CHN", V = "BELT", Z = "SHIFT", C = "CLTCH" }
+      local labels = { I = "SHFT", G = "COG", O = "LG", Q = "BOX", D = "CHN", V = "BELT", Z = "SHIFT", C = "CLTCH" }
       self:fontFit(x + 9, y, labels[part.kind], 15, 16)
       self:font(x + 26, y, tostring(part.count), 6)
     end
@@ -701,9 +716,11 @@ function R:drawSlots(m)
   self:button(69, 110, 62, 9, "BACK", "back")
 end
 function R:drawPause(m)
-  self:page("GAME PAUSED", m.game.sandbox and "SANDBOX / FREE BUILD"
-    or (m.devSession and "DEV SESSION / LEVEL " .. m.game.number
-    or "SLOT " .. m.slot .. " / LEVEL " .. m.game.number))
+  self:page(
+    "GAME PAUSED",
+    m.game.sandbox and "SANDBOX / FREE BUILD"
+      or (m.devSession and "DEV SESSION / LEVEL " .. m.game.number or "SLOT " .. m.slot .. " / LEVEL " .. m.game.number)
+  )
   local items = {
     { "RESUME", "resume" },
     { m.game.sandbox and "CLEAR WORKSHOP" or "SAVE GAME", m.game.sandbox and "clearSandbox" or "save" },
@@ -736,8 +753,16 @@ function R:drawLevels(m)
     local x = 10 + ((i - 1) % 6) * 30
     local y = 30 + math.floor((i - 1) / 6) * 15
     local unlocked = m.devSession or i <= m.progress.unlocked
-    self:button(x, y, 28, 12, string.format("%02d", i), unlocked and "level" or nil, i,
-      m.game and i == m.game.number and 6 or 3)
+    self:button(
+      x,
+      y,
+      28,
+      12,
+      string.format("%02d", i),
+      unlocked and "level" or nil,
+      i,
+      m.game and i == m.game.number and 6 or 3
+    )
   end
   self:button(70, 108, 60, 10, "BACK", "back")
 end
@@ -834,7 +859,13 @@ function R:drawText(m)
         self:add(px, py, 5, 3, "cell", x, y)
       end
     end
-    label(2, 22, g.sandbox and ("SANDBOX / FREE BUILD  MV " .. g.moves) or ("GOALS " .. result.correct .. "/" .. result.goals .. " CW=+ CCW=- MV " .. g.moves), colors.lightBlue)
+    label(
+      2,
+      22,
+      g.sandbox and ("SANDBOX / FREE BUILD  MV " .. g.moves)
+        or ("GOALS " .. result.correct .. "/" .. result.goals .. " CW=+ CCW=- MV " .. g.moves),
+      colors.lightBlue
+    )
     local bonuses = E.challenges(g, result)
     local awards = m.progress.awards[g.number] or {}
     for i, bonus in ipairs(bonuses) do
@@ -902,8 +933,11 @@ function R:drawText(m)
   elseif m.scene == "title" then
     label(3, 4, "KINETIC WORKSHOP  /  " .. #E.levels .. " PUZZLES", colors.lightBlue)
     local choices = {
-      { "CONTINUE", "continue" }, { "SAVE SLOTS", "slots" },
-      { "FREE SANDBOX", "sandbox" }, { "SETTINGS", "settings" }, { "EXIT", "exit" },
+      { "CONTINUE", "continue" },
+      { "SAVE SLOTS", "slots" },
+      { "FREE SANDBOX", "sandbox" },
+      { "SETTINGS", "settings" },
+      { "EXIT", "exit" },
     }
     if m.dev then
       table.insert(choices, 4, { "DEV: ALL LEVELS", "devLevels" })
@@ -919,7 +953,8 @@ function R:drawText(m)
     end
   elseif m.scene == "slots" then
     for i, slot in ipairs(m.slots) do
-      local labelText = slot.empty and "EMPTY - NEW" or ("LV " .. slot.level .. "/" .. #E.levels .. " BONUS " .. slot.trophies)
+      local labelText = slot.empty and "EMPTY - NEW"
+        or ("LV " .. slot.level .. "/" .. #E.levels .. " BONUS " .. slot.trophies)
       btn(4, 5 + (i - 1) * 4, math.min(w - 8, 42), "SLOT " .. i .. "  " .. labelText, "slot", i)
     end
     btn(4, h - 2, 16, "BACK", "back")
@@ -937,14 +972,20 @@ function R:drawText(m)
     if m.scene == "pause" then
       if m.game.sandbox then
         choices = {
-          { "RESUME", "resume" }, { "CLEAR WORKSHOP", "clearSandbox" },
-          { "SETTINGS", "settings" }, { "HELP", "help" }, { "TITLE MENU", "title" },
+          { "RESUME", "resume" },
+          { "CLEAR WORKSHOP", "clearSandbox" },
+          { "SETTINGS", "settings" },
+          { "HELP", "help" },
+          { "TITLE MENU", "title" },
         }
       else
         choices = {
-          { "RESUME", "resume" }, { "SAVE GAME", "save" },
-          { "SELECT LEVEL", "levels" }, { "SETTINGS", "settings" },
-          { "HELP", "help" }, { "RESTART LEVEL", "restart" },
+          { "RESUME", "resume" },
+          { "SAVE GAME", "save" },
+          { "SELECT LEVEL", "levels" },
+          { "SETTINGS", "settings" },
+          { "HELP", "help" },
+          { "RESTART LEVEL", "restart" },
           { "NEW CAMPAIGN", m.devSession and nil or "newGame" },
           { "TITLE MENU", "title" },
         }

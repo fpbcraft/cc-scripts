@@ -1,30 +1,51 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 local files, dirs = {}, {}
 fs = {}
-function fs.exists(path) return files[path] ~= nil or dirs[path] ~= nil end
-function fs.makeDir(path) dirs[path] = true end
-function fs.delete(path) files[path], dirs[path] = nil, nil end
+function fs.exists(path)
+  return files[path] ~= nil or dirs[path] ~= nil
+end
+function fs.makeDir(path)
+  dirs[path] = true
+end
+function fs.delete(path)
+  files[path], dirs[path] = nil, nil
+end
 function fs.move(a, b)
   assert(files[a], "Missing " .. a)
   files[b], files[a] = files[a], nil
 end
 function fs.open(path, mode)
   if mode == "r" then
-    if not files[path] then return nil end
-    return { readAll = function() return files[path] end, close = function() end }
+    if not files[path] then
+      return nil
+    end
+    return {
+      readAll = function()
+        return files[path]
+      end,
+      close = function() end,
+    }
   end
   assert(mode == "w")
   local body = ""
   return {
-    write = function(str) body = body .. str end,
-    close = function() files[path] = body end,
+    write = function(str)
+      body = body .. str
+    end,
+    close = function()
+      files[path] = body
+    end,
   }
 end
 local stored, counter = {}, 0
 local function copy(v)
-  if type(v) ~= "table" then return v end
+  if type(v) ~= "table" then
+    return v
+  end
   local result = {}
-  for k, value in pairs(v) do result[k] = copy(value) end
+  for k, value in pairs(v) do
+    result[k] = copy(value)
+  end
   return result
 end
 textutils = {
@@ -33,20 +54,25 @@ textutils = {
     stored[counter] = copy(v)
     return tostring(counter)
   end,
-  unserialize = function(v) return copy(stored[tonumber(v)]) end,
+  unserialize = function(v)
+    return copy(stored[tonumber(v)])
+  end,
 }
 local S = require("games.cogworks.storage")
 assert(S.VERSION == 4 and not S.has(2), "Updated campaign save schema")
 local old = {
-  campaignVersion = 3, unlocked = 30, level = 27,
+  campaignVersion = 3,
+  unlocked = 30,
+  level = 27,
   sessions = { [27] = { parts = { { kind = "L", x = 2, y = 3, r = 1 } } } },
   awards = { [27] = { sealed = true } },
 }
 files[S.LEGACY] = textutils.serialize(old)
 local imported = S.load(1)
-assert(imported.level == 1 and imported.unlocked == 1
-  and next(imported.sessions) == nil and next(imported.awards) == nil,
-  "Incompatible 30-stage saves reset to the new campaign")
+assert(
+  imported.level == 1 and imported.unlocked == 1 and next(imported.sessions) == nil and next(imported.awards) == nil,
+  "Incompatible 30-stage saves reset to the new campaign"
+)
 assert(files[S.LEGACY], "Preserve legacy file for backup")
 local current = S.newProgress()
 current.level, current.unlocked, current.best[2] = 2, 5, 12

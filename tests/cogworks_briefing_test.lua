@@ -9,8 +9,13 @@ for number, stage in ipairs(E.levels) do
   assert(#brief.targets == #stage.goals and #brief.targets > 0, "Every press visible in briefing")
   for i, goal in ipairs(brief.targets) do
     local part = stage.goals[i]
-    assert(goal.x == part.x and goal.y == part.y and goal.rpm == part.speed
-      and goal.spin == (part.sign < 0 and "CCW" or "CW"), "Mission brief matches actual press")
+    assert(
+      goal.x == part.x
+        and goal.y == part.y
+        and goal.rpm == part.speed
+        and goal.spin == (part.sign < 0 and "CCW" or "CW"),
+      "Mission brief matches actual press"
+    )
     goals = goals + 1
   end
   local total = 0
@@ -18,8 +23,12 @@ for number, stage in ipairs(E.levels) do
     total = total + count
   end
   assert(brief.stockTotal == total, "Briefing inventory matches level")
-  assert(brief.bonus.sealed == (number >= 2) and brief.bonus.fullFactory == (number >= 3)
-    and brief.bonus.precision == (number >= 5), "Bonus gates match simulator")
+  assert(
+    brief.bonus.sealed == (number >= 2)
+      and brief.bonus.fullFactory == (number >= 3)
+      and brief.bonus.precision == (number >= 5),
+    "Bonus gates match simulator"
+  )
   local stockKinds = 0
   for _, kind in ipairs(E.order) do
     if (stage.stock[kind] or 0) > 0 then

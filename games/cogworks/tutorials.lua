@@ -1,38 +1,62 @@
 -- Mechanic lessons introduce the Create equivalents used by each puzzle.
 local T = {}
 T.lessons = {
-  I = { title = "AXIAL SHAFTS", lines = {
-    "SHAFTS TRANSMIT ALONG THEIR AXIS.",
-    "TURN A SHAFT TO CHANGE ITS AXIS.",
-  } },
-  Q = { title = "BEVEL GEARBOX", lines = {
-    "A GEARBOX CONNECTS ALL FOUR SIDES.",
-    "EACH OUTPUT REVERSES INPUT SPIN.",
-  } },
-  G = { title = "SMALL COGWHEELS", lines = {
-    "SHAFTS CONNECT AT EACH AXIAL END.",
-    "COGS MESH SIDEWAYS AND REVERSE SPIN.",
-  } },
-  D = { title = "ENCASED CHAIN DRIVE", lines = {
-    "PARALLEL DRIVES CONNECT SIDEWAYS.",
-    "CHAIN LINKS PRESERVE SPIN AND SPEED.",
-  } },
-  Z = { title = "GEARSHIFT", lines = {
-    "USE SWITCH TO APPLY REDSTONE POWER.",
-    "POWERED GEARSHIFTS REVERSE SPIN.",
-  } },
-  C = { title = "CLUTCH", lines = {
-    "USE SWITCH TO APPLY REDSTONE POWER.",
-    "POWERED CLUTCHES DISCONNECT SHAFTS.",
-  } },
-  O = { title = "LARGE COGWHEELS", lines = {
-    "LARGE AND SMALL COGS MESH DIAGONALLY.",
-    "LARGE TO SMALL DOUBLES SPEED.",
-  } },
-  V = { title = "MECHANICAL BELTS", lines = {
-    "TWO PARALLEL PULLEYS NEED CLEAR SPACE.",
-    "BELTS KEEP ROTATION AND SPEED.",
-  } },
+  I = {
+    title = "AXIAL SHAFTS",
+    lines = {
+      "SHAFTS TRANSMIT ALONG THEIR AXIS.",
+      "TURN A SHAFT TO CHANGE ITS AXIS.",
+    },
+  },
+  Q = {
+    title = "BEVEL GEARBOX",
+    lines = {
+      "A GEARBOX CONNECTS ALL FOUR SIDES.",
+      "EACH OUTPUT REVERSES INPUT SPIN.",
+    },
+  },
+  G = {
+    title = "SMALL COGWHEELS",
+    lines = {
+      "SHAFTS CONNECT AT EACH AXIAL END.",
+      "COGS MESH SIDEWAYS AND REVERSE SPIN.",
+    },
+  },
+  D = {
+    title = "ENCASED CHAIN DRIVE",
+    lines = {
+      "PARALLEL DRIVES CONNECT SIDEWAYS.",
+      "CHAIN LINKS PRESERVE SPIN AND SPEED.",
+    },
+  },
+  Z = {
+    title = "GEARSHIFT",
+    lines = {
+      "USE SWITCH TO APPLY REDSTONE POWER.",
+      "POWERED GEARSHIFTS REVERSE SPIN.",
+    },
+  },
+  C = {
+    title = "CLUTCH",
+    lines = {
+      "USE SWITCH TO APPLY REDSTONE POWER.",
+      "POWERED CLUTCHES DISCONNECT SHAFTS.",
+    },
+  },
+  O = {
+    title = "LARGE COGWHEELS",
+    lines = {
+      "LARGE AND SMALL COGS MESH DIAGONALLY.",
+      "LARGE TO SMALL DOUBLES SPEED.",
+    },
+  },
+  V = {
+    title = "MECHANICAL BELTS",
+    lines = {
+      "TWO PARALLEL PULLEYS NEED CLEAR SPACE.",
+      "BELTS KEEP ROTATION AND SPEED.",
+    },
+  },
 }
 T.introductions = {
   [1] = { "I" },

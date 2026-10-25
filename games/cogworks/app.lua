@@ -316,7 +316,11 @@ function A:act(action, x, y)
       end
     elseif action == "next" or action == "prev" then
       local nextIndex = self.game.number + (action == "next" and 1 or -1)
-      if not self.game.sandbox and nextIndex >= 1 and nextIndex <= (self.devSession and #E.levels or self.progress.unlocked) then
+      if
+        not self.game.sandbox
+        and nextIndex >= 1
+        and nextIndex <= (self.devSession and #E.levels or self.progress.unlocked)
+      then
         self:save()
         self:openLevel(nextIndex)
         self:save()

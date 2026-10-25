@@ -2,22 +2,36 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 local T = require("games.cogworks.tutorials")
 local E = require("games.cogworks.engine")
 local function copy(v)
-  if type(v) ~= "table" then return v end
+  if type(v) ~= "table" then
+    return v
+  end
   local result = {}
-  for k, x in pairs(v) do result[k] = copy(x) end
+  for k, x in pairs(v) do
+    result[k] = copy(x)
+  end
   return result
 end
 local saved = {}
 local S = {}
 function S.newProgress()
-  return { campaignVersion = 4, unlocked = 1, level = 1,
-    best = {}, sessions = {}, awards = {}, tutorials = {} }
+  return { campaignVersion = 4, unlocked = 1, level = 1, best = {}, sessions = {}, awards = {}, tutorials = {} }
 end
-function S.loadSettings() return { animations = true, showPorts = true, lastSlot = 1 } end
-function S.saveSettings() return true end
-function S.load(slot) return saved[slot] and copy(saved[slot]) or nil end
-function S.has(slot) return saved[slot] ~= nil end
-function S.save(slot, value) saved[slot] = copy(value); return true end
+function S.loadSettings()
+  return { animations = true, showPorts = true, lastSlot = 1 }
+end
+function S.saveSettings()
+  return true
+end
+function S.load(slot)
+  return saved[slot] and copy(saved[slot]) or nil
+end
+function S.has(slot)
+  return saved[slot] ~= nil
+end
+function S.save(slot, value)
+  saved[slot] = copy(value)
+  return true
+end
 package.loaded["games.cogworks.storage"] = S
 local A = require("games.cogworks.app")
 assert(#T.forLevel(1) == 1 and T.forLevel(1)[1].key == "I")

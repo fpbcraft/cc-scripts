@@ -28,13 +28,17 @@ assert(not powered(meshing, isolated), "Wrong axis / diagonal small cog does not
 local large = E.sandbox()
 put(large, 2, 3, "O", 1)
 local small = put(large, 3, 4, "G", 1)
-assert(state(large, small).rate == 2 and state(large, small).sign == -1,
-  "Large cog drives diagonal small cog at twice the speed and opposite spin")
+assert(
+  state(large, small).rate == 2 and state(large, small).sign == -1,
+  "Large cog drives diagonal small cog at twice the speed and opposite spin"
+)
 local reduction = E.sandbox()
 put(reduction, 2, 3, "G", 1)
 local largeOut = put(reduction, 3, 4, "O", 1)
-assert(state(reduction, largeOut).rate == 0.5 and state(reduction, largeOut).sign == -1,
-  "Small cog drives diagonal large cog at half speed")
+assert(
+  state(reduction, largeOut).rate == 0.5 and state(reduction, largeOut).sign == -1,
+  "Small cog drives diagonal large cog at half speed"
+)
 -- Every gearbox output reverses sign relative to the incoming shaft.
 local box = E.sandbox()
 local gearbox = put(box, 2, 3, "Q", 0)
@@ -42,14 +46,15 @@ local b = state(box, gearbox)
 assert(not E.evaluate(box).jam, "Unused gearbox outlets should not jam")
 for direction = 0, 3 do
   assert(E.hasPort(gearbox, direction), "Gearbox should have four axial ports")
-  assert(b.ports[direction] and b.ports[direction].sign == (direction == 3 and 1 or -1),
-    "Output should reverse input on port " .. direction)
+  assert(
+    b.ports[direction] and b.ports[direction].sign == (direction == 3 and 1 or -1),
+    "Output should reverse input on port " .. direction
+  )
 end
 local belt = E.sandbox()
 put(belt, 2, 3, "V", 1)
 local remote = put(belt, 2, 6, "V", 1)
-assert(powered(belt, remote) and state(belt, remote).sign == 1,
-  "Belt preserves rotation and speed across a clear span")
+assert(powered(belt, remote) and state(belt, remote).sign == 1, "Belt preserves rotation and speed across a clear span")
 assert(not E.connection(belt, E.get(belt, 2, 3), 2), "Belt is not an invisible axial shaft")
 local obstructed = E.sandbox()
 put(obstructed, 2, 3, "V", 1)
@@ -59,8 +64,7 @@ assert(not powered(obstructed, far), "Machinery cannot be bridged by an invisibl
 local chain = E.sandbox()
 local head = put(chain, 2, 3, "D", 1)
 local tail = put(chain, 2, 4, "D", 1)
-assert(powered(chain, tail) and state(chain, tail).sign == 1,
-  "Parallel chain drives relay sideways without reversing")
+assert(powered(chain, tail) and state(chain, tail).sign == 1, "Parallel chain drives relay sideways without reversing")
 assert(not E.connection(chain, head, 2), "Chain link is not a gearbox port")
 local shift = E.sandbox()
 put(shift, 2, 3, "Z", 1)
@@ -78,8 +82,10 @@ assert(E.toggle(clutch, 2, 3) and powered(clutch, stopped), "Clutch reconnects w
 -- Saving a fixed puzzle toggle must not silently reset its redstone state.
 local fixture = E.new(8, true)
 local restored = E.new(8)
-assert(E.restore(restored, E.snapshot(fixture)) and E.evaluate(restored).win,
-  "Fixed clutch redstone state is serialized")
+assert(
+  E.restore(restored, E.snapshot(fixture)) and E.evaluate(restored).win,
+  "Fixed clutch redstone state is serialized"
+)
 -- Contradictory loops are jams, not arbitrary winner-takes-all power.
 assert(not E.evaluate(E.new(16, true)).jam, "Three gearbox outputs must coexist")
 print("COGWORKS: shafts, gearbox inversion, cog mesh and ratios, belts, chains, switches passed.")

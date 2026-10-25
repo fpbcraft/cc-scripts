@@ -1,8 +1,10 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 local E = require("games.cogworks.engine")
 local function eq(actual, expected, context)
-  assert(actual == expected, (context or "Mismatch") .. ": expected " .. tostring(expected)
-    .. ", got " .. tostring(actual))
+  assert(
+    actual == expected,
+    (context or "Mismatch") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual)
+  )
 end
 eq(#E.levels, 16, "All old puzzle stages replaced")
 eq(#E.order, 8, "Only supported Create-style construction parts")
@@ -27,8 +29,17 @@ for index, data in ipairs(E.levels) do
   end
   local solved = E.new(index, true)
   local result = E.evaluate(solved)
-  assert(result.win, "Bad Create-based reference solution at " .. index
-    .. ": " .. result.correct .. "/" .. result.goals .. ", jam=" .. tostring(result.jam))
+  assert(
+    result.win,
+    "Bad Create-based reference solution at "
+      .. index
+      .. ": "
+      .. result.correct
+      .. "/"
+      .. result.goals
+      .. ", jam="
+      .. tostring(result.jam)
+  )
   assert(result.unpowered == 0, "Reference contains idle parts at " .. index)
   goals = goals + result.goals
   for _, bonus in ipairs(E.challenges(solved, result)) do
@@ -36,8 +47,7 @@ for index, data in ipairs(E.levels) do
   end
   local manual = E.new(index)
   for _, part in ipairs(data.build) do
-    assert(E.place(manual, part.x, part.y, part.kind, part.r),
-      "Reference part placement failed on stage " .. index)
+    assert(E.place(manual, part.x, part.y, part.kind, part.r), "Reference part placement failed on stage " .. index)
   end
   for _, position in ipairs(data.toggles or {}) do
     assert(E.toggle(manual, position[1], position[2]), "Authored redstone toggle failed")
@@ -48,8 +58,7 @@ for index, data in ipairs(E.levels) do
   assert(E.restore(restored, saved), "Snapshot restore failed at " .. index)
   assert(E.evaluate(restored).win, "Restored solution failed at " .. index)
   local before = #E.snapshot(restored)
-  assert(not E.restore(restored, { { x = -1, y = 1, kind = "I", r = 0 } }),
-    "Reject malformed saved coordinates")
+  assert(not E.restore(restored, { { x = -1, y = 1, kind = "I", r = 0 } }), "Reject malformed saved coordinates")
   eq(#E.snapshot(restored), before, "Invalid restore must be atomic")
   for _, part in ipairs(data.build) do
     if E.remove(manual, part.x, part.y) then
@@ -62,20 +71,26 @@ end
 assert(goals >= #E.levels, "Campaign must have meaningful objectives")
 local unlimited = E.sandbox()
 assert(unlimited.sandbox and #E.challenges(unlimited, E.evaluate(unlimited)) == 0)
-assert(not E.evaluate(unlimited).win and E.evaluate(unlimited).goals == 0,
-  "Sandbox never has a victory condition")
+assert(not E.evaluate(unlimited).win and E.evaluate(unlimited).goals == 0, "Sandbox never has a victory condition")
 for _, kind in ipairs(E.order) do
   assert(unlimited.remaining[kind] == math.huge)
 end
 for x = 2, 7 do
   for y = 1, 6 do
-    assert(E.place(unlimited, x, y, E.order[(x + y) % #E.order + 1]),
-      "Sandbox must place components without stock limits")
+    assert(
+      E.place(unlimited, x, y, E.order[(x + y) % #E.order + 1]),
+      "Sandbox must place components without stock limits"
+    )
   end
 end
 assert(not E.place(unlimited, 1, 3, "I"), "Sandbox generator remains fixed")
 local count = #E.snapshot(unlimited)
 assert(count == 36, "Unlimited inventory does not restrict available board space")
 assert(E.restore(E.sandbox(), E.snapshot(unlimited)), "Sandbox layout restorable")
-print("COGWORKS: all " .. #E.levels .. " Create-style references and " .. goals
-  .. " goals, construction, redstone and sandbox validated.")
+print(
+  "COGWORKS: all "
+    .. #E.levels
+    .. " Create-style references and "
+    .. goals
+    .. " goals, construction, redstone and sandbox validated."
+)

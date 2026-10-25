@@ -4,9 +4,16 @@ local levels = require("games.cogworks.levels")
 local E = { levels = levels, WIDTH = 7, HEIGHT = 6 }
 local vectors = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } }
 local ports = {
-  S = { 0 }, M = { 0 }, I = { 0, 2 }, G = { 0, 2 },
-  O = { 0, 2 }, V = { 0, 2 }, Z = { 0, 2 }, C = { 0, 2 },
-  Q = { 0, 1, 2, 3 }, D = { 0, 2 },
+  S = { 0 },
+  M = { 0 },
+  I = { 0, 2 },
+  G = { 0, 2 },
+  O = { 0, 2 },
+  V = { 0, 2 },
+  Z = { 0, 2 },
+  C = { 0, 2 },
+  Q = { 0, 1, 2, 3 },
+  D = { 0, 2 },
 }
 E.parts = {
   I = { name = "SHAFT", description = "AXIAL ROTATION, 1:1", color = 11 },
@@ -23,9 +30,14 @@ local function index(x, y)
   return (y - 1) * E.WIDTH + x
 end
 function E.inside(x, y)
-  return type(x) == "number" and type(y) == "number"
-    and x >= 1 and x <= E.WIDTH and y >= 1 and y <= E.HEIGHT
-    and x % 1 == 0 and y % 1 == 0
+  return type(x) == "number"
+    and type(y) == "number"
+    and x >= 1
+    and x <= E.WIDTH
+    and y >= 1
+    and y <= E.HEIGHT
+    and x % 1 == 0
+    and y % 1 == 0
 end
 function E.hasPort(tile, dir)
   for _, p in ipairs(ports[tile.kind] or {}) do
@@ -43,9 +55,14 @@ local function add(g, value, fixed)
   local id = index(value.x, value.y)
   assert(not g.map[id], "Overlapping level part at " .. id)
   local t = {
-    id = id, x = value.x, y = value.y, kind = value.kind,
-    r = value.r or 0, fixed = not not fixed,
-    speed = value.speed, sign = value.sign,
+    id = id,
+    x = value.x,
+    y = value.y,
+    kind = value.kind,
+    r = value.r or 0,
+    fixed = not not fixed,
+    speed = value.speed,
+    sign = value.sign,
     engaged = value.engaged == true,
   }
   g.map[id] = t
@@ -62,10 +79,16 @@ end
 function E.new(number, solved)
   local data = assert(levels[number], "Invalid level")
   local g = {
-    number = number, name = data.name, tip = data.tip,
-    tiles = {}, map = {}, stock = copy(data.stock),
-    remaining = copy(data.stock), moves = 0,
-    fullNetwork = false, sandbox = false,
+    number = number,
+    name = data.name,
+    tip = data.tip,
+    tiles = {},
+    map = {},
+    stock = copy(data.stock),
+    remaining = copy(data.stock),
+    moves = 0,
+    fullNetwork = false,
+    sandbox = false,
   }
   add(g, data.source, true)
   for _, goal in ipairs(data.goals) do
@@ -91,10 +114,16 @@ function E.new(number, solved)
 end
 function E.sandbox()
   local g = {
-    number = 0, name = "FREE WORKSHOP",
+    number = 0,
+    name = "FREE WORKSHOP",
     tip = "EXPERIMENT WITH ALL PARTS. NO GOALS OR LIMITS.",
-    tiles = {}, map = {}, stock = {}, remaining = {},
-    moves = 0, fullNetwork = false, sandbox = true,
+    tiles = {},
+    map = {},
+    stock = {},
+    remaining = {},
+    moves = 0,
+    fullNetwork = false,
+    sandbox = true,
   }
   for _, kind in ipairs(E.order) do
     g.remaining[kind] = math.huge
@@ -230,8 +259,12 @@ function E.snapshot(g)
   for _, tile in ipairs(g.tiles) do
     if not tile.fixed or tile.kind == "C" or tile.kind == "Z" then
       list[#list + 1] = {
-        x = tile.x, y = tile.y, kind = tile.kind, r = tile.r,
-        engaged = tile.engaged, fixed = tile.fixed or nil,
+        x = tile.x,
+        y = tile.y,
+        kind = tile.kind,
+        r = tile.r,
+        engaged = tile.engaged,
+        fixed = tile.fixed or nil,
       }
     end
   end
@@ -249,8 +282,13 @@ function E.restore(g, list)
   end
   local trial = g.sandbox and E.sandbox() or E.new(g.number)
   for _, v in ipairs(list) do
-    if type(v) ~= "table" or not E.inside(v.x, v.y)
-      or type(v.r) ~= "number" or v.r % 1 ~= 0 or v.r < 0 or v.r > 3
+    if
+      type(v) ~= "table"
+      or not E.inside(v.x, v.y)
+      or type(v.r) ~= "number"
+      or v.r % 1 ~= 0
+      or v.r < 0
+      or v.r > 3
       or (v.engaged ~= nil and type(v.engaged) ~= "boolean")
     then
       return false
@@ -258,8 +296,13 @@ function E.restore(g, list)
     local tile
     if v.fixed == true then
       tile = E.get(trial, v.x, v.y)
-      if not tile or not tile.fixed or tile.kind ~= v.kind or tile.r ~= v.r
-        or (tile.kind ~= "C" and tile.kind ~= "Z") or type(v.engaged) ~= "boolean"
+      if
+        not tile
+        or not tile.fixed
+        or tile.kind ~= v.kind
+        or tile.r ~= v.r
+        or (tile.kind ~= "C" and tile.kind ~= "Z")
+        or type(v.engaged) ~= "boolean"
       then
         return false
       end
@@ -333,8 +376,10 @@ function E.evaluate(g)
     local slots = states[tile.id] or {}
     local sample = slots[next(slots)]
     local light = {
-      powered = sample ~= nil, rate = sample and sample.rate or 0,
-      sign = sample and sample.sign or 0, ports = slots,
+      powered = sample ~= nil,
+      rate = sample and sample.rate or 0,
+      sign = sample and sample.sign or 0,
+      ports = slots,
     }
     if sample then
       powered = powered + 1
@@ -351,9 +396,7 @@ function E.evaluate(g)
     if tile.kind == "M" then
       goals = goals + 1
       local actual = slots[tile.r]
-      light.correct = not not (
-        actual and actual.sign == tile.sign and math.abs(actual.rate - tile.speed) < 0.001
-      )
+      light.correct = not not (actual and actual.sign == tile.sign and math.abs(actual.rate - tile.speed) < 0.001)
       if light.correct then
         correct = correct + 1
       end
@@ -367,9 +410,15 @@ function E.evaluate(g)
     end
   end
   return {
-    lights = lights, powered = powered, goals = goals, correct = correct,
-    jam = jam, openPorts = openPorts, unpowered = unpowered,
-    remaining = remaining, complete = not jam and goals == correct,
+    lights = lights,
+    powered = powered,
+    goals = goals,
+    correct = correct,
+    jam = jam,
+    openPorts = openPorts,
+    unpowered = unpowered,
+    remaining = remaining,
+    complete = not jam and goals == correct,
     win = not g.sandbox and not jam and goals > 0 and goals == correct,
   }
 end
@@ -385,7 +434,9 @@ function E.challenges(g, result)
   par = par + #(levels[g.number].toggles or {})
   local function add(id, name, description, earned)
     list[#list + 1] = {
-      id = id, name = name, description = description,
+      id = id,
+      name = name,
+      description = description,
       earned = result.win and earned or false,
     }
   end
@@ -393,8 +444,7 @@ function E.challenges(g, result)
     add("sealed", "NO IDLE PARTS", "EVERY PLACED PART GETS POWER", result.unpowered == 0)
   end
   if g.number >= 3 then
-    add("master", "USE EVERY PART", "ALL STOCK USED AND POWERED",
-      result.remaining == 0 and result.unpowered == 0)
+    add("master", "USE EVERY PART", "ALL STOCK USED AND POWERED", result.remaining == 0 and result.unpowered == 0)
   end
   if g.number >= 5 then
     add("precision", "PRECISION", "AT MOST " .. par .. " MOVES", g.moves <= par)
