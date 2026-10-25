@@ -355,7 +355,13 @@ function R:cog(cx, cy, large, spin, maxRadius)
     for arm = 0, 3 do
       local theta = angle + arm * math.pi / 2
       local reach = math.max(1, radius - 1)
-      self:line(cx, cy, rounded(cx + math.cos(theta) * reach), rounded(cy + math.sin(theta) * reach), arm == 0 and (spin and 11 or 13) or 13)
+      self:line(
+        cx,
+        cy,
+        rounded(cx + math.cos(theta) * reach),
+        rounded(cy + math.sin(theta) * reach),
+        arm == 0 and (spin and 11 or 13) or 13
+      )
     end
     self:rect(cx - 1, cy - 1, 3, 3, 13)
     self:rect(cx, cy, 1, 1, 1)
@@ -373,7 +379,13 @@ function R:cog(cx, cy, large, spin, maxRadius)
         tooth == 0 and spin and 15 or 6
       )
     end
-    self:line(cx, cy, rounded(cx + math.cos(angle) * radius), rounded(cy + math.sin(angle) * radius), spin and (spin.sign > 0 and 11 or 14) or 13)
+    self:line(
+      cx,
+      cy,
+      rounded(cx + math.cos(angle) * radius),
+      rounded(cy + math.sin(angle) * radius),
+      spin and (spin.sign > 0 and 11 or 14) or 13
+    )
     self:rect(cx, cy, 1, 1, 1)
   end
 end
