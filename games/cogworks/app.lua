@@ -93,9 +93,7 @@ function A:finishTutorial()
   self:save()
 end
 function A:openLevel(index)
-  assert(
-    self.progress and index >= 1 and index <= (self.devSession and #E.levels or Campaign.openLevels(self.progress))
-  )
+  assert(self.progress and Campaign.levelUnlocked(self.progress, index, self.devSession))
   self.game = E.new(index)
   local session = self.progress.sessions[index]
   if type(session) == "table" and E.restore(self.game, session.parts) then
@@ -540,11 +538,7 @@ function A:act(action, x, y)
       end
     elseif action == "next" or action == "prev" then
       local nextIndex = self.game.number + (action == "next" and 1 or -1)
-      if
-        not self.game.sandbox
-        and nextIndex >= 1
-        and nextIndex <= (self.devSession and #E.levels or self.progress.unlocked)
-      then
+      if not self.game.sandbox and Campaign.levelUnlocked(self.progress, nextIndex, self.devSession) then
         self:save()
         self:openLevel(nextIndex)
         self:save()
@@ -610,21 +604,19 @@ function A:act(action, x, y)
     if action == "back" then
       self.scene = self.levelReturn
     elseif action == "chapter" and x >= 1 and x <= #Campaign.chapters then
-      if self.devSession or Campaign.unlocked(self.progress, x) then
+      if Campaign.unlocked(self.progress, x) or self.devSession then
         self.levelChapter = x
         self.scene = "chapter"
       else
-        self.message = "EARN MORE OBJECTIVES TO UNLOCK"
+        local stats = Campaign.stats(self.progress, x - 1)
+        self.message = "NEED " .. math.max(0, 6 - stats.points) .. " POINTS / "
+          .. math.max(0, 4 - stats.main) .. " MAIN CLEARS"
       end
     end
   elseif scene == "chapter" then
     if action == "back" then
       self.scene = "levels"
-    elseif
-      action == "level"
-      and x >= 1
-      and x <= (self.devSession and #E.levels or Campaign.openLevels(self.progress))
-    then
+    elseif action == "level" and Campaign.levelUnlocked(self.progress, x, self.devSession) then
       self:save()
       self:openLevel(x)
       self.levelReturn = "pause"
