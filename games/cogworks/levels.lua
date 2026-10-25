@@ -1,183 +1,153 @@
--- COGWORKS / Create-style kinetic lessons. Old elbow/splitter/inline-speed
--- puzzles are intentionally replaced, not adapted. 0=N 1=E 2=S 3=W.
--- Each reference contains placements plus optional redstone switch toggles.
-local function p(kind, x, y, r, engaged)
-  return { kind = kind, x = x, y = y, r = r or 0, engaged = engaged }
-end
-local function s(x, y, r)
-  return p("S", x, y, r)
-end
-local function m(x, y, r, rate, sign)
-  local part = p("M", x, y, r)
-  part.speed = rate
-  part.sign = sign
-  return part
-end
-local function level(name, tip, source, goals, build, options)
-  options = options or {}
-  local stock = {}
-  for _, part in ipairs(build) do
-    stock[part.kind] = (stock[part.kind] or 0) + 1
+-- 64-stage, 8-chapter kinetic campaign. Authoring templates are derived
+-- from the mechanically verified v0.3 puzzles; each variant is rotated or
+-- mirrored, repositioned and supplied with an individual objective layout.
+-- All data is regular Lua tables, compatible with future compiled level packs.
+local seed = require("games.cogworks.levels_seed")
+local chapters = require("games.cogworks.chapters").chapters
+local levels = {}
+local chapterSeeds = {
+  { 1, 1, 1, 1, 1, 1, 1, 1 },
+  { 2, 2, 3, 2, 3, 3, 5, 5 },
+  { 4, 4, 4, 13, 4, 13, 15, 15 },
+  { 9, 10, 9, 10, 9, 10, 14, 14 },
+  { 6, 6, 6, 12, 6, 12, 12, 12 },
+  { 11, 11, 11, 11, 14, 14, 14, 14 },
+  { 7, 8, 7, 8, 7, 8, 16, 16 },
+  { 12, 14, 15, 16, 12, 14, 15, 16 },
+}
+local function clone(value)
+  if type(value) ~= "table" then
+    return value
   end
-  for kind, amount in pairs(options.spares or {}) do
-    stock[kind] = (stock[kind] or 0) + amount
+  local result = {}
+  for key, child in pairs(value) do
+    result[key] = clone(child)
   end
+  return result
+end
+local function part(kind, x, y, r)
+  return { kind = kind, x = x, y = y, r = r or 0 }
+end
+local function shaftLesson(step)
+  local width = math.max(5, step + 2)
+  local height = math.max(5, math.min(10, step + 2))
+  local built, fixtures, stock = {}, {}, { I = step }
+  for x = 2, step + 1 do
+    local p = part("I", x, 3, 1)
+    if step >= 4 and x == math.floor((step + 3) / 2) then
+      fixtures[#fixtures + 1] = p
+      stock.I = stock.I - 1
+    else
+      built[#built + 1] = p
+    end
+  end
+  local name = step == 8 and "LONG RUN / SHAFT TEST" or ("SHAFT RUN " .. step)
   return {
     name = name,
-    tip = tip,
-    source = source,
-    goals = goals,
-    build = build,
-    blocks = options.blocks or {},
-    fixtures = options.fixtures or {},
-    toggles = options.toggles or {},
-    redstone = options.redstone or {},
-    removeRedstone = options.removeRedstone or {},
-    stock = stock,
+    tip = step == 8 and "FINISH THE LONG SHAFT LINE WITH A FIXED COUPLING." or "EXTEND THE AXIAL SHAFT LINE TO THE PRESS.",
+    width = width, height = height,
+    source = part("S", 1, 3, 1),
+    goals = { { kind = "M", x = step + 2, y = 3, r = 3, speed = 1, sign = 1 } },
+    build = built, fixtures = fixtures, blocks = {}, stock = stock,
+    redstone = {}, removeRedstone = {}, toggles = {},
   }
 end
-local levels = {
-  level(
-    "STRAIGHT SHAFT",
-    "CONNECT THE GENERATOR TO THE PRESS WITH AXIAL SHAFTS.",
-    s(1, 3, 1),
-    { m(5, 3, 3, 1, 1) },
-    { p("I", 2, 3, 1), p("I", 3, 3, 1), p("I", 4, 3, 1) }
-  ),
-  level(
-    "THE BEVEL TURN",
-    "A GEARBOX TURNS POWER AND REVERSES ITS SPIN.",
-    s(1, 3, 1),
-    { m(2, 5, 0, 1, -1) },
-    { p("Q", 2, 3, 0), p("I", 2, 4, 0) },
-    { blocks = { { 3, 4 }, { 3, 5 } } }
-  ),
-  level(
-    "TWO REVERSALS",
-    "TWO GEARBOXES CHANGE DIRECTION TWICE.",
-    s(1, 2, 1),
-    { m(4, 4, 3, 1, 1) },
-    { p("Q", 2, 2, 0), p("I", 2, 3, 0), p("Q", 2, 4, 0), p("I", 3, 4, 1) }
-  ),
-  level(
-    "MESHING TEETH",
-    "COGS MESH SIDEWAYS, NOT THROUGH THEIR SHAFT ENDS.",
-    s(1, 2, 1),
-    { m(4, 3, 3, 1, -1) },
-    { p("G", 2, 2, 1), p("G", 2, 3, 1), p("I", 3, 3, 1) }
-  ),
-  level(
-    "THREE-WAY POWER",
-    "ONE GEARBOX POWERS THREE OPPOSITE-SPIN PRESSES.",
-    s(1, 3, 1),
-    { m(3, 2, 2, 1, -1), m(4, 3, 3, 1, -1), m(3, 4, 0, 1, -1) },
-    { p("I", 2, 3, 1), p("Q", 3, 3, 0) }
-  ),
-  level(
-    "CHAIN LINK",
-    "CONNECT SIDE-BY-SIDE CHAIN DRIVES ON PARALLEL SHAFTS.",
-    s(1, 3, 1),
-    { m(5, 4, 3, 1, 1) },
-    { p("I", 2, 3, 1), p("D", 3, 3, 1), p("D", 3, 4, 1), p("I", 4, 4, 1) },
-    { blocks = { { 4, 3 } } }
-  ),
-  level(
-    "REDSTONE REVERSE",
-    "TOGGLE THE GEARSHIFT TO REVERSE THE OUTPUT.",
-    s(1, 3, 1),
-    { m(4, 3, 3, 1, -1) },
-    { p("Z", 2, 3, 1), p("I", 3, 3, 1) },
-    { spares = { B = 1, R = 2 } }
-  ),
-  level(
-    "CUT THE CLUTCH",
-    "SWITCH OFF THE POWERED CLUTCH TO CONNECT THE SHAFT.",
-    s(1, 3, 1),
-    { m(4, 3, 3, 1, 1) },
-    { p("I", 3, 3, 1) },
-    { fixtures = { p("C", 2, 3, 1) }, redstone = { p("B", 2, 2) }, removeRedstone = { { 2, 2 } } }
-  ),
-  level(
-    "GEAR UP",
-    "LARGE TO SMALL DIAGONAL COGS DOUBLE THE RPM.",
-    s(1, 2, 1),
-    { m(4, 3, 3, 2, -1) },
-    { p("O", 2, 2, 1), p("G", 3, 3, 1) }
-  ),
-  level(
-    "GEAR DOWN",
-    "SMALL TO LARGE DIAGONAL COGS HALVE THE RPM.",
-    s(1, 2, 1),
-    { m(4, 3, 3, 0.5, -1) },
-    { p("G", 2, 2, 1), p("O", 3, 3, 1) }
-  ),
-  level(
-    "PARALLEL BELTS",
-    "PAIR PARALLEL PULLEYS ACROSS AN EMPTY, CLEAR SPAN.",
-    s(1, 2, 1),
-    { m(3, 5, 3, 1, 1) },
-    { p("V", 2, 2, 1), p("V", 2, 5, 1) },
-    { blocks = { { 3, 3 }, { 3, 4 } } }
-  ),
-  level(
-    "BRANCHING WORKS",
-    "COMBINE A REVERSING GEARBOX WITH A CHAIN DRIVE.",
-    s(1, 3, 1),
-    { m(3, 2, 2, 1, -1), m(4, 3, 3, 1, -1), m(4, 5, 0, 1, -1) },
-    { p("I", 2, 3, 1), p("Q", 3, 3, 0), p("D", 3, 4, 0), p("D", 4, 4, 0) }
-  ),
-  level(
-    "COUNTER ROTATION",
-    "A GEARBOX AND SIDE-MESHING COGS CANCEL THE REVERSAL.",
-    s(1, 3, 1),
-    { m(3, 1, 2, 1, 1) },
-    { p("Q", 2, 3, 0), p("G", 2, 2, 0), p("G", 3, 2, 0) }
-  ),
-  level(
-    "BELTED GEAR TRAIN",
-    "USE A BELT, THEN A DIAGONAL COG PAIR TO SPEED UP.",
-    s(1, 2, 1),
-    { m(5, 4, 3, 2, -1) },
-    { p("V", 2, 2, 1), p("V", 2, 5, 1), p("O", 3, 5, 1), p("G", 4, 4, 1) }
-  ),
-  level(
-    "CLOCKWORK TREE",
-    "SPLIT POWER, THEN REVERSE ONE BRANCH WITH COGS.",
-    s(1, 3, 1),
-    { m(2, 2, 2, 1, -1), m(5, 4, 3, 1, 1), m(2, 5, 0, 1, -1) },
-    { p("Q", 2, 3, 0), p("I", 3, 3, 1), p("G", 4, 3, 1), p("G", 4, 4, 1), p("D", 2, 4, 0) }
-  ),
-  level(
-    "MASTER GEARSHIFT",
-    "SWITCH THE GEARSHIFT BEFORE FEEDING THREE GEARBOX OUTPUTS.",
-    s(1, 3, 1),
-    { m(3, 2, 2, 1, 1), m(4, 3, 3, 1, 1), m(3, 4, 0, 1, 1) },
-    { p("Q", 3, 3, 0) },
-    { fixtures = { p("Z", 2, 3, 1) }, spares = { B = 1, R = 2 } }
-  ),
-}
-local sizes = {
-  { 5, 5 },
-  { 5, 5 },
-  { 5, 5 },
-  { 6, 5 },
-  { 6, 5 },
-  { 6, 6 },
-  { 6, 6 },
-  { 6, 6 },
-  { 7, 6 },
-  { 7, 6 },
-  { 8, 7 },
-  { 8, 7 },
-  { 8, 8 },
-  { 9, 8 },
-  { 9, 9 },
-  { 10, 10 },
-}
-for index, stage in ipairs(levels) do
-  stage.width, stage.height = sizes[index][1], sizes[index][2]
+local function fromSeed(chapter, step)
+  local template = seed[chapterSeeds[chapter][step]]
+  local width = math.max(5 + chapter - 1 + (step >= 6 and 1 or 0), template.width)
+  local height = math.max(5 + chapter - 1 + (step >= 6 and 1 or 0), template.height)
+  width, height = math.min(10, width), math.min(10, height)
+  local flipX = step % 4 == 2 or step % 4 == 0
+  local flipY = step % 4 == 3 or step % 4 == 0
+  local offsetX = math.floor((width - template.width) / 2)
+  local offsetY = math.floor((height - template.height) / 2)
+  local function coords(x, y)
+    return offsetX + (flipX and template.width + 1 - x or x),
+      offsetY + (flipY and template.height + 1 - y or y)
+  end
+  local function relocate(p)
+    local t = clone(p)
+    t.x, t.y = coords(p.x, p.y)
+    if flipX then
+      t.r = ({ [0] = 0, [1] = 3, [2] = 2, [3] = 1 })[t.r or 0]
+    end
+    if flipY then
+      t.r = ({ [0] = 2, [1] = 1, [2] = 0, [3] = 3 })[t.r or 0]
+    end
+    return t
+  end
+  local function relocateAll(values)
+    local list = {}
+    for _, value in ipairs(values or {}) do
+      list[#list + 1] = relocate(value)
+    end
+    return list
+  end
+  local data = {
+    name = step == 8 and chapters[chapter].test or template.name,
+    tip = template.tip,
+    width = width, height = height,
+    source = relocate(template.source),
+    goals = relocateAll(template.goals),
+    fixtures = relocateAll(template.fixtures),
+    build = relocateAll(template.build),
+    redstone = relocateAll(template.redstone),
+    stock = clone(template.stock),
+    removeRedstone = {},
+    blocks = {},
+    toggles = {},
+  }
+  -- Early hints become increasingly constrained; later stages can start
+  -- with pre-installed, immovable mechanical components.
+  if step == 4 or step == 6 or step == 8 then
+    local fixedCount = step == 8 and 2 or 1
+    for _ = 1, math.min(fixedCount, math.max(0, #data.build - 1)) do
+      local fixture = table.remove(data.build, 1)
+      fixture.fixed = nil
+      data.fixtures[#data.fixtures + 1] = fixture
+      data.stock[fixture.kind] = data.stock[fixture.kind] - 1
+    end
+  end
+  for _, pos in ipairs(template.removeRedstone or {}) do
+    local x, y = coords(pos[1], pos[2])
+    data.removeRedstone[#data.removeRedstone + 1] = { x, y }
+  end
+  for _, pos in ipairs(template.blocks or {}) do
+    local x, y = coords(pos[1], pos[2])
+    data.blocks[#data.blocks + 1] = { x, y }
+  end
+  -- A few fixed stone borders create useful placement restrictions without
+  -- interfering with any reference power path.
+  if step >= 5 then
+    local occupied = {}
+    for _, p in ipairs({ data.source }) do
+      occupied[p.y * 20 + p.x] = true
+    end
+    for _, list in ipairs({ data.goals, data.build, data.fixtures, data.redstone }) do
+      for _, p in ipairs(list) do
+        occupied[p.y * 20 + p.x] = true
+      end
+    end
+    for _, pos in ipairs(data.blocks) do
+      occupied[pos[2] * 20 + pos[1]] = true
+    end
+    local corners = { { 1, 1 }, { width, height } }
+    for k = 1, step >= 7 and 2 or 1 do
+      local p = corners[k]
+      if not occupied[p[2] * 20 + p[1]] then
+        data.blocks[#data.blocks + 1] = p
+      end
+    end
+  end
+  return data
 end
--- Redstone is part of authored solutions, not a global magic switch.
-levels[7].build[#levels[7].build + 1] = p("B", 2, 2)
-levels[16].build[#levels[16].build + 1] = p("B", 2, 2)
+for chapter = 1, 8 do
+  for step = 1, 8 do
+    local stage = chapter == 1 and shaftLesson(step) or fromSeed(chapter, step)
+    stage.chapter, stage.stage = chapter, step
+    stage.finale = step == 8
+    stage.title = chapter .. "-" .. step .. " " .. stage.name
+    levels[#levels + 1] = stage
+  end
+end
 return levels
