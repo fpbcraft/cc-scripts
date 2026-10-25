@@ -1,5 +1,6 @@
 -- Odd-row offset pointy hexes. All geometry/pathfinding uses the same rules.
 local Biomes = dofile("/games/civcraft/biomes.lua")
+local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local H = { width = 12, height = 8 }
 local function dims(state)
 	local world = state and state.world
@@ -244,6 +245,11 @@ function H.reachable(state, unit, owner, Systems)
 					if enemy then
 						if
 							visible(nx, ny)
+							and Diplomacy.canAttack(
+								state,
+								owner,
+								(c and c.owner) or (u and u.owner)
+							)
 							and (stats.strength or 0) > 0
 							and (not unit.attackedRound or unit.attackedRound ~= state.round)
 							and (stats.range or 1) == 1
@@ -304,6 +310,7 @@ function H.reachable(state, unit, owner, Systems)
 		for _, u in ipairs(targets) do
 			if
 				u.owner ~= owner
+				and Diplomacy.canAttack(state, owner, u.owner)
 				and H.distance(unit.x, unit.y, u.x, u.y) <= stats.range
 				and H.distance(unit.x, unit.y, u.x, u.y) > 0
 			then

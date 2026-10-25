@@ -1,5 +1,6 @@
 -- Plan from detached observer knowledge; execute through the shared action rules.
 local Actions = dofile("/games/civcraft/actions.lua")
+local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Campaigns = dofile("/games/civcraft/ai_campaigns.lua")
 local CityRoles = dofile("/games/civcraft/ai_city_roles.lua")
 local Infrastructure = dofile("/games/civcraft/ai_infrastructure.lua")
@@ -241,8 +242,35 @@ function A.engineer(state, player, unit, systems)
 	return acted
 end
 function A.diplomacy(state, p, systems)
+	local view = A.knowledge(state, p)
+	if state.diplomacy and (p.aiPlan or {}).primary == "conquest" then
+		local army = 0
+		for _, unit in ipairs(view.units) do
+			if unit.owner == p.id and ((systems.units[unit.kind] or {}).strength or 0) > 0 then
+				army = army + 1
+			end
+		end
+		if army >= 3 then
+			for _, city in ipairs(view.cities) do
+				if
+					city.owner ~= p.id
+					and not city.village
+					and not Diplomacy.war(view, p.id, city.owner)
+					and (p.visible or {})[city.x .. ":" .. city.y]
+				then
+					Actions.apply(
+						state,
+						p.id,
+						{ action = "declareWar", target = city.owner, kind = "normal" },
+						systems
+					)
+					break
+				end
+			end
+		end
+	end
 	if (p.gold or 0) > 100 then
-		for _, city in ipairs(A.knowledge(state, p).cities) do
+		for _, city in ipairs(view.cities) do
 			if Villages.independent(city) and Villages.discovered(p, city) then
 				Actions.apply(state, p.id, { action = "envoy", x = city.x, y = city.y }, systems)
 			end

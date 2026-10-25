@@ -3,6 +3,7 @@
 local FactionColors = dofile("/games/civcraft/faction_colors.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
 local CampaignOptions = dofile("/games/civcraft/campaign_options.lua")
+local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
 local GameView = dofile("/games/civcraft/game_view.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
@@ -700,6 +701,23 @@ function UI:draw(state, playerID, opts)
 						},
 					},
 				}
+			elseif opts.host then
+				rows[#rows + 1] = {
+					buttons = {
+						{
+							label = "+ AI",
+							run = function()
+								self:command("addAI")
+							end,
+						},
+						{
+							label = "- AI",
+							run = function()
+								self:command("removeAI")
+							end,
+						},
+					},
+				}
 			end
 			rows[#rows + 1] = {
 				buttons = {
@@ -786,6 +804,13 @@ function UI:draw(state, playerID, opts)
 			end)
 			r:button(56, y, 40, 15, "+ PLAYER", function()
 				self:command("addPlayer")
+			end)
+		elseif opts.host then
+			r:button(12, y, 40, 15, "+ AI", function()
+				self:command("addAI")
+			end)
+			r:button(56, y, 40, 15, "- AI", function()
+				self:command("removeAI")
 			end)
 		else
 			r:text(13, y, "HOST ID: " .. tostring(opts.hostID or "?"), 5)
@@ -963,6 +988,7 @@ function UI:armCityStrike(city)
 	for _, u in ipairs(self.state.units) do
 		if
 			u.owner ~= self.playerID
+			and Diplomacy.canAttack(self.state, self.playerID, u.owner)
 			and Hex.distance(city.x, city.y, u.x, u.y) <= 2
 			and (player.visible or {})[u.x .. ":" .. u.y]
 		then

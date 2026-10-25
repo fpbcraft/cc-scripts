@@ -1,4 +1,6 @@
 local Colors = dofile("/games/civcraft/faction_colors.lua")
+local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
+local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
@@ -23,6 +25,48 @@ function Factions.draw(ui, state, observer, rect)
 		text(player.name .. (own and " (YOU)" or ""), Colors.players[index] or 8)
 		text(civilization.name .. " / " .. (player.ai and "AI" or "HUMAN"))
 		text("BONUS: " .. civilization.bonus)
+		if state.diplomacy then
+			text("REPUTATION: " .. ((state.diplomacy.reputation or {})[player.id] or 0))
+			if not own then
+				local war = Diplomacy.war(state, observer.id, player.id)
+				text(
+					war and (war.active and "AT WAR" or "WAR STARTS ROUND " .. war.activatesRound)
+						or "AT PEACE"
+				)
+				if not war and Scheduler.canAct(state, observer.id) then
+					rows[#rows + 1] = {
+						buttons = {
+							{
+								label = "ANNOUNCE WAR",
+								run = function()
+									ui:command(
+										"declareWar",
+										{ target = player.id, kind = "normal" }
+									)
+								end,
+							},
+						},
+					}
+					text(
+						"Normal war starts next round. Surprise War starts now: -50 reputation, -75 defender trust; all remaining actions before a response.",
+						9
+					)
+					rows[#rows + 1] = {
+						buttons = {
+							{
+								label = "DECLARE SURPRISE WAR",
+								run = function()
+									ui:command(
+										"declareWar",
+										{ target = player.id, kind = "surprise" }
+									)
+								end,
+							},
+						},
+					}
+				end
+			end
+		end
 		if player.ai then
 			text("PERSONALITY: " .. Personalities.forCivilization(player.civ).archetype:upper())
 		end
@@ -54,6 +98,24 @@ function Factions.draw(ui, state, observer, rect)
 				.. " UNITS"
 		)
 		rows[#rows + 1] = { text = "" }
+	end
+	local group = Scheduler.group(state, observer.id)
+	if group then
+		text("WAR GROUP ORDER:", 8)
+		for _, id in ipairs(group.order) do
+			for _, participant in ipairs(state.players) do
+				if participant.id == id then
+					text(
+						participant.name
+							.. (
+								id == group.active and " / ACTIVE"
+								or participant.ready and " / ENDED"
+								or " / WAITING"
+							)
+					)
+				end
+			end
+		end
 	end
 	Panels.rows(
 		r,

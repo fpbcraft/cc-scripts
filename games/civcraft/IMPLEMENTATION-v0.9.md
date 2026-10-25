@@ -123,12 +123,26 @@ The host chooses Conquest, Industrial, End Expedition and Score independently be
 
 Optional `gameSpeed` and `victories` fields remain compatible with schema 6. Migration gives old campaigns Standard progression while retaining their saved deadline and map; each player's pace is synchronized from the campaign for shared cost APIs. Observer snapshots copy the public options without aliasing the host's table. Host validation rejects unauthorized edits, invalid values, edits after launch and disabling the last victory. All 62 regression scripts pass. Native CraftOS-PC passed rule scenarios and a mouse-driven lobby that selects Quick and disables Score, then completes research/Codex navigation, two human turns, an AI turn, settings and save reload.
 
+## 07: Hybrid turns and declarations
+
+Peaceful civilizations act independently through the serialized host command queue. Active wars form connected components, each with one eligible civilization. Each component rotates its starting player each round; independent groups keep progressing separately. Every human and AI gameplay order checks the same scheduler, and End Turn advances its component without resetting movement. Economy, growth, research, production and victory advance only after all participants and response windows finish.
+
+Normal War is announced now and activates at the next global boundary, before round effects. Surprise War activates immediately, merging only affected components and retaining the attacker's remaining-action window until End Turn. An already-ended defender keeps Ready recorded but receives one response window using only its remaining budgets. No declaration refreshes movement, attack limits or production. The faction panel exposes explicit declaration choices and their initial reputation/trust penalties; turn status and group order are visible. Peace takes effect at a specified boundary; negotiation UI belongs to workstream 08.
+
+Combat forecasts, actual attacks, movement attack overlays, city strikes, sieges, danger maps and AI military targets respect active war. Independent monsters and guarded villages retain their separate rules. Conquest AI can announce a normal war through the shared action executor when it has a field army and an observed foreign city. The host AI runner operates in both local and network modes, including transitions that activate an AI. Network hosts can add/remove AI civilizations in the lobby.
+
+Optional version 1 diplomacy and scheduler records persist war edges, turn order, reactions and diplomatic penalties in schema 6 saves. Loading a pre-diplomacy campaign imports its former unrestricted foreign hostility as active wars, without penalties, preserves its current hotseat participant where eligible and retains all spent actions/Ready locks. Public snapshots detach war/order data and omit other parties' private relations. Migration is idempotent.
+
+The 63-script regression suite passes. Scheduler scenarios cover all 64 four-player war graphs, separate/merged/split groups, fair rotation, normal activation, Surprise War against an ended defender, unrelated active participants, illegal inactive declarations, shared attack legality, legacy migration and snapshot detachment. Native CraftOS-PC passes the scheduler scenarios and a complete mouse-driven Surprise War/hotseat/AI session, including saving during the defender's response. A separate real host-mode session adds an AI through the network lobby and completes its turn and save reload. These headless tests use the text backend and no modem; live remote clients, reconnect races and physical displays remain release validation.
+
 ## Remaining workstreams
 
-07. Hybrid peaceful/war-group turns and declaration transitions.
 08. Relations, treaty offers, explicit defense calls and authored conversations.
 09. Council elections, resolutions and diplomatic victory.
 10. Remaining display integration, faction diplomacy controls and larger map presets.
+    New 25 October requirements also include settler capture/stacked escorts,
+    queued multi-turn movement, immediate sharp labels after zoom, frozen grey
+    fog memory, the top-right reverse-chronological Event Log and replay pauses.
 11. AI difficulty variants after the Prince baseline.
 12. Save/integration/fuzz/performance/network validation and release metadata.
 

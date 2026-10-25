@@ -1,6 +1,7 @@
 -- Host-authoritative gameplay orders shared by humans, remote players and AI.
 -- Session orchestration (lobby, save, end turn) belongs to game.lua.
 local Combat = dofile("/games/civcraft/combat.lua")
+local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Events = dofile("/games/civcraft/events.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local Hostiles = dofile("/games/civcraft/hostiles.lua")
@@ -8,6 +9,7 @@ local Rails = dofile("/games/civcraft/railways.lua")
 local UnitMovement = dofile("/games/civcraft/unit_movement.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local World = dofile("/games/civcraft/world.lua")
+local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local A = {}
 
 function A.validateIntent(state, request)
@@ -40,8 +42,9 @@ function A.apply(state, id, req, Systems)
 	if not current then
 		return false, reason
 	end
-	if p.ready then
-		return false, "Already ended turn"
+	local eligible, waiting = Scheduler.canAct(state, id)
+	if not eligible then
+		return false, waiting
 	end
 	local function at(list, x, y)
 		for _, item in ipairs(list or {}) do
@@ -66,7 +69,16 @@ function A.apply(state, id, req, Systems)
 			table.remove(state.logs)
 		end
 	end
-	if req.action == "exchange" then
+	if req.action == "declareWar" then
+		local ok, why = Diplomacy.declare(state, id, req.target, req.kind)
+		if ok then
+			log((p.name or tostring(id)) .. ": " .. why)
+			for _, observer in ipairs(state.players) do
+				Events.notice(state, "order", nil, why, observer.id)
+			end
+		end
+		return ok, why
+	elseif req.action == "exchange" then
 		local ok, why = Systems.exchange(state, p, req.resource)
 		if ok then
 			Events.notice(state, "order", nil, req.action, id)

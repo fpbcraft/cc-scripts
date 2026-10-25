@@ -1,6 +1,7 @@
 -- The director accepts an observer projection, never unrestricted host state.
 local Hex = dofile("/games/civcraft/hex.lua")
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
+local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
 local Strategy = { version = 1, reviewInterval = 10 }
 local preferences = {
@@ -97,6 +98,7 @@ local function emergency(view, player, cities)
 			for _, unit in ipairs(view.units or {}) do
 				if
 					unit.owner ~= player.id
+					and Diplomacy.canAttack(view, player.id, unit.owner)
 					and not unit.villageGuard
 					and unit.kind ~= "settler"
 					and Hex.distance(city.x, city.y, unit.x, unit.y) <= 3

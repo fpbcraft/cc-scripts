@@ -158,6 +158,8 @@ P.packages.civcraft = {
 		"game_view.lua",
 		"research_details.lua",
 		"campaign_rules.lua",
+		"diplomacy.lua",
+		"turn_scheduler.lua",
 		"campaign_options.lua",
 		"faction_view.lua",
 		"hex.lua",

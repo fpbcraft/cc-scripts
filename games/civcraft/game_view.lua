@@ -10,6 +10,7 @@ local Minimap = dofile("/games/civcraft/minimap.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
 local Reports = dofile("/games/civcraft/reports.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
+local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local TechTree = dofile("/games/civcraft/tech_tree.lua")
 local G = {}
 local modes = { "terrain", "territory", "resources", "yields" }
@@ -67,10 +68,29 @@ function G.draw(ui, state, player)
 		w - 82 - infoX
 	)
 	HUD.resources(ui, state, player)
+	local turnStatus
+	local group = Scheduler.group(state, player.id)
+	if group then
+		if group.active == player.id then
+			turnStatus = state.scheduler.reactions[player.id]
+					and "YOUR RESPONSE / UNSPENT ACTIONS ONLY"
+				or "WAR GROUP / YOUR TURN"
+		else
+			local name = "ROUND BOUNDARY"
+			for _, participant in ipairs(state.players) do
+				if participant.id == group.active then
+					name = participant.name
+				end
+			end
+			turnStatus = "WAR GROUP / WAITING: " .. name
+		end
+	end
 	r:text(
 		4,
 		header - 7,
-		ui.hoverLabel or (ui.notice ~= "" and ui.notice or "SELECT A HEX OR AN ACTION"),
+		ui.hoverLabel
+			or turnStatus
+			or (ui.notice ~= "" and ui.notice or "SELECT A HEX OR AN ACTION"),
 		6,
 		1,
 		w - 8

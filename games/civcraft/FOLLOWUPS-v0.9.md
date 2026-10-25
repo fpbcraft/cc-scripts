@@ -25,6 +25,30 @@ in the design draft. Keep this list alongside the main roadmap until verified.
   with authoritative resolution.
 - [x] Add a persistent Settings menu accessible from the title and pause screens,
   covering sound/music, volume, animation/accessibility and display preferences.
+- Capture an unprotected settler immediately when attacked. Allow a military
+  unit and settler to share a hex, and attach/detach the settler as an escort
+  group that moves together. Transfer a captured settler to the attacker through
+  the shared action executor; a protecting military unit takes combat first.
+  Linked movement must be legal and affordable for both units.
+- Allow distant destinations and multiple future movement orders. Persist each
+  unit's route/queue and execute only its affordable legal movement at the start
+  of its next eligible turn. Respect terrain, occupancy, fog, combat limits and
+  war-group scheduling; do not regenerate movement. Provide cancel/replace and
+  interruption feedback, including for attached settler escorts.
+- Fix city-name and other label blur immediately after zooming. Invalidate or
+  rebuild the relevant scaled rendering caches before the next frame; panning
+  must not be required to restore sharp text.
+- Keep explored tiles outside vision visible, greyed out and frozen at their
+  last observed state. Do not show unseen units, new cities or other changes.
+  Re-entering vision updates the remembered state. Check local, hotseat, remote
+  snapshots and event playback against the same observation rules.
+- Add a top-right Event Log button. List the observer's known events in reverse
+  chronological order, newest first, with no hidden actions or action-count
+  leakage. Keep compact observer-filtered history separately from the bounded
+  replay window so older known events remain reachable by scrolling/pagination.
+- Add a short pause before each replayed event at the start of a turn so the
+  player can parse successive actions. Pause/reduced-motion/speed preferences
+  must remain coherent; simulation must not wait on presentation.
 
 Surprise War first strike: the attacker uses **all remaining legal actions**
 before the defender responds. Previously spent movement and attacks stay spent.

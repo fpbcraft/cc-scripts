@@ -2,6 +2,7 @@ local Hex = dofile("/games/civcraft/hex.lua")
 local Routes = dofile("/games/civcraft/ai_routes.lua")
 local Threats = dofile("/games/civcraft/threats.lua")
 local World = dofile("/games/civcraft/world.lua")
+local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Campaigns = {}
 
 local function corridor(view, player, city, target, systems)
@@ -140,7 +141,11 @@ function Campaigns.update(view, player, systems)
 		coast = coast or systems.coastal(view, city)
 	end
 	for _, unit in ipairs(view.units) do
-		if unit.owner ~= player.id and (systems.units[unit.kind] or {}).naval then
+		if
+			unit.owner ~= player.id
+			and Diplomacy.canAttack(view, player.id, unit.owner)
+			and (systems.units[unit.kind] or {}).naval
+		then
 			enemyShips = enemyShips + 1
 		end
 	end
@@ -151,6 +156,7 @@ function Campaigns.update(view, player, systems)
 	for _, city in ipairs(view.cities) do
 		if
 			city.owner ~= player.id
+			and Diplomacy.canAttack(view, player.id, city.owner)
 			and not city.village
 			and (player.visible or {})[World.key(city.x, city.y)]
 		then
@@ -184,6 +190,7 @@ function Campaigns.update(view, player, systems)
 		not target
 		and previous
 		and previous.kind == "city"
+		and Diplomacy.canAttack(view, player.id, previous.owner)
 		and (view.round or 1) - previous.seenRound <= 10
 	then
 		local seen = (player.visible or {})[World.key(previous.x, previous.y)]

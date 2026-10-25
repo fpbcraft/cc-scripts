@@ -1,6 +1,8 @@
 -- Seeded hex geography, strategic deposits, private discovery and territory.
 -- World state is authoritative and saved; map presets never reroll on reload.
 local Biomes = dofile("/games/civcraft/biomes.lua")
+local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
+local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local CombatStrength = dofile("/games/civcraft/combat_strength.lua")
 local Content = dofile("/games/civcraft/content.lua")
 local Events = dofile("/games/civcraft/events.lua")
@@ -418,6 +420,8 @@ function W.forPlayer(state, id, afterSeq)
 		ruleset = state.ruleset,
 		roundLimit = state.roundLimit,
 		gameSpeed = state.gameSpeed,
+		diplomacy = Diplomacy.public(state),
+		scheduler = Scheduler.public(state),
 		victories = state.victories and {},
 		hostileMode = state.hostileMode,
 		victoryReason = state.victoryReason,

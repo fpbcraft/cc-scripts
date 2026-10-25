@@ -1,5 +1,6 @@
 -- Confirmed danger uses visible combatants only. Remembered uncertainty is AI-only.
 local Combat = dofile("/games/civcraft/combat.lua")
+local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Threats = {}
@@ -13,6 +14,9 @@ end
 
 function Threats.opponent(view, player, entity, systems)
 	if entity.owner == player.id or entity.villageGuard then
+		return false
+	end
+	if not Diplomacy.canAttack(view, entity.owner, player.id) then
 		return false
 	end
 	return not entity.kind or ((systems.units[entity.kind] or {}).strength or 0) > 0

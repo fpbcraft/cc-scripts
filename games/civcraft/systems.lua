@@ -1,6 +1,7 @@
 -- CIVCRAFT 4X data & deterministic mechanics, no dependencies on UI/peripherals.
 local M = {}
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
+local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local AI = dofile("/games/civcraft/ai.lua")
 local Actions = dofile("/games/civcraft/actions.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
@@ -837,7 +838,7 @@ function M.production(state, hex)
 end
 -- AI plays by the same research and production queue rules as humans.
 function M.aiTurn(state, p, hex)
-	if p.ready then
+	if not Scheduler.canAct(state, p.id) then
 		return
 	end
 	AI.beginTurn(state, p, M)
@@ -905,6 +906,6 @@ function M.aiTurn(state, p, hex)
 			end
 		end
 	end
-	p.ready = true
+	Scheduler.finish(state, p.id)
 end
 return M

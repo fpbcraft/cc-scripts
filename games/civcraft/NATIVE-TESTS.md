@@ -63,3 +63,16 @@ the detail scroll position when reopening research.
 Add `--campaign` to open Campaign Options in the lobby, select Quick and disable
 Score, then start the campaign. `campaignOptions` confirms that the selected
 pace, deadline and victory toggles survive the full session and save reload.
+
+Add `--war` to the two-human session to have the second human declare Surprise
+War after the first human has ended. The driver hands the screen back for the
+first human's response, saves during that response and finishes it before the
+round boundary. `warResponse` and `responseSaved` confirm the path and persisted
+Ready/reaction state. The next round rotates the war group's starting player.
+
+Use `--host-ai` instead of `--ai` for a separate host-mode scenario: add an AI
+through the network lobby, complete the host/AI round, save and exit.
+`hostModeAI` confirms this path. It can combine with `--settings`, `--research`
+and `--campaign`, but not `--war` (which requires the two-human scenario).
+This tests the actual host code without a modem; it does not establish live
+rednet transport or multi-client reconnect behavior.

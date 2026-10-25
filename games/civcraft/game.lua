@@ -107,6 +107,9 @@ local function newCampaignID()
 	return tostring(stamp) .. ":" .. campaignCounter
 end
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
+local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
+local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
+local pumpActors = function() end
 local W, H = Hex.width, Hex.height
 local state
 local turnProgress = function() end
@@ -117,6 +120,8 @@ local function newGame()
 		ruleset = "create",
 		roundLimit = 180,
 		gameSpeed = "standard",
+		diplomacy = Diplomacy.new(),
+		scheduler = Scheduler.new(),
 		hostileMode = "standard",
 		phase = "lobby",
 		round = 1,
@@ -218,6 +223,9 @@ local function initMap()
 	Hostiles.generate(state)
 	Villages.generate(state)
 	Systems.migrate(state)
+	Diplomacy.boundary(state)
+	World.reveal(state, Hex, Systems)
+	pumpActors()
 	log("Game started: " .. #state.players .. " civilizations")
 	save()
 end
@@ -257,14 +265,15 @@ local function nextTurn()
 	trace("round.begin", state.round)
 	turnProgress("PROCESSING ROUND", "Economy, exploration and reports")
 	state.round = state.round + 1
+	for _, p in ipairs(state.players) do
+		p.ready = false
+	end
+	Diplomacy.boundary(state)
 	Events.prune(state)
 	Combat.round(state, Systems)
 	Systems.production(state, Hex)
 	Villages.round(state, Systems, Combat)
 	Hostiles.round(state, Systems)
-	for _, p in ipairs(state.players) do
-		p.ready = false
-	end
 	for _, u in ipairs(state.units) do
 		local owner = player(u.owner)
 		local base = Systems.units[u.kind] or Systems.units.warrior
@@ -276,7 +285,8 @@ local function nextTurn()
 	end
 	World.reveal(state, Hex, Systems)
 	for _, unit in ipairs(state.units) do
-		if unit.autoExplore and not unit.standby then
+		if unit.autoExplore and not unit.standby and Scheduler.canAct(state, unit.owner) then
+			unit.autoExploreRound = state.round
 			Systems.autoExplore(state, unit, Hex)
 		end
 	end
@@ -296,9 +306,46 @@ local function nextTurn()
 		p.reportRound = state.round
 	end
 	winner(true)
+	pumpActors()
 	log("Round " .. state.round)
 	save()
 	trace("round.end", state.round)
+end
+pumpActors = function()
+	if state.phase ~= "game" then
+		return
+	end
+	for _ = 1, #state.players do
+		local ranAI = false
+		for _, participant in ipairs(state.players) do
+			if Scheduler.canAct(state, participant.id) then
+				for _, unit in ipairs(state.units) do
+					if
+						unit.owner == participant.id
+						and unit.autoExplore
+						and not unit.standby
+						and unit.autoExploreRound ~= state.round
+					then
+						unit.autoExploreRound = state.round
+						Systems.autoExplore(state, unit, Hex)
+					end
+				end
+				if participant.ai then
+					if not participant.ready then
+						participant.turnBaseline = Reports.capture(state, participant)
+					end
+					turnProgress("AI TAKING ITS TURN", participant.name)
+					trace("ai.begin", participant.name)
+					Systems.aiTurn(state, participant, Hex)
+					trace("ai.end", participant.name)
+					ranAI = true
+				end
+			end
+		end
+		if not ranAI then
+			break
+		end
+	end
 end
 local function apply(id, req)
 	local p = player(id)
@@ -318,6 +365,38 @@ local function apply(id, req)
 	end
 	if req.action == "gameSpeed" or req.action == "toggleVictory" then
 		return CampaignRules.configure(state, id, req)
+	end
+	if req.action == "addAI" or req.action == "removeAI" then
+		if state.phase ~= "lobby" or id ~= state.players[1].id then
+			return false, "Host lobby only"
+		end
+		if req.action == "addAI" then
+			if #state.players >= 4 then
+				return false, "Four civilizations maximum"
+			end
+			local aiID = -2000000000
+			while player(aiID) do
+				aiID = aiID - 1
+			end
+			local index = #state.players + 1
+			state.players[index] = {
+				id = aiID,
+				name = "AI " .. index,
+				ai = true,
+				civ = Systems.civs[index].id,
+				techs = {},
+				ready = false,
+				gameSpeed = state.gameSpeed,
+			}
+			return true
+		end
+		for index = #state.players, 1, -1 do
+			if state.players[index].ai then
+				table.remove(state.players, index)
+				return true
+			end
+		end
+		return false, "No AI civilization to remove"
 	end
 	if req.action == "hostileMode" and state.phase == "lobby" then
 		if id ~= state.players[1].id then
@@ -340,31 +419,27 @@ local function apply(id, req)
 	if state.phase ~= "game" then
 		return false, "Game not running"
 	end
-	if p.ready then
-		return false, "Already ended turn"
+	local eligible, waiting = Scheduler.canAct(state, id)
+	if not eligible then
+		return false, waiting
+	end
+	if req.action == "declareWar" then
+		local ok, why = Actions.apply(state, id, req, Systems)
+		if ok then
+			pumpActors()
+			save()
+		end
+		return ok, why
 	end
 	if req.action == "end" then
-		p.turnBaseline = Reports.capture(state, p)
-		p.ready = true
+		if not p.ready then
+			p.turnBaseline = Reports.capture(state, p)
+		end
+		Scheduler.finish(state, id)
 		Events.notice(state, "order", nil, "end", id)
 		log(p.name .. " is ready")
-		if localMode then
-			for _, q in ipairs(state.players) do
-				if q.ai and not q.ready then
-					turnProgress("AI TAKING ITS TURN", q.name)
-					trace("ai.begin", q.name)
-					Systems.aiTurn(state, q, Hex)
-					trace("ai.end", q.name)
-				end
-			end
-		end
-		local all = true
-		for _, q in ipairs(state.players) do
-			if not q.ready then
-				all = false
-			end
-		end
-		if all then
+		pumpActors()
+		if Scheduler.complete(state) then
 			nextTurn()
 		else
 			save()
@@ -446,6 +521,7 @@ else
 	)
 end
 Systems.migrate(state)
+Diplomacy.migrate(state)
 state.campaignID = state.campaignID or newCampaignID()
 World.reveal(state, Hex, Systems)
 local snapshot = localHost and state or nil
@@ -493,6 +569,7 @@ local function draw()
 	view:draw(s, observer, {
 		handoff = handoff,
 		localMode = localMode,
+		host = localHost,
 		hostID = hostId,
 		screen = appScreen,
 		report = true,
@@ -521,6 +598,7 @@ local function dispatch(action, params)
 			hasHumanSave = type(loaded) == "table"
 			if hasHumanSave then
 				state = Systems.migrate(World.migrate(loaded))
+				Diplomacy.migrate(state)
 				state.campaignID = state.campaignID or newCampaignID()
 				if state.world then
 					W, H = state.world.width, state.world.height
@@ -742,7 +820,10 @@ local function dispatch(action, params)
 			local previousIndex = state.activeIndex or 1
 			local nextIndex = previousIndex % #state.players + 1
 			for _ = 1, #state.players do
-				if not state.players[nextIndex].ready and not state.players[nextIndex].ai then
+				if
+					Scheduler.canAct(state, state.players[nextIndex].id)
+					and not state.players[nextIndex].ai
+				then
 					break
 				end
 				nextIndex = nextIndex % #state.players + 1

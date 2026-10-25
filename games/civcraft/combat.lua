@@ -1,6 +1,7 @@
 -- Deterministic strength-difference combat with separate city and wall health.
 local CombatStrength = dofile("/games/civcraft/combat_strength.lua")
 local Events = dofile("/games/civcraft/events.lua")
+local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local UnitMovement = dofile("/games/civcraft/unit_movement.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
@@ -70,6 +71,7 @@ function C.besieged(state, city, systems)
 				local stats = systems.units[u.kind] or {}
 				if
 					u.owner ~= city.owner
+					and Diplomacy.canAttack(state, u.owner, city.owner)
 					and (stats.strength or 0) > 0
 					and (stats.range or 1) <= 1
 					and not stats.naval
@@ -141,6 +143,9 @@ function C.predict(state, unit, target, systems)
 	local defender = at(state.units, target.x, target.y)
 	if not city and (not defender or defender.owner == unit.owner) then
 		return nil, "No enemy target"
+	end
+	if not Diplomacy.canAttack(state, unit.owner, city and city.owner or defender.owner) then
+		return nil, "Declare war before attacking this civilization"
 	end
 	local ranged = (stats.range or 1) > 1
 	local offense = C.power(attacker, systems, false, state)
@@ -317,6 +322,9 @@ function C.strike(state, city, x, y, systems)
 	local enemy = at(state.units, x, y)
 	if not enemy or enemy.owner == city.owner or Hex.distance(city.x, city.y, x, y) > 2 then
 		return false, "Select an enemy unit within two hexes"
+	end
+	if not Diplomacy.canAttack(state, city.owner, enemy.owner) then
+		return false, "Declare war before attacking this civilization"
 	end
 	local owner
 	for _, p in ipairs(state.players) do

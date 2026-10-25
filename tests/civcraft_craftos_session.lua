@@ -4,6 +4,8 @@
 	acknowledge mouse events at actual button coordinates.
 ]]
 local includeAI, includeSettings, includeResearch, includeCampaign = false, false, false, false
+local includeWar = false
+local includeHost = false
 for _, argument in ipairs({ ... }) do
 	if argument == "--ai" then
 		includeAI = true
@@ -17,10 +19,21 @@ for _, argument in ipairs({ ... }) do
 	if argument == "--campaign" then
 		includeCampaign = true
 	end
+	if argument == "--war" then
+		includeWar = true
+	end
+	if argument == "--host-ai" then
+		includeHost, includeAI = true, true
+	end
 end
+assert(
+	not (includeHost and includeWar),
+	"The host AI scenario has one human; use hotseat for defender reactions"
+)
 local native = dofile
 local stage = 0
 local settingsExpectedSpeed, settingsExpectedDisplay
+local responseSaved = false
 local renderer
 local queued = false
 local function tap(view, label)
@@ -100,6 +113,7 @@ dofile = function(path)
 		local settingsStep = 0
 		local researchStep = 0
 		local campaignStep = 0
+		local warStep, responseStep = 0, 0
 		view.draw = function(self, state, observer, options)
 			draw(self, state, observer, options)
 			renderer = self.r.mode
@@ -134,10 +148,18 @@ dofile = function(path)
 				return
 			end
 			if includeAI and not aiConfigured and stage == 1 and state.phase == "lobby" then
-				self:command("addPlayer")
-				self:command("toggleAI", { player = 3 })
-				aiConfigured = true
-				os.queueEvent("term_resize")
+				if includeHost then
+					if tap(self, "+ AI") then
+						aiConfigured = true
+					else
+						tap(self, "NEXT")
+					end
+				else
+					self:command("addPlayer")
+					self:command("toggleAI", { player = 3 })
+					aiConfigured = true
+					os.queueEvent("term_resize")
+				end
 				return
 			end
 			if includeCampaign and stage == 1 and state.phase == "lobby" and campaignStep < 5 then
@@ -146,7 +168,7 @@ dofile = function(path)
 				if tap(self, labels[campaignStep + 1]) then
 					campaignStep = campaignStep + 1
 				else
-					tap(self, "NEXT")
+					tap(self, campaignStep == 0 and "PREV" or "NEXT")
 				end
 				return
 			end
@@ -182,6 +204,43 @@ dofile = function(path)
 				end
 				return
 			end
+			if includeWar and stage == 5 and not options.handoff and warStep < 3 then
+				local labels = { "FACTIONS", "DECLARE SURPRISE WAR", "CLOSE" }
+				if tap(self, labels[warStep + 1]) then
+					warStep = warStep + 1
+				else
+					tap(self, "NEXT")
+				end
+				return
+			end
+			if includeWar and stage == 7 and state.round == 1 then
+				local label = options.handoff and "READY TO PLAY"
+					or responseStep == 1 and "PAUSE"
+					or options.paused and responseStep == 2 and "SAVE"
+					or options.paused and responseStep == 3 and "RESUME"
+					or self.endConfirm and "END ANYWAY"
+					or "END TURN"
+				if options.paused and responseStep == 3 then
+					local saved = native("/games/civcraft/saves.lua").load(1)
+					assert(
+						saved.round == 1
+							and saved.players[1].ready
+							and saved.scheduler.reactions[saved.players[1].id],
+						"Mid-response save retains the Ready defender's window"
+					)
+					responseSaved = true
+				end
+				if not options.handoff then
+					assert(
+						state.players[1].ready and state.scheduler.reactions[state.players[1].id],
+						"Ended defender must receive an unspent-action response before the round closes"
+					)
+				end
+				if tap(self, label) then
+					responseStep = responseStep + 1
+				end
+				return
+			end
 			local label
 			if stage == 0 and options.screen == "title" then
 				label = "NEW CAMPAIGN"
@@ -191,6 +250,12 @@ dofile = function(path)
 				label = "END TURN"
 			elseif stage == 3 and self.endConfirm then
 				label = "END ANYWAY"
+			elseif includeHost and stage == 4 and state.round == 2 then
+				label = "PAUSE"
+			elseif includeHost and stage == 5 and options.paused then
+				label = "SAVE"
+			elseif includeHost and stage == 6 and options.paused then
+				label = "EXIT"
 			elseif stage == 4 and options.handoff then
 				label = "READY TO PLAY"
 			elseif stage == 5 and not options.handoff then
@@ -224,7 +289,11 @@ local completed = false
 local timeout = os.startTimer(20)
 local success, reason = pcall(function()
 	parallel.waitForAny(function()
-		assert(loadfile("/games/civcraft/game.lua", "t", _ENV))("local", "--new", "--debug")
+		assert(loadfile("/games/civcraft/game.lua", "t", _ENV))(
+			includeHost and "host" or "local",
+			"--new",
+			"--debug"
+		)
 		completed = true
 	end, function()
 		while true do
@@ -240,9 +309,35 @@ if term.setGraphicsMode then
 	pcall(term.setGraphicsMode, 0)
 end
 assert(success, reason)
-assert(completed and stage == 11, "Session did not traverse both players and return to round two")
-local state = native("/games/civcraft/saves.lua").load(1)
-assert(state and state.round == 2 and state.activeIndex == 1 and state.campaignID)
+assert(
+	completed and stage == (includeHost and 7 or 11),
+	"Session did not complete its turns and return to round two"
+)
+local state
+if includeHost then
+	local file = assert(fs.open("/games/civcraft/data/save.dat", "r"))
+	state = textutils.unserialize(file.readAll())
+	file.close()
+else
+	state = native("/games/civcraft/saves.lua").load(1)
+end
+assert(
+	state
+		and state.round == 2
+		and (includeHost or state.activeIndex == (includeWar and 2 or 1))
+		and state.campaignID
+)
+if includeWar then
+	assert(responseSaved, "The native response scenario must save during the response window")
+	assert(
+		#state.diplomacy.wars == 1 and state.diplomacy.wars[1].active,
+		"Native Surprise War must survive response, round rotation and save reload"
+	)
+	assert(
+		state.scheduler.groups[1].active == state.players[2].id,
+		"The defending group's starting player rotates at the global boundary"
+	)
+end
 if includeCampaign then
 	assert(
 		state.gameSpeed == "quick" and state.roundLimit == 120 and state.victories.score == false,
@@ -257,8 +352,9 @@ if includeResearch then
 	)
 end
 if includeAI then
+	local ai = state.players[includeHost and 2 or 3]
 	assert(
-		state.players[3].ai and state.players[3].aiPlan and state.players[3].aiPlan.version == 1,
+		ai.ai and ai.aiPlan and ai.aiPlan.version == 1,
 		"Native game session must execute and persist the third player's economic AI"
 	)
 end
@@ -284,6 +380,9 @@ output.write(textutils.serialize({
 	settingsReload = includeSettings,
 	researchFlow = includeResearch,
 	campaignOptions = includeCampaign,
+	warResponse = includeWar,
+	responseSaved = responseSaved,
+	hostModeAI = includeHost,
 }))
 output.close()
 print(
