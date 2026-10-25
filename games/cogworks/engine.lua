@@ -195,7 +195,8 @@ function E.connection(g, tile, dir)
   return nil
 end
 -- Cogs have an axial shaft, but teeth mesh PERPENDICULAR to that shaft.
--- Equal-sized gears mesh side by side; small/large 2:1 gears mesh diagonally.
+-- Cog rims mesh side by side at any size, with a 2:1 ratio for mixed sizes.
+-- Diagonal mixed-size meshing remains supported for existing puzzle layouts.
 -- Pulley belts also run perpendicular to two parallel shafts, without gearing.
 function E.meshes(g, tile)
   local links = {}
@@ -240,8 +241,14 @@ function E.meshes(g, tile)
   local perpendicular = horizontal and { { 0, -1 }, { 0, 1 } } or { { -1, 0 }, { 1, 0 } }
   for _, d in ipairs(perpendicular) do
     local other = E.get(g, tile.x + d[1], tile.y + d[2])
-    if other and other.kind == tile.kind and matching(other) then
-      links[#links + 1] = { tile = other, ratio = 1, sign = -1 }
+    if other and (other.kind == "G" or other.kind == "O") and matching(other) then
+      -- In the flat workshop adjacent toothed rims mesh regardless of size.
+      -- Different sizes keep their Create-inspired 2:1 speed relationship.
+      local ratio = 1
+      if other.kind ~= tile.kind then
+        ratio = tile.kind == "O" and 2 or 0.5
+      end
+      links[#links + 1] = { tile = other, ratio = ratio, sign = -1 }
     end
   end
   for _, dx in ipairs({ -1, 1 }) do
