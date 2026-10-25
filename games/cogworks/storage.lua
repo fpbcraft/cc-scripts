@@ -5,7 +5,7 @@ S.ROOT = "/games/cogworks"
 S.DIR = S.ROOT .. "/saves"
 S.SETTINGS = S.ROOT .. "/settings.dat"
 S.LEGACY = S.ROOT .. "/save.dat"
-S.VERSION = 5
+S.VERSION = 6
 local function ensure(path)
   if not fs.exists(path) then
     fs.makeDir(path)
@@ -93,6 +93,9 @@ function S.normalize(data)
   p.awards = type(data.awards) == "table" and data.awards or {}
   p.unlocked = chapters.openLevels(p)
   p.level = clamp(data.level, 1, p.unlocked, 1)
+  if not chapters.levelUnlocked(p, p.level) then
+    p.level = 1
+  end
   p.sessions = type(data.sessions) == "table" and data.sessions or {}
   if type(data.tutorials) == "table" then
     for key, value in pairs(data.tutorials) do
@@ -130,6 +133,25 @@ function S.has(slot)
   return S.load(slot) ~= nil
 end
 function S.save(slot, data)
-  return write(S.path(slot), S.normalize(data))
+  local path = S.path(slot)
+  local original = decode(path)
+  -- The previous procedurally generated level campaign has incompatible
+  -- geometry; preserve its save bytes before resetting chapter progress.
+  if original and original.campaignVersion ~= S.VERSION then
+    local backup = path .. ".campaign-v" .. tostring(original.campaignVersion or "unknown")
+    if not fs.exists(backup) then
+      local oldFile = fs.open(path, "r")
+      if oldFile then
+        local bytes = oldFile.readAll()
+        oldFile.close()
+        local archive = fs.open(backup, "w")
+        if archive then
+          archive.write(bytes)
+          archive.close()
+        end
+      end
+    end
+  end
+  return write(path, S.normalize(data))
 end
 return S
