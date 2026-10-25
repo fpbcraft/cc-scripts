@@ -223,6 +223,10 @@ end
 function txt.write(str)
   txt.writes = txt.writes + #str
 end
+model.game = E.new(11, true)
+model.result = E.evaluate(model.game)
+model.progress = { awards = {}, unlocked = #E.levels }
+model.devSession = false
 local plain = R.new(txt)
 assert(plain.mode == "text")
 for _, scene in ipairs({
