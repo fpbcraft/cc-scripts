@@ -228,8 +228,11 @@ end
 function E.snapshot(g)
   local list = {}
   for _, tile in ipairs(g.tiles) do
-    if not tile.fixed then
-      list[#list + 1] = { x = tile.x, y = tile.y, kind = tile.kind, r = tile.r, engaged = tile.engaged }
+    if not tile.fixed or tile.kind == "C" or tile.kind == "Z" then
+      list[#list + 1] = {
+        x = tile.x, y = tile.y, kind = tile.kind, r = tile.r,
+        engaged = tile.engaged, fixed = tile.fixed or nil,
+      }
     end
   end
   table.sort(list, function(a, b)
@@ -249,11 +252,23 @@ function E.restore(g, list)
     if type(v) ~= "table" or not E.inside(v.x, v.y)
       or type(v.r) ~= "number" or v.r % 1 ~= 0 or v.r < 0 or v.r > 3
       or (v.engaged ~= nil and type(v.engaged) ~= "boolean")
-      or not E.place(trial, v.x, v.y, v.kind, v.r)
     then
       return false
     end
-    local tile = E.get(trial, v.x, v.y)
+    local tile
+    if v.fixed == true then
+      tile = E.get(trial, v.x, v.y)
+      if not tile or not tile.fixed or tile.kind ~= v.kind or tile.r ~= v.r
+        or (tile.kind ~= "C" and tile.kind ~= "Z") or type(v.engaged) ~= "boolean"
+      then
+        return false
+      end
+    else
+      if not E.place(trial, v.x, v.y, v.kind, v.r) then
+        return false
+      end
+      tile = E.get(trial, v.x, v.y)
+    end
     if tile.kind == "C" or tile.kind == "Z" then
       tile.engaged = v.engaged == true
     elseif v.engaged then
