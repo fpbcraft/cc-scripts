@@ -322,6 +322,10 @@ function A:act(action, x, y)
           self.message = "NO STOCK AVAILABLE"
         end
       end
+    elseif action == "toggleAnimations" then
+      self.settings.animations = not self.settings.animations
+      self.store.saveSettings(self.settings)
+      self.message = self.settings.animations and "KINETIC ANIMATION ON" or "KINETIC ANIMATION OFF"
     elseif action == "tool" then
       if x == "erase" or E.parts[x] then
         self.inspected = nil
