@@ -111,8 +111,17 @@ local function start()
         or event == "mouse_click"
       then
         trace(
-          tostring(event) .. " side=" .. tostring(a) .. " x=" .. tostring(b) .. " y=" .. tostring(c)
-            .. " extra=" .. tostring(d) .. " graphics=" .. tostring(renderer.mode)
+          tostring(event)
+            .. " side="
+            .. tostring(a)
+            .. " x="
+            .. tostring(b)
+            .. " y="
+            .. tostring(c)
+            .. " extra="
+            .. tostring(d)
+            .. " graphics="
+            .. tostring(renderer.mode)
         )
       end
       if event == "terminate" then
