@@ -10,6 +10,7 @@ local VisibilityEvents = dofile("/games/civcraft/visibility_events.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Zone = dofile("/games/civcraft/zone_control.lua")
 local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local C = {}
 local function at(list, x, y)
 	for _, v in ipairs(list or {}) do
@@ -143,7 +144,7 @@ function C.predict(state, unit, target, systems)
 	if city and city.owner == unit.owner then
 		city = nil
 	end
-	local defender = at(state.units, target.x, target.y)
+	local defender = Stacks.at(state.units, target.x, target.y)
 	if not city and (not defender or defender.owner == unit.owner) then
 		return nil, "No enemy target"
 	end
@@ -153,6 +154,20 @@ function C.predict(state, unit, target, systems)
 	local ranged = MovementBudget.attackRange(state, unit, stats, Hex) > 1
 	if not ranged and not stats.naval and Hex.terrain(target.x, target.y, state) == "water" then
 		return nil, "Land melee units cannot initiate attacks against units on water"
+	end
+	if not city and defender.kind == "settler" and not ranged then
+		return {
+			damage = 0,
+			retaliation = 0,
+			attackerHP = attacker.hp,
+			defenderHP = defender.hp or 100,
+			ranged = false,
+			captured = false,
+			capturedSettler = true,
+			captureOnly = true,
+			attackerDied = false,
+			defenderDied = false,
+		}
 	end
 	local offense = C.power(attacker, systems, false, state)
 	local defense
@@ -204,6 +219,11 @@ function C.predict(state, unit, target, systems)
 		attackerDied = attackerHP <= 0,
 		defenderDied = not city and targetHP <= 0 or false,
 		captured = captured,
+		capturedSettler = not ranged
+				and attackerHP > 0
+				and (captured or not city and targetHP <= 0)
+				and Stacks.settler(state.units, target.x, target.y) ~= nil
+			or false,
 		ranged = ranged,
 	}
 end
@@ -255,7 +275,7 @@ function C.attack(state, unit, target, systems)
 	if city and city.owner == unit.owner then
 		city = nil
 	end
-	local defender = at(state.units, target.x, target.y)
+	local defender = Stacks.at(state.units, target.x, target.y)
 	local event = {
 		type = "combat",
 		actor = VisibilityEvents.actor(unit),
@@ -266,7 +286,10 @@ function C.attack(state, unit, target, systems)
 	}
 	local damage, retaliation, captured, ranged =
 		result.damage, result.retaliation, result.captured, result.ranged
-	if city then
+	if result.captureOnly then
+		Stacks.capture(state, defender, unit.owner)
+		unit.x, unit.y = target.x, target.y
+	elseif city then
 		city.lastAttackRound = state.round
 		city.wallHP = result.wallHP
 		city.hp = result.cityHP
@@ -288,7 +311,7 @@ function C.attack(state, unit, target, systems)
 			city.population = math.max(1, city.population - 1)
 			city.project = nil
 			city.worked = nil
-			if defender and defender.owner == previousOwner then
+			if defender and defender.owner == previousOwner and defender.kind ~= "settler" then
 				remove(state, defender)
 			end
 			state.territoryRevision = (state.territoryRevision or 0) + 1
@@ -315,6 +338,12 @@ function C.attack(state, unit, target, systems)
 			end
 		end
 	end
+	if result.capturedSettler and not result.captureOnly and unit.hp > 0 then
+		local settler = Stacks.settler(state.units, target.x, target.y)
+		if settler and settler.owner ~= unit.owner then
+			Stacks.capture(state, settler, unit.owner)
+		end
+	end
 	if stats.explosive then
 		unit.hp = 0
 	end
@@ -332,7 +361,8 @@ function C.attack(state, unit, target, systems)
 		Zone.enter(state, unit, systems, Hex)
 	end
 	return true,
-		captured and "City captured"
+		result.capturedSettler and "Settler captured"
+			or captured and "City captured"
 			or ("Dealt " .. damage .. " HP; received " .. retaliation .. " HP"),
 		result
 end
@@ -344,7 +374,7 @@ function C.strike(state, city, x, y, systems)
 	if city.struckRound and city.struckRound == state.round then
 		return false, "City already attacked this round"
 	end
-	local enemy = at(state.units, x, y)
+	local enemy = Stacks.at(state.units, x, y)
 	if not enemy or enemy.owner == city.owner or Hex.distance(city.x, city.y, x, y) > 2 then
 		return false, "Select an enemy unit within two hexes"
 	end

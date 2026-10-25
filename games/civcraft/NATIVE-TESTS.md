@@ -110,3 +110,9 @@ landing and response budgets, amphibious forecast/resolution parity, coastal
 capture, shore attack restrictions and observed-enemy danger estimates. The
 normal full session also exercises the response activation hook without granting
 an ended defender a second movement budget.
+
+`civcraft_unit_stacks_test.lua` tests capture/protection and shared-tile selection
+with real core rules and instrumented text/graphics displays. It installs the
+same CivCraft-specific internal module cache as `game.lua`; it does not change
+the CraftOS watchdog. `civcraft_module_cache_test.lua` checks isolation, failure
+recovery and external-script behavior. Linked escorts remain a separate follow-up.

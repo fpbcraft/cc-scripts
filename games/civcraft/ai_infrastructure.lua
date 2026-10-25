@@ -83,7 +83,15 @@ function Infrastructure.order(view, player, unit, systems)
 		return nil, plan
 	end
 	if Rails.canBuild(view, player, unit, target.x, target.y, systems) then
-		return { action = "buildRail", sx = unit.x, sy = unit.y, x = target.x, y = target.y }, plan
+		return {
+			action = "buildRail",
+			unitID = unit.id,
+			sx = unit.x,
+			sy = unit.y,
+			x = target.x,
+			y = target.y,
+		},
+			plan
 	end
 	local routes = Routes.from(view, unit, systems)
 	local destination, cost
@@ -113,7 +121,15 @@ function Infrastructure.order(view, player, unit, systems)
 		end
 	end
 	if best then
-		return { action = "move", sx = unit.x, sy = unit.y, x = best.x, y = best.y }, plan
+		return {
+			action = "move",
+			unitID = unit.id,
+			sx = unit.x,
+			sy = unit.y,
+			x = best.x,
+			y = best.y,
+		},
+			plan
 	end
 	return nil, plan
 end

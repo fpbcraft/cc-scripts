@@ -7,6 +7,7 @@ local Systems = dofile("/games/civcraft/systems.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local World = dofile("/games/civcraft/world.lua")
 local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local I = {}
 local function at(list, x, y)
 	for _, item in ipairs(list or {}) do
@@ -36,7 +37,8 @@ function I.draw(ui, state, player, rect, modal)
 		end)
 	end
 	local city = not ui.selected.empty and at(state.cities, ui.selected.x, ui.selected.y)
-	local unit = not ui.selected.empty and at(state.units, ui.selected.x, ui.selected.y)
+	local unit = not ui.selected.empty
+		and Stacks.at(state.units, ui.selected.x, ui.selected.y, ui.selected.unitID)
 	local rows = {}
 	local function text(value, color)
 		for _, line in ipairs(Panels.wrap(r, value, w - 17)) do
@@ -56,20 +58,56 @@ function I.draw(ui, state, player, rect, modal)
 		end
 		return
 	end
+	local cohabitant
+	if unit and unit.owner == ui.playerID then
+		for _, other in ipairs(state.units) do
+			if
+				other ~= unit
+				and other.x == unit.x
+				and other.y == unit.y
+				and other.owner == unit.owner
+			then
+				cohabitant = other
+			end
+		end
+	end
 	local bodyY = y + 13
 	local controlsY = y + 13
 	local stacked = false
 	if city and unit and city.owner == ui.playerID and unit.owner == ui.playerID then
 		stacked = true
-		local width = math.floor((w - 6) / 2)
-		for i, kind in ipairs({ "city", "unit" }) do
-			r:button(x + 2 + (i - 1) * (width + 2), controlsY, width, 11, kind:upper(), function()
-				ui.selected.kind = kind
-				ui.inspectorOffset = 0
-				ui.source = nil
-				ui.reachable = {}
-				ui.workCity = nil
-			end, { selected = (ui.selected.kind or "unit") == kind })
+		if cohabitant then
+			local nextKind, nextUnit, caption
+			if ui.selected.kind == "city" then
+				nextKind, nextUnit, caption =
+					"unit", Stacks.at(state.units, city.x, city.y), "SELECT GUARD"
+			elseif unit.kind ~= "settler" then
+				nextKind, nextUnit, caption = "unit", cohabitant, "SELECT SETTLER"
+			else
+				nextKind, nextUnit, caption = "city", city, "SELECT CITY"
+			end
+			r:button(x + 2, controlsY, w - 4, 11, caption, function()
+				ui:focus(nextKind, nextUnit)
+			end)
+		else
+			local width = math.floor((w - 6) / 2)
+			for i, kind in ipairs({ "city", "unit" }) do
+				r:button(
+					x + 2 + (i - 1) * (width + 2),
+					controlsY,
+					width,
+					11,
+					kind:upper(),
+					function()
+						ui.selected.kind = kind
+						ui.inspectorOffset = 0
+						ui.source = nil
+						ui.reachable = {}
+						ui.workCity = nil
+					end,
+					{ selected = (ui.selected.kind or "unit") == kind }
+				)
+			end
 		end
 		controlsY = controlsY + 12
 		bodyY = controlsY
@@ -78,6 +116,21 @@ function I.draw(ui, state, player, rect, modal)
 		else
 			unit = nil
 		end
+	end
+	if cohabitant and not stacked and (ui.selected.kind or "unit") == "unit" then
+		r:button(
+			x + 2,
+			controlsY,
+			w - 4,
+			11,
+			cohabitant.kind == "settler" and "SELECT SETTLER" or "SELECT GUARD",
+			function()
+				ui.selected.unitID = cohabitant.id
+				ui.inspectorOffset, ui.unitDetails = 0, false
+				ui.source, ui.pendingMove, ui.reachable = nil, nil, {}
+			end
+		)
+		controlsY, bodyY = controlsY + 12, controlsY + 12
 	end
 	if ui.selected.empty then
 		text("NO SELECTION", 7)
@@ -372,7 +425,7 @@ function I.draw(ui, state, player, rect, modal)
 						if ui.mapViewport and ui.mapViewport.tile < 16 then
 							ui:zoom((16 - ui.mapViewport.tile) / 4)
 						end
-						ui.source = { x = unit.x, y = unit.y }
+						ui.source = { x = unit.x, y = unit.y, unitID = unit.id }
 						ui.reachable = Hex.reachable(state, unit, ui.playerID, Systems)
 						ui.pendingMove = nil
 						ui:feedback("CYAN MOVE / RED ATTACK / AMBER THREAT")
@@ -405,7 +458,10 @@ function I.draw(ui, state, player, rect, modal)
 						ui.source = nil
 						ui.reachable = {}
 						ui.pendingMove = nil
-						ui:command("standby", { x = unit.x, y = unit.y, value = not unit.standby })
+						ui:command(
+							"standby",
+							{ x = unit.x, y = unit.y, unitID = unit.id, value = not unit.standby }
+						)
 					end,
 				},
 			},
@@ -418,7 +474,7 @@ function I.draw(ui, state, player, rect, modal)
 						ui.source = nil
 						ui.reachable = {}
 						ui.pendingMove = nil
-						ui:command("heal", { x = unit.x, y = unit.y })
+						ui:command("heal", { x = unit.x, y = unit.y, unitID = unit.id })
 					end,
 				},
 			},
@@ -441,10 +497,12 @@ function I.draw(ui, state, player, rect, modal)
 					{
 						label = unit.autoExplore and "STOP EXPLORING" or "AUTO EXPLORE",
 						run = function()
-							ui:command(
-								"autoExplore",
-								{ x = unit.x, y = unit.y, value = not unit.autoExplore }
-							)
+							ui:command("autoExplore", {
+								x = unit.x,
+								y = unit.y,
+								unitID = unit.id,
+								value = not unit.autoExplore,
+							})
 						end,
 					},
 				},
@@ -490,7 +548,7 @@ function I.draw(ui, state, player, rect, modal)
 					{
 						label = "FOUND CITY",
 						run = function()
-							ui:command("found", { x = unit.x, y = unit.y })
+							ui:command("found", { x = unit.x, y = unit.y, unitID = unit.id })
 						end,
 					},
 				},

@@ -154,6 +154,13 @@ Names appear above cities and in city navigation, and remain stable in saves.
   costs, vision and attack ranges. Scouts reveal farther, naval vessels travel
   on water, and settlers found cities at least three hexes apart. Fog hides
   unexplored land and enemy units outside current sight.
+- **Settlers and protection:** An unprotected settler is captured immediately
+  when a melee attacker reaches its tile. Ranged attacks damage it normally.
+  One settler and one protecting unit can share a hex; attacks hit the protector
+  first. Winning melee combat captures the remaining settler, while defeating
+  the protector at range leaves its settler unprotected. Captured settlers have
+  no movement until a later turn. Use Select Settler / Select Guard in the
+  inspector to order the intended unit. Linked escort movement is still pending.
 - **Zone of control:** Hostile melee land units control adjacent passable land,
   combat ships control adjacent water, and cities control both. Entering control
   stops further movement for the current turn; military units can still attack

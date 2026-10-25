@@ -3,6 +3,7 @@ local Biomes = dofile("/games/civcraft/biomes.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Zone = dofile("/games/civcraft/zone_control.lua")
 local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local H = { width = 12, height = 8 }
 local function dims(state)
 	local world = state and state.world
@@ -165,13 +166,7 @@ end
 function H.passable(x, y, state, unit, Systems)
 	return H.moveCost(x, y, state, unit or { kind = "warrior" }, Systems) ~= nil
 end
-local function occupant(state, x, y)
-	for _, u in ipairs(state.units or {}) do
-		if u.x == x and u.y == y then
-			return u
-		end
-	end
-end
+local occupant = Stacks.at
 local function settlement(state, x, y)
 	for _, c in ipairs(state.cities or {}) do
 		if c.x == x and c.y == y then
@@ -244,7 +239,7 @@ function H.reachable(state, unit, owner, Systems)
 				local moveCost =
 					H.moveCost(nx, ny, state, unit, Systems, cur.x, cur.y, budget - cur.cost)
 				local total = moveCost and cur.cost + moveCost
-				local u = occupant(state, nx, ny)
+				local u = occupant(state.units, nx, ny)
 				local c = settlement(state, nx, ny)
 				if u and not Zone.visible(state, unit, u, Systems) then
 					u = nil
@@ -285,7 +280,9 @@ function H.reachable(state, unit, owner, Systems)
 						end
 					elseif
 						not stopped[cur.y * w + cur.x]
-						and not u
+						and Stacks.canEnter(state, unit, nx, ny, function(other)
+							return Zone.visible(state, unit, other, Systems)
+						end)
 						and (not c or c.owner == owner)
 					then
 						local idx = ny * w + nx

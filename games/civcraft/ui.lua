@@ -16,6 +16,7 @@ local Systems = dofile("/games/civcraft/systems.lua")
 local TurnTasks = dofile("/games/civcraft/turn_tasks.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local World = dofile("/games/civcraft/world.lua")
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local UI = {}
 UI.__index = UI
 local function mapLabel(state)
@@ -281,7 +282,8 @@ function UI:tile(x, y)
 	if self.source and not (x == self.source.x and y == self.source.y) then
 		for _, p in ipairs(self.reachable or {}) do
 			if p.x == x and p.y == y then
-				local unit = where(self.state.units, self.source.x, self.source.y)
+				local unit =
+					Stacks.at(self.state.units, self.source.x, self.source.y, self.source.unitID)
 				self.pendingMove = {
 					sx = self.source.x,
 					sy = self.source.y,
@@ -316,7 +318,7 @@ function UI:tile(x, y)
 						.. " / TARGET "
 						.. (forecast.defenderHP or forecast.cityHP)
 						.. (forecast.wallHP and (" / WALL " .. forecast.wallHP) or "")
-						.. (forecast.captured and " CAPTURE" or "")
+						.. ((forecast.captured or forecast.capturedSettler) and " CAPTURE" or "")
 				end
 				if risk then
 					summary = summary .. " / THREAT ~" .. risk.damage
@@ -337,7 +339,7 @@ function UI:tile(x, y)
 		self:deselect()
 		return
 	end
-	local unit = where(self.state.units, x, y)
+	local unit = Stacks.at(self.state.units, x, y)
 	self.selected = {
 		x = x,
 		y = y,
@@ -1030,7 +1032,10 @@ function UI:confirmMove()
 				tileY = order.y,
 			})
 		else
-			self:command("buildRail", { sx = item.x, sy = item.y, x = order.x, y = order.y })
+			self:command(
+				"buildRail",
+				{ sx = item.x, sy = item.y, x = order.x, y = order.y, unitID = item.id }
+			)
 		end
 		self.placement = nil
 		self.reachable = {}
@@ -1045,11 +1050,18 @@ function UI:confirmMove()
 	if not order or order.player ~= self.playerID then
 		return false
 	end
-	local unit = where(self.state.units, order.sx, order.sy)
+	local unit = Stacks.at(self.state.units, order.sx, order.sy, order.unitID)
 	if unit and unit.owner == self.playerID and unit.id == order.unitID then
 		for _, destination in ipairs(Hex.reachable(self.state, unit, self.playerID, Systems)) do
 			if destination.x == order.x and destination.y == order.y then
-				self:command("move", { sx = order.sx, sy = order.sy, x = order.x, y = order.y })
+				local request = {
+					sx = order.sx,
+					sy = order.sy,
+					x = order.x,
+					y = order.y,
+					unitID = order.unitID,
+				}
+				self:command("move", request)
 				self.selected = { x = unit.x, y = unit.y, kind = "unit", unitID = unit.id }
 				self.source = nil
 				self.reachable = {}

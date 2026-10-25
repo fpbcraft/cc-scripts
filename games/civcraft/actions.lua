@@ -14,6 +14,7 @@ local World = dofile("/games/civcraft/world.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local Zone = dofile("/games/civcraft/zone_control.lua")
 local TurnTasks = dofile("/games/civcraft/turn_tasks.lua")
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local A = {}
 
 function A.validateIntent(state, request)
@@ -62,7 +63,7 @@ function A.apply(state, id, req, Systems)
 		return at(state.cities, x, y)
 	end
 	local function unitAt(x, y)
-		return at(state.units, x, y)
+		return Stacks.at(state.units, x, y, req.unitID)
 	end
 	local function terrain(x, y)
 		return Hex.terrain(x, y, state)

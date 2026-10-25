@@ -32,11 +32,13 @@ in the design draft. Keep this list alongside the main roadmap until verified.
   with authoritative resolution.
 - [x] Add a persistent Settings menu accessible from the title and pause screens,
   covering sound/music, volume, animation/accessibility and display preferences.
-- Capture an unprotected settler immediately when attacked. Allow a military
-  unit and settler to share a hex, and attach/detach the settler as an escort
-  group that moves together. Transfer a captured settler to the attacker through
-  the shared action executor; a protecting military unit takes combat first.
-  Linked movement must be legal and affordable for both units.
+- [x] Capture an unprotected settler immediately when reached by a melee attack.
+  Ranged attacks damage settlers normally (user clarification). Allow one settler
+  and one protecting unit to share a hex; the protecting unit takes combat first.
+  A winning melee attack captures the remaining settler. Captures transfer
+  ownership without fresh movement or the previous owner's private AI plans.
+- Attach/detach a settler and protecting unit as an escort group that moves
+  together. Linked movement must be legal and affordable for both units.
 - Allow distant destinations and multiple future movement orders. Persist each
   unit's route/queue and execute only its affordable legal movement at the start
   of its next eligible turn. Respect terrain, occupancy, fog, combat limits and

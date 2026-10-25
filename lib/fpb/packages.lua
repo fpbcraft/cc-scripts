@@ -173,6 +173,8 @@ P.packages.civcraft = {
 		"zone_control.lua",
 		"hostility.lua",
 		"movement_budget.lua",
+		"unit_stacks.lua",
+		"module_cache.lua",
 		"campaign_options.lua",
 		"faction_view.lua",
 		"hex.lua",

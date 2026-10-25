@@ -56,7 +56,7 @@ function V.draw(ui, state, player, rect)
 	ui.mapViewport =
 		{ x = rect.x, y = rect.y, w = rect.w, h = rect.h, tile = size, maxX = maxX, maxY = maxY }
 	local citySignature = {}
-	local cityIndex, unitIndex = {}, {}
+	local cityIndex, unitIndex, civilianIndex = {}, {}, {}
 	local hidden = ui.animationFrame and ui.animationFrame.hidden or {}
 	local campIndex = {}
 	for _, camp in ipairs(World.observedCamps(state, player)) do
@@ -68,7 +68,13 @@ function V.draw(ui, state, player, rect)
 		cityIndex[World.key(city.x, city.y)] = city
 	end
 	for _, unit in ipairs(state.units or {}) do
-		unitIndex[World.key(unit.x, unit.y)] = unit
+		local key = World.key(unit.x, unit.y)
+		if not unitIndex[key] or unitIndex[key].kind == "settler" then
+			unitIndex[key] = unit
+		end
+		if unit.kind == "settler" then
+			civilianIndex[key] = unit
+		end
 	end
 	local signature = table.concat(citySignature, ";") .. ":" .. (state.territoryRevision or 0)
 	local cache = ui.mapCache
@@ -329,6 +335,34 @@ function V.draw(ui, state, player, rect)
 						py + size / 2 - 5,
 						11,
 						ownerColor(state, unit.owner)
+					)
+				end
+			end
+			local settler = civilianIndex[World.key(x, y)]
+			if
+				unit
+				and settler
+				and unit ~= settler
+				and t.visibility == "visible"
+				and not hidden[Animations.identity(settler)]
+			then
+				if size >= 16 then
+					Icons.faction(
+						r,
+						"settler",
+						px + size * 0.65,
+						py + size * 0.6,
+						math.min(7, size / 2),
+						ownerColor(state, settler.owner)
+					)
+				else
+					r:fill(px + size * 0.65 - 1, py + size * 0.6 - 1, 4, 4, 0)
+					r:fill(
+						px + size * 0.65,
+						py + size * 0.6,
+						2,
+						2,
+						ownerColor(state, settler.owner)
 					)
 				end
 			end

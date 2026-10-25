@@ -8,6 +8,7 @@ local Perception = dofile("/games/civcraft/diplomatic_perception.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Zone = dofile("/games/civcraft/zone_control.lua")
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local UnitMovement = {}
 
 function UnitMovement.walk(state, unit, path, systems, lastPoint)
@@ -29,12 +30,7 @@ function UnitMovement.walk(state, unit, path, systems, lastPoint)
 			completed, reason = false, "Stopped in enemy zone of control"
 			break
 		end
-		local blocked = false
-		for _, other in ipairs(state.units or {}) do
-			if other ~= unit and other.x == position.x and other.y == position.y then
-				blocked = true
-			end
-		end
+		local blocked = not Stacks.canEnter(state, unit, position.x, position.y)
 		for _, city in ipairs(state.cities or {}) do
 			if city.owner ~= unit.owner and city.x == position.x and city.y == position.y then
 				blocked = true

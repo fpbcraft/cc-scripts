@@ -78,6 +78,7 @@ local function projectCombat(event, observer)
 				wallHP = result.wallHP,
 				ranged = result.ranged,
 				captured = result.captured,
+				capturedSettler = result.capturedSettler,
 				attackerDied = result.attackerDied,
 				defenderDied = result.defenderDied,
 			},
@@ -94,6 +95,7 @@ local function projectCombat(event, observer)
 				wallHP = result.wallHP,
 				defenderDied = result.defenderDied,
 				captured = result.captured,
+				capturedSettler = result.capturedSettler,
 			},
 		}
 	end

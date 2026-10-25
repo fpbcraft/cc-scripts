@@ -4,6 +4,7 @@ local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local World = dofile("/games/civcraft/world.lua")
 local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local Threats = {}
 local function copy(value)
 	local result = {}
@@ -79,7 +80,18 @@ function Threats.build(state, player, systems)
 end
 
 function Threats.at(map, x, y, unit, excluded)
-	local defender = copy(unit or { kind = "warrior", owner = map.player.id, hp = 100 })
+	local protector = Stacks.at(map.view.units, x, y)
+	local target = unit
+	if
+		unit
+		and unit.kind == "settler"
+		and protector
+		and protector.kind ~= "settler"
+		and protector.owner == unit.owner
+	then
+		target = protector
+	end
+	local defender = copy(target or { kind = "warrior", owner = map.player.id, hp = 100 })
 	defender.x, defender.y = x, y
 	defender.standby, defender.healing = false, false
 	local defense = Combat.power(defender, map.systems, true, map.view)

@@ -3,6 +3,7 @@ local Hex = dofile("/games/civcraft/hex.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
 local Threats = dofile("/games/civcraft/threats.lua")
 local World = dofile("/games/civcraft/world.lua")
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local Tactics = { maxCandidates = 24 }
 local function copy(value)
 	local result = {}
@@ -149,6 +150,7 @@ function Tactics.ranked(view, player, unit, systems)
 		{
 			request = {
 				action = resting and (unit.hp or 100) < 100 and "heal" or "standby",
+				unitID = unit.id,
 				x = unit.x,
 				y = unit.y,
 				value = true,
@@ -168,11 +170,13 @@ function Tactics.ranked(view, player, unit, systems)
 		position.x, position.y = choice.x, choice.y
 		if choice.attack then
 			local defender = at(view.cities, choice.x, choice.y)
-				or at(view.units, choice.x, choice.y)
+				or Stacks.at(view.units, choice.x, choice.y)
 			if
 				defender
 				and not (defender.village and defender.owner == defender.villageOwner)
-				and Threats.opponent(view, player, defender, systems)
+				and (
+					defender.kind == "settler" or Threats.opponent(view, player, defender, systems)
+				)
 			then
 				forecast = Combat.predictOrder(view, unit, choice, systems)
 				if forecast then
@@ -182,13 +186,18 @@ function Tactics.ranked(view, player, unit, systems)
 					score = damage
 						+ (forecast.defenderDied and 70 or 0)
 						+ (forecast.captured and 250 or 0)
+						+ (forecast.capturedSettler and 120 or 0)
 						+ math.max(0, (defender.wallHP or 0) - (forecast.wallHP or 0)) * 0.6
 						- retaliation * 1.1
 						- (forecast.attackerDied and 220 or 0)
 					position.hp = forecast.attackerHP
 					if forecast.ranged then
 						position.x, position.y = unit.x, unit.y
-					elseif not forecast.defenderDied and not forecast.captured then
+					elseif
+						not forecast.defenderDied
+						and not forecast.captured
+						and not forecast.capturedSettler
+					then
 						local point = choice.path[#choice.path - 1]
 						position.x, position.y = point.x, point.y
 					end
@@ -231,7 +240,14 @@ function Tactics.ranked(view, player, unit, systems)
 		end
 		score = score - Threats.uncertainty(player, position.x, position.y, view.round or 1)
 		result[#result + 1] = {
-			request = { action = "move", sx = unit.x, sy = unit.y, x = choice.x, y = choice.y },
+			request = {
+				action = "move",
+				unitID = unit.id,
+				sx = unit.x,
+				sy = unit.y,
+				x = choice.x,
+				y = choice.y,
+			},
 			score = score,
 			forecast = forecast,
 			risk = risk,

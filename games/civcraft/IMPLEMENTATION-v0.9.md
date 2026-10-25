@@ -315,3 +315,39 @@ forecast damage/retaliation parity and coastal capture. Native CraftOS-PC passes
 those rules and the full hotseat/AI/Surprise War session with turn decisions,
 settings, research, conversations and save reload. Instrumented text/graphics UI
 coverage does not establish physical monitor or live remote-client behavior.
+
+### Settler capture, protection and shared-tile identity
+
+Per the user's clarification, instant capture is melee-only; ranged attacks damage
+settlers normally. A melee attacker reaching an unprotected settler transfers its
+ownership without a damage exchange, movement refresh or loss of identity/health.
+Captured units discard their previous owner's AI settlement/role/infrastructure
+plans and allowance bookkeeping. One settler and one protecting unit may share a
+hex. Protection always takes combat first, independent of array order. A surviving
+melee victor captures the remaining settler after defeating its guard; ranged
+victory leaves it unprotected. City capture likewise preserves and transfers a
+settler rather than deleting it as a garrison. Capture forecasts and observer-local
+combat events include the distinction, and AI values legal capture opportunities.
+
+Human and AI commands carry explicit unit IDs on shared tiles, including movement,
+founding, standby, healing, exploration and rail orders. Stale or foreign identities
+cannot silently select the other unit. Inspectors switch between guard and settler;
+a city/guard/settler tile cycles the selector in a single row on compact displays.
+The map prioritizes the protector and adds a separate small settler marker. This
+slice establishes shared tiles and protection; attach/detach and linked escort
+movement remain explicitly unfinished.
+
+As the module graph grew, native startup exceeded CraftOS's watchdog while the
+same source modules were repeatedly loaded through absolute `dofile` calls. The
+shared loader caches `require`, but not those `dofile` calls. CivCraft now installs
+its own per-program internal module cache before loading gameplay/UI. Other
+program paths, nil-return entry scripts and failures retain their semantics; new
+program globals receive independent caches. The module-cache tests cover reuse,
+external scripts, failure recovery, isolation and circular-load rejection. Native
+capture/UI rules and the full hotseat/AI/Surprise War session pass with this actual
+program loading path; the watchdog is unchanged.
+
+Capture tests exercise melee/ranged distinctions, guard priority and death, city
+capture, stack limits, former-owner permissions, captured-plan privacy, explicit
+shared-tile selection in text/graphics and AI capture ranking. Native tests remain
+headless/instrumented rather than physical-monitor or live remote-client proof.

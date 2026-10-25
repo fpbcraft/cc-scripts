@@ -696,13 +696,15 @@ function M.autoExplore(state, unit, hex)
 			break
 		end
 		unit.executingAutoExplore = true
-		local completed, ok = pcall(
-			Actions.apply,
-			state,
-			unit.owner,
-			{ action = "move", sx = unit.x, sy = unit.y, x = destination.x, y = destination.y },
-			M
-		)
+		local request = {
+			action = "move",
+			unitID = unit.id,
+			sx = unit.x,
+			sy = unit.y,
+			x = destination.x,
+			y = destination.y,
+		}
+		local completed, ok = pcall(Actions.apply, state, unit.owner, request, M)
 		unit.executingAutoExplore = nil
 		if not completed then
 			error(ok, 0)

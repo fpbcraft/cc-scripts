@@ -213,7 +213,7 @@ function A.engineer(state, player, unit, systems)
 		Actions.apply(
 			state,
 			player.id,
-			{ action = "standby", x = unit.x, y = unit.y, value = false },
+			{ action = "standby", unitID = unit.id, x = unit.x, y = unit.y, value = false },
 			systems
 		)
 	end
@@ -243,7 +243,7 @@ function A.engineer(state, player, unit, systems)
 		Actions.apply(
 			state,
 			player.id,
-			{ action = "standby", x = unit.x, y = unit.y, value = true },
+			{ action = "standby", unitID = unit.id, x = unit.x, y = unit.y, value = true },
 			systems
 		)
 	end

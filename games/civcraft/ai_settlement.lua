@@ -125,11 +125,19 @@ function Settlement.order(view, player, unit, systems)
 	local target = Settlement.select(view, player, unit, systems)
 	if target then
 		if target.x == unit.x and target.y == unit.y then
-			return { action = "found", x = unit.x, y = unit.y }, target
+			return { action = "found", unitID = unit.id, x = unit.x, y = unit.y }, target
 		end
 		local step = target.path[2]
 		if step then
-			return { action = "move", sx = unit.x, sy = unit.y, x = step.x, y = step.y }, target
+			return {
+				action = "move",
+				unitID = unit.id,
+				sx = unit.x,
+				sy = unit.y,
+				x = step.x,
+				y = step.y,
+			},
+				target
 		end
 	end
 	-- Scout the nearest known frontier rather than evaluating unrevealed deposits.
@@ -149,7 +157,14 @@ function Settlement.order(view, player, unit, systems)
 		end
 	end
 	if best then
-		return { action = "move", sx = unit.x, sy = unit.y, x = best.x, y = best.y }
+		return {
+			action = "move",
+			unitID = unit.id,
+			sx = unit.x,
+			sy = unit.y,
+			x = best.x,
+			y = best.y,
+		}
 	end
 	return nil
 end

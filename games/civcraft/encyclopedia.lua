@@ -101,6 +101,11 @@ mechanics[#mechanics + 1] = {
 	text = "Each city earns two gold plus its population each round. Markets add three, bazaars three and banks five. Every unit pays its listed upkeep. A treasury can temporarily cover negative income, but unpaid units disband if gold runs out. DISBAND in the unit inspector lets you reduce upkeep voluntarily after confirmation. The top bar shows stocks and projected changes; click it for the full ledger. Owned iron, horses and saltpeter deposits add one stock per round; specialized units consume two stock on completion.",
 }
 mechanics[#mechanics + 1] = {
+	id = "settlercapture",
+	name = "SETTLER CAPTURE AND PROTECTION",
+	text = "A melee attacker reaching an unprotected settler captures it immediately without a damage exchange. Ranged attacks damage settlers normally. One settler and one protecting unit can share a hex. The protector always takes combat first, regardless of which unit was placed there first. A winning melee attack captures the remaining settler; a ranged kill leaves it unprotected. Captured settlers retain their identity and health but have no fresh movement. Select Settler / Select Guard changes the unit being ordered.",
+}
+mechanics[#mechanics + 1] = {
 	id = "zonecontrol",
 	name = "ZONE OF CONTROL",
 	text = "Visible hostile melee land units control adjacent passable land; combat ships control adjacent water, and hostile cities control both. Ordinary ranged land units and civilians do not exert control. Entering control stops further movement for this turn, but a military unit may still attack with remaining movement. Civilian and support units spend their remaining movement on entry. Mounted units ignore control. A new turn may leave a zone it started in. Amber movement rings mark stopping tiles. Newly discovered hostile control may interrupt an otherwise valid route; only actual travel is charged and replayed. Current maps do not model river-edge control exceptions.",

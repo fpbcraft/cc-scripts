@@ -30,7 +30,7 @@ function Playback.summary(event)
 	local actor = event.actor
 	local name = actor and (actor.name or actor.kind) or ""
 	local result = event.result or {}
-	local label = result.captured and "CAPTURE" or event.type:upper()
+	local label = (result.captured or result.capturedSettler) and "CAPTURE" or event.type:upper()
 	local point = event.target
 		or event.start
 		or event.paths and event.paths[1] and event.paths[1][1]
