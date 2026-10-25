@@ -87,11 +87,11 @@ local cog = E.get(wheel, 2, 4)
 r.frame = 0
 r.buffer = {}
 r:piece(20, 20, 13, cog, wheelInfo.lights[cog.id])
-assert(r.buffer[27] and r.buffer[27][31] == 15, "HTML-style first gear tooth is bright white at frame zero")
+assert(r.buffer[27] and r.buffer[27][30] == 15, "Small pinion highlights its first gear tooth at frame zero")
 r.frame = 1
 r.buffer = {}
 r:piece(20, 20, 13, cog, wheelInfo.lights[cog.id])
-assert(r.buffer[27][31] ~= 15, "Highlighted tooth must move to a new location on the next frame")
+assert(r.buffer[27][30] ~= 15, "Highlighted tooth must move to a new location on the next frame")
 local pixels = 0
 for _, row in pairs(r.buffer) do
   for _, ink in pairs(row) do
@@ -114,19 +114,19 @@ local function pixel(frame, x, y)
 end
 local small = gearFrame(false, { rate = 1, sign = 1 }, 0)
 local large = gearFrame(true, { rate = 1, sign = 1 }, 0)
-assert(pixel(small, 39, 35) == 15, "Small cog highlighted tooth lies four pixels from its center")
-assert(pixel(large, 40, 35) == 15, "Large cog highlighted tooth lies five pixels from its center")
-assert(pixel(small, 41, 35) == 0 and pixel(large, 41, 35) == 15, "Large cog rim must be visibly wider")
-assert(pixel(small, 34, 34) == 13, "Steel center cap is drawn over the rotating brass face")
+assert(pixel(small, 38, 35) == 15, "Small pinion highlighted tooth lies three pixels from its center")
+assert(pixel(large, 40, 35) == 15, "Large wheel highlighted tooth lies five pixels from its center")
+assert(pixel(small, 40, 35) == 0 and pixel(large, 40, 35) == 15, "Large cog extends two pixels beyond the pinion")
+assert(pixel(small, 34, 34) == 6 and pixel(large, 34, 34) == 13, "Small solid face and large steel hub are distinct")
 local forward = gearFrame(false, { rate = 1, sign = 1 }, 1)
 local reverse = gearFrame(false, { rate = 1, sign = -1 }, 1)
-assert(pixel(forward, 39, 35) ~= 15, "At 1X the highlighted tooth travels between successive frames")
-assert(pixel(forward, 39, 37) == 15, "CW tooth travels down from the rightmost starting position")
-assert(pixel(reverse, 39, 33) == 15, "CCW tooth travels up from the rightmost starting position")
+assert(pixel(forward, 38, 35) ~= 15, "At 1X the highlighted tooth travels between successive frames")
+assert(pixel(forward, 38, 36) == 15, "CW tooth travels down from the rightmost starting position")
+assert(pixel(reverse, 38, 34) == 15, "CCW tooth travels up from the rightmost starting position")
 local slow = gearFrame(false, { rate = 0.5, sign = 1 }, 1)
 local fast = gearFrame(false, { rate = 2, sign = 1 }, 1)
-assert(pixel(slow, 39, 36) == 15, "Half-speed cog advances a shorter angle per frame")
-assert(pixel(fast, 38, 38) == 15, "Double-speed cog advances a longer angle per frame")
+assert(pixel(slow, 38, 36) == 15, "Half-speed cog advances a shorter angle per frame")
+assert(pixel(fast, 37, 37) == 15, "Double-speed cog advances a longer angle per frame")
 r.frame = 0
 r.buffer = {}
 r:toolIcon(10, 10, "G")
@@ -134,8 +134,8 @@ local smallIcon = r.buffer
 r.buffer = {}
 r:toolIcon(10, 10, "O")
 local largeIcon = r.buffer
-assert(pixel(smallIcon, 10, 10) == 0, "Small palette cog has distinct exposed corners")
-assert(pixel(largeIcon, 10, 10) ~= 0, "Large palette cog extends to full icon bounds")
+assert(pixel(smallIcon, 10, 10) == 0, "Small pinion palette icon has exposed corners")
+assert(pixel(largeIcon, 10, 13) == 6, "Large palette cog has an outer cardinal tooth")
 r.buffer = {}
 local function click(action, arg)
   for _, v in ipairs(r.targets) do
