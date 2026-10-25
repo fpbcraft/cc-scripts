@@ -186,7 +186,7 @@ for _, graphics in ipairs({ false, true }) do
 				assert(button.label ~= "MINIMAP", "There is no always-visible minimap")
 				if button.label == "END TURN" then
 					assert(
-						button.x + button.w == ui.r.w - 2 and button.w >= 52,
+						button.x + button.w == ui.r.w - 2 and button.w >= 30,
 						"End turn is a labeled button aligned right"
 					)
 				end
@@ -433,6 +433,34 @@ for _, graphics in ipairs({ false, true }) do
 					)
 				end
 			end
+			local research, nextUnit, endTurn
+			for _, button in ipairs(ui.r.buttons) do
+				if button.label == "TECH TREE" then
+					research = button
+				end
+				if button.label == "NEXT IDLE UNIT" then
+					nextUnit = button
+				end
+				if button.label == "END TURN" then
+					endTurn = button
+				end
+			end
+			assert(research and research.y < 14, "Research belongs in the top bar")
+			assert(
+				nextUnit
+					and endTurn
+					and nextUnit.x + nextUnit.w <= endTurn.x
+					and nextUnit.y == endTurn.y,
+				"Next idle is beside End Turn"
+			)
+			assert(
+				ui.mapViewport.y + ui.mapViewport.h > endTurn.y,
+				"Map uses the vertical space beside the inspector footer"
+			)
+			assert(click("FACTIONS"))
+			draw()
+			bounds()
+			assert(ui.panel == "factions" and click("CLOSE"), "Faction details open and close")
 			ui.panel = "tech"
 			draw()
 			bounds()

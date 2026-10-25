@@ -88,11 +88,11 @@ function I.draw(r, kind, x, y, size, color)
 		dispenserbarge = "frigate",
 	}
 	if kind == "diamondguard" or kind == "netherguard" then
-		I.draw(r, "swordsman", x, y, size, kind == "diamondguard" and 13 or 4)
+		I.draw(r, "swordsman", x, y, size, color or (kind == "diamondguard" and 13 or 4))
 		return
 	end
 	kind = aliases[kind] or kind
-	if sprite(r, kind, x, y, size) then
+	if sprite(r, kind, x, y, size, color) then
 		return
 	end
 	if kind == "food" or kind == "grain" then

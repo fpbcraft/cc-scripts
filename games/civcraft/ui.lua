@@ -1,5 +1,7 @@
 -- CIVCRAFT local/network UI built on the RAILBREAK pixel canvas.
 -- Never mutate simulation here: all commands flow through dispatch().
+local FactionColors = dofile("/games/civcraft/faction_colors.lua")
+local Personalities = dofile("/games/civcraft/ai_personalities.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
 local GameView = dofile("/games/civcraft/game_view.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
@@ -16,7 +18,7 @@ local function mapLabel(state)
 	local dims = World.sizes[size] or World.sizes.standard
 	return size:upper() .. " " .. dims[1] .. "X" .. dims[2]
 end
-local P = { 8, 13, 11, 21 }
+local P = FactionColors.players
 local function clip(s, n)
 	return tostring(s or ""):upper():sub(1, math.max(0, n))
 end
@@ -78,6 +80,9 @@ function UI:turnProgress(title, detail)
 	r:finish()
 end
 function UI:command(action, params)
+	if action == "civ" then
+		self.lobbyPlayer = params and params.player or 1
+	end
 	if Settings.command(self, action) then
 		return
 	end
@@ -595,6 +600,15 @@ function UI:draw(state, playerID, opts)
 			local rows = {}
 			for i, p in ipairs(state.players) do
 				rows[#rows + 1] = { text = i .. ". " .. p.name .. " / " .. Systems.civ(p.civ).name }
+				for _, line in ipairs(Panels.wrap(r, "BONUS: " .. Systems.civ(p.civ).bonus, w - 20)) do
+					rows[#rows + 1] = { text = line, color = P[i] or 8 }
+				end
+				if p.ai then
+					rows[#rows + 1] = {
+						text = "PERSONALITY: " .. Personalities.forCivilization(p.civ).archetype
+							:upper(),
+					}
+				end
 				if opts.localMode then
 					rows[#rows + 1] = {
 						buttons = {
@@ -758,6 +772,25 @@ function UI:draw(state, playerID, opts)
 		r:button(math.max(12, w - 90), y, 75, 15, "START GAME", function()
 			self:command("start")
 		end, { primary = true })
+		local choosing = state.players[self.lobbyPlayer or 1] or state.players[1]
+		if choosing then
+			r:text(
+				12,
+				h - 15,
+				"BONUS: " .. Systems.civ(choosing.civ).bonus,
+				P[self.lobbyPlayer or 1] or 8,
+				1,
+				w - 24
+			)
+			r:text(
+				12,
+				h - 7,
+				"AI PERSONALITY: " .. Personalities.forCivilization(choosing.civ).archetype:upper(),
+				6,
+				1,
+				w - 24
+			)
+		end
 		r:finish()
 		return
 	end

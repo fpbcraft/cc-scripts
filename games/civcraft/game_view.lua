@@ -3,6 +3,7 @@ local Codex = dofile("/games/civcraft/encyclopedia.lua")
 local EventFeed = dofile("/games/civcraft/event_feed.lua")
 local Danger = dofile("/games/civcraft/danger_view.lua")
 local HUD = dofile("/games/civcraft/hud.lua")
+local Factions = dofile("/games/civcraft/faction_view.lua")
 local Inspector = dofile("/games/civcraft/inspector.lua")
 local Map = dofile("/games/civcraft/map_view.lua")
 local Minimap = dofile("/games/civcraft/minimap.lua")
@@ -44,20 +45,26 @@ function G.draw(ui, state, player)
 	ui.inputMode = "map"
 	r:fill(0, 0, w, h, 0)
 	r:fill(0, 0, w, header, 1)
-	r:text(4, 3, "CIVCRAFT", 8, 1, 40)
-	local infoX = 12 + r:textWidth("CIVCRAFT")
+	local compactHeader = w < 240
+	if not compactHeader then
+		r:text(4, 3, "CIVCRAFT", 8, 1, 40)
+	end
+	local infoX = compactHeader and 4 or 12 + r:textWidth("CIVCRAFT")
 	r:text(
 		infoX,
 		3,
 		"R"
 			.. state.round
-			.. " "
-			.. (player and player.name or "")
-			.. " / "
-			.. (player and Systems.ages[Systems.age(player)].name or ""),
+			.. (
+				compactHeader and ""
+				or " "
+					.. (player and player.name or "")
+					.. " / "
+					.. (player and Systems.ages[Systems.age(player)].name or "")
+			),
 		7,
 		1,
-		w - 66 - infoX
+		w - 82 - infoX
 	)
 	HUD.resources(ui, state, player)
 	r:text(
@@ -75,6 +82,25 @@ function G.draw(ui, state, player)
 		r.buttons[#r.buttons].icon = icon
 	end
 	for i, action in ipairs({
+		{
+			"TECH TREE",
+			"tree",
+			function()
+				ui.panel = "tech"
+				ui.source = nil
+				ui.reachable = {}
+				ui.workCity = nil
+				ui.lastDrag = nil
+			end,
+		},
+		{
+			"FACTIONS",
+			"station",
+			function()
+				ui.panel = "factions"
+				ui.factionOffset = 0
+			end,
+		},
 		{
 			"EMPIRE",
 			"station",
@@ -107,13 +133,13 @@ function G.draw(ui, state, player)
 			end,
 		},
 	}) do
-		iconButton(w - 62 + (i - 1) * 15, 1, 14, action[1], action[2], action[3])
+		iconButton(w - 80 + (i - 1) * 13, 1, 12, action[1], action[2], action[3])
 	end
 	Map.draw(
 		ui,
 		state,
 		player,
-		{ x = left + 4, y = header + 2, w = w - left - right - 10, h = bottom - header - 4 }
+		{ x = left + 4, y = header + 2, w = w - left - right - 10, h = h - header - 4 }
 	)
 	local y = header + 3
 	local modeStep = 14
@@ -167,45 +193,34 @@ function G.draw(ui, state, player)
 		{ x = w - right - 2, y = header + 1, w = right, h = bottom - header - 3 }
 	)
 
-	local actions = {
-		{
-			"TECH TREE",
-			"tree",
-			function()
-				ui.panel = "tech"
-				ui.source = nil
-				ui.reachable = {}
-				ui.workCity = nil
-				ui.lastDrag = nil
-			end,
-		},
-		{
-			"NEXT IDLE UNIT",
-			"nextUnit",
-			function()
-				ui:nextIdle()
-			end,
-		},
-	}
-	local width = 12
-	r:fill(0, bottom, w, 15, 1)
-	for i, action in ipairs(actions) do
-		iconButton(2 + (i - 1) * (width + 2), bottom + 1, width, action[1], action[2], action[3])
-	end
+	local footerX = w - right - 2
+	r:fill(footerX, bottom, right, 15, 1)
+	iconButton(footerX + 1, bottom + 1, 12, "NEXT IDLE UNIT", "nextUnit", function()
+		ui:nextIdle()
+	end)
 	if ui:animating() then
-		iconButton(30, bottom + 1, 12, "SKIP", "nextUnit", function()
+		iconButton(2, bottom + 1, 12, "SKIP", "nextUnit", function()
 			ui:command("skipPlayback")
 		end)
 	else
-		iconButton(30, bottom + 1, 12, "OBSERVED EVENTS", "contract", function()
+		iconButton(2, bottom + 1, 12, "OBSERVED EVENTS", "contract", function()
 			ui.panel = "events"
 			ui.eventOffset = 0
 		end)
 	end
-	r:button(w - 54, bottom + 1, 52, 12, "END TURN", function()
-		ui:command("end")
-	end, { primary = true, icon = "endTurn" })
+	r:button(
+		footerX + 15,
+		bottom + 1,
+		right - 15,
+		12,
+		right < 68 and "END" or "END TURN",
+		function()
+			ui:command("end")
+		end,
+		{ primary = true, icon = "endTurn" }
+	)
 	r.buttons[#r.buttons].icon = "endTurn"
+	r.buttons[#r.buttons].label = "END TURN"
 	local rect = { x = 3, y = 3, w = w - 6, h = h - 6 }
 	if ui.disbandConfirm then
 		modal(ui, rect, true)
@@ -326,6 +341,9 @@ function G.draw(ui, state, player)
 		end, { primary = true })
 		r:icon("endTurn", v.x + 17, v.y + 3, 1)
 		r.buttons[#r.buttons].label = "CONFIRM"
+	elseif ui.panel == "factions" then
+		modal(ui, rect)
+		Factions.draw(ui, state, player, rect)
 	elseif ui.panel == "events" then
 		modal(ui, rect)
 		EventFeed.draw(ui, rect)

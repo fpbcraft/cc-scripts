@@ -1,7 +1,7 @@
 -- Draw event-time observations even when current fog or entity membership changed.
+local FactionColors = dofile("/games/civcraft/faction_colors.lua")
 local Icons = dofile("/games/civcraft/icons.lua")
 local View = {}
-local colors = { 8, 13, 11, 21 }
 function View.center(ui, rect, size)
 	local frame = ui.animationFrame
 	if not frame then
@@ -16,14 +16,7 @@ function View.center(ui, rect, size)
 	end
 end
 
-local function ownerColor(state, owner)
-	for i, player in ipairs(state.players or {}) do
-		if player.id == owner then
-			return colors[i] or 8
-		end
-	end
-	return 31
-end
+local ownerColor = FactionColors.owner
 
 function View.draw(ui, state, rect, size)
 	local frame = ui.animationFrame

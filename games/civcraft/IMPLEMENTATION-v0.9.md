@@ -107,6 +107,12 @@ The user's governing guide is the [Roblox Lua style guide](https://roblox.github
 
 Rebased onto `main` at `3a7518b` after PR #47 merged. Formatting conflicts were resolved through normalized three-way merges and checked against the pre-rebase implementation; upstream fixes and Selene annotations were retained. Use the repository's `.stylua.toml`, `selene.toml` and `cc-tweaked.yml` for all future work. StyLua 2.6.0 verifies formatting and Selene 0.32.0 checks the branch. The local Selene build enables `selene-lib/lua52` and `selene-lib/lua53` so the full CraftOS standard library loads without the prebuilt macOS binary's diagnostic. Refresh and rebase against `main` again before the final PR if it advances.
 
+## HUD, lobby and faction follow-ups
+
+Science, food and industry now show per-round rates in the HUD and ledger. Material stocks appear only after their technology unlocks, with signed rate suffixes only when nonzero. Lobby selection exposes the actual civilization bonus on compact and wide displays. Four shared gold/cyan/ivory/rose faction colors apply consistently to units, territory, animation and overview; bitmap sprites honor the faction tint.
+
+Research and faction details occupy the top-right bar. Next Idle Unit sits beside End Turn inside the inspector-width footer; the map extends into the freed vertical space. The faction panel shows public civilization bonuses, AI archetypes and age, plus own totals or currently visible rival forces. Hidden economy and AI plans are excluded. Focused controls checks cover 18 monitor/mode combinations, and a native two-human/one-AI session passes with Settings persistence and save reload. Remaining small-screen research changes still belong to workstream 10.
+
 ## Remaining workstreams
 
 07. Hybrid peaceful/war-group turns and declaration transitions.

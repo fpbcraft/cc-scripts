@@ -5,9 +5,20 @@ local H = {}
 local function compact(value)
 	value = math.floor(value or 0)
 	if math.abs(value) >= 1000 then
-		return math.floor(value / 1000) .. "K"
+		return (value < 0 and "-" or "") .. math.floor(math.abs(value) / 1000) .. "K"
 	end
 	return tostring(value)
+end
+local function rate(value)
+	value = value or 0
+	return (value > 0 and "+" or "") .. compact(value)
+end
+local function stock(value, change)
+	return compact(value) .. ((change or 0) ~= 0 and rate(change) or "")
+end
+local function unlocked(player, kind)
+	local technology = (Systems.resources[kind] or {}).tech
+	return not technology or (player.techs or {})[technology] == true
 end
 function H.resources(ui, state, player)
 	local r = ui.r
@@ -16,22 +27,21 @@ function H.resources(ui, state, player)
 	local x = 4
 	r:withClip({ x = 4, y = 14, w = r.w - 8, h = 7 }, function()
 		for _, entry in ipairs({
-			{ "gold", player.gold or 20, economy.net },
-			{ "science", player.science, economy.science },
-			{ "food", player.food, economy.food },
-			{ "wood", player.wood, economy.industry },
+			{ "gold", stock(player.gold or 20, economy.net) },
+			{ "science", rate(economy.science) },
+			{ "food", rate(economy.food) },
+			{ "wood", rate(economy.industry) },
 		}) do
-			local value = compact(entry[2]) .. (entry[3] >= 0 and "+" or "") .. compact(entry[3])
-			local width = Icons.yieldValue(r, entry[1], value, x, 15)
+			local width = Icons.yieldValue(r, entry[1], entry[2], x, 15)
 			x = x + width + 3
 		end
 		for _, kind in ipairs(Systems.resourceOrder) do
-			Icons.resource(r, kind, x, 15)
-			local value = compact((player.stockpile or {})[kind])
-				.. ((economy.strategic[kind] or 0) >= 0 and "+" or "")
-				.. (economy.strategic[kind] or 0)
-			r:text(x + 6, 15, value, 7)
-			x = x + 7 + r:textWidth(value) + 3
+			if unlocked(player, kind) then
+				Icons.resource(r, kind, x, 15)
+				local value = stock((player.stockpile or {})[kind], economy.strategic[kind])
+				r:text(x + 6, 15, value, 7)
+				x = x + 7 + r:textWidth(value) + 3
+			end
 		end
 	end)
 	r.buttons[#r.buttons + 1] = {
@@ -57,52 +67,40 @@ function H.ledger(ui, rect, player)
 	end)
 	local rows = {}
 	for _, entry in ipairs({
-		{ "GOLD", player.gold or 20, e.net },
-		{ "SCIENCE", player.science or 0, e.science },
-		{ "FOOD", player.food or 0, e.food },
-		{ "INDUSTRY", player.wood or 0, e.industry },
-		{ "GOLD INCOME", e.income, 0 },
-		{ "UNIT UPKEEP", e.upkeep, 0 },
+		{
+			"GOLD",
+			compact(player.gold or 20) .. (e.net ~= 0 and " (" .. rate(e.net) .. "/TURN)" or ""),
+		},
+		{ "SCIENCE", rate(e.science) .. "/TURN" },
+		{ "FOOD", rate(e.food) .. "/TURN" },
+		{ "INDUSTRY", rate(e.industry) .. "/TURN" },
+		{ "GOLD INCOME", rate(e.income) .. "/TURN" },
+		{ "UNIT UPKEEP", rate(-e.upkeep) .. "/TURN" },
 	}) do
-		for _, line in
-			ipairs(
-				Panels.wrap(
-					r,
-					entry[1]
-						.. " "
-						.. entry[2]
-						.. " ("
-						.. (entry[3] >= 0 and "+" or "")
-						.. entry[3]
-						.. "/TURN)",
-					rect.w - 20
-				)
-			)
-		do
+		for _, line in ipairs(Panels.wrap(r, entry[1] .. " " .. entry[2], rect.w - 20)) do
 			rows[#rows + 1] = { text = line }
 		end
 	end
 	for _, kind in ipairs(Systems.resourceOrder) do
-		local rate = e.strategic[kind] or 0
-		rows[#rows + 1] = {
-			text = kind:upper()
-				.. " "
-				.. ((player.stockpile or {})[kind] or 0)
-				.. " ("
-				.. (rate >= 0 and "+" or "")
-				.. rate
-				.. "/TURN)",
-		}
-		rows[#rows + 1] = {
-			buttons = {
-				{
-					label = "TRADE 20 GOLD FOR 1 " .. kind:upper(),
-					run = function()
-						ui:command("exchange", { resource = kind })
-					end,
+		if unlocked(player, kind) then
+			local change = e.strategic[kind] or 0
+			rows[#rows + 1] = {
+				text = kind:upper()
+					.. " "
+					.. ((player.stockpile or {})[kind] or 0)
+					.. (change ~= 0 and " (" .. rate(change) .. "/TURN)" or ""),
+			}
+			rows[#rows + 1] = {
+				buttons = {
+					{
+						label = "TRADE 20 GOLD FOR 1 " .. kind:upper(),
+						run = function()
+							ui:command("exchange", { resource = kind })
+						end,
+					},
 				},
-			},
-		}
+			}
+		end
 	end
 	rows[#rows + 1] = { text = "AGE: " .. Systems.ages[Systems.age(player)].name }
 	local victory = dofile("/games/civcraft/victory.lua").status(ui.state, player)

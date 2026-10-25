@@ -1,3 +1,4 @@
+local FactionColors = dofile("/games/civcraft/faction_colors.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Terrain = dofile("/games/civcraft/terrain_view.lua")
@@ -36,7 +37,7 @@ function M.draw(ui, state, player, rect)
 						rect.y + ((item.y - 1) * 0.75 + 0.5) * rect.h / fullH,
 						2,
 						2,
-						item.owner == ui.playerID and 8 or 10
+						FactionColors.owner(state, item.owner)
 					)
 				end
 			end

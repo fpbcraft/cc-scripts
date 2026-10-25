@@ -1,4 +1,5 @@
 -- World geometry, painting and pointer targets use the same pointy hex polygons.
+local FactionColors = dofile("/games/civcraft/faction_colors.lua")
 local AnimationView = dofile("/games/civcraft/animation_view.lua")
 local Animations = dofile("/games/civcraft/animations.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
@@ -7,7 +8,6 @@ local Systems = dofile("/games/civcraft/systems.lua")
 local Terrain = dofile("/games/civcraft/terrain_view.lua")
 local World = dofile("/games/civcraft/world.lua")
 local V = {}
-local colors = { 8, 13, 11, 21 }
 local function at(list, x, y)
 	for _, item in ipairs(list or {}) do
 		if item.x == x and item.y == y then
@@ -15,14 +15,7 @@ local function at(list, x, y)
 		end
 	end
 end
-local function ownerColor(state, id)
-	for i, p in ipairs(state.players) do
-		if p.id == id then
-			return colors[i] or 8
-		end
-	end
-	return id < 0 and (id == -2147483647 and 31 or 9) or 8
-end
+local ownerColor = FactionColors.owner
 function V.draw(ui, state, player, rect)
 	local frame = rect
 	rect = { x = frame.x + 4, y = frame.y + 4, w = frame.w - 8, h = frame.h - 8 }
