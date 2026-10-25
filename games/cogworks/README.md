@@ -1,17 +1,17 @@
 # COGWORKS: Kinetic Lab
 
-> **Campaign redesign (proposal):** [Discovery-Driven 64-Level Campaign Design](CAMPAIGN_DESIGN.md)
-> specifies all 64 hand-authored puzzle concepts, branching chapters, remixes,
-> varied bonuses, fixed machinery and the editor/pack acceptance criteria.
-> The currently generated 64-level layouts are **implementation placeholders**;
-> this document does not describe already playable replacement levels.
+> **Campaign redesign:** [Discovery-Driven 64-Level Campaign Design](CAMPAIGN_DESIGN.md)
+> specifies the intended puzzle insights and variations. This branch now contains
+> a **playable first implementation**: 64 distinct solver-verified layouts,
+> including 22 bespoke circuits and 42 authored variations of proven kinetic
+> constructions. Further manual playtesting and refining the remixes against
+> their design briefs remains necessary.
 
 A touchscreen-first construction puzzle for CC:Tweaked, based on the rotational
 transmission mechanics in the Minecraft [Create mod](https://github.com/Creators-of-Create/Create/wiki).
 
 The previous 30-stage campaign and its fictitious elbow, splitter, inline-speed
-drive and inline-reversing gear have been **removed entirely**. The new
-**16-stage campaign** introduces the actual principles of shaft axes, side-meshing
+drive and inline-reversing gear have been **removed entirely**. The **64-stage, eight-chapter campaign** introduces the actual principles of shaft axes, side-meshing
 cogs, bevel gearboxes, encased chain drives, mechanical belts and redstone
 devices. COGWORKS is a standalone game; it does **not** control Minecraft machines.
 
@@ -28,14 +28,14 @@ To try this branch before merging, run the branch's installer and pass the branc
 name as the positional ref:
 
 ```lua
-wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/feat/cogworks-v03-craftos/installers/cogworks.lua feat/cogworks-create-kinetics-sandbox
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/feat/cogworks-64-campaign-editor/installers/cogworks.lua feat/cogworks-64-campaign-editor
 /games/cogworks/main.lua --dev
 ```
 
-The installer preserves saves and settings. The new campaign uses version-4
-save data and resets old puzzle sessions/unlocks, because the old solutions are
-mechanically incompatible. Previous save files remain on disk; they are not
-deleted. Display options are preserved.
+The installer preserves saves and settings. The handcrafted campaign uses **version-6** save data and starts a new
+campaign when loading incompatible generated-layout saves. A permanent
+`slot-N.dat.campaign-v5` backup is retained before an older slot is
+overwritten. Display settings are preserved.
 
 ## Mechanical components
 
@@ -71,16 +71,42 @@ requested spin and speed.
 
 ### Campaign
 
-Sixteen new levels, from 5×5 to 10×10, progress from straight powerlines and gearbox reversals
-through perpendicular cog teeth, chain drives, clutches/gearshifts, 2:1 gearing,
-belts and branching networks. Each level starts with a mission briefing;
+Sixty-four levels in **eight branching chapters** (eight stages each), on
+5×5 to 10×10 boards, progress from basic mechanical intuition through
+surprising routes, gear ratios, transmission crossings, distribution,
+redstone, factory repair and a four-press final examination. Each level starts with a mission briefing;
 a one-time Ponder explains newly introduced parts. Complete all required
 presses at their requested relative speed and rotation without jamming
-the mechanism. Optional bonus challenges do not block advancement.
+the mechanism. Each level has **two different, named bonus objectives** in addition to the
+main clear, including transmission and geometry checks, redstone, fixture
+restoration, resource limits and more.
+
+Each chapter offers six main puzzles, an optional difficult remix (#7) and
+an optional examination (#8). Stages 2 and 3 open after stage 1; stages
+4 and 5 after either 2 or 3; stage 6 after two earlier branch clears;
+the extra after stage 4 plus another clear; and the examination after four
+main clears. To unlock the next chapter, earn at least **six objective points
+and four main clears from its first six levels**. Optional exams and remixes
+are never mandatory. A level's clear state and its two independent bonus
+states appear on the chapter selection screen.
 
 Progress and awards are stored in three independent save slots. Each stage
 retains its own construction snapshot, including placed and removed redstone parts. Existing campaign unlocks are
 retained; incompatible old board arrangements reset when the level is opened.
+
+### Campaign reference and validation
+
+Each authored stage has a playable starting state, a separate reference
+construction, an explicit stock inventory, optional immovable fixtures,
+and two typed bonuses. `tests/cogworks_campaign_design_test.lua` verifies
+all 64 reference solutions with the actual kinetic simulator; it also
+checks both authored bonuses, fixed-piece protections, board diversity,
+and progression without needing to complete optional chapter exams.
+
+The 42 levels derived from earlier proven kinetic layouts are **intentional
+first-pass variations, not yet final playtested puzzles**. Their discovery
+quality and authored twists should be checked during in-game playtesting
+and revised where a familiar solution still works trivially.
 
 ### Development mode
 
@@ -184,6 +210,7 @@ old graphics viewport moving or changing size.
 ## Regression tests
 
 ```sh
+lua5.3 tests/cogworks_campaign_design_test.lua
 lua5.3 tests/cogworks_test.lua
 lua5.3 tests/cogworks_mechanics_test.lua
 lua5.3 tests/cogworks_briefing_test.lua
