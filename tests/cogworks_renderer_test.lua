@@ -251,7 +251,9 @@ click("tutorialSkip")
 for _, target in ipairs(r.targets) do
   assert(target.action ~= "cell", "Ponder must block board interaction")
 end
-assert(gfx.batches <= 10, "Pixel-diff screens upload at most once per frame")
+local uploadsBefore = gfx.batches
+r:draw(model)
+assert(gfx.batches <= uploadsBefore + 1, "Each redraw uploads no more than one bitmap")
 -- Briefing is modal, has animated reveals, and respects disabled animation.
 local largeTitles = 0
 local large = r.fontLarge
