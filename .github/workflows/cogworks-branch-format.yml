@@ -1,0 +1,29 @@
+name: Format Cogworks working branch
+
+on:
+  push:
+    branches: [feat/cogworks-create-kinetics-sandbox]
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply pinned StyLua formatting
+        uses: JohnnyMorganz/stylua-action@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: 2.6.0
+          args: games/cogworks tests/cogworks_test.lua tests/cogworks_mechanics_test.lua tests/cogworks_tutorials_test.lua tests/cogworks_briefing_test.lua tests/cogworks_storage_test.lua tests/cogworks_renderer_test.lua
+      - name: Commit formatting to feature branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add games/cogworks tests/cogworks*_test.lua
+          if ! git diff --cached --quiet; then
+            git commit -m 'style(cogworks): apply pinned StyLua formatting'
+            git push origin HEAD:feat/cogworks-create-kinetics-sandbox
+          fi
