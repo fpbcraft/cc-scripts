@@ -78,21 +78,24 @@ function H.ledger(ui, rect, player)
   end
   for _, kind in ipairs(Systems.resourceOrder) do
     local rate = e.strategic[kind] or 0
-    rows[#rows + 1] =
-      { text = kind:upper()
+    rows[#rows + 1] = {
+      text = kind:upper()
         .. " "
         .. ((player.stockpile or {})[kind] or 0)
         .. " ("
         .. (rate >= 0 and "+" or "")
         .. rate
-        .. "/TURN)" }
+        .. "/TURN)",
+    }
     rows[#rows + 1] = {
-      buttons = { {
-        label = "TRADE 20 GOLD FOR 1 " .. kind:upper(),
-        run = function()
-          ui:command("exchange", { resource = kind })
-        end,
-      } },
+      buttons = {
+        {
+          label = "TRADE 20 GOLD FOR 1 " .. kind:upper(),
+          run = function()
+            ui:command("exchange", { resource = kind })
+          end,
+        },
+      },
     }
   end
   rows[#rows + 1] = { text = "AGE: " .. Systems.ages[Systems.age(player)].name }

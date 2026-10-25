@@ -3,21 +3,33 @@
 local levels = require("games.cogworks.levels")
 local E = { levels = levels, WIDTH = 7, HEIGHT = 6 }
 local vectors = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } }
-local ports = { S = { 0 }, M = { 0 }, I = { 0, 2 }, L = { 0, 1 }, T = { 0, 1, 3 }, G = { 0, 2 }, B = { 0, 2 }, Q = {
-  0,
-  1,
-  2,
-  3,
-}, O = {
-  0,
-  2,
-}, V = {
-  0,
-  2,
-}, D = {
-  0,
-  2,
-} }
+local ports = {
+  S = { 0 },
+  M = { 0 },
+  I = { 0, 2 },
+  L = { 0, 1 },
+  T = { 0, 1, 3 },
+  G = { 0, 2 },
+  B = { 0, 2 },
+  Q = {
+    0,
+    1,
+    2,
+    3,
+  },
+  O = {
+    0,
+    2,
+  },
+  V = {
+    0,
+    2,
+  },
+  D = {
+    0,
+    2,
+  },
+}
 E.parts = {
   I = { name = "SHAFT", description = "STRAIGHT POWER LINE", color = 11 },
   L = { name = "ELBOW", description = "TURNS POWER 90 DEGREES", color = 11 },

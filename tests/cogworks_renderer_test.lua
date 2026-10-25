@@ -208,7 +208,18 @@ function txt.write(str)
 end
 local plain = R.new(txt)
 assert(plain.mode == "text")
-for _, scene in ipairs({ "title", "slots", "game", "briefing", "tutorial", "pause", "settings", "levels", "help", "confirm" }) do
+for _, scene in ipairs({
+  "title",
+  "slots",
+  "game",
+  "briefing",
+  "tutorial",
+  "pause",
+  "settings",
+  "levels",
+  "help",
+  "confirm",
+}) do
   model.scene = scene
   plain:draw(model)
   assert(#plain.targets > 0, "Text fallback has buttons on " .. scene)

@@ -9,7 +9,15 @@ local core = {
   },
   monitorName = "monitor_left",
   snapshot = function()
-    return { mode = "idle", route = {}, routeNext = 1, presets = {}, position = { x = 0, z = 0, y = 100 }, outputs = {}, notice = "Ready" }
+    return {
+      mode = "idle",
+      route = {},
+      routeNext = 1,
+      presets = {},
+      position = { x = 0, z = 0, y = 100 },
+      outputs = {},
+      notice = "Ready",
+    }
   end,
   fly = function(x, z, name)
     calls[#calls + 1] = { x = x, z = z, name = name }
@@ -23,8 +31,19 @@ local core = {
   end,
   setPage = function() end,
 }
-colors =
-  { black = 1, white = 2, lightBlue = 4, cyan = 8, lightGray = 16, gray = 32, blue = 64, yellow = 128, lime = 256, red = 512, orange = 1024 }
+colors = {
+  black = 1,
+  white = 2,
+  lightBlue = 4,
+  cyan = 8,
+  lightGray = 16,
+  gray = 32,
+  blue = 64,
+  yellow = 128,
+  lime = 256,
+  red = 512,
+  orange = 1024,
+}
 term = {
   getSize = function()
     return 51, 19

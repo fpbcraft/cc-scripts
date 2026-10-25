@@ -282,13 +282,17 @@ function E.draw(ui, rect)
   local body = { x = x + 3, y = y + 24, w = w - 6, h = h - 26 }
   local rows = {}
   if model.entry then
-    rows[#rows + 1] = { buttons = { {
-      label = "BACK TO LIST",
-      run = function()
-        model.entry = nil
-        model.offset = 0
-      end,
-    } } }
+    rows[#rows + 1] = {
+      buttons = {
+        {
+          label = "BACK TO LIST",
+          run = function()
+            model.entry = nil
+            model.offset = 0
+          end,
+        },
+      },
+    }
     for _, line in ipairs(Panels.wrap(r, model.entry.name, body.w - 4)) do
       rows[#rows + 1] = { text = line, color = 8 }
     end
@@ -299,13 +303,17 @@ function E.draw(ui, rect)
     end
   else
     for _, entry in ipairs(E.entries(model.category)) do
-      rows[#rows + 1] = { buttons = { {
-        label = entry.name,
-        run = function()
-          model.entry = entry
-          model.offset = 0
-        end,
-      } } }
+      rows[#rows + 1] = {
+        buttons = {
+          {
+            label = entry.name,
+            run = function()
+              model.entry = entry
+              model.offset = 0
+            end,
+          },
+        },
+      }
     end
   end
   Panels.rows(r, body, rows, model)

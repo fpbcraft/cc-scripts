@@ -184,10 +184,12 @@ if settings then
   end
 end
 local function saveSettings()
-  return writeTable(
-    settingsFile,
-    { bowOffset = CFG.BOW_OFFSET, invertSteering = CFG.INVERT_STEERING, autoMap = CFG.AUTO_MAP, engineAuto = CFG.ENGINE_AUTO }
-  )
+  return writeTable(settingsFile, {
+    bowOffset = CFG.BOW_OFFSET,
+    invertSteering = CFG.INVERT_STEERING,
+    autoMap = CFG.AUTO_MAP,
+    engineAuto = CFG.ENGINE_AUTO,
+  })
 end
 
 local CHANNELS = {
@@ -359,17 +361,14 @@ if routeData.nextWaypointId then
 end
 local function saveRoute()
   local current = route[routeNext]
-  return writeTable(
-    routeFile,
-    {
-      version = 3,
-      points = route,
-      loop = routeLoop,
-      nextIndex = routeNext,
-      nextWaypointId = current and current.id or nil,
-      nextId = nextWaypointId,
-    }
-  )
+  return writeTable(routeFile, {
+    version = 3,
+    points = route,
+    loop = routeLoop,
+    nextIndex = routeNext,
+    nextWaypointId = current and current.id or nil,
+    nextId = nextWaypointId,
+  })
 end
 
 local presetFile = sibling(".airship_avionics_presets")

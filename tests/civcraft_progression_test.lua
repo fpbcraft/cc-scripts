@@ -19,13 +19,16 @@ local function simulate(secondID, expected)
     version = 6,
     nextId = 10,
     world = world,
-    players = { { id = 1, name = "A", civ = "scholar", techs = {}, ai = true }, {
-      id = secondID,
-      name = "B",
-      civ = "iron",
-      techs = {},
-      ai = true,
-    } },
+    players = {
+      { id = 1, name = "A", civ = "scholar", techs = {}, ai = true },
+      {
+        id = secondID,
+        name = "B",
+        civ = "iron",
+        techs = {},
+        ai = true,
+      },
+    },
     cities = {},
     units = {},
   }

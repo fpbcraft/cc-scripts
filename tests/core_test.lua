@@ -106,16 +106,22 @@ local devices = {
       end,
     },
   },
-  create_speedometer_0 = { kind = "Create_Speedometer", dev = {
-    getSpeed = function()
-      return 128
-    end,
-  } },
-  powergrid_voltage_gauge_0 = { kind = "powergrid_voltage_gauge", dev = {
-    voltage = function()
-      return 24
-    end,
-  } },
+  create_speedometer_0 = {
+    kind = "Create_Speedometer",
+    dev = {
+      getSpeed = function()
+        return 128
+      end,
+    },
+  },
+  powergrid_voltage_gauge_0 = {
+    kind = "powergrid_voltage_gauge",
+    dev = {
+      voltage = function()
+        return 24
+      end,
+    },
+  },
 }
 peripheral = {
   getNames = function()

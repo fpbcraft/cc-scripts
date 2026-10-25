@@ -106,12 +106,11 @@ function S.normalize(data)
 end
 function S.loadSettings()
   local raw = decode(S.SETTINGS) or {}
-  return { animations = raw.animations ~= false, showPorts = raw.showPorts ~= false, lastSlot = clamp(
-    raw.lastSlot,
-    1,
-    3,
-    1
-  ) }
+  return {
+    animations = raw.animations ~= false,
+    showPorts = raw.showPorts ~= false,
+    lastSlot = clamp(raw.lastSlot, 1, 3, 1),
+  }
 end
 function S.saveSettings(settings)
   return write(S.SETTINGS, settings)

@@ -92,8 +92,17 @@ function P.rows(r, rect, rows, model, key)
     local pos = math.floor((track.h - thumb) * model[key] / max)
     r:fill(track.x, track.y, track.w, track.h, 3)
     r:fill(track.x, track.y + pos, track.w, thumb, 8)
-    local bar =
-      { x = track.x, y = track.y, w = track.w, h = track.h, area = area, model = model, key = key, max = max, thumb = thumb }
+    local bar = {
+      x = track.x,
+      y = track.y,
+      w = track.w,
+      h = track.h,
+      area = area,
+      model = model,
+      key = key,
+      max = max,
+      thumb = thumb,
+    }
     local function scrollTo(_, py)
       model[key] =
         math.floor(math.max(0, math.min(1, (py - track.y - thumb / 2) / math.max(1, track.h - thumb))) * max + 0.5)

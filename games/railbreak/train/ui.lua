@@ -12,27 +12,24 @@ local function first(text, n)
   return tostring(text or ""):sub(1, n or 18)
 end
 function UI.new(m, opt)
-  local self = setmetatable(
-    {
-      r = R.new(m),
-      g = opt and opt.game or nil,
-      scene = "title",
-      frame = 0,
-      toast = "",
-      page = 1,
-      selected = 1,
-      selectedWagon = 2,
-      marketSide = "buy",
-      difficulty = "standard",
-      players = 1,
-      names = { "", "", "", "" },
-      editing = nil,
-      helpPage = 1,
-      info = nil,
-      infoPage = 1,
-    },
-    UI
-  )
+  local self = setmetatable({
+    r = R.new(m),
+    g = opt and opt.game or nil,
+    scene = "title",
+    frame = 0,
+    toast = "",
+    page = 1,
+    selected = 1,
+    selectedWagon = 2,
+    marketSide = "buy",
+    difficulty = "standard",
+    players = 1,
+    names = { "", "", "", "" },
+    editing = nil,
+    helpPage = 1,
+    info = nil,
+    infoPage = 1,
+  }, UI)
   if self.g then
     self.scene = "hub"
   end
@@ -215,7 +212,13 @@ function UI:footer(entries)
   end
 end
 function UI:foot()
-  self:footer({ { "hub", "TRAIN" }, { "map", "MAP" }, { "station", "STOP" }, { "contracts", "JOBS" }, { "help", "HELP" } })
+  self:footer({
+    { "hub", "TRAIN" },
+    { "map", "MAP" },
+    { "station", "STOP" },
+    { "contracts", "JOBS" },
+    { "help", "HELP" },
+  })
 end
 function UI:status()
   if self.toast == "" then
@@ -710,9 +713,8 @@ function UI:train()
   local w, h = r.w, r.h
   local g = self.g
   self:header("TRAIN COMPOSITION", "TAP A WAGON TO INSPECT")
-  local artH = self:small() and (r.mode == "graphics" and math.floor((h - 64) * 0.45) or 44) or math.floor(
-    (h - 45) * 0.43
-  )
+  local artH = self:small() and (r.mode == "graphics" and math.floor((h - 64) * 0.45) or 44)
+    or math.floor((h - 45) * 0.43)
   local taps = Art.train(r, 2, 21, w - 4, artH, g.wagons, self.frame, self.selectedWagon)
   for i, t in ipairs(taps) do
     local ix = i

@@ -19,18 +19,15 @@ rednet = {
 }
 local r = Remote.new()
 local nodeId = 17
-r:ingest(
-  nodeId,
-  {
-    kind = "snapshot",
-    version = 1,
-    name = "Andesite Node",
-    peripherals = {
-      { name = "computer", type = "remote_computer", methods = {}, values = {} },
-      { name = "redstone_relay_0", type = "redstone_relay", methods = {}, values = {} },
-    },
-  }
-)
+r:ingest(nodeId, {
+  kind = "snapshot",
+  version = 1,
+  name = "Andesite Node",
+  peripherals = {
+    { name = "computer", type = "remote_computer", methods = {}, values = {} },
+    { name = "redstone_relay_0", type = "redstone_relay", methods = {}, values = {} },
+  },
+})
 assert(not r:control("remote:17:computer", "front", true, true))
 local secret = string.rep("0123456789abcdef", 3)
 assert(r:pair(nodeId, secret))

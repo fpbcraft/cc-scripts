@@ -19,13 +19,16 @@ local function campaign()
     round = 1,
     nextId = 10,
     world = { width = 12, height = 8, tiles = tiles, resources = {}, seed = 12 },
-    players = { { id = 1, name = "A", civ = "verdant", techs = {}, gold = 20 }, {
-      id = 2,
-      name = "B",
-      civ = "iron",
-      techs = {},
-      gold = 20,
-    } },
+    players = {
+      { id = 1, name = "A", civ = "verdant", techs = {}, gold = 20 },
+      {
+        id = 2,
+        name = "B",
+        civ = "iron",
+        techs = {},
+        gold = 20,
+      },
+    },
     cities = { { id = 1, owner = 1, x = 3, y = 3, population = 2, buildings = {} } },
     units = { { id = 3, owner = 1, x = 4, y = 3, kind = "warrior", movesLeft = 2 } },
   }

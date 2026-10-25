@@ -945,40 +945,34 @@ function R:icon(id, x, y, s)
         run = col
       end
       if not lit and run then
-        self:fill(
-          x + (run - 1) * s,
-          y + (i - 1) * s,
-          (col - run) * s,
-          s,
-          ({
-            coin = 8,
-            coal = 17,
-            parts = 17,
-            people = 13,
-            box = 9,
-            wood = 9,
-            sheet = 6,
-            fuel = 10,
-            wrench = 17,
-            map = 11,
-            station = 9,
-            contract = 8,
-            train = 10,
-            bolt = 8,
-            back = 6,
-            right = 6,
-            danger = 10,
-            star = 8,
-            press = 17,
-            saw = 17,
-            foundry = 10,
-            crane = 9,
-            signal = 11,
-            clock = 5,
-            ore = 17,
-            food = 18,
-          })[id] or 8
-        )
+        self:fill(x + (run - 1) * s, y + (i - 1) * s, (col - run) * s, s, ({
+          coin = 8,
+          coal = 17,
+          parts = 17,
+          people = 13,
+          box = 9,
+          wood = 9,
+          sheet = 6,
+          fuel = 10,
+          wrench = 17,
+          map = 11,
+          station = 9,
+          contract = 8,
+          train = 10,
+          bolt = 8,
+          back = 6,
+          right = 6,
+          danger = 10,
+          star = 8,
+          press = 17,
+          saw = 17,
+          foundry = 10,
+          crane = 9,
+          signal = 11,
+          clock = 5,
+          ore = 17,
+          food = 18,
+        })[id] or 8)
         run = nil
       end
     end
@@ -990,12 +984,8 @@ function R:button(x, y, w, h, label, fn, opt)
     return
   end
   if
-    self.clip and (
-      x < self.clip.x
-      or y < self.clip.y
-      or x + w > self.clip.x + self.clip.w
-      or y + h > self.clip.y + self.clip.h
-    )
+    self.clip
+    and (x < self.clip.x or y < self.clip.y or x + w > self.clip.x + self.clip.w or y + h > self.clip.y + self.clip.h)
   then
     return
   end

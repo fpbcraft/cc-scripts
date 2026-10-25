@@ -28,7 +28,10 @@ local state = {
   round = 1,
   world = world,
   nextId = 4,
-  players = { { id = 1, name = "ONE", techs = {}, civ = "verdant" }, { id = 2, name = "TWO", techs = {}, civ = "iron" } },
+  players = {
+    { id = 1, name = "ONE", techs = {}, civ = "verdant" },
+    { id = 2, name = "TWO", techs = {}, civ = "iron" },
+  },
   cities = {
     { owner = 1, x = a.x, y = a.y, population = 2, jobs = { food = 1, wood = 1, science = 0 }, buildings = {} },
     { owner = 2, x = b.x, y = b.y, population = 2, jobs = { food = 1, wood = 1, science = 0 }, buildings = {} },
@@ -413,9 +416,13 @@ for _, graphics in ipairs({ false, true }) do
       draw({ report = true })
       assert(ui.panel == "report")
       state.round = 1
-      for _, opts in ipairs({ { screen = "title", slots = { { occupied = true }, {}, {} } }, { paused = true }, {
-        handoff = true,
-      } }) do
+      for _, opts in ipairs({
+        { screen = "title", slots = { { occupied = true }, {}, {} } },
+        { paused = true },
+        {
+          handoff = true,
+        },
+      }) do
         draw(opts)
         bounds()
       end

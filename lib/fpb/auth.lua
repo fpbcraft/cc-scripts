@@ -146,20 +146,17 @@ function M.equal(a, b)
 end
 -- Fixed-field canonical encoding: no transmitted Lua code, no ambiguity.
 function M.frame(kind, hub, node, seq, target, side, on, polarity, session)
-  return table.concat(
-    {
-      tostring(kind),
-      tostring(hub),
-      tostring(node),
-      tostring(seq),
-      tostring(target or ""),
-      tostring(side or ""),
-      on and "1" or "0",
-      polarity and "1" or "0",
-      tostring(session or ""),
-    },
-    "|"
-  )
+  return table.concat({
+    tostring(kind),
+    tostring(hub),
+    tostring(node),
+    tostring(seq),
+    tostring(target or ""),
+    tostring(side or ""),
+    on and "1" or "0",
+    polarity and "1" or "0",
+    tostring(session or ""),
+  }, "|")
 end
 function M.mac(key, frame)
   return M.hmac(key, frame)

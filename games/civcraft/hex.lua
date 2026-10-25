@@ -33,14 +33,20 @@ end
 -- Clockwise polygon edges: NE, E, SE, SW, W, NW. Includes map edges.
 function H.edgeNeighbours(x, y)
   local shift = (y - 1) % 2
-  return { { x = x + shift, y = y - 1 }, { x = x + 1, y = y }, { x = x + shift, y = y + 1 }, { x = x + shift - 1, y = y
-    + 1 }, {
-    x = x - 1,
-    y = y,
-  }, {
-    x = x + shift - 1,
-    y = y - 1,
-  } }
+  return {
+    { x = x + shift, y = y - 1 },
+    { x = x + 1, y = y },
+    { x = x + shift, y = y + 1 },
+    { x = x + shift - 1, y = y + 1 },
+    {
+      x = x - 1,
+      y = y,
+    },
+    {
+      x = x + shift - 1,
+      y = y - 1,
+    },
+  }
 end
 function H.vertices(x, y, size)
   return {
@@ -219,12 +225,14 @@ function H.reachable(state, unit, owner, Systems)
               and (not u or u.owner ~= owner)
             then
               if not attacks[ny * w + nx] or total < attacks[ny * w + nx].cost then
-                attacks[ny * w + nx] =
-                  { x = nx, y = ny, cost = total, attack = true, ranged = (stats.range or 1) > 1, path = route(
-                    nx,
-                    ny,
-                    cur
-                  ) }
+                attacks[ny * w + nx] = {
+                  x = nx,
+                  y = ny,
+                  cost = total,
+                  attack = true,
+                  ranged = (stats.range or 1) > 1,
+                  path = route(nx, ny, cur),
+                }
               end
             end
           elseif not u and (not c or c.owner == owner) then
@@ -282,10 +290,17 @@ function H.reachable(state, unit, owner, Systems)
         if visible then
           local idx = u.y * w + u.x
           if not attacks[idx] then
-            out[#out + 1] = { x = u.x, y = u.y, cost = budget, attack = true, ranged = true, path = {
-              { x = unit.x, y = unit.y },
-              { x = u.x, y = u.y },
-            } }
+            out[#out + 1] = {
+              x = u.x,
+              y = u.y,
+              cost = budget,
+              attack = true,
+              ranged = true,
+              path = {
+                { x = unit.x, y = unit.y },
+                { x = u.x, y = u.y },
+              },
+            }
           end
         end
       end

@@ -33,12 +33,16 @@ function E.draw(ui, rect)
           .. " "
           .. (item.standby and "ZZ" or ("M" .. (item.movesLeft or 0)))
         )
-      rows[#rows + 1] = { buttons = { {
-        label = label,
-        run = function()
-          ui:focus(kind, item)
-        end,
-      } } }
+      rows[#rows + 1] = {
+        buttons = {
+          {
+            label = label,
+            run = function()
+              ui:focus(kind, item)
+            end,
+          },
+        },
+      }
     end
   end
   if #rows == 0 then

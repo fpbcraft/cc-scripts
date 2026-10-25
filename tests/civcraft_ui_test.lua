@@ -45,8 +45,13 @@ local ui = UI.new(m, function(action, data)
   calls[#calls + 1] = { action = action, data = data }
 end)
 assert(ui.r.mode == "graphics", "Native pixel mode enabled")
-local state =
-  { phase = "lobby", round = 1, players = { { id = 11, name = "P1" }, { id = 12, name = "P2" } }, cities = {}, units = {} }
+local state = {
+  phase = "lobby",
+  round = 1,
+  players = { { id = 11, name = "P1" }, { id = 12, name = "P2" } },
+  cities = {},
+  units = {},
+}
 ui:draw(state, 11, { localMode = true, screen = "game" })
 local function touchLabel(label)
   for _, b in ipairs(ui.r.buttons) do
@@ -59,39 +64,31 @@ local function touchLabel(label)
   end
   error("Button not found: " .. label)
 end
-ui:draw(
-  state,
-  11,
-  {
-    localMode = true,
-    screen = "title",
-    slot = 2,
-    slots = {
-      { occupied = true, name = "EMPIRE ALPHA", round = 4 },
-      { occupied = false, name = "EMPTY SLOT 2" },
-      { occupied = true, name = "EMPIRE BETA", round = 9 },
-    },
-  }
-)
+ui:draw(state, 11, {
+  localMode = true,
+  screen = "title",
+  slot = 2,
+  slots = {
+    { occupied = true, name = "EMPIRE ALPHA", round = 4 },
+    { occupied = false, name = "EMPTY SLOT 2" },
+    { occupied = true, name = "EMPIRE BETA", round = 9 },
+  },
+})
 touchLabel("SLOT 3  EMPIRE BETA  R9")
 assert(
   calls[#calls].action == "selectSlot" and calls[#calls].data.slot == 3,
   "Touchscreen title must switch between saved campaigns"
 )
-ui:draw(
-  state,
-  11,
-  {
-    localMode = true,
-    screen = "title",
-    slot = 2,
-    slots = {
-      { occupied = true, name = "A", round = 1 },
-      { occupied = false, name = "B" },
-      { occupied = false, name = "C" },
-    },
-  }
-)
+ui:draw(state, 11, {
+  localMode = true,
+  screen = "title",
+  slot = 2,
+  slots = {
+    { occupied = true, name = "A", round = 1 },
+    { occupied = false, name = "B" },
+    { occupied = false, name = "C" },
+  },
+})
 touchLabel("NEW CAMPAIGN")
 assert(calls[#calls].action == "newGame", "Main menu starts a new game")
 state.mapSize = "standard"

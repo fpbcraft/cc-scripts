@@ -215,8 +215,18 @@ function M.new(cfg)
     local x = 0.075 + 0.85 * column / 5 + (rnd(g) - 0.5) * 0.025
     local y = 0.09 + 0.82 * row / 4 + (rnd(g) - 0.5) * 0.03
     local typeId = C.systemTypes[rnd(g, #C.systemTypes)].id
-    g.systems[id] =
-      { id = id, name = C.names[id], x = x, y = y, kind = typeId, owner = 0, colony = false, focus = nil, level = 0, focusedYear = 0 }
+    g.systems[id] = {
+      id = id,
+      name = C.names[id],
+      x = x,
+      y = y,
+      kind = typeId,
+      owner = 0,
+      colony = false,
+      focus = nil,
+      level = 0,
+      focusedYear = 0,
+    }
     if column > 0 then
       g.links[#g.links + 1] = { id - 1, id }
     end
@@ -732,7 +742,8 @@ function M.command(g, p, action, a)
   elseif action == "project" then
     spend(
       f,
-      a.kind == "discovery" and { credits = 25, alloy = 15, knowledge = 18 } or { credits = 30, alloy = 12, knowledge = 12 }
+      a.kind == "discovery" and { credits = 25, alloy = 15, knowledge = 18 }
+        or { credits = 30, alloy = 12, knowledge = 12 }
     )
     f.project = { type = a.kind, progress = 0 }
     push(g, f.name .. " starts the " .. a.kind .. " project")

@@ -23,31 +23,28 @@ local function textwrap(str, width)
   return out
 end
 function App.new(m, opt)
-  local self = setmetatable(
-    {
-      r = R.new(m),
-      scene = "title",
-      game = nil,
-      selected = nil,
-      tool = "shaft",
-      mode = "select",
-      buildPage = 1,
-      playerCount = 1,
-      editing = 1,
-      names = { "", "", "", "" },
-      modal = nil,
-      helpPage = 1,
-      blueprintPage = 1,
-      toast = "",
-      animation = 0,
-      autoTarget = "iron_sheet",
-      settings = { audio = true },
-      buttons = {},
-      presaved = nil,
-      seed = 12825,
-    },
-    App
-  )
+  local self = setmetatable({
+    r = R.new(m),
+    scene = "title",
+    game = nil,
+    selected = nil,
+    tool = "shaft",
+    mode = "select",
+    buildPage = 1,
+    playerCount = 1,
+    editing = 1,
+    names = { "", "", "", "" },
+    modal = nil,
+    helpPage = 1,
+    blueprintPage = 1,
+    toast = "",
+    animation = 0,
+    autoTarget = "iron_sheet",
+    settings = { audio = true },
+    buttons = {},
+    presaved = nil,
+    seed = 12825,
+  }, App)
   if opt and opt.game then
     self.game = opt.game
     self.scene = "factory"
@@ -102,7 +99,17 @@ function App:layout()
   local available = r.w - sidebar - 5
   local step = math.floor(math.min(available / S.W, (bottom - top - 4) / S.H))
   step = math.max(3, step)
-  return { x = x, y = top, step = step, gw = S.W * step, gh = S.H * step, side = r.w - sidebar - 1, sw = sidebar, bottom = bottom, compact = compact }
+  return {
+    x = x,
+    y = top,
+    step = step,
+    gw = S.W * step,
+    gh = S.H * step,
+    side = r.w - sidebar - 1,
+    sw = sidebar,
+    bottom = bottom,
+    compact = compact,
+  }
 end
 function App:header()
   local r = self.r
@@ -165,23 +172,15 @@ function App:bottom()
   local short = { "FACTORY", "RAILS", "STOCK", "PLANS", "HELP", "MENU" }
   for i, item in ipairs(menu) do
     local xx = pad + (i - 1) * (bw + 1)
-    r:button(
-      xx,
-      b + 1,
-      bw,
-      compact and 3 or 5,
-      compact and short[i] or item[1],
-      function()
-        self.scene = item[2]
-        self.modal = nil
-      end,
-      {
-        color = self.scene == item[2] and 9 or 6,
-        icon = not compact
-            and (i == 1 and "factory" or i == 2 and "train" or i == 3 and "stock" or i == 4 and "tools" or "info")
-          or nil,
-      }
-    )
+    r:button(xx, b + 1, bw, compact and 3 or 5, compact and short[i] or item[1], function()
+      self.scene = item[2]
+      self.modal = nil
+    end, {
+      color = self.scene == item[2] and 9 or 6,
+      icon = not compact
+          and (i == 1 and "factory" or i == 2 and "train" or i == 3 and "stock" or i == 4 and "tools" or "info")
+        or nil,
+    })
   end
   if g and self.scene ~= "title" then
     r:text(2, r.h - 2, self.toast, 5, r.w - 4)

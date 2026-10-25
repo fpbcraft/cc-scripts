@@ -465,9 +465,17 @@ function R:drawGame(m)
     self:rect(x + 1, y + 1, 36, 7, active and 2 or 1)
     self:rect(x + 2, y + 1, 7, 7, count > 0 and E.parts[kind].color or 4)
     self:font(x + 4, y + 2, kind == "B" and "2" or kind, 0)
-    local alias = (
-      { I = "SHAFT", L = "ELBOW", T = "SPLIT", G = "GEAR", B = "2X", Q = "BOX", O = "COG", V = "BELT", D = "CHAIN" }
-    )[kind]
+    local alias = ({
+      I = "SHAFT",
+      L = "ELBOW",
+      T = "SPLIT",
+      G = "GEAR",
+      B = "2X",
+      Q = "BOX",
+      O = "COG",
+      V = "BELT",
+      D = "CHAIN",
+    })[kind]
     self:fontFit(x + 11, y + 2, alias, count > 0 and 15 or 4, 20)
     self:font(x + 32, y + 2, tostring(count), count > 0 and 9 or 4)
     self:add(x, y, 38, 9, "tool", kind)

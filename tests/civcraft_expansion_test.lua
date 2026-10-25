@@ -36,13 +36,16 @@ local function fixture()
     round = 1,
     nextId = 20,
     world = world,
-    players = { { id = 1, name = "A", civ = "iron", techs = {}, gold = 100 }, {
-      id = 2,
-      name = "B",
-      civ = "verdant",
-      techs = {},
-      gold = 100,
-    } },
+    players = {
+      { id = 1, name = "A", civ = "iron", techs = {}, gold = 100 },
+      {
+        id = 2,
+        name = "B",
+        civ = "verdant",
+        techs = {},
+        gold = 100,
+      },
+    },
     cities = {
       { id = 1, owner = 1, capitalOf = 1, x = 3, y = 4, population = 2, buildings = {} },
       { id = 2, owner = 2, capitalOf = 2, x = 15, y = 9, population = 2, buildings = {} },

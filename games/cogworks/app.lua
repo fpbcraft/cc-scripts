@@ -15,25 +15,22 @@ local function countAward(awards)
   return n
 end
 function A.new()
-  local self = setmetatable(
-    {
-      scene = "title",
-      settings = S.loadSettings(),
-      store = S,
-      game = nil,
-      result = nil,
-      slot = nil,
-      progress = nil,
-      selected = "I",
-      message = "",
-      returnScene = "title",
-      pending = nil,
-      inspected = nil,
-      tutorial = nil,
-      briefing = nil,
-    },
-    A
-  )
+  local self = setmetatable({
+    scene = "title",
+    settings = S.loadSettings(),
+    store = S,
+    game = nil,
+    result = nil,
+    slot = nil,
+    progress = nil,
+    selected = "I",
+    message = "",
+    returnScene = "title",
+    pending = nil,
+    inspected = nil,
+    tutorial = nil,
+    briefing = nil,
+  }, A)
   return self
 end
 function A:slots()

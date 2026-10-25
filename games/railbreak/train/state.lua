@@ -35,10 +35,15 @@ function S.new(opts)
     delivered = 0,
     penalty = 0,
     cargo = { logs = 1, planks = 3, ore = 2, sheets = 1, parts = 3, coal = 1, food = 1, passengers = 0 },
-    wagons = { { id = "engine", level = 1 }, { id = "cargo", level = 1 }, { id = "passenger", level = 1 }, {
-      id = "crane",
-      level = 1,
-    } },
+    wagons = {
+      { id = "engine", level = 1 },
+      { id = "cargo", level = 1 },
+      { id = "passenger", level = 1 },
+      {
+        id = "crane",
+        level = 1,
+      },
+    },
     upgrades = {},
     stations = {},
     contracts = {},

@@ -53,8 +53,16 @@ function W.generate(seed, size, count, mapType)
   if not ({ continents = true, archipelago = true, pangaea = true, highlands = true })[mapType] then
     mapType = "continents"
   end
-  local world =
-    { width = dims[1], height = dims[2], seed = seed, size = size, mapType = mapType, tiles = {}, resources = {}, starts = {} }
+  local world = {
+    width = dims[1],
+    height = dims[2],
+    seed = seed,
+    size = size,
+    mapType = mapType,
+    tiles = {},
+    resources = {},
+    starts = {},
+  }
   local w, h = world.width, world.height
   for y = 1, h do
     for x = 1, w do
@@ -250,10 +258,12 @@ function W.expandCity(state, hex, city)
         end
         if adjacent then
           local yield = W.yields(state.world, x, y)
-          candidates[#candidates + 1] =
-            { x = x, y = y, distance = hex.distance(city.x, city.y, x, y), score = yield.food
-              + yield.industry
-              + yield.science }
+          candidates[#candidates + 1] = {
+            x = x,
+            y = y,
+            distance = hex.distance(city.x, city.y, x, y),
+            score = yield.food + yield.industry + yield.science,
+          }
         end
       end
     end

@@ -32,11 +32,15 @@ local FOES = {
   { name = "RUST MITE", hp = 25, attacks = { { "BITE", 7 }, { "HARDEN", 0, 6 }, { "BITE", 9 } } },
   { name = "COPPER SENTINEL", hp = 33, attacks = { { "PUNCH", 9 }, { "GUARD", 4, 9 }, { "SMASH", 13 } } },
   { name = "SMOKE WRAITH", hp = 29, attacks = { { "DRAIN", 6, 0, 2 }, { "SLASH", 10 }, { "DRAIN", 7, 0, 1 } } },
-  { name = "GEAR COLOSSUS", hp = 95, attacks = { { "CRUSH", 15 }, { "PLATING", 0, 13 }, { "HAMMER", 19 }, {
-    "REV UP",
-    0,
-    6,
-  } } },
+  {
+    name = "GEAR COLOSSUS",
+    hp = 95,
+    attacks = { { "CRUSH", 15 }, { "PLATING", 0, 13 }, { "HAMMER", 19 }, {
+      "REV UP",
+      0,
+      6,
+    } },
+  },
 }
 local function copy(a)
   local b = {}
@@ -333,9 +337,15 @@ function UI:draw()
         end
         r:fill(x, y, bw, 22, reachable and 12 or visited and 16 or 2)
         r:outline(x, y, bw, 22, col)
-        local label = (
-          { battle = "FIGHT", elite = "ELITE", rest = "REST", shop = "SHOP", event = "EVENT", boss = "BOSS", closed = "--" }
-        )[node.kind]
+        local label = ({
+          battle = "FIGHT",
+          elite = "ELITE",
+          rest = "REST",
+          shop = "SHOP",
+          event = "EVENT",
+          boss = "BOSS",
+          closed = "--",
+        })[node.kind]
         text(x + 3, y + 3, "F" .. floor .. " " .. label, reachable and 7 or 5, bw - 6)
         if reachable then
           button(x + 2, y + 11, bw - 4, 10, "GO >", function()
@@ -577,7 +587,8 @@ if monitor.setTextScale then
 end
 local app = UI.new(
   monitor,
-  loadSave() or { screen = "title", hp = 72, maxhp = 72, floor = 0, gold = 75, deck = {}, log = "A DECKBUILDING ADVENTURE" }
+  loadSave()
+    or { screen = "title", hp = 72, maxhp = 72, floor = 0, gold = 75, deck = {}, log = "A DECKBUILDING ADVENTURE" }
 )
 local ok, err = xpcall(function()
   while not app.quit do

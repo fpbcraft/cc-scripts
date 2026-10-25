@@ -84,8 +84,19 @@ local core = {
     return true
   end,
 }
-colors =
-  { black = 1, white = 2, lightBlue = 4, cyan = 8, lightGray = 16, gray = 32, blue = 64, yellow = 128, lime = 256, red = 512, orange = 1024 }
+colors = {
+  black = 1,
+  white = 2,
+  lightBlue = 4,
+  cyan = 8,
+  lightGray = 16,
+  gray = 32,
+  blue = 64,
+  yellow = 128,
+  lime = 256,
+  red = 512,
+  orange = 1024,
+}
 term = {
   getSize = function()
     return 51, 22

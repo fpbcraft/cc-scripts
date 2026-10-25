@@ -629,11 +629,16 @@ function UI.run(api)
     end
     local s = api.snapshot()
     label(panel, 2, 1, "FPBCRAFT  /  AERONAUTICS", C.cyan, w - 3)
-    local nav =
-      { { "FLIGHT", "FLIGHT" }, { "ROUTE", "ROUTE" }, { "PRESETS", "PRESETS" }, { "SETUP", "SETTINGS" }, {
+    local nav = {
+      { "FLIGHT", "FLIGHT" },
+      { "ROUTE", "ROUTE" },
+      { "PRESETS", "PRESETS" },
+      { "SETUP", "SETTINGS" },
+      {
         "INFO",
         "DIAGNOSTICS",
-      } }
+      },
+    }
     local x = 2
     for _, entry in ipairs(nav) do
       local bw = math.max(5, math.floor((w - 4) / #nav))

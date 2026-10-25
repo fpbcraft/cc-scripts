@@ -111,8 +111,13 @@ local function monitor(w, h, graphics)
   end
   return m
 end
-local game =
-  { phase = "game", round = 1, players = { { id = 1, name = "ONE", civ = "verdant", techs = {} } }, cities = {}, units = {} }
+local game = {
+  phase = "game",
+  round = 1,
+  players = { { id = 1, name = "ONE", civ = "verdant", techs = {} } },
+  cities = {},
+  units = {},
+}
 for _, graphics in ipairs({ true, false }) do
   local ui = UI.new(monitor(graphics and 200 or 57, graphics and 110 or 28, graphics), function()
     error("Dragging must not issue research orders")

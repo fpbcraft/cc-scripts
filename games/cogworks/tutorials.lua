@@ -2,14 +2,20 @@
 -- level numbers so a resumed save does not repeat a lesson.
 local T = {}
 T.lessons = {
-  I = { title = "SHAFTS AND PORTS", lines = {
-    "SHAFTS CONNECT OPPOSITE PORTS.",
-    "SPIN AND RPM PASS THROUGH UNCHANGED.",
-  } },
-  L = { title = "TURNING POWER", lines = {
-    "ELBOWS BEND A ROUTE BY 90 DEGREES.",
-    "TAP A PLACED PART TO ROTATE IT.",
-  } },
+  I = {
+    title = "SHAFTS AND PORTS",
+    lines = {
+      "SHAFTS CONNECT OPPOSITE PORTS.",
+      "SPIN AND RPM PASS THROUGH UNCHANGED.",
+    },
+  },
+  L = {
+    title = "TURNING POWER",
+    lines = {
+      "ELBOWS BEND A ROUTE BY 90 DEGREES.",
+      "TAP A PLACED PART TO ROTATE IT.",
+    },
+  },
   T = {
     title = "SPLITTING POWER",
     lines = {
@@ -17,14 +23,20 @@ T.lessons = {
       "EACH BRANCH RECEIVES THE SAME DRIVE.",
     },
   },
-  V = { title = "BELT TRANSMISSION", lines = {
-    "PAIR TWO FACING BELT ENDPOINTS.",
-    "SPAN UP TO TWO CELLS, EVEN STONE.",
-  } },
-  G = { title = "REVERSING ROTATION", lines = {
-    "GEARS CHANGE CW INTO CCW AND BACK.",
-    "THE SPEED STAYS THE SAME.",
-  } },
+  V = {
+    title = "BELT TRANSMISSION",
+    lines = {
+      "PAIR TWO FACING BELT ENDPOINTS.",
+      "SPAN UP TO TWO CELLS, EVEN STONE.",
+    },
+  },
+  G = {
+    title = "REVERSING ROTATION",
+    lines = {
+      "GEARS CHANGE CW INTO CCW AND BACK.",
+      "THE SPEED STAYS THE SAME.",
+    },
+  },
   B = {
     title = "SPEED CONTROLLERS",
     lines = {

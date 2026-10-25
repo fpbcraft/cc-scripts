@@ -45,22 +45,19 @@ local function scenario(w, h, events, check)
     calls.lastRemove = app.id
   end
   local target = screen
-  local env = setmetatable(
-    {
-      colors = screen.colors,
-      keys = screen.keys,
-      term = {
-        current = function()
-          return target
-        end,
-        redirect = function(t)
-          target = t
-        end,
-      },
-      print = function() end,
+  local env = setmetatable({
+    colors = screen.colors,
+    keys = screen.keys,
+    term = {
+      current = function()
+        return target
+      end,
+      redirect = function(t)
+        target = t
+      end,
     },
-    { __index = _G }
-  )
+    print = function() end,
+  }, { __index = _G })
   local index = 0
   env.os = setmetatable({
     pullEvent = function()

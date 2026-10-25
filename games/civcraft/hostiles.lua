@@ -96,7 +96,8 @@ function H.round(state, systems)
         local kinds = state.round >= 60 and { "zombie", "skeleton", "spider", "creeper", "pillager" }
           or state.round >= 25 and { "zombie", "skeleton", "spider", "creeper" }
           or { "zombie", "skeleton", "spider" }
-        local kind = s.kind == "outpost" and state.round >= 40 and "pillager" or kinds[(state.round + s.id) % #kinds + 1]
+        local kind = s.kind == "outpost" and state.round >= 40 and "pillager"
+          or kinds[(state.round + s.id) % #kinds + 1]
         state.units[#state.units + 1] = {
           id = state.nextId,
           owner = H.owner,

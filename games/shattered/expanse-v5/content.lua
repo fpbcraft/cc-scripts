@@ -102,7 +102,11 @@ C.tech = {
   prosperity = {
     { name = "TRADE NETWORKS", cost = 12, description = "Commerce colonies produce 2 extra Credits yearly." },
     { name = "DIPLOMATIC CORPS", cost = 20, description = "Diplomatic offers receive a relationship bonus." },
-    { name = "PROSPERITY CHARTER", cost = 30, description = "Your colonies produce 1 extra of their specialized resource." },
+    {
+      name = "PROSPERITY CHARTER",
+      cost = 30,
+      description = "Your colonies produce 1 extra of their specialized resource.",
+    },
   },
   warfare = {
     { name = "FLEET DOCTRINE", cost = 12, description = "Fleets gain +2 strength in battle." },

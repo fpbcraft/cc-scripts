@@ -579,19 +579,15 @@ function Core:request(item, quantity)
   if type(result) ~= "number" or result <= 0 then
     return false, "Nothing was accepted by the logistics network"
   end
-  table.insert(
-    self.orders,
-    1,
-    {
-      at = now(),
-      item = item.displayName or item.name,
-      id = item.name,
-      quantity = result,
-      requested = quantity,
-      to = self.config.hubAddress,
-      status = "Requested (not confirmed delivered)",
-    }
-  )
+  table.insert(self.orders, 1, {
+    at = now(),
+    item = item.displayName or item.name,
+    id = item.name,
+    quantity = result,
+    requested = quantity,
+    to = self.config.hubAddress,
+    status = "Requested (not confirmed delivered)",
+  })
   while #self.orders > 100 do
     table.remove(self.orders)
   end

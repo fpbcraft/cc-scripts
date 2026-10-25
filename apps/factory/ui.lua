@@ -205,7 +205,13 @@ function UI.run(core)
       background = C.black,
     })
     terminalEditor:addLabel({ x = 2, y = 2, width = tw - 3, text = "FACTORY MANAGER / KEYBOARD", foreground = C.cyan })
-    terminalEditor:addLabel({ x = 2, y = 4, width = tw - 3, text = "Type or Ctrl+V (Cmd+V on Mac)", foreground = C.lightGray })
+    terminalEditor:addLabel({
+      x = 2,
+      y = 4,
+      width = tw - 3,
+      text = "Type or Ctrl+V (Cmd+V on Mac)",
+      foreground = C.lightGray,
+    })
     terminalInput = terminalEditor:addInput({
       x = 2,
       y = 6,
@@ -1513,7 +1519,13 @@ function UI.run(core)
       panel:destroy()
     end
     panel = root:addFrame({ x = 1, y = 1, width = w, height = h, background = C.black })
-    panel:addLabel({ x = 2, y = 1, width = w - 3, text = short("FPBCRAFT / " .. core.config.site, w - 5), foreground = C.cyan })
+    panel:addLabel({
+      x = 2,
+      y = 1,
+      width = w - 3,
+      text = short("FPBCRAFT / " .. core.config.site, w - 5),
+      foreground = C.cyan,
+    })
     if page ~= "HOME" then
       button(panel, 2, 2, 8, 1, "< HOME", function()
         navigateTo("HOME")

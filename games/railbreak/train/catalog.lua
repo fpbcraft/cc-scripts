@@ -1,35 +1,98 @@
 -- Railbreak Train-first Edition. Game data is deliberately separate from rules and UI.
 local C = {}
 C.stations = {
-  { id = 1, name = "IRON JUNCTION", short = "IRON JCT", x = 0.16, y = 0.59, kind = "junction", bonus = "parts", prices = {
-    ore = 5,
-    coal = 4,
-    logs = 5,
-  } },
-  { id = 2, name = "PINE RIDGE", short = "PINE RIDGE", x = 0.39, y = 0.26, kind = "forest", bonus = "planks", prices = {
-    logs = 3,
-    planks = 4,
-  } },
-  { id = 3, name = "STONEBRIDGE", short = "STONEBRIDGE", x = 0.50, y = 0.62, kind = "quarry", bonus = "ore", prices = {
-    ore = 3,
-    parts = 8,
-  } },
-  { id = 4, name = "RED VALLEY", short = "RED VALLEY", x = 0.72, y = 0.42, kind = "forge", bonus = "sheets", prices = {
-    ore = 4,
-    sheets = 6,
-  } },
-  { id = 5, name = "EASTPORT", short = "EASTPORT", x = 0.91, y = 0.72, kind = "capital", bonus = "passengers", prices = {
-    passengers = 4,
-    food = 4,
-  } },
-  { id = 6, name = "NORTHMILL", short = "NORTHMILL", x = 0.61, y = 0.13, kind = "mill", bonus = "planks", prices = {
-    logs = 3,
-    planks = 4,
-  } },
-  { id = 7, name = "RIVERWATCH", short = "RIVERWATCH", x = 0.29, y = 0.82, kind = "river", bonus = "food", prices = {
-    food = 3,
-    coal = 4,
-  } },
+  {
+    id = 1,
+    name = "IRON JUNCTION",
+    short = "IRON JCT",
+    x = 0.16,
+    y = 0.59,
+    kind = "junction",
+    bonus = "parts",
+    prices = {
+      ore = 5,
+      coal = 4,
+      logs = 5,
+    },
+  },
+  {
+    id = 2,
+    name = "PINE RIDGE",
+    short = "PINE RIDGE",
+    x = 0.39,
+    y = 0.26,
+    kind = "forest",
+    bonus = "planks",
+    prices = {
+      logs = 3,
+      planks = 4,
+    },
+  },
+  {
+    id = 3,
+    name = "STONEBRIDGE",
+    short = "STONEBRIDGE",
+    x = 0.50,
+    y = 0.62,
+    kind = "quarry",
+    bonus = "ore",
+    prices = {
+      ore = 3,
+      parts = 8,
+    },
+  },
+  {
+    id = 4,
+    name = "RED VALLEY",
+    short = "RED VALLEY",
+    x = 0.72,
+    y = 0.42,
+    kind = "forge",
+    bonus = "sheets",
+    prices = {
+      ore = 4,
+      sheets = 6,
+    },
+  },
+  {
+    id = 5,
+    name = "EASTPORT",
+    short = "EASTPORT",
+    x = 0.91,
+    y = 0.72,
+    kind = "capital",
+    bonus = "passengers",
+    prices = {
+      passengers = 4,
+      food = 4,
+    },
+  },
+  {
+    id = 6,
+    name = "NORTHMILL",
+    short = "NORTHMILL",
+    x = 0.61,
+    y = 0.13,
+    kind = "mill",
+    bonus = "planks",
+    prices = {
+      logs = 3,
+      planks = 4,
+    },
+  },
+  {
+    id = 7,
+    name = "RIVERWATCH",
+    short = "RIVERWATCH",
+    x = 0.29,
+    y = 0.82,
+    kind = "river",
+    bonus = "food",
+    prices = {
+      food = 3,
+      coal = 4,
+    },
+  },
 }
 C.edges = {
   { 1, 2, 1, 1 },
@@ -101,7 +164,17 @@ for _, w in ipairs(C.wagons) do
   C.wagonById[w.id] = w
 end
 C.modules = {
-  { id = "sawmill", name = "SAWMILL", icon = "saw", cost = 38, from = "logs", input = 1, to = "planks", output = 2, desc = "1 LOG -> 2 PLANKS" },
+  {
+    id = "sawmill",
+    name = "SAWMILL",
+    icon = "saw",
+    cost = 38,
+    from = "logs",
+    input = 1,
+    to = "planks",
+    output = 2,
+    desc = "1 LOG -> 2 PLANKS",
+  },
   {
     id = "press",
     name = "PRESS SHOP",
@@ -113,7 +186,17 @@ C.modules = {
     output = 2,
     desc = "1 ORE -> 2 SHEETS",
   },
-  { id = "foundry", name = "FOUNDRY", icon = "foundry", cost = 55, from = "ore", input = 1, to = "parts", output = 2, desc = "1 ORE -> 2 PARTS" },
+  {
+    id = "foundry",
+    name = "FOUNDRY",
+    icon = "foundry",
+    cost = 55,
+    from = "ore",
+    input = 1,
+    to = "parts",
+    output = 2,
+    desc = "1 ORE -> 2 PARTS",
+  },
   {
     id = "fuel_yard",
     name = "FUEL DEPOT",
@@ -170,7 +253,16 @@ C.contracts = {
   { id = 3, name = "GEAR DELIVERY", item = "parts", count = 2, origin = 1, destination = 4, reward = 80, rep = 2 },
   { id = 4, name = "MILL MACHINERY", item = "sheets", count = 3, origin = 2, destination = 6, reward = 75, rep = 1 },
   { id = 5, name = "RIVER RELIEF", item = "food", count = 3, origin = 1, destination = 7, reward = 54, rep = 1 },
-  { id = 6, name = "EASTPORT RIDERS", item = "passengers", count = 3, origin = 3, destination = 5, reward = 85, rep = 2 },
+  {
+    id = 6,
+    name = "EASTPORT RIDERS",
+    item = "passengers",
+    count = 3,
+    origin = 3,
+    destination = 5,
+    reward = 85,
+    rep = 2,
+  },
   { id = 7, name = "VALLEY REPAIRS", item = "parts", count = 3, origin = 3, destination = 4, reward = 92, rep = 2 },
   { id = 8, name = "NORTHERN TIMBER", item = "planks", count = 4, origin = 6, destination = 5, reward = 110, rep = 2 },
   { id = 9, name = "HARBOR PLATING", item = "sheets", count = 3, origin = 4, destination = 5, reward = 85, rep = 2 },

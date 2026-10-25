@@ -49,7 +49,20 @@ C.cityNames = {
     "IRONVALE",
     "BRASS",
   },
-  scholar = { "ENCHANT", "LAPIS", "AMETHYST", "QUARTZ", "ENDER", "PONDER", "QUILL", "SCRIBE", "PRISM", "PORTAL", "ARCANA", "RUNE" },
+  scholar = {
+    "ENCHANT",
+    "LAPIS",
+    "AMETHYST",
+    "QUARTZ",
+    "ENDER",
+    "PONDER",
+    "QUILL",
+    "SCRIBE",
+    "PRISM",
+    "PORTAL",
+    "ARCANA",
+    "RUNE",
+  },
   nomad = {
     "DUNEREST",
     "OASIS",
@@ -462,7 +475,12 @@ C.naturalWonders = {
   mushroom = { name = "MUSHROOM ISLAND", food = 4, description = "Worked tile: +4 food" },
   ice_spikes = { name = "ICE SPIKES", science = 2, industry = 2, description = "Worked tile: +2 science, +2 industry" },
   dripstone = { name = "DRIPSTONE CAVE", industry = 4, description = "Worked tile: +4 industry" },
-  ancientcity = { name = "ANCIENT CITY", science = 3, industry = 1, description = "Worked tile: +3 science, +1 industry" },
+  ancientcity = {
+    name = "ANCIENT CITY",
+    science = 3,
+    industry = 1,
+    description = "Worked tile: +3 science, +1 industry",
+  },
 }
 C.wonders = {
   beacon = {
@@ -479,7 +497,13 @@ C.wonders = {
     effects = { industry = 6 },
     description = "City +6 industry",
   },
-  greattree = { name = "GREAT OAK SANCTUARY", tech = "husbandry", production = 100, effects = { food = 4 }, description = "City +4 food" },
+  greattree = {
+    name = "GREAT OAK SANCTUARY",
+    tech = "husbandry",
+    production = 100,
+    effects = { food = 4 },
+    description = "City +4 food",
+  },
   monument = {
     name = "PRISMARINE MONUMENT",
     tech = "navigation",
@@ -488,7 +512,13 @@ C.wonders = {
     effects = { gold = 5, science = 2 },
     description = "Coastal city +5 gold, +2 science",
   },
-  vault = { name = "ENCHANTED VAULT", tech = "philosophy", production = 170, effects = { science = 5 }, description = "City +5 science" },
+  vault = {
+    name = "ENCHANTED VAULT",
+    tech = "philosophy",
+    production = 170,
+    effects = { science = 5 },
+    description = "City +5 science",
+  },
   railhub = {
     name = "GRAND TERMINAL",
     tech = "logistics",
@@ -499,10 +529,48 @@ C.wonders = {
 }
 C.hostiles = {
   zombie = { name = "ZOMBIE", move = 2, vision = 4, strength = 2, defense = 2, range = 1, hostile = true, upkeep = 0 },
-  skeleton = { name = "SKELETON", move = 2, vision = 4, strength = 3, defense = 1, range = 2, hostile = true, upkeep = 0 },
-  spider = { name = "SPIDER", move = 3, vision = 4, strength = 3, defense = 2, range = 1, hostile = true, forest = true, upkeep = 0 },
-  creeper = { name = "CREEPER", move = 2, vision = 4, strength = 7, defense = 1, range = 1, hostile = true, explosive = true, upkeep = 0 },
-  pillager = { name = "PILLAGER", move = 2, vision = 5, strength = 6, defense = 3, range = 2, hostile = true, upkeep = 0 },
+  skeleton = {
+    name = "SKELETON",
+    move = 2,
+    vision = 4,
+    strength = 3,
+    defense = 1,
+    range = 2,
+    hostile = true,
+    upkeep = 0,
+  },
+  spider = {
+    name = "SPIDER",
+    move = 3,
+    vision = 4,
+    strength = 3,
+    defense = 2,
+    range = 1,
+    hostile = true,
+    forest = true,
+    upkeep = 0,
+  },
+  creeper = {
+    name = "CREEPER",
+    move = 2,
+    vision = 4,
+    strength = 7,
+    defense = 1,
+    range = 1,
+    hostile = true,
+    explosive = true,
+    upkeep = 0,
+  },
+  pillager = {
+    name = "PILLAGER",
+    move = 2,
+    vision = 5,
+    strength = 6,
+    defense = 3,
+    range = 2,
+    hostile = true,
+    upkeep = 0,
+  },
 }
 for id, u in pairs(C.hostiles) do
   u.production = 0

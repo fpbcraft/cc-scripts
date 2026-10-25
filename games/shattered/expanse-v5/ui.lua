@@ -606,13 +606,15 @@ function UI:systemCommands(s)
   local f = g.factions[p]
   local visible = f.seen[s.id] or s.owner == p
   if not visible then
-    return { {
-      "HOW TO EXPLORE",
-      "scan",
-      function()
-        self.notice = "SELECT A SCOUT ICON, MOVE IT HERE TO SURVEY"
-      end,
-    } }
+    return {
+      {
+        "HOW TO EXPLORE",
+        "scan",
+        function()
+          self.notice = "SELECT A SCOUT ICON, MOVE IT HERE TO SURVEY"
+        end,
+      },
+    }
   end
   if s.owner == p and s.colony then
     return {
@@ -665,13 +667,15 @@ function UI:systemCommands(s)
       },
     }
   elseif s.owner == p then
-    return { {
-      "YOUR OUTPOST",
-      "flag",
-      function()
-        self.notice = "OUTPOST: +1 ALLOY EACH YEAR"
-      end,
-    } }
+    return {
+      {
+        "YOUR OUTPOST",
+        "flag",
+        function()
+          self.notice = "OUTPOST: +1 ALLOY EACH YEAR"
+        end,
+      },
+    }
   elseif s.owner == 0 then
     local ark
     for _, sh in ipairs(Sim.shipsAt(g, s.id, p)) do
@@ -814,11 +818,15 @@ function UI:contextGeometry(systems, ships, targets)
   end
   local anchorX = target.x + target.w + 2
   local anchorY = target.y - 1
-  local candidates =
-    { { anchorX, anchorY }, { target.x - w - 2, anchorY }, { target.x, target.y + target.h + 2 }, {
+  local candidates = {
+    { anchorX, anchorY },
+    { target.x - w - 2, anchorY },
+    { target.x, target.y + target.h + 2 },
+    {
       target.x,
       target.y - h - 2,
-    } }
+    },
+  }
   local best, bestScore
   for index, pair in ipairs(candidates) do
     local x = math.max(2, math.min(r.w - w - 2, pair[1]))

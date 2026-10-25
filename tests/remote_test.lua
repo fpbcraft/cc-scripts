@@ -38,7 +38,9 @@ local revised = {
   kind = "snapshot",
   version = 1,
   name = "Updated",
-  peripherals = { { name = "new_sensor", type = "custom_sensor", methods = { "getValue" }, values = { getValue = 12 } } },
+  peripherals = {
+    { name = "new_sensor", type = "custom_sensor", methods = { "getValue" }, values = { getValue = 12 } },
+  },
 }
 assert(remote:ingest(15, revised))
 assert(remote:find("remote:15:new_sensor").values.getValue == 12)

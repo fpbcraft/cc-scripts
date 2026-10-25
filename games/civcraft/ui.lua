@@ -19,25 +19,22 @@ local function where(list, x, y)
   end
 end
 function UI.new(m, dispatch)
-  local self = setmetatable(
-    {
-      r = Renderer.new(m),
-      dispatch = dispatch,
-      mapMode = "terrain",
-      panX = 0,
-      panY = 0,
-      selected = { x = 2, y = 2 },
-      source = nil,
-      mode = "map",
-      frame = 0,
-      notice = "",
-      panel = "context",
-      productionCategory = "unit",
-      productionPage = 1,
-      workCity = nil,
-    },
-    UI
-  )
+  local self = setmetatable({
+    r = Renderer.new(m),
+    dispatch = dispatch,
+    mapMode = "terrain",
+    panX = 0,
+    panY = 0,
+    selected = { x = 2, y = 2 },
+    source = nil,
+    mode = "map",
+    frame = 0,
+    notice = "",
+    panel = "context",
+    productionCategory = "unit",
+    productionPage = 1,
+    workCity = nil,
+  }, UI)
   return self
 end
 function UI:message(s)
@@ -267,8 +264,8 @@ function UI:tile(x, y)
     return
   end
   local unit = where(self.state.units, x, y)
-  self.selected = { x = x, y = y, kind = unit and unit.owner == self.playerID and "unit" or "city", unitID = unit
-    and unit.id }
+  self.selected =
+    { x = x, y = y, kind = unit and unit.owner == self.playerID and "unit" or "city", unitID = unit and unit.id }
   self.panel = "context"
   self.cityPanel = "jobs"
   self.workCity = nil
@@ -280,15 +277,12 @@ function UI:draw(state, playerID, opts)
   local w, h = r.w, r.h
   opts = opts or {}
   local world = state and state.world
-  self.worldKey = table.concat(
-    {
-      state and state.name or "",
-      world and world.width or 0,
-      world and world.height or 0,
-      world and world.mapType or "",
-    },
-    ":"
-  )
+  self.worldKey = table.concat({
+    state and state.name or "",
+    world and world.width or 0,
+    world and world.height or 0,
+    world and world.mapType or "",
+  }, ":")
   if not state or state.phase ~= "game" then
     self.worldReady = false
     self.reportSeen = {}
@@ -425,7 +419,8 @@ function UI:draw(state, playerID, opts)
       local sy = math.floor(h * 0.32)
       for i, record in ipairs(opts.slots) do
         local active = i == opts.slot
-        local title = record.occupied and ("SLOT " .. i .. "  " .. (record.name or "CAMPAIGN") .. "  R" .. (record.round or 1))
+        local title = record.occupied
+            and ("SLOT " .. i .. "  " .. (record.name or "CAMPAIGN") .. "  R" .. (record.round or 1))
           or ("SLOT " .. i .. "  EMPTY")
         r:button(bx, sy + (i - 1) * 21, bw - 35, 17, title, function()
           self:command("selectSlot", { slot = i })
@@ -459,12 +454,16 @@ function UI:draw(state, playerID, opts)
       { "MAIN MENU", "title" },
       { "EXIT", "exit" },
     }) do
-      rows[#rows + 1] = { buttons = { {
-        label = action[1],
-        run = function()
-          self:command(action[2])
-        end,
-      } } }
+      rows[#rows + 1] = {
+        buttons = {
+          {
+            label = action[1],
+            run = function()
+              self:command(action[2])
+            end,
+          },
+        },
+      }
     end
     Panels.rows(r, { x = 4, y = 14, w = w - 8, h = h - 18 }, rows, self, "menuOffset")
     r:finish()
@@ -530,21 +529,26 @@ function UI:draw(state, playerID, opts)
           },
         },
       }
-      rows[#rows + 1] =
-        { buttons = {
+      rows[#rows + 1] = {
+        buttons = {
           {
             label = "MOBS: " .. (state.hostileMode or "off"):upper(),
             run = function()
               self:command("hostileMode")
             end,
           },
-        } }
-      rows[#rows + 1] = { buttons = { {
-        label = "REROLL SEED",
-        run = function()
-          self:command("mapSeed")
-        end,
-      } } }
+        },
+      }
+      rows[#rows + 1] = {
+        buttons = {
+          {
+            label = "REROLL SEED",
+            run = function()
+              self:command("mapSeed")
+            end,
+          },
+        },
+      }
       if opts.localMode then
         rows[#rows + 1] = {
           buttons = {
@@ -563,13 +567,17 @@ function UI:draw(state, playerID, opts)
           },
         }
       end
-      rows[#rows + 1] = { buttons = { {
-        label = "START GAME",
-        run = function()
-          self:command("start")
-        end,
-        style = { primary = true },
-      } } }
+      rows[#rows + 1] = {
+        buttons = {
+          {
+            label = "START GAME",
+            run = function()
+              self:command("start")
+            end,
+            style = { primary = true },
+          },
+        },
+      }
       Panels.rows(r, { x = 4, y = 14, w = w - 8, h = h - 18 }, rows, self, "lobbyOffset")
       r:finish()
       return

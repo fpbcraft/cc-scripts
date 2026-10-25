@@ -179,21 +179,18 @@ local function initMap()
   for i, p in ipairs(state.players) do
     local pos = state.world.starts[i]
     local x, y = pos.x, pos.y
-    table.insert(
-      state.cities,
-      {
-        id = state.nextId,
-        x = x,
-        y = y,
-        owner = p.id,
-        capitalOf = p.id,
-        level = 1,
-        population = 2,
-        foodStore = 0,
-        jobs = { food = 1, wood = 1, science = 0 },
-        buildings = {},
-      }
-    )
+    table.insert(state.cities, {
+      id = state.nextId,
+      x = x,
+      y = y,
+      owner = p.id,
+      capitalOf = p.id,
+      level = 1,
+      population = 2,
+      foodStore = 0,
+      jobs = { food = 1, wood = 1, science = 0 },
+      buildings = {},
+    })
     state.nextId = state.nextId + 1
     addUnit(p.id, x + ((x < W / 2) and 1 or -1), y, "warrior")
     p.food = 12
@@ -522,14 +519,21 @@ local function apply(id, req)
         break
       end
     end
-    table.insert(
-      state.cities,
-      { id = state.nextId, x = x, y = y, owner = id, level = 1, population = 2, foodStore = 0, jobs = {
+    table.insert(state.cities, {
+      id = state.nextId,
+      x = x,
+      y = y,
+      owner = id,
+      level = 1,
+      population = 2,
+      foodStore = 0,
+      jobs = {
         food = 1,
         wood = 1,
         science = 0,
-      }, buildings = {} }
-    )
+      },
+      buildings = {},
+    })
     local founded = state.cities[#state.cities]
     Systems.nameCity(state, founded)
     state.nextId = state.nextId + 1

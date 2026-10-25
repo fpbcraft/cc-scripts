@@ -47,21 +47,33 @@ return function(campaign)
   bridge(6, "V", { 3, 3 }, { 5, 3 }, { 4, 3 })
   bridge(23, "D", { 6, 2 }, { 6, 4 }, { 6, 3 })
   local dir = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } }
-  local shapes = { S = { 0 }, M = { 0 }, I = { 0, 2 }, L = { 0, 1 }, T = { 0, 1, 3 }, G = { 0, 2 }, B = { 0, 2 }, Q = {
-    0,
-    1,
-    2,
-    3,
-  }, O = {
-    0,
-    2,
-  }, V = {
-    0,
-    2,
-  }, D = {
-    0,
-    2,
-  } }
+  local shapes = {
+    S = { 0 },
+    M = { 0 },
+    I = { 0, 2 },
+    L = { 0, 1 },
+    T = { 0, 1, 3 },
+    G = { 0, 2 },
+    B = { 0, 2 },
+    Q = {
+      0,
+      1,
+      2,
+      3,
+    },
+    O = {
+      0,
+      2,
+    },
+    V = {
+      0,
+      2,
+    },
+    D = {
+      0,
+      2,
+    },
+  }
   local function port(t, d)
     for _, p in ipairs(shapes[t.kind] or {}) do
       if (p + t.r) % 4 == d then

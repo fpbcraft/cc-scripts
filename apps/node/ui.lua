@@ -14,10 +14,17 @@ end
 function UI.new(opts)
   assert(type(opts) == "table" and type(opts.info) == "function")
   assert(type(opts.export) == "function")
-  return setmetatable(
-    { opts = opts, status = "", showKey = false, overwrite = false, buttons = {}, drive = nil, screen = term, monitorName = nil, focus = 1 },
-    UI
-  )
+  return setmetatable({
+    opts = opts,
+    status = "",
+    showKey = false,
+    overwrite = false,
+    buttons = {},
+    drive = nil,
+    screen = term,
+    monitorName = nil,
+    focus = 1,
+  }, UI)
 end
 -- Prefer an attached Advanced Monitor: unlike a basic computer it is touchable.
 function UI:selectDisplay()

@@ -88,8 +88,8 @@ function I.draw(ui, state, player, rect, modal)
         end
       end
       if stacked and h < 64 then
-        tabButtons[#tabButtons + 1] = { label = label, run = choose, style = { selected = (ui.cityPanel or "jobs")
-          == mode } }
+        tabButtons[#tabButtons + 1] =
+          { label = label, run = choose, style = { selected = (ui.cityPanel or "jobs") == mode } }
       else
         r:button(
           x + 2 + (i - 1) * (width + 2),
@@ -134,12 +134,16 @@ function I.draw(ui, state, player, rect, modal)
       text("WALLS " .. city.wallHP .. "/" .. city.maxWalls, 13)
     end
     if city.wallHP > 0 and city.struckRound ~= state.round then
-      rows[#rows + 1] = { buttons = { {
-        label = "CITY STRIKE",
-        run = function()
-          ui:armCityStrike(city)
-        end,
-      } } }
+      rows[#rows + 1] = {
+        buttons = {
+          {
+            label = "CITY STRIKE",
+            run = function()
+              ui:armCityStrike(city)
+            end,
+          },
+        },
+      }
     end
     if ui.cityPanel == "production" then
       local project = city.project
@@ -227,15 +231,18 @@ function I.draw(ui, state, player, rect, modal)
       text("WORKED " .. count .. "/" .. (city.population or 2), 8)
       text("TAP LAND HEXES")
       text("Tap a worked hex to free it.")
-      rows[#rows + 1] =
-        { buttons = { {
-          label = "DONE WORK",
-          run = function()
-            ui.workCity = nil
-            ui.cityPanel = "jobs"
-            ui.inspectorOffset = 0
-          end,
-        } } }
+      rows[#rows + 1] = {
+        buttons = {
+          {
+            label = "DONE WORK",
+            run = function()
+              ui.workCity = nil
+              ui.cityPanel = "jobs"
+              ui.inspectorOffset = 0
+            end,
+          },
+        },
+      }
     else
       for _, job in ipairs(Systems.jobs) do
         rows[#rows + 1] = {
@@ -325,12 +332,16 @@ function I.draw(ui, state, player, rect, modal)
       },
     }
     if stats.engineer then
-      rows[#rows + 1] = { buttons = { {
-        label = "BUILD RAIL (2 IRON)",
-        run = function()
-          ui:armPlacement("rail", unit)
-        end,
-      } } }
+      rows[#rows + 1] = {
+        buttons = {
+          {
+            label = "BUILD RAIL (2 IRON)",
+            run = function()
+              ui:armPlacement("rail", unit)
+            end,
+          },
+        },
+      }
     end
     if unit.kind == "scout" or unit.kind == "explorer" then
       rows[#rows + 1] = {
@@ -345,36 +356,48 @@ function I.draw(ui, state, player, rect, modal)
       }
     end
     if ui.source then
-      rows[#rows + 1] =
-        { buttons = { {
-          label = "CANCEL MOVE",
-          run = function()
-            ui.source = nil
-            ui.reachable = {}
-            ui.pendingMove = nil
-          end,
-        } } }
+      rows[#rows + 1] = {
+        buttons = {
+          {
+            label = "CANCEL MOVE",
+            run = function()
+              ui.source = nil
+              ui.reachable = {}
+              ui.pendingMove = nil
+            end,
+          },
+        },
+      }
     end
-    rows[#rows + 1] =
-      { buttons = { {
-        label = "DISBAND",
+    rows[#rows + 1] = {
+      buttons = {
+        {
+          label = "DISBAND",
+          run = function()
+            ui:command("disband", { x = unit.x, y = unit.y, unitID = unit.id })
+          end,
+        },
+      },
+    }
+    rows[#rows + 1] = {
+      buttons = { {
+        label = "DESELECT",
         run = function()
-          ui:command("disband", { x = unit.x, y = unit.y, unitID = unit.id })
+          ui:deselect()
         end,
-      } } }
-    rows[#rows + 1] = { buttons = { {
-      label = "DESELECT",
-      run = function()
-        ui:deselect()
-      end,
-    } } }
+      } },
+    }
     if unit.kind == "settler" and not at(state.cities, unit.x, unit.y) then
-      rows[#rows + 1] = { buttons = { {
-        label = "FOUND CITY",
-        run = function()
-          ui:command("found", { x = unit.x, y = unit.y })
-        end,
-      } } }
+      rows[#rows + 1] = {
+        buttons = {
+          {
+            label = "FOUND CITY",
+            run = function()
+              ui:command("found", { x = unit.x, y = unit.y })
+            end,
+          },
+        },
+      }
     end
   elseif city and Villages.independent(city) and World.known(player, city.x, city.y) ~= "hidden" then
     text(city.name or "VILLAGER VILLAGE", 8)
@@ -391,13 +414,16 @@ function I.draw(ui, state, player, rect, modal)
       end
     end
     text(city.remoteVillage and "DEFENSE OUTSIDE CURRENT SIGHT" or ("HP " .. (city.hp or 200) .. "/200"))
-    rows[#rows + 1] =
-      { buttons = { {
-        label = "SEND ENVOY (25 GOLD)",
-        run = function()
-          ui:command("envoy", { x = city.x, y = city.y })
-        end,
-      } } }
+    rows[#rows + 1] = {
+      buttons = {
+        {
+          label = "SEND ENVOY (25 GOLD)",
+          run = function()
+            ui:command("envoy", { x = city.x, y = city.y })
+          end,
+        },
+      },
+    }
     text("20 influence enables village material trade from the resource ledger.")
   elseif (city or unit) and World.known(player, ui.selected.x, ui.selected.y) == "visible" then
     if city then

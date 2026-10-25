@@ -42,13 +42,17 @@ local function compact(r, systems, player, rect, model, research, onClose)
   rows[#rows + 1] = { text = ageName(systems, tier) }
   if model.detail then
     local chosen = systems.techs[model.selected]
-    rows[#rows + 1] = { buttons = { {
-      label = "BACK TO TREE",
-      run = function()
-        model.detail = false
-        model.offset = 0
-      end,
-    } } }
+    rows[#rows + 1] = {
+      buttons = {
+        {
+          label = "BACK TO TREE",
+          run = function()
+            model.detail = false
+            model.offset = 0
+          end,
+        },
+      },
+    }
     local paragraphs = {
       ageName(systems, chosen.tier),
       chosen.name,
