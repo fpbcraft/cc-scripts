@@ -5,9 +5,24 @@ local chapters = {
   { name = "GEARBOXES", mechanic = "Turning corners and reversing direction", threshold = 12, test = "THREE-WAY TEST" },
   { name = "SMALL COGS", mechanic = "Perpendicular tooth meshing", threshold = 27, test = "MESHING TEST" },
   { name = "GEAR RATIOS", mechanic = "Large/small cogs, gearing up and down", threshold = 44, test = "RATIO TEST" },
-  { name = "CHAIN DRIVES", mechanic = "Parallel chain transmissions and branching", threshold = 62, test = "CHAIN TEST" },
-  { name = "BELT ROUTES", mechanic = "Nearby pulleys, long belts, shaft crossings", threshold = 82, test = "BELT TEST" },
-  { name = "REDSTONE", mechanic = "Dust, blocks, powered gearshifts and clutches", threshold = 102, test = "CONTROL TEST" },
+  {
+    name = "CHAIN DRIVES",
+    mechanic = "Parallel chain transmissions and branching",
+    threshold = 62,
+    test = "CHAIN TEST",
+  },
+  {
+    name = "BELT ROUTES",
+    mechanic = "Nearby pulleys, long belts, shaft crossings",
+    threshold = 82,
+    test = "BELT TEST",
+  },
+  {
+    name = "REDSTONE",
+    mechanic = "Dust, blocks, powered gearshifts and clutches",
+    threshold = 102,
+    test = "CONTROL TEST",
+  },
   { name = "MASTER WORKSHOP", mechanic = "Integrating all kinetic systems", threshold = 123, test = "MASTER TEST" },
 }
 for i, chapter in ipairs(chapters) do

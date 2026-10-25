@@ -34,7 +34,12 @@ function fs.open(path, mode)
     if not files[path] then
       return nil
     end
-    return { readAll = function() return files[path] end, close = function() end }
+    return {
+      readAll = function()
+        return files[path]
+      end,
+      close = function() end,
+    }
   end
   local content = ""
   return {
@@ -78,8 +83,10 @@ assert(E.place(edit, 4, 4, "X"), "Editor supports fixed stone")
 assert(E.place(edit, 3, 4, "B"), "Editor supports redstone blocks")
 E.get(edit, 2, 3).fixed = true
 local original = P.fromEditor(edit, "SHAFTWORK TRAINING")
-assert(#original.fixtures == 1 and #original.blocks == 1 and #original.build == 5,
-  "Editor distinguishes immovable fixtures from stock and obstacles")
+assert(
+  #original.fixtures == 1 and #original.blocks == 1 and #original.build == 5,
+  "Editor distinguishes immovable fixtures from stock and obstacles"
+)
 local valid, reason = P.validate(original)
 assert(valid, tostring(reason))
 assert(P.saveLevel("shaftwork", original), "Save independent editable level file")
@@ -93,7 +100,10 @@ local packed = assert(P.loadPack("training-pack"))
 assert(#packed.levels == 1 and packed.levels[1].name == "SHAFTWORK TRAINING")
 local playable = E.fromDefinition(packed.levels[1], false)
 local solved = E.fromDefinition(packed.levels[1], true)
-assert(not E.evaluate(playable).win and E.evaluate(solved).win, "Compiled pack plays identically to its editor reference")
+assert(
+  not E.evaluate(playable).win and E.evaluate(solved).win,
+  "Compiled pack plays identically to its editor reference"
+)
 assert(E.get(playable, 2, 3).fixed, "Compiled pack preserves immovable factory parts")
 assert(#P.listPacks() == 1 and P.listPacks()[1] == "training-pack")
 assert(not P.saveLevel("../escape", original), "Reject path traversal in level names")

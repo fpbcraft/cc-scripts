@@ -155,9 +155,18 @@ function E.editor(width, height)
 end
 function E.fromDefinition(data, solved)
   local g = {
-    number = 0, width = data.width, height = data.height, name = data.name, tip = data.tip,
-    tiles = {}, map = {}, stock = copy(data.stock or {}), remaining = copy(data.stock or {}),
-    moves = 0, sandbox = false, custom = true,
+    number = 0,
+    width = data.width,
+    height = data.height,
+    name = data.name,
+    tip = data.tip,
+    tiles = {},
+    map = {},
+    stock = copy(data.stock or {}),
+    remaining = copy(data.stock or {}),
+    moves = 0,
+    sandbox = false,
+    custom = true,
   }
   add(g, data.source, true)
   for _, goal in ipairs(data.goals or {}) do
@@ -182,7 +191,11 @@ function E.fromDefinition(data, solved)
   return g
 end
 function E.place(g, x, y, kind, rotation)
-  if not E.inside(x, y, g) or not (E.parts[kind] or g.editor and (kind == "S" or kind == "M" or kind == "X")) or E.get(g, x, y) then
+  if
+    not E.inside(x, y, g)
+    or not (E.parts[kind] or g.editor and (kind == "S" or kind == "M" or kind == "X"))
+    or E.get(g, x, y)
+  then
     return false
   end
   if not g.sandbox and (g.remaining[kind] or 0) < 1 then
@@ -201,7 +214,10 @@ function E.place(g, x, y, kind, rotation)
   end
   local special = g.editor and (kind == "S" or kind == "M" or kind == "X")
   add(g, {
-    kind = kind, x = x, y = y, r = (rotation or 0) % 4,
+    kind = kind,
+    x = x,
+    y = y,
+    r = (rotation or 0) % 4,
     speed = kind == "M" and (g.goalRate or 1) or nil,
     sign = kind == "M" and (g.goalSign or 1) or nil,
   }, special)

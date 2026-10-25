@@ -44,12 +44,19 @@ local function shaftLesson(step)
   local name = step == 8 and "LONG RUN / SHAFT TEST" or ("SHAFT RUN " .. step)
   return {
     name = name,
-    tip = step == 8 and "FINISH THE LONG SHAFT LINE WITH A FIXED COUPLING." or "EXTEND THE AXIAL SHAFT LINE TO THE PRESS.",
-    width = width, height = height,
+    tip = step == 8 and "FINISH THE LONG SHAFT LINE WITH A FIXED COUPLING."
+      or "EXTEND THE AXIAL SHAFT LINE TO THE PRESS.",
+    width = width,
+    height = height,
     source = part("S", 1, 3, 1),
     goals = { { kind = "M", x = step + 2, y = 3, r = 3, speed = 1, sign = 1 } },
-    build = built, fixtures = fixtures, blocks = {}, stock = stock,
-    redstone = {}, removeRedstone = {}, toggles = {},
+    build = built,
+    fixtures = fixtures,
+    blocks = {},
+    stock = stock,
+    redstone = {},
+    removeRedstone = {},
+    toggles = {},
   }
 end
 local function fromSeed(chapter, step)
@@ -62,8 +69,7 @@ local function fromSeed(chapter, step)
   local offsetX = math.floor((width - template.width) / 2)
   local offsetY = math.floor((height - template.height) / 2)
   local function coords(x, y)
-    return offsetX + (flipX and template.width + 1 - x or x),
-      offsetY + (flipY and template.height + 1 - y or y)
+    return offsetX + (flipX and template.width + 1 - x or x), offsetY + (flipY and template.height + 1 - y or y)
   end
   local function relocate(p)
     local t = clone(p)
@@ -86,7 +92,8 @@ local function fromSeed(chapter, step)
   local data = {
     name = step == 8 and chapters[chapter].test or template.name,
     tip = template.tip,
-    width = width, height = height,
+    width = width,
+    height = height,
     source = relocate(template.source),
     goals = relocateAll(template.goals),
     fixtures = relocateAll(template.fixtures),

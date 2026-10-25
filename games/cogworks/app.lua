@@ -93,7 +93,9 @@ function A:finishTutorial()
   self:save()
 end
 function A:openLevel(index)
-  assert(self.progress and index >= 1 and index <= (self.devSession and #E.levels or Campaign.openLevels(self.progress)))
+  assert(
+    self.progress and index >= 1 and index <= (self.devSession and #E.levels or Campaign.openLevels(self.progress))
+  )
   self.game = E.new(index)
   local session = self.progress.sessions[index]
   if type(session) == "table" and E.restore(self.game, session.parts) then
@@ -234,7 +236,8 @@ function A:updateGame()
     end
     local previous = self.progress.unlocked
     self.progress.unlocked = Campaign.openLevels(self.progress)
-    self.message = self.progress.unlocked > previous and "CHAPTER UNLOCKED!" or ("LEVEL CLEAR +" .. additions .. " BONUS")
+    self.message = self.progress.unlocked > previous and "CHAPTER UNLOCKED!"
+      or ("LEVEL CLEAR +" .. additions .. " BONUS")
   elseif self.result.jam then
     self.message = "JAM: INCONSISTENT ROTATION"
   end
@@ -617,7 +620,11 @@ function A:act(action, x, y)
   elseif scene == "chapter" then
     if action == "back" then
       self.scene = "levels"
-    elseif action == "level" and x >= 1 and x <= (self.devSession and #E.levels or Campaign.openLevels(self.progress)) then
+    elseif
+      action == "level"
+      and x >= 1
+      and x <= (self.devSession and #E.levels or Campaign.openLevels(self.progress))
+    then
       self:save()
       self:openLevel(x)
       self.levelReturn = "pause"

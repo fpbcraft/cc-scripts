@@ -728,8 +728,14 @@ function R:drawGame(m)
     nil,
     m.settings.animations and 9 or 8
   )
-  self:button(120, 2, 28, 11, g.editor and "SAVE" or (g.sandbox and "CLEAR" or "SAVE"),
-    g.editor and "editorSave" or (g.sandbox and "clearSandbox" or "save"))
+  self:button(
+    120,
+    2,
+    28,
+    11,
+    g.editor and "SAVE" or (g.sandbox and "CLEAR" or "SAVE"),
+    g.editor and "editorSave" or (g.sandbox and "clearSandbox" or "save")
+  )
   self:button(150, 2, 36, 11, g.editor and "MENU" or "PAUSE", g.editor and "editorMenu" or "pause")
   self:button(188, 2, 11, 11, "?", "help")
   self:rect(3, 16, 109, 94, 1)
@@ -1222,8 +1228,13 @@ function R:drawChapter(m)
     self:rect(x, y, 90, 19, i == (m.game and m.game.number) and 6 or (cleared and 9 or 12))
     self:rect(x + 1, y + 1, 88, 17, 1)
     self:fontFit(x + 3, y + 2, string.format("%02d %s", i, item.name), 15, 83)
-    self:fontFit(x + 3, y + 10, (cleared and "[X]" or "[ ]") .. " CLEAR  +"
-      .. achieved .. " BONUS" .. (step == 8 and " TEST" or ""), cleared and 9 or 11, 85)
+    self:fontFit(
+      x + 3,
+      y + 10,
+      (cleared and "[X]" or "[ ]") .. " CLEAR  +" .. achieved .. " BONUS" .. (step == 8 and " TEST" or ""),
+      cleared and 9 or 11,
+      85
+    )
     if active then
       self:add(x, y, 90, 19, "level", i)
     end
@@ -1238,8 +1249,15 @@ local function listMenu(self, title, entries, action, page)
     local item = entries[index]
     if item then
       local label = type(item) == "table" and (item.name or item.title) or item
-      self:button(23, 21 + slot * 11, 154, 10, tostring(index) .. " " .. tostring(label), action,
-        type(item) == "table" and index or item)
+      self:button(
+        23,
+        21 + slot * 11,
+        154,
+        10,
+        tostring(index) .. " " .. tostring(label),
+        action,
+        type(item) == "table" and index or item
+      )
     end
   end
   if page > 1 then
@@ -1273,8 +1291,13 @@ function R:drawPackList(m)
   listMenu(self, "COMPILED PACKS", m.packFiles or {}, "pack", m.catalogPage)
 end
 function R:drawPackLevels(m)
-  listMenu(self, m.activePack and m.activePack.title or "USER PACK", m.activePack and m.activePack.levels or {},
-    "packLevel", m.catalogPage)
+  listMenu(
+    self,
+    m.activePack and m.activePack.title or "USER PACK",
+    m.activePack and m.activePack.levels or {},
+    "packLevel",
+    m.catalogPage
+  )
 end
 function R:drawConfirm(m)
   self:page("CONFIRM ACTION")
@@ -1500,8 +1523,14 @@ function R:drawText(m)
     label(2, 3, "OBJECTIVES: " .. m.objectives .. "  (OPEN CHAPTERS)", colors.lightBlue)
     for i, chapter in ipairs(m.chapters) do
       local open = m.devSession or i == 1 or m.progress.unlocked >= chapter.first
-      btn(3, 4 + i * 3, math.min(w - 6, 45), i .. " " .. chapter.name .. (open and " OPEN" or (" NEED " .. chapter.threshold)),
-        open and "chapter" or nil, i)
+      btn(
+        3,
+        4 + i * 3,
+        math.min(w - 6, 45),
+        i .. " " .. chapter.name .. (open and " OPEN" or (" NEED " .. chapter.threshold)),
+        open and "chapter" or nil,
+        i
+      )
     end
     btn(3, h - 2, 16, "BACK", "back")
   elseif m.scene == "chapter" then
@@ -1516,8 +1545,14 @@ function R:drawText(m)
           count = count + 1
         end
       end
-      btn(3, 4 + step * 3, math.min(w - 6, 50),
-        string.format("%02d %s CLEAR:%s BONUS:%d", i, E.levels[i].name, clear and "Y" or "N", count), "level", i)
+      btn(
+        3,
+        4 + step * 3,
+        math.min(w - 6, 50),
+        string.format("%02d %s CLEAR:%s BONUS:%d", i, E.levels[i].name, clear and "Y" or "N", count),
+        "level",
+        i
+      )
     end
     btn(3, h - 2, 16, "CHAPTERS", "back")
   else

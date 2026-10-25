@@ -6,8 +6,21 @@ P.ROOT = "/games/cogworks"
 P.LEVELS = P.ROOT .. "/user_levels"
 P.PACKS = P.ROOT .. "/packs"
 P.VERSION = 1
-local validKinds = { S = true, M = true, X = true, I = true, G = true, O = true, Q = true, D = true,
-  V = true, Z = true, C = true, R = true, B = true }
+local validKinds = {
+  S = true,
+  M = true,
+  X = true,
+  I = true,
+  G = true,
+  O = true,
+  Q = true,
+  D = true,
+  V = true,
+  Z = true,
+  C = true,
+  R = true,
+  B = true,
+}
 local function slug(text)
   if type(text) ~= "string" then
     return nil
@@ -27,8 +40,15 @@ local function checkPart(piece, width, height, used)
   if not integer(piece.x, 1, width) or not integer(piece.y, 1, height) or not integer(piece.r or 0, 0, 3) then
     return false, "PART OUTSIDE GRID"
   end
-  if piece.kind == "M" and (type(piece.speed) ~= "number" or piece.speed <= 0 or piece.speed > 16
-      or (piece.sign ~= 1 and piece.sign ~= -1)) then
+  if
+    piece.kind == "M"
+    and (
+      type(piece.speed) ~= "number"
+      or piece.speed <= 0
+      or piece.speed > 16
+      or (piece.sign ~= 1 and piece.sign ~= -1)
+    )
+  then
     return false, "INVALID GOAL SPEED OR DIRECTION"
   end
   local key = piece.y * 16 + piece.x
@@ -42,8 +62,13 @@ function P.validate(data)
   if type(data) ~= "table" then
     return false, "LEVEL IS NOT A TABLE"
   end
-  if type(data.name) ~= "string" or #data.name < 1 or #data.name > 48
-    or type(data.tip) ~= "string" or #data.tip > 160 then
+  if
+    type(data.name) ~= "string"
+    or #data.name < 1
+    or #data.name > 48
+    or type(data.tip) ~= "string"
+    or #data.tip > 160
+  then
     return false, "NAME OR DESCRIPTION INVALID"
   end
   if not integer(data.width, 5, 10) or not integer(data.height, 5, 10) then
@@ -80,8 +105,12 @@ function P.validate(data)
     return false, "INVALID OBSTACLES"
   end
   for _, stone in ipairs(data.blocks or {}) do
-    if type(stone) ~= "table" or not integer(stone[1], 1, data.width)
-      or not integer(stone[2], 1, data.height) or occupied[stone[2] * 16 + stone[1]] then
+    if
+      type(stone) ~= "table"
+      or not integer(stone[1], 1, data.width)
+      or not integer(stone[2], 1, data.height)
+      or occupied[stone[2] * 16 + stone[1]]
+    then
       return false, "INVALID STONE PLACEMENT"
     end
     occupied[stone[2] * 16 + stone[1]] = true
@@ -94,8 +123,7 @@ function P.validate(data)
     required[piece.kind] = (required[piece.kind] or 0) + 1
   end
   for kind, count in pairs(data.stock) do
-    if not validKinds[kind] or kind == "S" or kind == "M" or kind == "X"
-      or not integer(count, 0, 100) then
+    if not validKinds[kind] or kind == "S" or kind == "M" or kind == "X" or not integer(count, 0, 100) then
       return false, "INVALID INVENTORY"
     end
   end
@@ -187,8 +215,15 @@ function P.fromEditor(board, name)
   local data = {
     name = name or board.name or "NEW WORKSHOP",
     tip = board.tip or "CONNECT ALL TARGETS.",
-    width = board.width, height = board.height, source = nil,
-    goals = {}, build = {}, fixtures = {}, blocks = {}, redstone = {}, stock = {},
+    width = board.width,
+    height = board.height,
+    source = nil,
+    goals = {},
+    build = {},
+    fixtures = {},
+    blocks = {},
+    redstone = {},
+    stock = {},
   }
   for _, tile in ipairs(board.tiles) do
     local part = { kind = tile.kind, x = tile.x, y = tile.y, r = tile.r }
@@ -234,8 +269,13 @@ function P.loadPack(id)
   if not pack then
     return nil, reason
   end
-  if pack.format ~= P.VERSION or type(pack.title) ~= "string"
-    or type(pack.levels) ~= "table" or #pack.levels == 0 or #pack.levels > 64 then
+  if
+    pack.format ~= P.VERSION
+    or type(pack.title) ~= "string"
+    or type(pack.levels) ~= "table"
+    or #pack.levels == 0
+    or #pack.levels > 64
+  then
     return nil, "INVALID LEVEL PACK"
   end
   for _, level in ipairs(pack.levels) do
