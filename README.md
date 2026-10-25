@@ -63,8 +63,12 @@ make lint         # detect Lua lint violations
 make style-check  # run both checks locally (same gate as CI)
 ```
 
-Editors can invoke StyLua on save; `.editorconfig` defines two-space Lua indentation
-and LF line endings. Lua syntax and regression tests remain in the existing CI workflows.
+The formatter follows the [Roblox Lua style guide](https://roblox.github.io/lua-style-guide/)
+with tab indentation (four-column display), a 100-column target, double-quoted
+strings and expanded statement blocks. `.editorconfig` uses the same settings and
+LF line endings. Editors can invoke StyLua on save. Lua syntax and regression
+tests remain in the existing CI workflows.
+CraftOS APIs and Lua 5.2/5.3 syntax stay compatible; Luau-only syntax is not used.
 Use `-- selene: allow(rule_name)` next to an intentional exception rather than
 disabling a useful rule for the entire project. Avoid committing vendored Lua files.
 
@@ -73,5 +77,5 @@ are not understood by Selene 0.32; Lua syntax and regression CI still check that
 The installed launchers use a narrow, line-local Selene suppression for their
 valid top-level `...` forwarding.
 
-The repository was normalized once with StyLua. After that baseline, any unformatted
-Lua source or disallowed Selene finding fails CI, including on existing files.
+CI rejects unformatted Lua source and disallowed Selene findings, including in
+existing files.

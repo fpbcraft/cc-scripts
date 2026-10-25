@@ -39,9 +39,9 @@ Validation:
 
 ## Lua style and upstream integration
 
-The user's governing guide is the [Roblox Lua style guide](https://roblox.github.io/lua-style-guide/), replacing the earlier LuaRocks reference. Modified Lua files use tabs, a 100-column target, expanded blocks, double-quoted strings and camelCase local/function names where introduced; CraftOS and existing save/API names remain compatible. Formatting was applied and verified with StyLua 2.6.0. New code remains ordinary Lua, without Luau-only syntax.
+The user's governing guide is the [Roblox Lua style guide](https://roblox.github.io/lua-style-guide/), replacing the earlier LuaRocks reference. After rebasing, the user authorized updating `.stylua.toml` to align with the Roblox guide: tabs displayed at four columns, a 100-column target, double-quoted strings and expanded blocks. `.editorconfig` and repository documentation match; the repository was reformatted with AST verification. Modified code follows the guide's readability, expanded blocks, double-quoted strings and camelCase naming where introduced; existing save/API names remain compatible. New code remains ordinary Lua, without Luau-only syntax.
 
-The separately maintained [style-enforcement branch](https://github.com/fpbcraft/cc-scripts/compare/main...chore/enforce-lua-style) must merge before this implementation. Its configuration was inspected while still in progress and then specified two spaces/120 columns. Re-read its final configuration after merge, rebase this branch onto `main`, resolve formatting conflicts, and run its final StyLua/Selene checks before considering the implementation ready. Do not duplicate that branch's repository-wide tooling work here.
+Rebased onto `main` at `3a7518b` after PR #47 merged. Formatting conflicts were resolved through normalized three-way merges and checked against the pre-rebase implementation; upstream fixes and Selene annotations were retained. Use the repository's `.stylua.toml`, `selene.toml` and `cc-tweaked.yml` for all future work. StyLua 2.6.0 verifies formatting and Selene 0.32.0 checks the branch. The local Selene build enables `selene-lib/lua52` and `selene-lib/lua53` so the full CraftOS standard library loads without the prebuilt macOS binary's diagnostic. Refresh and rebase against `main` again before the final PR if it advances.
 
 ## Remaining workstreams
 

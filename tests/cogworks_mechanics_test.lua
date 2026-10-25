@@ -2,27 +2,27 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 local E = require("games.cogworks.engine")
 assert(#E.order == 9, "Nine distinct construction mechanisms available")
 for _, level in ipairs({ 6, 9, 16, 23, 25, 27, 30 }) do
-  local state = E.new(level, true)
-  assert(E.evaluate(state).win, "Expanded reference not solved: " .. level)
+	local state = E.new(level, true)
+	assert(E.evaluate(state).win, "Expanded reference not solved: " .. level)
 end
 local function find(g, kind)
-  for _, part in ipairs(g.tiles) do
-    if part.kind == kind then
-      return part
-    end
-  end
+	for _, part in ipairs(g.tiles) do
+		if part.kind == kind then
+			return part
+		end
+	end
 end
 -- Legacy snapshots with clutch tiles migrate to regular shafts without
 -- invalidating the save slot or the level's solution.
 local legacy = E.snapshot(E.new(6, true))
 local oldClutch = nil
 for _, part in ipairs(legacy) do
-  if part.x == 2 and part.y == 2 then
-    part.kind = "C"
-    part.enabled = false
-    oldClutch = part
-    break
-  end
+	if part.x == 2 and part.y == 2 then
+		part.kind = "C"
+		part.enabled = false
+		oldClutch = part
+		break
+	end
 end
 assert(oldClutch, "Old level 6 contained a clutch")
 local migrated = E.new(6)
@@ -33,7 +33,7 @@ assert(not E.parts.C, "Clutch removed from selectable inventory")
 local gearbox = E.new(9, true)
 local box = assert(find(gearbox, "Q"))
 for d = 0, 3 do
-  assert(E.hasPort(box, d), "Four-way gearbox has all ports")
+	assert(E.hasPort(box, d), "Four-way gearbox has all ports")
 end
 local belt = E.new(6, true)
 local left = assert(E.get(belt, 3, 3))

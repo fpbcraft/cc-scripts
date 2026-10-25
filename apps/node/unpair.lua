@@ -1,25 +1,25 @@
 local bootstrap = loadfile("/apps/node/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot ~= "/apps/node" then
-  -- selene: allow(undefined_variable) -- Selene misidentifies chunk-level varargs.
-  return bootstrap().run("/apps/node", "unpair.lua", _ENV, ...)
+	-- selene: allow(undefined_variable) -- Selene misidentifies chunk-level varargs.
+	return bootstrap().run("/apps/node", "unpair.lua", _ENV, ...)
 end
 -- Physically unpair a remote node after moving it to a new Factory Manager.
 -- Stop the running node program (Ctrl+T), then run /apps/node/unpair.lua.
 local file = "/apps/node/config.db"
 if not fs.exists(file) then
-  error("Node config not found", 0)
+	error("Node config not found", 0)
 end
 local f = assert(fs.open(file, "r"))
 local ok, cfg = pcall(textutils.unserialize, f.readAll())
 f.close()
 assert(ok and type(cfg) == "table", "Invalid node config")
 for _, m in pairs(cfg.managed or {}) do
-  local signal = not (m.polarity == true)
-  if m.target == "computer" then
-    pcall(redstone.setOutput, m.side, signal)
-  elseif peripheral.isPresent(m.target) and peripheral.getType(m.target) == "redstone_relay" then
-    pcall(peripheral.call, m.target, "setOutput", m.side, signal)
-  end
+	local signal = not (m.polarity == true)
+	if m.target == "computer" then
+		pcall(redstone.setOutput, m.side, signal)
+	elseif peripheral.isPresent(m.target) and peripheral.getType(m.target) == "redstone_relay" then
+		pcall(peripheral.call, m.target, "setOutput", m.side, signal)
+	end
 end
 cfg.hubId = nil
 cfg.key = nil -- main.lua generates a fresh pairing key at next boot

@@ -156,7 +156,7 @@ for index = 1, 600 do
 	end
 	if index <= 12 then
 		math.randomseed(index + 123)
-		math.random()
+		assert(math.random() >= 0)
 		assert(
 			equal(world, W.generate(seed, size, index % 3 + 2, kind)),
 			"Determinism depends on global random state"
