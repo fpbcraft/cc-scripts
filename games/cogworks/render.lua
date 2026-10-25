@@ -92,6 +92,7 @@ end
 function R:enable()
   local m = self.m
   self.tw, self.th = m.getSize()
+  self.needsClear = true
   if m.setGraphicsMode and m.drawPixels then
     local ok = pcall(m.setGraphicsMode, 2)
     if ok then
@@ -129,6 +130,9 @@ function R:resize()
       self.ox = math.floor((w - 200 * self.scale) / 2)
       self.oy = math.floor((h - 120 * self.scale) / 2)
       self.previousBuffer = nil
+      -- The previous image and letterbox are still in the monitor's pixel
+      -- backing surface after a resize. Discard them before the next draw.
+      self.needsClear = true
     end
   else
     self.tw, self.th = self.m.getSize()
@@ -213,6 +217,12 @@ function R:flush()
   local mon = self.m
   if mon.setFrozen then
     pcall(mon.setFrozen, true)
+  end
+  if self.needsClear then
+    -- Clear the FULL pixel surface, including bars outside the scaled 200x120
+    -- logical viewport; otherwise old text and white edges survive resizing.
+    mon.drawPixels(0, 0, 0, self.pw, self.ph)
+    self.needsClear = false
   end
   -- One batched draw request, including on remote Minecraft monitors.
   mon.drawPixels(x1, y1, rows, width, height)
