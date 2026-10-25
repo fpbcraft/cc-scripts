@@ -1,4 +1,5 @@
 local Systems = dofile("/games/civcraft/systems.lua")
+local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Icons = dofile("/games/civcraft/icons.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
 local H = {}
@@ -66,6 +67,18 @@ function H.ledger(ui, rect, player)
 		ui.panel = "context"
 	end)
 	local rows = {}
+	local victories = {}
+	for _, victory in ipairs(CampaignRules.victories) do
+		if CampaignRules.enabled(ui.state, victory) then
+			victories[#victories + 1] = victory:upper()
+		end
+	end
+	for _, line in
+		ipairs(Panels.wrap(r, "VICTORIES: " .. table.concat(victories, ", "), rect.w - 20))
+	do
+		rows[#rows + 1] = { text = line }
+	end
+	rows[#rows + 1] = { text = "LENGTH: " .. (ui.state.gameSpeed or "standard"):upper() }
 	for _, entry in ipairs({
 		{
 			"GOLD",
@@ -107,7 +120,9 @@ function H.ledger(ui, rect, player)
 	rows[#rows + 1] = {
 		text = "INDUSTRIAL: "
 			.. victory.industryTurns
-			.. "/10 ROUNDS; "
+			.. "/"
+			.. victory.industryTarget
+			.. " ROUNDS; "
 			.. victory.connected
 			.. " LINKED CITIES",
 	}
@@ -122,7 +137,9 @@ function H.ledger(ui, rect, player)
 					.. (rival.age or Systems.age(rival))
 					.. ", INDUSTRY "
 					.. (rival.industryTurns or 0)
-					.. "/10, END "
+					.. "/"
+					.. victory.industryTarget
+					.. ", END "
 					.. (rival.endStage or 0)
 					.. "/3",
 			}

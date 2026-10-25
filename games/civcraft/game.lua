@@ -106,6 +106,7 @@ local function newCampaignID()
 	local stamp = os.epoch and os.epoch("utc") or math.floor(os.clock() * 1000000)
 	return tostring(stamp) .. ":" .. campaignCounter
 end
+local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local W, H = Hex.width, Hex.height
 local state
 local turnProgress = function() end
@@ -115,6 +116,7 @@ local function newGame()
 		version = 6,
 		ruleset = "create",
 		roundLimit = 180,
+		gameSpeed = "standard",
 		hostileMode = "standard",
 		phase = "lobby",
 		round = 1,
@@ -313,6 +315,9 @@ local function apply(id, req)
 		end
 		save()
 		return true, "Game saved"
+	end
+	if req.action == "gameSpeed" or req.action == "toggleVictory" then
+		return CampaignRules.configure(state, id, req)
 	end
 	if req.action == "hostileMode" and state.phase == "lobby" then
 		if id ~= state.players[1].id then

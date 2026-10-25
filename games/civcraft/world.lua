@@ -417,6 +417,8 @@ function W.forPlayer(state, id, afterSeq)
 		winner = state.winner,
 		ruleset = state.ruleset,
 		roundLimit = state.roundLimit,
+		gameSpeed = state.gameSpeed,
+		victories = state.victories and {},
 		hostileMode = state.hostileMode,
 		victoryReason = state.victoryReason,
 		spawners = {},
@@ -425,6 +427,9 @@ function W.forPlayer(state, id, afterSeq)
 		units = {},
 		logs = {},
 	}
+	for victory, enabled in pairs(state.victories or {}) do
+		view.victories[victory] = enabled
+	end
 	if state.phase ~= "game" and state.phase ~= "over" then
 		view.mapSize, view.mapType, view.mapSeed = state.mapSize, state.mapType, state.mapSeed
 		for _, player in ipairs(state.players) do

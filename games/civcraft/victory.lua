@@ -1,4 +1,5 @@
 local Rails = dofile("/games/civcraft/railways.lua")
+local Rules = dofile("/games/civcraft/campaign_rules.lua")
 local V = {}
 function V.score(state, p)
 	local score = 0
@@ -47,6 +48,7 @@ function V.status(state, p)
 		dragon = dragon,
 		connected = largest,
 		industryTurns = p.industryTurns or 0,
+		industryTarget = Rules.cost(10, state),
 		score = V.score(state, p),
 	}
 end
@@ -60,7 +62,10 @@ function V.check(state, advance)
 		local status = V.status(state, p)
 		if advance and p.victoryRound ~= state.round then
 			p.victoryRound = state.round
-			p.industryTurns = status.industrial and (p.industryTurns or 0) + 1 or 0
+			p.industryTurns = Rules.enabled(state, "industrial")
+					and status.industrial
+					and (p.industryTurns or 0) + 1
+				or 0
 		end
 		local capitals = 0
 		local own = 0
@@ -72,15 +77,25 @@ function V.check(state, advance)
 				end
 			end
 		end
-		local reason = capitals >= 2 and own == capitals and "CONQUEST"
-			or status.dragon and "END EXPEDITION"
-			or (p.industryTurns or 0) >= 10 and "INDUSTRIAL"
+		local reason = Rules.enabled(state, "conquest")
+				and capitals >= 2
+				and own == capitals
+				and "CONQUEST"
+			or Rules.enabled(state, "expedition") and status.dragon and "END EXPEDITION"
+			or Rules.enabled(state, "industrial")
+				and (p.industryTurns or 0) >= status.industryTarget
+				and "INDUSTRIAL"
 		if reason then
 			qualifiers[#qualifiers + 1] = p
 			reasons[#reasons + 1] = reason
 		end
 	end
 	if #qualifiers == 0 and state.round >= (state.roundLimit or 180) then
+		if not Rules.enabled(state, "score") then
+			state.phase, state.winner, state.victoryReason, state.winnerIDs =
+				"over", "DRAW", "ROUND LIMIT", {}
+			return
+		end
 		local best = -1
 		for _, p in ipairs(state.players) do
 			local score = V.score(state, p)

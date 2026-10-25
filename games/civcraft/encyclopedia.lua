@@ -185,7 +185,7 @@ function E.describe(category, entry, player)
 	end
 	if category == "wonders" then
 		return {
-			"Industry cost: " .. record.production,
+			"Industry cost: " .. Systems.projectCost("wonder", entry.id, player),
 			record.description,
 			"Research: " .. Systems.techs[record.tech].name,
 			"Unique across the world. Choose an empty owned land hex. Benefits follow tile ownership. Capturing a wonder transfers its benefits.",
@@ -221,12 +221,15 @@ function E.describe(category, entry, player)
 		}
 	elseif category == "buildings" then
 		lines = {
-			"Industry cost: " .. Systems.projectCost("building", entry.id),
+			"Industry cost: " .. Systems.projectCost("building", entry.id, player),
 			record.description or "",
 			"One of this building per city.",
 		}
 	else
-		lines = { "Science cost: " .. record.cost, "Unlock: " .. title(record.unlock or "none") }
+		lines = {
+			"Science cost: " .. Systems.techCost(entry.id, player),
+			"Unlock: " .. title(record.unlock or "none"),
+		}
 		for _, paragraph in ipairs(ResearchDetails.paragraphs(Systems, entry.id)) do
 			lines[#lines + 1] = paragraph
 		end

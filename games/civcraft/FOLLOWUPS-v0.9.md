@@ -5,7 +5,7 @@ in the design draft. Keep this list alongside the main roadmap until verified.
 
 - [x] Replay actions automatically, one at a time, centering the camera on each.
   Do not ask whether to replay. Exclude the observer's own auto-explore actions.
-- Add game length and enabled-victory controls to campaign creation.
+- [x] Add game length and enabled-victory controls to campaign creation.
 - [x] Show full civilization bonuses during selection.
 - [x] Show food, industry and science as rates rather than accumulated totals in
   the top bar. Gate other materials by their technologies. Omit zero-rate suffixes;

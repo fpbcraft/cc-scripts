@@ -3,7 +3,7 @@
 	overwritten. Rendering and input handling are real. The UI is instrumented to enqueue and
 	acknowledge mouse events at actual button coordinates.
 ]]
-local includeAI, includeSettings, includeResearch = false, false, false
+local includeAI, includeSettings, includeResearch, includeCampaign = false, false, false, false
 for _, argument in ipairs({ ... }) do
 	if argument == "--ai" then
 		includeAI = true
@@ -13,6 +13,9 @@ for _, argument in ipairs({ ... }) do
 	end
 	if argument == "--research" then
 		includeResearch = true
+	end
+	if argument == "--campaign" then
+		includeCampaign = true
 	end
 end
 local native = dofile
@@ -96,6 +99,7 @@ dofile = function(path)
 		local aiConfigured = false
 		local settingsStep = 0
 		local researchStep = 0
+		local campaignStep = 0
 		view.draw = function(self, state, observer, options)
 			draw(self, state, observer, options)
 			renderer = self.r.mode
@@ -134,6 +138,16 @@ dofile = function(path)
 				self:command("toggleAI", { player = 3 })
 				aiConfigured = true
 				os.queueEvent("term_resize")
+				return
+			end
+			if includeCampaign and stage == 1 and state.phase == "lobby" and campaignStep < 5 then
+				local labels =
+					{ "CAMPAIGN OPTIONS", "LENGTH STANDARD", "LENGTH EPIC", "SCORE ON", "CLOSE" }
+				if tap(self, labels[campaignStep + 1]) then
+					campaignStep = campaignStep + 1
+				else
+					tap(self, "NEXT")
+				end
 				return
 			end
 			if self.panel == "recap" and not options.handoff then
@@ -229,6 +243,13 @@ assert(success, reason)
 assert(completed and stage == 11, "Session did not traverse both players and return to round two")
 local state = native("/games/civcraft/saves.lua").load(1)
 assert(state and state.round == 2 and state.activeIndex == 1 and state.campaignID)
+if includeCampaign then
+	assert(
+		state.gameSpeed == "quick" and state.roundLimit == 120 and state.victories.score == false,
+		"Native lobby options must survive round processing and save reload"
+	)
+	assert(state.players[1].gameSpeed == "quick", "The campaign pace must reach gameplay costs")
+end
 if includeResearch then
 	assert(
 		state.players[1].researchTarget == "agriculture" or state.players[1].techs.agriculture,
@@ -262,6 +283,7 @@ output.write(textutils.serialize({
 	aiPlanReload = includeAI,
 	settingsReload = includeSettings,
 	researchFlow = includeResearch,
+	campaignOptions = includeCampaign,
 }))
 output.close()
 print(

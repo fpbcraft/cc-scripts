@@ -59,3 +59,7 @@ description, follow its building Codex link, return to research and choose it
 using real mouse input. `researchFlow` records that the selected research order
 survives the round boundary and save reload. The driver preserves and navigates
 the detail scroll position when reopening research.
+
+Add `--campaign` to open Campaign Options in the lobby, select Quick and disable
+Score, then start the campaign. `campaignOptions` confirms that the selected
+pace, deadline and victory toggles survive the full session and save reload.

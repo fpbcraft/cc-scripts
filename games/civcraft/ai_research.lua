@@ -68,7 +68,8 @@ function Research.ranked(view, player, systems)
 					end
 				end
 			end
-			local remaining = systems.techCost(id) - ((player.researchProgress or {})[id] or 0)
+			local remaining = systems.techCost(id, player)
+				- ((player.researchProgress or {})[id] or 0)
 			local turns = math.max(1, math.ceil(remaining / math.max(1, science)))
 			result[#result + 1] = { id = id, score = score / math.sqrt(turns), turns = turns }
 		end

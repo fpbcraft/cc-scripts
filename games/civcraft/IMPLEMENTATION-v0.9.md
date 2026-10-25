@@ -115,12 +115,20 @@ Research and faction details occupy the top-right bar. Next Idle Unit sits besid
 
 Research now retains a connected, draggable prerequisite graph on compact text and graphics displays, with pan/zoom buttons for touch input. The detail view scrolls full explanations, gives every technology an authored purpose and derives project effects from the actual content. Unlock buttons open the corresponding building, unit or wonder Codex entry. The large canvas also offers these details. All 61 regression scripts pass; native CraftOS-PC passed the compact graph scenarios and a real mouse-driven graph/details/Codex/research flow before completing both hotseat turns, an AI turn and settings/save reload. The test driver pages back to the preserved Research action after returning from the Codex.
 
+## Campaign duration and victory options
+
+Campaign Options in both lobby layouts selects Quick (120 rounds, two-thirds costs), Standard (180, unchanged costs) or Epic (270, one-and-a-half costs). Research, production including escalating settler costs, food growth thresholds, minimum growth time and the Industrial victory timer use the same scaling helper. Movement, attacks, yields, upkeep and material consumption keep their normal per-round rules. UI costs, estimates and AI research/production scoring consume the scaled costs.
+
+The host chooses Conquest, Industrial, End Expedition and Score independently before starting; at least one remains enabled. Disabled conditions cannot win, and AI plans select from enabled goals. At the deadline, an enabled Score condition resolves the highest score; otherwise an unresolved game ends in a draw, as explained in the menu. Council remains a later workstream. The resource ledger shows the chosen length and enabled victories.
+
+Optional `gameSpeed` and `victories` fields remain compatible with schema 6. Migration gives old campaigns Standard progression while retaining their saved deadline and map; each player's pace is synchronized from the campaign for shared cost APIs. Observer snapshots copy the public options without aliasing the host's table. Host validation rejects unauthorized edits, invalid values, edits after launch and disabling the last victory. All 62 regression scripts pass. Native CraftOS-PC passed rule scenarios and a mouse-driven lobby that selects Quick and disables Score, then completes research/Codex navigation, two human turns, an AI turn, settings and save reload.
+
 ## Remaining workstreams
 
 07. Hybrid peaceful/war-group turns and declaration transitions.
 08. Relations, treaty offers, explicit defense calls and authored conversations.
 09. Council elections, resolutions and diplomatic victory.
-10. Duration/victory lobby settings, compact graphical research, HUD and factions.
+10. Remaining display integration, faction diplomacy controls and larger map presets.
 11. AI difficulty variants after the Prince baseline.
 12. Save/integration/fuzz/performance/network validation and release metadata.
 

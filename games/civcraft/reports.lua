@@ -1,5 +1,6 @@
 -- Reports contain only the receiving empire's possessions and economy.
 local Content = dofile("/games/civcraft/content.lua")
+local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local R = {}
@@ -18,6 +19,7 @@ function R.capture(state, p)
 		mobClears = p.mobClears or 0,
 		age = p.age or 1,
 		industryTurns = p.industryTurns or 0,
+		industryTarget = CampaignRules.cost(10, state),
 		endStage = p.endStage or 0,
 	}
 	for id, value in pairs(p.techs or {}) do
@@ -160,7 +162,11 @@ function R.build(state, p, before)
 		lines[#lines + 1] = "New Age: " .. Content.ages[now.age].name
 	end
 	if now.industryTurns > 0 then
-		lines[#lines + 1] = "Industrial victory: " .. now.industryTurns .. "/10 rounds"
+		lines[#lines + 1] = "Industrial victory: "
+			.. now.industryTurns
+			.. "/"
+			.. now.industryTarget
+			.. " rounds"
 	end
 	if now.endStage > (before.endStage or 0) then
 		lines[#lines + 1] = "End expedition: " .. now.endStage .. "/3 projects"

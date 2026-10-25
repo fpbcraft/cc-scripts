@@ -2,6 +2,7 @@
 -- Never mutate simulation here: all commands flow through dispatch().
 local FactionColors = dofile("/games/civcraft/faction_colors.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
+local CampaignOptions = dofile("/games/civcraft/campaign_options.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
 local GameView = dofile("/games/civcraft/game_view.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
@@ -594,10 +595,26 @@ function UI:draw(state, playerID, opts)
 		return
 	end
 	if phase == "lobby" then
+		if self.panel == "campaign" then
+			CampaignOptions.draw(self, state)
+			r:finish()
+			return
+		end
 		if w < 220 or h < 140 then
 			r:fill(0, 0, w, h, 0)
 			r:text(4, 3, opts.localMode and "LOCAL LOBBY" or "NETWORK LOBBY", 8)
 			local rows = {}
+			rows[#rows + 1] = {
+				buttons = {
+					{
+						label = "CAMPAIGN OPTIONS",
+						run = function()
+							self.panel = "campaign"
+							self.campaignOffset = 0
+						end,
+					},
+				},
+			}
 			for i, p in ipairs(state.players) do
 				rows[#rows + 1] = { text = i .. ". " .. p.name .. " / " .. Systems.civ(p.civ).name }
 				for _, line in ipairs(Panels.wrap(r, "BONUS: " .. Systems.civ(p.civ).bonus, w - 20)) do
@@ -726,6 +743,10 @@ function UI:draw(state, playerID, opts)
 				end)
 			end
 		end
+		r:button(w - 101, header + 10, 85, 11, "CAMPAIGN OPTIONS", function()
+			self.panel = "campaign"
+			self.campaignOffset = 0
+		end)
 		r:button(
 			w - 101,
 			header + 24,

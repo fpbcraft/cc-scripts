@@ -1,5 +1,6 @@
 -- The director accepts an observer projection, never unrestricted host state.
 local Hex = dofile("/games/civcraft/hex.lua")
+local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
 local Strategy = { version = 1, reviewInterval = 10 }
 local preferences = {
@@ -123,7 +124,11 @@ function Strategy.review(view, player, seed)
 	local reason = not plan and "initial" or player.strategySignal
 	local rivals = {}
 	for _, rival in ipairs(view.players or {}) do
-		if rival.id ~= player.id and (rival.industryTurns or 0) >= 7 then
+		if
+			CampaignRules.enabled(view, "industrial")
+			and rival.id ~= player.id
+			and (rival.industryTurns or 0) >= CampaignRules.cost(7, view)
+		then
 			rivals[#rivals + 1] = tostring(rival.id)
 		end
 	end

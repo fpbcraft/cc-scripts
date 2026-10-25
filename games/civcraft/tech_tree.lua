@@ -179,7 +179,7 @@ local function compact(r, systems, player, rect, model, research, onClose, openC
 			"SCIENCE "
 				.. ((player.researchProgress or {})[model.selected] or 0)
 				.. "/"
-				.. chosen.cost,
+				.. systems.techCost(model.selected, player),
 			"REQUIRES: "
 				.. (#chosen.requires > 0 and table.concat(chosen.requires, ", ") or "NONE"),
 		}
@@ -380,7 +380,7 @@ function T.draw(r, systems, player, rect, model, research, onClose, openCodex)
 		r:text(dx + 7, graphY + 51, clip(prereq, math.floor((dw - 14) / 4)), 7, 1, dw - 13)
 		r:text(dx + 7, graphY + 69, "UNLOCKS", 9, 1, dw - 13)
 		r:text(dx + 7, graphY + 78, clip(chosen.unlock, math.floor((dw - 14) / 4)), 7, 1, dw - 13)
-		local cost = systems.techCost(model.selected)
+		local cost = systems.techCost(model.selected, player)
 		local progress = (player.researchProgress or {})[model.selected] or 0
 		local rate = player.scienceRate or 0
 		r:text(dx + 7, graphY + 97, "PROGRESS " .. progress .. "/" .. cost, 7, 1, dw - 13)

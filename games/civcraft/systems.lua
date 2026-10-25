@@ -1,5 +1,6 @@
 -- CIVCRAFT 4X data & deterministic mechanics, no dependencies on UI/peripherals.
 local M = {}
+local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local AI = dofile("/games/civcraft/ai.lua")
 local Actions = dofile("/games/civcraft/actions.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
@@ -197,6 +198,7 @@ function M.nameCity(state, city)
 end
 function M.migrate(state)
 	state.ruleset = state.ruleset or "legacy"
+	state.gameSpeed = state.gameSpeed or "standard"
 	state.roundLimit = state.roundLimit or (state.ruleset == "create" and 180 or 90)
 	state.hostileMode = state.hostileMode or (state.ruleset == "create" and "standard" or "off")
 	if state.world then
@@ -231,6 +233,7 @@ function M.migrate(state)
 				end
 			end
 		end
+		p.gameSpeed = state.gameSpeed
 		p.food = p.food or 0
 		p.wood = p.wood or 0
 		p.science = p.science or 0
@@ -467,9 +470,9 @@ function M.assign(c, from, to, state)
 	end
 	return true
 end
-function M.techCost(id)
+function M.techCost(id, player)
 	local tech = M.techs[id]
-	return tech and tech.cost or nil
+	return tech and CampaignRules.cost(tech.cost, player) or nil
 end
 function M.projectCost(kind, id, player)
 	local record = (kind == "unit" and M.units or kind == "wonder" and M.wonders or M.buildings)[id]
@@ -478,9 +481,12 @@ function M.projectCost(kind, id, player)
 	end
 	local base = record.production or math.ceil((record.wood or 8) * 2.5)
 	if kind == "unit" and id == "settler" then
-		return base + (record.productionStep or 0) * ((player and player.settlersTrained) or 0)
+		return CampaignRules.cost(
+			base + (record.productionStep or 0) * ((player and player.settlersTrained) or 0),
+			player
+		)
 	end
-	return base
+	return CampaignRules.cost(base, player)
 end
 function M.centerYields(p, c, state)
 	local e = Economy.effects(c, state, M)
@@ -579,12 +585,20 @@ end
 function M.growth(p, c, state)
 	local yield = M.yields(p, c, state, Hex)
 	local surplus = yield.food - 2 * (c.population or 2)
-	local threshold = 20 + 8 * (c.population or 2)
-	local result = { surplus = surplus, threshold = threshold, stored = c.foodStore or 0 }
+	local threshold = CampaignRules.cost(20 + 8 * (c.population or 2), p)
+	local result = {
+		surplus = surplus,
+		threshold = threshold,
+		minimumTurns = CampaignRules.cost(4, p),
+		stored = c.foodStore or 0,
+	}
 	if surplus > 0 then
 		result.status = "GROWING"
-		result.turns =
-			math.max(1, 4 - (c.growthAge or 0), math.ceil((threshold - result.stored) / surplus))
+		result.turns = math.max(
+			1,
+			result.minimumTurns - (c.growthAge or 0),
+			math.ceil((threshold - result.stored) / surplus)
+		)
 	elseif surplus == 0 then
 		result.status = "STAGNANT"
 	else
@@ -729,7 +743,7 @@ function M.production(state, hex)
 					if
 						growth.surplus > 0
 						and c.foodStore >= growth.threshold
-						and c.growthAge >= 4
+						and c.growthAge >= growth.minimumTurns
 					then
 						c.foodStore = c.foodStore - growth.threshold
 						c.population = c.population + 1
@@ -813,7 +827,7 @@ function M.production(state, hex)
 		if id and M.canResearch(p, id) then
 			local progress = (p.researchProgress[id] or 0) + totalScience
 			p.researchProgress[id] = progress
-			if progress >= M.techs[id].cost then
+			if progress >= M.techCost(id, p) then
 				p.techs[id] = true
 				p.researchTarget = nil
 				Events.notice(state, "research", nil, id, p.id)
