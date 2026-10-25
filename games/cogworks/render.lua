@@ -338,13 +338,19 @@ function R:cog(cx, cy, large, spin, maxRadius)
   self:rect(cx - r, cy - r + 1, 1, 2 * r - 1, 7)
   self:rect(cx + r, cy - r + 1, 1, 2 * r - 1, 7)
   self:rect(cx - r + 1, cy - r + 1, 2 * r - 1, 2 * r - 1, face)
+  if r >= 4 then
+    self:rect(cx - r + 2, cy - r + 2, 2 * r - 3, 2 * r - 3, 2)
+    -- A dark inset separates the brass ring from moving metal spokes.
+  end
+  local phase = spin and math.floor(self.frame * math.min(spin.rate, 4)) * spin.sign or 0
   for tooth = 0, 7 do
-    local theta = tooth * math.pi / 4
+    -- Shift the repeated teeth by half a step between frames. The asymmetric
+    -- index pin below keeps direction unmistakable.
+    local theta = tooth * math.pi / 4 + (phase % 2) * math.pi / 8
     local tx = math.floor(cx + math.cos(theta) * (r + 0.4) + 0.5)
     local ty = math.floor(cy + math.sin(theta) * (r + 0.4) + 0.5)
     self:rect(tx, ty, 1, 1, 6)
   end
-  local phase = spin and math.floor(self.frame * math.min(spin.rate, 4)) * spin.sign or 0
   local direction = math.pi / 4 * phase
   if spin then
     -- Draw two different spokes so 180-degree rotation remains visible.
