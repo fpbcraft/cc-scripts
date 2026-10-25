@@ -1,6 +1,7 @@
 -- Installed programs own their globals and module cache.
 local bootstrap = loadfile("/apps/airship/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot ~= "/apps/airship" then
+  -- selene: allow(undefined_variable) -- Selene misidentifies chunk-level varargs.
   return bootstrap().run("/apps/airship", "autopilot.lua", _ENV, ...)
 end
 -- AIRSHIP AUTOPILOT | Avionics Navigation Edition

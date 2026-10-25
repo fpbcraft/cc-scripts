@@ -1,6 +1,7 @@
 -- Installed programs own their globals and module cache.
 local bootstrap = loadfile("/games/civcraft/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot ~= "/games/civcraft" then
+  -- selene: allow(undefined_variable) -- Selene misidentifies chunk-level varargs.
   return bootstrap().run("/games/civcraft", "game.lua", _ENV, ...)
 end
 -- CIVCRAFT v0.8.0: Railbreak-style 4X with local hotseat or rednet networking

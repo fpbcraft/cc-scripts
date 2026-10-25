@@ -68,5 +68,10 @@ and LF line endings. Lua syntax and regression tests remain in the existing CI w
 Use `-- selene: allow(rule_name)` next to an intentional exception rather than
 disabling a useful rule for the entire project. Avoid committing vendored Lua files.
 
+Selene excludes only `tests/auth_test.lua` because its host-Lua-5.3 bitwise expressions
+are not understood by Selene 0.32; Lua syntax and regression CI still check that file.
+The installed launchers use a narrow, line-local Selene suppression for their
+valid top-level `...` forwarding.
+
 The repository was normalized once with StyLua. After that baseline, any unformatted
 Lua source or disallowed Selene finding fails CI, including on existing files.

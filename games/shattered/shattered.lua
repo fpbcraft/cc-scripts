@@ -1,6 +1,7 @@
 -- Installed programs own their globals and module cache.
 local bootstrap = loadfile("/games/shattered/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot ~= "/games/shattered" then
+  -- selene: allow(undefined_variable) -- Selene misidentifies chunk-level varargs.
   return bootstrap().run("/games/shattered", "shattered.lua", _ENV, ...)
 end
 -- SHATTERED EXPANSE v5.6. Run: /games/shattered/shattered.lua

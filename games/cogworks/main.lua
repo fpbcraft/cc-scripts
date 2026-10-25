@@ -1,6 +1,7 @@
 -- Installed programs own their globals and module cache.
 local bootstrap = loadfile("/games/cogworks/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot ~= "/games/cogworks" then
+  -- selene: allow(undefined_variable) -- Selene misidentifies chunk-level varargs.
   return bootstrap().run("/games/cogworks", "main.lua", _ENV, ...)
 end
 -- COGWORKS / kinetic workshop for CC:Tweaked Advanced Monitors.

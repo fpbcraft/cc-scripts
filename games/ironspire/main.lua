@@ -1,6 +1,7 @@
 -- Installed programs own their globals and module cache.
 local bootstrap = loadfile("/games/ironspire/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot ~= "/games/ironspire" then
+  -- selene: allow(undefined_variable) -- Selene misidentifies chunk-level varargs.
   return bootstrap().run("/games/ironspire", "main.lua", _ENV, ...)
 end
 -- IRONSPIRE v0.1.0 - touchscreen deckbuilding roguelike for CC:Tweaked

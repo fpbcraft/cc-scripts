@@ -1,5 +1,6 @@
 local bootstrap = loadfile("/games/railbreak/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot ~= "/games/railbreak" then
+  -- selene: allow(undefined_variable) -- Selene misidentifies chunk-level varargs.
   return bootstrap().run("/games/railbreak", "classic.lua", _ENV, ...)
 end
 -- RAILBREAK: KINETIC FRONTIER / CC:Tweaked 3x3 through 5x5 Advanced Monitors

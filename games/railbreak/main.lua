@@ -1,6 +1,7 @@
 -- Installed programs own their globals and module cache.
 local bootstrap = loadfile("/games/railbreak/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot ~= "/games/railbreak" then
+  -- selene: allow(undefined_variable) -- Selene misidentifies chunk-level varargs.
   return bootstrap().run("/games/railbreak", "main.lua", _ENV, ...)
 end
 -- RAILBREAK: KINETIC FRONTIER - Train-first Edition v2.0.7

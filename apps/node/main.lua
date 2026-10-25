@@ -1,6 +1,7 @@
 -- Installed programs own their globals and module cache.
 local bootstrap = loadfile("/apps/node/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot ~= "/apps/node" then
+  -- selene: allow(undefined_variable) -- Selene misidentifies chunk-level varargs.
   return bootstrap().run("/apps/node", "main.lua", _ENV, ...)
 end
 local Auth = require("auth")

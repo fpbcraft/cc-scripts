@@ -1,6 +1,7 @@
 -- Installed programs own their globals and module cache.
 local bootstrap = loadfile("/apps/factory/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot ~= "/apps/factory" then
+  -- selene: allow(undefined_variable) -- Selene misidentifies chunk-level varargs.
   return bootstrap().run("/apps/factory", "main.lua", _ENV, ...)
 end
 -- FPBCRAFT factory entry point. Kept tiny for crash reporting and updates.

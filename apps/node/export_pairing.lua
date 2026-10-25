@@ -1,5 +1,6 @@
 local bootstrap = loadfile("/apps/node/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot ~= "/apps/node" then
+  -- selene: allow(undefined_variable) -- Selene misidentifies chunk-level varargs.
   return bootstrap().run("/apps/node", "export_pairing.lua", _ENV, ...)
 end
 -- Optional command-line fallback; the running remote GUI has EXPORT KEY.
