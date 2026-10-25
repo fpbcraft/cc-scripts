@@ -420,7 +420,7 @@ function R:drawGame(m)
   local g, result = m.game, m.result
   self:page(g.sandbox and "COGWORKS  SANDBOX" or ("COGWORKS  " .. string.format("%02d/%02d", g.number, #E.levels)))
   self:font(77, 5, "MV " .. g.moves, 4)
-  self:button(120, 2, 28, 11, "SAVE", "save")
+  self:button(120, 2, 28, 11, g.sandbox and "CLEAR" or "SAVE", g.sandbox and "clearSandbox" or "save")
   self:button(150, 2, 36, 11, "PAUSE", "pause")
   self:button(188, 2, 11, 11, "?", "help")
   self:rect(3, 16, 109, 94, 1)
@@ -504,7 +504,7 @@ function R:drawGame(m)
   for i, bonus in ipairs(bonuses) do
     local y = 93 + (i - 1) * 5
     local done = awarded[bonus.id] or false
-    local label = bonus.id == "sealed" and "NO OPEN PORTS"
+    local label = bonus.id == "sealed" and "NO IDLE PARTS"
       or (bonus.id == "master" and "ALL STOCK USED" or (bonus.description:match("%d+") or "?") .. " MOVE PAR")
     self:rect(117, y, 4, 4, done and 9 or (bonus.earned and 6 or 3))
     self:fontFit(124, y, label, done and 9 or (bonus.earned and 6 or 5), 70)
@@ -525,6 +525,8 @@ function R:drawGame(m)
       status = "CLEARED! BONUS TASKS ARE OPTIONAL"
     elseif result.jam then
       status = "GEARS JAMMED"
+    elseif g.sandbox then
+      status = "FREE BUILD - NO TARGETS OR PART LIMITS"
     elseif m.hasLeftInput then
       status = "LEFT: PLACE/TURN   RIGHT: REMOVE"
     else
@@ -721,16 +723,27 @@ function R:drawPause(m)
     m.game.sandbox and "SANDBOX / FREE BUILD"
       or (m.devSession and "DEV SESSION / LEVEL " .. m.game.number or "SLOT " .. m.slot .. " / LEVEL " .. m.game.number)
   )
-  local items = {
-    { "RESUME", "resume" },
-    { m.game.sandbox and "CLEAR WORKSHOP" or "SAVE GAME", m.game.sandbox and "clearSandbox" or "save" },
-    { m.game.sandbox and "FREE WORKSHOP" or "SELECT LEVEL", m.game.sandbox and nil or "levels" },
-    { "SETTINGS", "settings" },
-    { "HELP", "help" },
-    { m.game.sandbox and "CLEAR WORKSHOP" or "RESTART LEVEL", m.game.sandbox and "clearSandbox" or "restart" },
-    { m.game.sandbox and "FREE BUILD" or "NEW CAMPAIGN", (m.game.sandbox or m.devSession) and nil or "newGame" },
-    { "TITLE MENU", "title" },
-  }
+  local items
+  if m.game.sandbox then
+    items = {
+      { "RESUME", "resume" },
+      { "CLEAR WORKSHOP", "clearSandbox" },
+      { "SETTINGS", "settings" },
+      { "HELP", "help" },
+      { "TITLE MENU", "title" },
+    }
+  else
+    items = {
+      { "RESUME", "resume" },
+      { "SAVE GAME", "save" },
+      { "SELECT LEVEL", "levels" },
+      { "SETTINGS", "settings" },
+      { "HELP", "help" },
+      { "RESTART LEVEL", "restart" },
+      { "NEW CAMPAIGN", m.devSession and nil or "newGame" },
+      { "TITLE MENU", "title" },
+    }
+  end
   for i, item in ipairs(items) do
     self:button(41, 24 + (i - 1) * 11, 118, 10, item[1], item[2])
   end
@@ -869,7 +882,7 @@ function R:drawText(m)
     local bonuses = E.challenges(g, result)
     local awards = m.progress.awards[g.number] or {}
     for i, bonus in ipairs(bonuses) do
-      local name = bonus.id == "sealed" and "SEAL ALL PORTS"
+      local name = bonus.id == "sealed" and "NO IDLE PARTS"
         or (bonus.id == "master" and "USE ALL STOCK" or "PRECISION MOVES")
       label(
         2,
@@ -893,7 +906,7 @@ function R:drawText(m)
     end
     btn(1, h - 5, 12, "REMOVE", "tool", "erase")
     btn(15, h - 5, 12, "SWITCH", "tool", "switch")
-    btn(1, h - 4, 12, "SAVE", "save")
+    btn(1, h - 4, 12, g.sandbox and "CLEAR" or "SAVE", g.sandbox and "clearSandbox" or "save")
     btn(15, h - 4, 12, "PAUSE", "pause")
     if result.win then
       btn(29, h - 4, 12, "NEXT", "next")
