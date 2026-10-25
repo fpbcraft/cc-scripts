@@ -221,7 +221,7 @@ end
 function R:shaft(x, y, cx, cy, tile, spin)
   local active = spin ~= nil
   local base = active and 13 or 4
-  local phase = active and math.floor(self.frame * math.min(spin.rate, 8) / 2) or 0
+  local phase = active and math.floor(self.frame * math.min(spin.rate, 8) * spin.sign / 2) or 0
   for dir = 0, 3 do
     if E.hasPort(tile, dir) then
       local dx, dy = DX[dir + 1], DY[dir + 1]
