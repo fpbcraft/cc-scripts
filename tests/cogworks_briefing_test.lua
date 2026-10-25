@@ -37,5 +37,5 @@ for number, stage in ipairs(E.levels) do
   end
   assert(stockKinds == #brief.stock, "Only real parts included in brief")
 end
-assert(goals >= #E.levels and #E.levels == 16, "All sixteen new mission briefs ready")
+assert(goals >= #E.levels and #E.levels == 64, "All eight campaign chapters have eight briefs each")
 print("COGWORKS: " .. #E.levels .. " revised mission briefs and " .. goals .. " targets passed.")
