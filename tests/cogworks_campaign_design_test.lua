@@ -17,7 +17,17 @@ for i, stage in ipairs(E.levels) do
   assert(not E.evaluate(current).win, "Stage must start unsolved: " .. i)
   local reference = E.new(i, true)
   local evaluated = E.evaluate(reference)
-  assert(evaluated.win, "Reference failed at stage " .. i .. " (" .. evaluated.correct .. "/" .. evaluated.goals .. ") jam=" .. tostring(evaluated.jam))
+  assert(
+    evaluated.win,
+    "Reference failed at stage "
+      .. i
+      .. " ("
+      .. evaluated.correct
+      .. "/"
+      .. evaluated.goals
+      .. ") jam="
+      .. tostring(evaluated.jam)
+  )
   assert(evaluated.unpowered == 0, "Idle reference machinery at stage " .. i)
   for _, objective in ipairs(E.challenges(reference, evaluated)) do
     assert(objective.earned, "Authored bonus cannot be reached by published reference: " .. i .. " " .. objective.name)
@@ -40,9 +50,13 @@ for i, stage in ipairs(E.levels) do
   end
 end
 local totalTypes = 0
-for _ in pairs(bonusTypes) do totalTypes = totalTypes + 1 end
+for _ in pairs(bonusTypes) do
+  totalTypes = totalTypes + 1
+end
 local totalLayouts = 0
-for _ in pairs(distinct) do totalLayouts = totalLayouts + 1 end
+for _ in pairs(distinct) do
+  totalLayouts = totalLayouts + 1
+end
 assert(totalTypes >= 12, "Campaign should feature a broad catalogue of bonuses")
 assert(totalLayouts >= 55, "Most campaign puzzles must have different actual board geometry")
 assert(fixedStages >= 32, "Fixed machinery appears throughout the campaign")
@@ -66,5 +80,12 @@ assert(C.unlocked(progress, 2) and C.levelUnlocked(progress, 9), "Four main clea
 assert(not C.unlocked(progress, 3))
 assert(C.objectives(progress, 8) == 6)
 assert(C.levelUnlocked(progress, 64, true), "Dev mode can access every stage")
-print("COGWORKS: 64 stage solutions, both authored bonuses, chapter paths and fixture locks verified; "
-  .. totalLayouts .. " distinct board layouts, " .. totalTypes .. " bonus rules, " .. targetCount .. " targets.")
+print(
+  "COGWORKS: 64 stage solutions, both authored bonuses, chapter paths and fixture locks verified; "
+    .. totalLayouts
+    .. " distinct board layouts, "
+    .. totalTypes
+    .. " bonus rules, "
+    .. targetCount
+    .. " targets."
+)
