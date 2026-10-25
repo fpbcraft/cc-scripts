@@ -17,7 +17,7 @@ in the design draft. Keep this list alongside the main roadmap until verified.
 - [x] Expand technology descriptions and add Codex links for unlocked buildings and
   units. Keep the connected research tree on small screens.
 - Increase map preset dimensions further, preserving existing saved worlds.
-- Add Civilization-style conversations with AI factions.
+- [x] Add Civilization-style conversations with AI factions.
 - Wake units automatically for accepted orders. Verify every applicable action.
 - [x] Remove green player/faction colors and preserve visibility on terrain.
 - [x] Add a top-right faction/player details button.

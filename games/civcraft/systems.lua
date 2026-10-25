@@ -2,6 +2,7 @@
 local M = {}
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
+local DiplomaticOffers = dofile("/games/civcraft/diplomatic_offers.lua")
 local AI = dofile("/games/civcraft/ai.lua")
 local Actions = dofile("/games/civcraft/actions.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
@@ -298,6 +299,11 @@ function M.coastal(state, c)
 end
 function M.treasury(p, state)
 	local income, upkeep = 0, 0
+	for _, other in ipairs(state.players or {}) do
+		if other.id ~= p.id and DiplomaticOffers.treaty(state, p.id, other.id, "commerce") then
+			income = income + 2
+		end
+	end
 	for _, city in ipairs(state.cities or {}) do
 		if city.owner == p.id then
 			local effects = Economy.effects(city, state, M)
@@ -622,6 +628,9 @@ function M.autoExplore(state, unit, hex)
 	if not player or not state.world then
 		return false, "No world to explore"
 	end
+	if player.ai and DiplomaticOffers.withdrawing(state, player.id) then
+		return false, "Withdrawal orders take priority over exploration"
+	end
 	unit.autoExplore = true
 	unit.standby = false
 	while (unit.movesLeft or 0) > 0 and not unit.moved do
@@ -837,11 +846,16 @@ function M.production(state, hex)
 	end
 end
 -- AI plays by the same research and production queue rules as humans.
+function M.diplomaticResponses(state, p)
+	AI.respond(state, p, M)
+end
+
 function M.aiTurn(state, p, hex)
 	if not Scheduler.canAct(state, p.id) then
 		return
 	end
 	AI.beginTurn(state, p, M)
+	AI.withdraw(state, p, M)
 	AI.diplomacy(state, p, M)
 	AI.materials(state, p, M)
 	for _, city in ipairs(state.cities) do

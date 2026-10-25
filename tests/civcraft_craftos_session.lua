@@ -6,6 +6,7 @@
 local includeAI, includeSettings, includeResearch, includeCampaign = false, false, false, false
 local includeWar = false
 local includeHost = false
+local includeConversation = false
 for _, argument in ipairs({ ... }) do
 	if argument == "--ai" then
 		includeAI = true
@@ -24,6 +25,9 @@ for _, argument in ipairs({ ... }) do
 	end
 	if argument == "--host-ai" then
 		includeHost, includeAI = true, true
+	end
+	if argument == "--conversation" then
+		includeConversation, includeAI = true, true
 	end
 end
 assert(
@@ -114,6 +118,7 @@ dofile = function(path)
 		local researchStep = 0
 		local campaignStep = 0
 		local warStep, responseStep = 0, 0
+		local conversationStep = 0
 		view.draw = function(self, state, observer, options)
 			draw(self, state, observer, options)
 			renderer = self.r.mode
@@ -204,8 +209,30 @@ dofile = function(path)
 				end
 				return
 			end
+			if
+				includeConversation
+				and stage == 2
+				and not options.handoff
+				and conversationStep < 7
+			then
+				local labels = {
+					"FACTIONS",
+					includeHost and "TALK AI 2" or "TALK PLAYER 3",
+					"GREET",
+					"OFFER COMMERCE",
+					"SEND TRADE",
+					"CLOSE",
+					"CLOSE",
+				}
+				if tap(self, labels[conversationStep + 1]) then
+					conversationStep = conversationStep + 1
+				else
+					tap(self, "NEXT")
+				end
+				return
+			end
 			if includeWar and stage == 5 and not options.handoff and warStep < 3 then
-				local labels = { "FACTIONS", "DECLARE SURPRISE WAR", "CLOSE" }
+				local labels = { "FACTIONS", "SURPRISE WAR: " .. state.players[1].name, "CLOSE" }
 				if tap(self, labels[warStep + 1]) then
 					warStep = warStep + 1
 				else
@@ -358,6 +385,19 @@ if includeAI then
 		"Native game session must execute and persist the third player's economic AI"
 	)
 end
+if includeConversation then
+	local acceptedTrade, commerce = false, false
+	for _, offer in ipairs(state.diplomacy.offers) do
+		acceptedTrade = acceptedTrade or offer.kind == "trade" and offer.status == "accepted"
+	end
+	for _, treaty in ipairs(state.diplomacy.treaties) do
+		commerce = commerce or treaty.kind == "commerce" and treaty.status == "active"
+	end
+	assert(
+		acceptedTrade and commerce,
+		"Native conversations must execute their actual trade and commerce terms"
+	)
+end
 if includeSettings then
 	local preferences = native("/games/civcraft/animation_preferences.lua").load()
 	assert(
@@ -383,6 +423,7 @@ output.write(textutils.serialize({
 	warResponse = includeWar,
 	responseSaved = responseSaved,
 	hostModeAI = includeHost,
+	conversationFlow = includeConversation,
 }))
 output.close()
 print(

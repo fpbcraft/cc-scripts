@@ -109,6 +109,7 @@ end
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
+local DiplomaticPerception = dofile("/games/civcraft/diplomatic_perception.lua")
 local pumpActors = function() end
 local W, H = Hex.width, Hex.height
 local state
@@ -284,6 +285,7 @@ local function nextTurn()
 		u.moved = base.hostile == true or u.villageGuard ~= nil
 	end
 	World.reveal(state, Hex, Systems)
+	DiplomaticPerception.promises(state, Hex, World, Systems.units)
 	for _, unit in ipairs(state.units) do
 		if unit.autoExplore and not unit.standby and Scheduler.canAct(state, unit.owner) then
 			unit.autoExploreRound = state.round
@@ -318,6 +320,9 @@ pumpActors = function()
 	for _ = 1, #state.players do
 		local ranAI = false
 		for _, participant in ipairs(state.players) do
+			if participant.ai then
+				Systems.diplomaticResponses(state, participant)
+			end
 			if Scheduler.canAct(state, participant.id) then
 				for _, unit in ipairs(state.units) do
 					if
@@ -419,6 +424,14 @@ local function apply(id, req)
 	if state.phase ~= "game" then
 		return false, "Game not running"
 	end
+	if req.action == "diplomaticReply" or req.action == "diplomaticCounter" then
+		local ok, why = Actions.apply(state, id, req, Systems)
+		if ok then
+			pumpActors()
+			save()
+		end
+		return ok, why
+	end
 	local eligible, waiting = Scheduler.canAct(state, id)
 	if not eligible then
 		return false, waiting
@@ -448,6 +461,9 @@ local function apply(id, req)
 	end
 	local ok, why = Actions.apply(state, id, req, Systems)
 	if ok then
+		if req.action == "diplomaticOffer" then
+			pumpActors()
+		end
 		if state.ruleset ~= "create" then
 			winner()
 		end

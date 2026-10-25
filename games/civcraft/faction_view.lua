@@ -28,6 +28,30 @@ function Factions.draw(ui, state, observer, rect)
 		if state.diplomacy then
 			text("REPUTATION: " .. ((state.diplomacy.reputation or {})[player.id] or 0))
 			if not own then
+				local pending = 0
+				for _, offer in ipairs(state.diplomacy.offers or {}) do
+					if
+						offer.from == player.id
+						and offer.to == observer.id
+						and offer.status == "pending"
+					then
+						pending = pending + 1
+					end
+				end
+				if pending > 0 then
+					text("PENDING DIPLOMATIC CHOICES: " .. pending, 9)
+				end
+				rows[#rows + 1] = {
+					buttons = {
+						{
+							label = "TALK " .. player.name,
+							run = function()
+								ui.conversationTarget, ui.conversationOffset, ui.panel =
+									player.id, 0, "conversation"
+							end,
+						},
+					},
+				}
 				local war = Diplomacy.war(state, observer.id, player.id)
 				text(
 					war and (war.active and "AT WAR" or "WAR STARTS ROUND " .. war.activatesRound)
@@ -37,7 +61,7 @@ function Factions.draw(ui, state, observer, rect)
 					rows[#rows + 1] = {
 						buttons = {
 							{
-								label = "ANNOUNCE WAR",
+								label = "ANNOUNCE WAR: " .. player.name,
 								run = function()
 									ui:command(
 										"declareWar",
@@ -54,7 +78,7 @@ function Factions.draw(ui, state, observer, rect)
 					rows[#rows + 1] = {
 						buttons = {
 							{
-								label = "DECLARE SURPRISE WAR",
+								label = "SURPRISE WAR: " .. player.name,
 								run = function()
 									ui:command(
 										"declareWar",

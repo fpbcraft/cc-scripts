@@ -357,7 +357,10 @@ function UI:draw(state, playerID, opts)
 	end
 	-- Never carry a previous hotseat player's selection or movement overlay
 	-- into the next player's screen (including the concealed handoff).
-	if self.lastPlayer ~= nil and self.lastPlayer ~= playerID then
+	if
+		self.lastPlayer ~= nil and self.lastPlayer ~= playerID
+		or self.lastCampaign ~= nil and self.lastCampaign ~= (state and state.campaignID)
+	then
 		self.source = nil
 		self.reachable = {}
 		self.pendingMove = nil
@@ -369,6 +372,10 @@ function UI:draw(state, playerID, opts)
 		self.placement = nil
 		self.actionPage = 1
 		self.techModel = nil
+		self.conversationTarget = nil
+		self.conversationOffset = 0
+		self.trade = nil
+		self.factionOffset = 0
 		self.workCity = nil
 		self.worldReady = false
 		self.panX = 0
@@ -386,6 +393,7 @@ function UI:draw(state, playerID, opts)
 		end
 	end
 	self.lastPlayer = playerID
+	self.lastCampaign = state and state.campaignID
 	if self.selected.kind == "unit" and self.selected.unitID then
 		for _, u in ipairs(state.units or {}) do
 			if u.id == self.selected.unitID and u.owner == playerID then

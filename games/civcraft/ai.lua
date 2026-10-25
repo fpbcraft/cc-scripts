@@ -1,6 +1,8 @@
 -- Plan from detached observer knowledge; execute through the shared action rules.
 local Actions = dofile("/games/civcraft/actions.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
+local DiplomaticAI = dofile("/games/civcraft/diplomatic_ai.lua")
+local DiplomaticOffers = dofile("/games/civcraft/diplomatic_offers.lua")
 local Campaigns = dofile("/games/civcraft/ai_campaigns.lua")
 local CityRoles = dofile("/games/civcraft/ai_city_roles.lua")
 local Infrastructure = dofile("/games/civcraft/ai_infrastructure.lua")
@@ -61,7 +63,7 @@ function A.military(state, player, unit, systems)
 		for _, choice in ipairs(Tactics.ranked(view, player, unit, systems)) do
 			local request = choice.request
 			key = request.action .. ":" .. request.x .. ":" .. request.y
-			if not failed[key] then
+			if not failed[key] and DiplomaticAI.allows(view, player, unit, request) then
 				selected = choice
 				break
 			end
@@ -193,6 +195,9 @@ function A.settle(state, player, unit, systems)
 		if not request then
 			break
 		end
+		if not DiplomaticAI.allows(view, player, unit, request) then
+			break
+		end
 		local ok = Actions.apply(state, player.id, request, systems)
 		if not ok then
 			break
@@ -221,6 +226,9 @@ function A.engineer(state, player, unit, systems)
 		local request, plan = Infrastructure.order(view, player, unit, systems)
 		unit.aiRail = plan
 		if not request then
+			break
+		end
+		if not DiplomaticAI.allows(view, player, unit, request) then
 			break
 		end
 		if not Actions.apply(state, player.id, request, systems) then
@@ -274,6 +282,46 @@ function A.diplomacy(state, p, systems)
 			if Villages.independent(city) and Villages.discovered(p, city) then
 				Actions.apply(state, p.id, { action = "envoy", x = city.x, y = city.y }, systems)
 			end
+		end
+	end
+end
+
+function A.withdraw(state, player, systems)
+	if not DiplomaticOffers.withdrawing(state, player.id) then
+		return
+	end
+	for _, unit in ipairs(state.units) do
+		if unit.owner == player.id then
+			for _ = 1, 3 do
+				local order =
+					DiplomaticAI.pullbackOrder(A.knowledge(state, player), player, unit, systems)
+				if not order or not Actions.apply(state, player.id, order, systems) then
+					break
+				end
+			end
+		end
+	end
+end
+
+function A.respond(state, player, systems)
+	if not state.diplomacy then
+		return
+	end
+	local view = A.knowledge(state, player)
+	for _, offer in ipairs(view.diplomacy.offers or {}) do
+		if
+			offer.to == player.id
+			and offer.status == "pending"
+			and offer.expiresRound > state.round
+		then
+			local response, reason =
+				DiplomaticAI.evaluate(A.knowledge(state, player), player, offer, systems)
+			Actions.apply(state, player.id, {
+				action = "diplomaticReply",
+				offerID = offer.id,
+				response = response,
+				reason = reason,
+			}, systems)
 		end
 	end
 end

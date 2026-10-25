@@ -2,6 +2,7 @@
 local CombatStrength = dofile("/games/civcraft/combat_strength.lua")
 local Events = dofile("/games/civcraft/events.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
+local Perception = dofile("/games/civcraft/diplomatic_perception.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local UnitMovement = dofile("/games/civcraft/unit_movement.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
@@ -284,6 +285,7 @@ function C.attack(state, unit, target, systems)
 		if defender.hp <= 0 then
 			if (systems.units[defender.kind] or {}).hostile and not stats.hostile then
 				Villages.defended(state, unit.owner, defender.x, defender.y)
+				Perception.protection(state, unit.owner, defender.x, defender.y, Hex)
 			end
 			remove(state, defender)
 			C.experience(unit, 5)

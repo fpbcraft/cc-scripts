@@ -1,5 +1,6 @@
 local Empire = dofile("/games/civcraft/empire_menu.lua")
 local Codex = dofile("/games/civcraft/encyclopedia.lua")
+local Conversation = dofile("/games/civcraft/conversation_view.lua")
 local EventFeed = dofile("/games/civcraft/event_feed.lua")
 local Danger = dofile("/games/civcraft/danger_view.lua")
 local HUD = dofile("/games/civcraft/hud.lua")
@@ -361,6 +362,9 @@ function G.draw(ui, state, player)
 		end, { primary = true })
 		r:icon("endTurn", v.x + 17, v.y + 3, 1)
 		r.buttons[#r.buttons].label = "CONFIRM"
+	elseif ui.panel == "conversation" then
+		modal(ui, rect)
+		Conversation.draw(ui, state, player, rect)
 	elseif ui.panel == "factions" then
 		modal(ui, rect)
 		Factions.draw(ui, state, player, rect)

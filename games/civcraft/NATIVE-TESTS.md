@@ -76,3 +76,12 @@ through the network lobby, complete the host/AI round, save and exit.
 and `--campaign`, but not `--war` (which requires the two-human scenario).
 This tests the actual host code without a modem; it does not establish live
 rednet transport or multi-client reconnect behavior.
+
+Add `--conversation` to either AI session to open the AI faction's conversation,
+greet it, offer commerce and send gold through real mouse input. The host must
+execute the AI replies and actual agreement/exchange effects; `conversationFlow`
+confirms that the accepted exchange and active commerce survive save reload.
+This combines with the hotseat `--war` response/save scenario. Run
+`/tests/civcraft_diplomacy_test.lua` separately for offer ownership, atomic
+funding, defense choices, armistices, counters, obligations, observation privacy,
+promise movement and expiry scenarios.

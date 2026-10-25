@@ -2,6 +2,8 @@
 -- Session orchestration (lobby, save, end turn) belongs to game.lua.
 local Combat = dofile("/games/civcraft/combat.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
+local Offers = dofile("/games/civcraft/diplomatic_offers.lua")
+local Perception = dofile("/games/civcraft/diplomatic_perception.lua")
 local Events = dofile("/games/civcraft/events.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local Hostiles = dofile("/games/civcraft/hostiles.lua")
@@ -43,7 +45,7 @@ function A.apply(state, id, req, Systems)
 		return false, reason
 	end
 	local eligible, waiting = Scheduler.canAct(state, id)
-	if not eligible then
+	if not eligible and req.action ~= "diplomaticReply" and req.action ~= "diplomaticCounter" then
 		return false, waiting
 	end
 	local function at(list, x, y)
@@ -69,7 +71,70 @@ function A.apply(state, id, req, Systems)
 			table.remove(state.logs)
 		end
 	end
-	if req.action == "declareWar" then
+	if req.action == "diplomaticOffer" then
+		local ok, why, offer = Offers.propose(state, id, req, Systems, Diplomacy)
+		if ok then
+			Events.notice(state, "order", nil, "Offered " .. Offers.label(offer.kind), id)
+			Events.notice(
+				state,
+				"order",
+				nil,
+				(p.name or tostring(id)) .. " offered " .. Offers.label(offer.kind),
+				offer.to
+			)
+		end
+		return ok, why
+	elseif req.action == "diplomaticReply" then
+		local offer = Offers.find(state, req.offerID)
+		local ok, why = Offers.respond(state, id, req, Systems, Diplomacy)
+		if ok then
+			Events.notice(state, "order", nil, why, id)
+			Events.notice(state, "order", nil, (p.name or tostring(id)) .. ": " .. why, offer.from)
+		end
+		return ok, why
+	elseif req.action == "diplomaticCounter" then
+		local ok, why, offer = Offers.counter(state, id, req, Systems, Diplomacy)
+		if ok then
+			Events.notice(state, "order", nil, "Counteroffer sent", id)
+			Events.notice(
+				state,
+				"order",
+				nil,
+				"Counteroffer received from " .. (p.name or tostring(id)),
+				offer.to
+			)
+		end
+		return ok, why
+	elseif req.action == "diplomaticTalk" then
+		if not state.diplomacy then
+			return false, "Diplomacy is unavailable"
+		end
+		local ok, why = Diplomacy.talk(state, id, req.target, req.topic)
+		if ok then
+			for _, observer in ipairs(state.players) do
+				if req.topic == "denounce" or observer.id == id or observer.id == req.target then
+					Events.notice(
+						state,
+						"order",
+						nil,
+						(p.name or tostring(id)) .. ": " .. why,
+						observer.id
+					)
+				end
+			end
+		end
+		return ok, why
+	elseif req.action == "cancelTreaty" then
+		if not state.diplomacy then
+			return false, "Diplomacy is unavailable"
+		end
+		local ok, why, other = Diplomacy.cancelTreaty(state, id, req.treatyID)
+		if ok then
+			Events.notice(state, "order", nil, why, id)
+			Events.notice(state, "order", nil, why, other)
+		end
+		return ok, why
+	elseif req.action == "declareWar" then
 		local ok, why = Diplomacy.declare(state, id, req.target, req.kind)
 		if ok then
 			log((p.name or tostring(id)) .. ": " .. why)
@@ -318,6 +383,7 @@ function A.apply(state, id, req, Systems)
 		World.ensureTerritories(state, Hex, false)
 		log(p.name .. " founded " .. founded.name)
 		Events.notice(state, "found", founded)
+		Perception.settlement(state, founded, Hex)
 	else
 		return false, "Unknown action"
 	end

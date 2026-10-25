@@ -3,6 +3,8 @@
 	Presentation consumes the frozen event; it never drives simulation positions.
 ]]
 local Events = dofile("/games/civcraft/events.lua")
+local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
+local Perception = dofile("/games/civcraft/diplomatic_perception.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local World = dofile("/games/civcraft/world.lua")
 local UnitMovement = {}
@@ -24,6 +26,7 @@ function UnitMovement.walk(state, unit, path, systems, lastPoint)
 		unit.x, unit.y = position.x, position.y
 		unit.actedThisRound = true
 		World.reveal(state, Hex, systems, notices)
+		Perception.move(state, unit, Hex, World, Diplomacy)
 		Events.step(event, state, unit)
 	end
 	Events.emit(state, event)
