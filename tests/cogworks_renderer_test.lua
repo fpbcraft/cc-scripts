@@ -16,8 +16,8 @@ colors = {
   red = 16384,
   brown = 4096,
 }
-local game = E.new(30, true)
-local progress = { awards = {}, unlocked = 30 }
+local game = E.new(#E.levels, true)
+local progress = { awards = {}, unlocked = #E.levels }
 local model = {
   scene = "title",
   game = game,
@@ -92,6 +92,7 @@ click("cell", 1)
 click("pause")
 click("save")
 click("tool", "D")
+click("tool", "switch")
 click("tool", "erase")
 for _, target in ipairs(r.targets) do
   assert(target.arg ~= "C" and target.arg ~= "switch", "Clutch control removed")
@@ -106,7 +107,7 @@ click("title")
 model.scene = "levels"
 r:draw(model)
 click("level", 1)
-click("level", 30)
+click("level", #E.levels)
 click("back")
 model.scene = "settings"
 r:draw(model)
@@ -121,18 +122,18 @@ model.pending = "newGame"
 r:draw(model)
 click("confirm")
 click("cancel")
--- Draw the level-six belt: its physical span should cross the stone gap.
+-- Draw the belt between parallel pulleys on the new stage eleven.
 local spanCount = 0
 local originalSpan = r.drawSpan
 function r:drawSpan(...)
   spanCount = spanCount + 1
   return originalSpan(self, ...)
 end
-model.game = E.new(6, true)
+model.game = E.new(11, true)
 model.result = E.evaluate(model.game)
 model.scene = "game"
 r:draw(model)
-assert(spanCount > 0, "Gap-spanning belts must be rendered")
+assert(spanCount > 0, "Clear-span belt links must be rendered")
 model.scene = "tutorial"
 model.tutorial = {
   steps = { { key = "V", title = "BELT TRANSMISSION", lines = { "PAIR TWO BELTS", "POWER TRAVELS ACROSS GAPS" } } },
@@ -153,7 +154,7 @@ function r:fontLarge(...)
   return large(self, ...)
 end
 model.scene = "briefing"
-model.briefing = B.forLevel(6)
+model.briefing = B.forLevel(11)
 model.settings.animations = true
 r:draw(model)
 assert(largeTitles == 0, "Briefing title animates into view")
@@ -165,7 +166,7 @@ click("beginLevel")
 for _, target in ipairs(r.targets) do
   assert(target.action ~= "cell", "Intro blocks interaction with the level grid")
 end
-model.briefing = B.forLevel(23)
+model.briefing = B.forLevel(#E.levels)
 model.settings.animations = false
 local count = largeTitles
 r:draw(model)
@@ -183,6 +184,22 @@ for index, level in ipairs(E.levels) do
   model.settings.animations = false
   r:draw(model)
 end
+-- Sandbox shows unlimited stock and the redstone switch tool in graphics mode.
+model.game = E.sandbox()
+model.result = E.evaluate(model.game)
+model.progress = { awards = {}, unlocked = 1 }
+model.scene = "game"
+r:draw(model)
+click("tool", "switch")
+model.scene = "title"
+model.dev = true
+r:draw(model)
+click("devLevels")
+model.scene = "levels"
+model.game = nil
+model.devSession = true
+r:draw(model)
+click("level", #E.levels)
 local long = r:wrapBriefingTip("BUILD EVERY CONNECTION; UNUSED PORTS LEAK POWER.")
 assert(#long == 2, "Long instruction must wrap instead of truncating")
 model.settings.animations = true
