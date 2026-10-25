@@ -83,6 +83,14 @@ local reloaded = S.load(1)
 assert(reloaded.level == 2 and reloaded.unlocked == 8 and reloaded.best[2] == 12)
 assert(reloaded.tutorials.G, "New Ponder progress persists")
 assert(S.save(2, S.newProgress()) and S.save(3, S.newProgress()), "Independent slots")
+local older = { campaignVersion = 5, level = 47, best = { [47] = 5 }, awards = {} }
+local previousBytes = textutils.serialize(older)
+files[S.path(3)] = previousBytes
+local migrated = S.load(3)
+assert(migrated.level == 1 and next(migrated.best) == nil, "Old placeholder campaign is not treated as new puzzles")
+assert(S.save(3, migrated), "Write the new campaign save")
+assert(files[S.path(3) .. ".campaign-v5"] == previousBytes, "The previous campaign save is permanently archived")
+assert(S.load(3).campaignVersion == 6, "Migrate to chapter-based save format")
 local settings = S.loadSettings()
 assert(settings.animations and settings.showPorts)
 settings.animations = false
