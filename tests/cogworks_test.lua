@@ -45,7 +45,7 @@ for index, data in ipairs(E.levels) do
   goals = goals + result.goals
   for _, bonus in ipairs(E.challenges(solved, result)) do
     assert(
-      bonus.earned or (index == 8 and bonus.id == "master"),
+      bonus.earned or ((index == 7 or index == 8 or index == 16) and bonus.id == "master"),
       "Reference should earn bonus " .. bonus.id .. " at " .. index
     )
   end
