@@ -292,7 +292,8 @@ function E.wireConnections(g, tile)
   local connected = {}
   for dir, vector in ipairs(vectors) do
     local other = E.get(g, tile.x + vector[1], tile.y + vector[2])
-    connected[dir] = other and (other.kind == "R" or other.kind == "B" or other.kind == "C" or other.kind == "Z") or false
+    connected[dir] = other and (other.kind == "R" or other.kind == "B" or other.kind == "C" or other.kind == "Z")
+      or false
   end
   return connected
 end
@@ -356,6 +357,15 @@ function E.restore(g, list)
     return false
   end
   local trial = g.sandbox and E.sandbox(g.width, g.height) or E.new(g.number)
+  -- Nonfixed level-start redstone (e.g. the clutch lesson's powered block)
+  -- is part of the save snapshot. Clear it before restoring the snapshot,
+  -- or the snapshot would conflict with that starting fixture.
+  for i = #trial.tiles, 1, -1 do
+    local tile = trial.tiles[i]
+    if not tile.fixed then
+      E.remove(trial, tile.x, tile.y)
+    end
+  end
   for _, v in ipairs(list) do
     if
       type(v) ~= "table"
