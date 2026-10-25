@@ -1104,19 +1104,20 @@ function R:drawHelp(m)
     "V: CLEAR-SPAN BELT",
     "Z: GEARSHIFT REVERSE",
     "C: CLUTCH CUT-OFF",
-    "SWITCH: REDSTONE ON",
+    "R: CENTERED REDSTONE DUST",
+    "B: POWER BLOCK",
   }
   local right = {
     "CW = CLOCKWISE",
     "CCW = COUNTERCW",
     "GOAL: MATCH SPIN + RPM",
     "TAP EMPTY TO BUILD",
-    "TAP A PART TO ROTATE",
+    "TAP PART: CORNER CONTROLS",
     "REMOVE TO RECLAIM",
     "COGS MESH PERPENDICULAR",
     "LARGE + SMALL = 2X",
     "BELTS NEED CLEAR SPACE",
-    "REDSTONE TOGGLE TOOL",
+    "REDSTONE POWERS SHIFT/CLUTCH",
     "BONUSES ARE OPTIONAL",
     "AUTO SAVES PER SLOT",
   }
@@ -1156,10 +1157,11 @@ function R:drawText(m)
     local g = m.game
     local result = m.result
     local x0, y0 = 2, 3
-    for y = 1, E.HEIGHT do
-      for x = 1, E.WIDTH do
+    local columnWidth = math.min(6, math.max(4, math.floor((w - 2) / g.width)))
+    for y = 1, g.height do
+      for x = 1, g.width do
         local p = E.get(g, x, y)
-        local px = x0 + (x - 1) * 6
+        local px = x0 + (x - 1) * columnWidth
         local py = y0 + (y - 1) * 3
         local color = p
             and (p.kind == "M" and colors.blue or (p.kind == "S" and colors.green or (p.kind == "X" and colors.brown or colors.gray)))
@@ -1173,30 +1175,32 @@ function R:drawText(m)
         local motion = p and motionFor(p, result.lights[p.id])
         local readout = motion and ((motion.sign > 0 and ">" or "<") .. (speedLabel(motion.rate) or "?")) or ""
         local readoutColor = motion and (motion.sign > 0 and colors.lightBlue or colors.orange) or fg
-        label(px, py, slots[1] and "  ^  " or "     ", fg, color, 5)
-        label(px, py + 1, (slots[4] and "<" or " ") .. " " .. labelText .. (slots[2] and ">" or " "), fg, color, 5)
-        label(px, py + 2, (readout .. "    "):sub(1, 4) .. (slots[3] and "v" or " "), readoutColor, color, 5)
-        self:add(px, py, 5, 3, "cell", x, y)
+        label(px, py, slots[1] and "  ^  " or "     ", fg, color, columnWidth - 1)
+        label(px, py + 1, (slots[4] and "<" or " ") .. " " .. labelText .. (slots[2] and ">" or " "), fg, color, columnWidth - 1)
+        label(px, py + 2, (readout .. "    "):sub(1, 4) .. (slots[3] and "v" or " "), readoutColor, color, columnWidth - 1)
+        self:add(px, py, columnWidth - 1, 3, "cell", x, y)
       end
     end
     label(
       2,
-      22,
-      g.sandbox and ("SANDBOX / FREE BUILD  MV " .. g.moves)
+      g.height > 6 and 2 or 22,
+      g.sandbox and ("SANDBOX " .. g.width .. "X" .. g.height .. " MV " .. g.moves)
         or ("GOALS " .. result.correct .. "/" .. result.goals .. " CW=+ CCW=- MV " .. g.moves),
       colors.lightBlue
     )
-    local bonuses = E.challenges(g, result)
-    local awards = m.progress.awards[g.number] or {}
-    for i, bonus in ipairs(bonuses) do
-      local name = bonus.id == "sealed" and "NO IDLE PARTS"
-        or (bonus.id == "master" and "USE ALL STOCK" or "PRECISION MOVES")
-      label(
-        2,
-        22 + i,
-        (awards[bonus.id] and "[X] " or "[ ] ") .. name,
-        awards[bonus.id] and colors.lime or colors.white
-      )
+    if g.height <= 6 then
+      local bonuses = E.challenges(g, result)
+      local awards = m.progress.awards[g.number] or {}
+      for i, bonus in ipairs(bonuses) do
+        local name = bonus.id == "sealed" and "NO IDLE PARTS"
+          or (bonus.id == "master" and "USE ALL STOCK" or "PRECISION MOVES")
+        label(
+          2,
+          22 + i,
+          (awards[bonus.id] and "[X] " or "[ ] ") .. name,
+          awards[bonus.id] and colors.lime or colors.white
+        )
+      end
     end
     local size = math.floor(w / 5)
     for i, kind in ipairs(E.order) do
@@ -1212,7 +1216,8 @@ function R:drawText(m)
       )
     end
     btn(1, h - 5, 12, "REMOVE", "tool", "erase")
-    btn(15, h - 5, 12, "SWITCH", "tool", "switch")
+    btn(15, h - 5, 12, g.sandbox and ("SIZE " .. g.width) or "ROTATE", g.sandbox and "sandboxSize" or nil,
+      g.sandbox and (5 + g.width % 6) or nil)
     btn(1, h - 4, 12, g.sandbox and "CLEAR" or "SAVE", g.sandbox and "clearSandbox" or "save")
     btn(15, h - 4, 12, "PAUSE", "pause")
     if result.win then
