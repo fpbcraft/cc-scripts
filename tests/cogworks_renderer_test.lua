@@ -84,8 +84,23 @@ assert(E.place(wheel, 2, 3, "O", 1))
 assert(E.place(wheel, 2, 4, "G", 1))
 local wheelInfo = E.evaluate(wheel)
 local cog = E.get(wheel, 2, 4)
+r.frame = 0
+r.buffer = {}
 r:piece(20, 20, 13, cog, wheelInfo.lights[cog.id])
-assert(r.buffer[27] and r.buffer[27][21] == 14, "Powered opposite-spin cog shows unobtrusive amber edge")
+assert(r.buffer[27] and r.buffer[27][31] == 14, "Powered CCW cog has a moving amber rim marker")
+r.frame = 1
+r.buffer = {}
+r:piece(20, 20, 13, cog, wheelInfo.lights[cog.id])
+assert(r.buffer[27][31] ~= 14, "CCW rim marker moves between successive frames")
+local pixels = 0
+for _, row in pairs(r.buffer) do
+  for _, ink in pairs(row) do
+    if ink == 14 then
+      pixels = pixels + 1
+    end
+  end
+end
+assert(pixels > 0, "Rotation marker remains visible after stepping to next frame")
 local twoPositions = {}
 local previousLine = r.line
 function r:line(x1, y1, x2, y2, color)
@@ -151,6 +166,29 @@ click("slot", 2)
 model.scene = "game"
 r:draw(model)
 assert(#r.targets >= game.width * game.height + 12, "Game includes all variable-size board cells")
+-- Selecting a board piece draws a complete outline with small action glyphs
+-- and keeps rotate/remove hitboxes above the underlying grid hit target.
+model.game = E.sandbox(5, 5)
+assert(E.place(model.game, 3, 3, "G", 1))
+model.result = E.evaluate(model.game)
+model.inspected = { x = 3, y = 3 }
+r:draw(model)
+click("rotate", 3)
+click("remove", 3)
+local selectedPx = r.boardX + (model.inspected.x - 1) * r.cell
+local selectedPy = r.boardY + (model.inspected.y - 1) * r.cell
+assert(r.buffer[selectedPy + 1][selectedPx + 1] == 11, "Selected part shows cyan outline around its cell")
+model.inspected = nil
+model.selected = "G"
+r:draw(model)
+local foundActive = false
+for _, target in ipairs(r.targets) do
+  if target.action == "tool" and target.arg == "G" then
+    assert(r.buffer[target.y + 1][target.x + 1] == 6, "Selected palette part has bright border")
+    foundActive = true
+  end
+end
+assert(foundActive, "Selected gear appears in palette")
 click("cell", 1)
 click("pause")
 click("save")
