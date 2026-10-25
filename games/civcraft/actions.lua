@@ -263,6 +263,10 @@ function A.apply(state, id, req, Systems)
 		if c then
 			return false, "Tile has a city"
 		end
+		local claim = World.territoryCity(state, Hex, x, y)
+		if claim and claim.owner ~= id then
+			return false, "Cannot found in another civilization's territory"
+		end
 		if ((state.world or {}).landmarks or {})[x .. ":" .. y] then
 			return false, "Cannot settle on a landmark"
 		end

@@ -3,6 +3,7 @@
 	overwritten. Rendering and input handling are real. The UI is instrumented to enqueue and
 	acknowledge mouse events at actual button coordinates.
 ]]
+local includeAI = ... == "--ai"
 local native = dofile
 local stage = 0
 local renderer
@@ -72,10 +73,18 @@ dofile = function(path)
 			return (table.unpack or unpack)(event, 1, event.n)
 		end
 		local draw = view.draw
+		local aiConfigured = false
 		view.draw = function(self, state, observer, options)
 			draw(self, state, observer, options)
 			renderer = self.r.mode
 			if queued then
+				return
+			end
+			if includeAI and not aiConfigured and stage == 1 and state.phase == "lobby" then
+				self:command("addPlayer")
+				self:command("toggleAI", { player = 3 })
+				aiConfigured = true
+				os.queueEvent("term_resize")
 				return
 			end
 			if self.panel == "recap" and not options.handoff then
@@ -152,6 +161,12 @@ assert(success, reason)
 assert(completed and stage == 11, "Session did not traverse both players and return to round two")
 local state = native("/games/civcraft/saves.lua").load(1)
 assert(state and state.round == 2 and state.activeIndex == 1 and state.campaignID)
+if includeAI then
+	assert(
+		state.players[3].ai and state.players[3].aiPlan and state.players[3].aiPlan.version == 1,
+		"Native game session must execute and persist the third player's economic AI"
+	)
+end
 local Events = native("/games/civcraft/events.lua")
 assert(Events.forPlayer(state, state.players[1].id).lastSeq > 0)
 assert(Events.forPlayer(state, state.players[2].id).lastSeq > 0)
@@ -162,6 +177,7 @@ output.write(textutils.serialize({
 	stages = stage,
 	round = state.round,
 	saveReload = true,
+	aiPlanReload = includeAI,
 }))
 output.close()
 print(

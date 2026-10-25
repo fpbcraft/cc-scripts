@@ -820,17 +820,23 @@ function M.aiTurn(state, p, hex)
 	if p.ready then
 		return
 	end
-	AI.beginTurn(state, p)
+	AI.beginTurn(state, p, M)
 	AI.diplomacy(state, p, M)
+	AI.materials(state, p, M)
+	for _, city in ipairs(state.cities) do
+		if city.owner == p.id then
+			AI.staff(state, p, city, M)
+		end
+	end
 	if not p.researchTarget then
-		local id = AI.research(p, M)
+		local id = AI.research(p, M, AI.knowledge(state, p))
 		if id then
 			Actions.apply(state, p.id, { action = "researchTech", id = id }, M)
 		end
 	end
 	for _, city in ipairs(state.cities) do
 		if city.owner == p.id then
-			for _, enemy in ipairs(state.units) do
+			for _, enemy in ipairs(AI.knowledge(state, p).units) do
 				if
 					enemy.owner ~= p.id
 					and Actions.apply(state, p.id, {
@@ -844,17 +850,7 @@ function M.aiTurn(state, p, hex)
 					break
 				end
 			end
-			if not city.project and not city.productionIdle then
-				AI.choose(state, p, city, M)
-			end
-			if city.jobs.food > 1 and city.jobs.science < 2 then
-				Actions.apply(
-					state,
-					p.id,
-					{ action = "assign", x = city.x, y = city.y, from = "food", to = "science" },
-					M
-				)
-			end
+			AI.choose(state, p, city, M)
 		end
 	end
 	-- Move one unit a turn; settlers expand, warriors approach other empires.
@@ -875,11 +871,17 @@ function M.aiTurn(state, p, hex)
 			if engineer then
 				AI.engineer(state, p, u, M)
 			end
-			local choices = not engineer and hex.reachable(state, u, p.id, M) or {}
+			local settler = u.kind == "settler"
+			if settler then
+				AI.settle(state, p, u, M)
+			end
+			local observed = AI.knowledge(state, p)
+			local choices = not engineer and not settler and hex.reachable(observed, u, p.id, M)
+				or {}
 			for index = #choices, 1, -1 do
 				if choices[index].attack then
 					local neutral = false
-					for _, c in ipairs(state.cities) do
+					for _, c in ipairs(observed.cities) do
 						if
 							c.village
 							and c.owner == c.villageOwner
@@ -889,7 +891,7 @@ function M.aiTurn(state, p, hex)
 							neutral = true
 						end
 					end
-					for _, v in ipairs(state.units) do
+					for _, v in ipairs(observed.units) do
 						if
 							v.villageGuard
 							and v.owner < 0
@@ -904,37 +906,9 @@ function M.aiTurn(state, p, hex)
 					end
 				end
 			end
-			if u.kind == "settler" then
-				local canFound = true
-				for _, c in ipairs(state.cities) do
-					if hex.distance(c.x, c.y, u.x, u.y) < 3 then
-						canFound = false
-					end
-				end
-				local nearest = 100
-				for _, c in ipairs(state.cities) do
-					if c.owner == p.id then
-						nearest = math.min(nearest, hex.distance(c.x, c.y, u.x, u.y))
-					end
-				end
-				if (state.world.landmarks or {})[u.x .. ":" .. u.y] then
-					canFound = false
-				end
-				for _, camp in ipairs(state.spawners or {}) do
-					if not camp.cleared and camp.x == u.x and camp.y == u.y then
-						canFound = false
-					end
-				end
-				if canFound and nearest <= 5 then
-					local ok = Actions.apply(state, p.id, { action = "found", x = u.x, y = u.y }, M)
-					if ok then
-						u.consumed = true
-					end
-				end
-			end
 			if not u.consumed and #choices > 0 then
 				local target
-				for _, c in ipairs(state.cities) do
+				for _, c in ipairs(observed.cities) do
 					if
 						c.owner ~= p.id
 						and (
@@ -947,32 +921,6 @@ function M.aiTurn(state, p, hex)
 					end
 				end
 				table.sort(choices, function(a, b)
-					if u.kind == "settler" then
-						local function settlementScore(tile)
-							local terrain = hex.terrain(tile.x, tile.y, state)
-							if
-								terrain == "water"
-								or terrain == "mountain"
-								or (state.world.landmarks or {})[tile.x .. ":" .. tile.y]
-							then
-								return -1000
-							end
-							local closest, home = 100, 100
-							for _, c in ipairs(state.cities) do
-								local d = hex.distance(tile.x, tile.y, c.x, c.y)
-								closest = math.min(closest, d)
-								if c.owner == p.id then
-									home = math.min(home, d)
-								end
-							end
-							return closest >= 3 and home <= 5 and 100 - home or closest * 2 - home
-						end
-						local aa, bb = settlementScore(a), settlementScore(b)
-						if aa ~= bb then
-							return aa > bb
-						end
-						return a.y == b.y and a.x < b.x or a.y < b.y
-					end
 					if not target then
 						return a.x + a.y > b.x + b.y
 					end

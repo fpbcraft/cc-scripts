@@ -40,3 +40,9 @@ The separate regression suite covers graphics primitives and text/graphics
 layout with fake displays. GUI pixel animation, physical advanced-monitor input,
 network modem traffic and multi-client reconnects still need their own tests;
 headless success does not establish those behaviors.
+
+For the economic AI scenarios, run `/tests/civcraft_economic_ai_test.lua` inside
+the isolated computer. Run `/tests/civcraft_craftos_session.lua --ai` to configure
+a third AI through the session commands and execute its real turn alongside the
+two human turns. Its session result also verifies AI-plan reload. This variant
+still overwrites only the isolated profile's save slot 1.

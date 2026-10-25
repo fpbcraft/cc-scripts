@@ -65,16 +65,22 @@ Automatic onscreen playback is a provisional default pending the user's answer; 
 
 All 56 repository regression scripts passed, including the recap. Tests cover a five-hex timeline, fog gaps, ranged/melee phases, HP/fade timing, stale duplicate ingestion, queue bounds, age, skips and detached nested data. Text/graphics UI checks cover automatic playback, one rendered sprite, feed controls, reduced motion and private recaps without reconstructing concealed paths. Four native CraftOS-PC checks passed together in an isolated profile. The latest text playback traversed six hexes at 13 distinct positions across 14 draws in 0.806 seconds, then accepted Skip without losing the feed. This measures the default 51×19 text backend; native GUI/graphics animation, physical monitor input, frame pacing on larger displays and live rednet races remain release-validation work.
 
-## 05: Strategic director foundation (in progress)
+## 05: Strategic and economic AI
 
 - Civilization archetypes have fixed aggression, ambition, risk, diplomacy, loyalty and border preferences, separate from difficulty. Values are initial tuning settings. Scholars prefer End Expedition, Engineers prefer Industrial and Miners prefer Conquest. Merchants use Industrial until Council victory exists; their diplomatic preference is retained for that later workstream.
 - Optional version 1 `player.aiPlan` saves the primary goal, objectives, priorities, revision/review rounds and city specializations. A review occurs every ten rounds or on city loss, a treasury shock, decisive technology, newly urgent public rival progress or an explicit strategic signal. An incumbent survives unless a challenger exceeds a substantial utility margin. Seeded goal tie-breaks do not consume global randomness.
-- Bankruptcy, a visible threat near the capital and urgent public rival progress add emergency priorities without replacing the primary goal. These priorities and city specializations are recorded for the upcoming economic/tactical executors; those executors are not complete yet.
+- Bankruptcy, a visible threat near the capital and urgent public rival progress add emergency priorities without replacing the primary goal. Economic decisions now consume these priorities and city specializations; coordinated tactical execution belongs to workstream 06.
 - The director receives `World.forPlayer` output, so an undiscovered nearby army cannot trigger its emergency assessment. Rival snapshots omit saved plans. Research/final-project preference now follows the saved goal instead of computer-ID parity.
 
-All 57 repository regression scripts passed. Focused checks cover fixed civilization archetypes, ID independence, periodic and major-event reviews, goal hysteresis, emergency separation, nested plan restore and hidden-army privacy. Updated seeded scenarios use two Scholars and two Engineers: expedition victory occurred in round 93 and industrial victory in round 131. These replace the old ID-parity fixtures rather than requiring an archetype to change goals when its computer ID changes. Native CraftOS-PC passed the director checks and campaign/AI-plan serialization alongside the presentation/save and full-session tests. A final focused check also covers a deliberate low-progress Score pivot near the round cap and late-game research-fork independence from ID parity.
+Economic execution now adds:
 
-Still required in workstream 05: utility-valued research/production, specialization-aware workers, saved settlement targets, improved treasury/material management and persistent rail goals. Existing tactical/settlement code still needs its own complete observer-state conversion; the director's privacy checks do not establish privacy for all older AI decisions.
+- Scored legal technology candidates evaluate building/unit unlocks, known material access, missing victory prerequisites and projected completion time. Scored buildings, units and optional wonders compete using expected yields, urgency, affordability, remaining production time and prerequisite value. Normal investments finish before being replaced; food/defense/treasury emergencies may redirect them. Idle cities reconsider needs on later turns, preserving deliberate No Production when no useful project is available.
+- City roles cover science, industry, military, commerce and infrastructure. They use observed workable yields, capital defense and network centrality and remain stable between strategic reviews. Worker orders secure food first, then optimize the assigned role through ordinary work-tile commands. No hidden deposit contributes to a score.
+- Bounded weighted routes use discovered terrain and observed occupancy. Settlers save version 1 destinations and routes, reserve sites against other friendly settlers, evaluate yields/materials/wonders/spacing/connectivity/visible pressure and replan after obstruction. Rejected orders stop; positive movement remains required for founding. Surviving settlers may rebuild after losing the last city. The shared human/AI founding rule also rejects foreign-owned territory.
+- Engineers save version 1 city-link plans, preserve endpoints across turns, navigate around obstacles and build through the shared action executor. Material trades target current projects and rail/mixer shortages, cap purchases per turn and preserve an upkeep reserve. Approaching insolvency produces an economic emergency before the automatic disband boundary.
+- Research, production, staffing, settlements, infrastructure and village decisions read detached observer knowledge. Military candidate generation and city-strike target enumeration also use permitted observations; exact forecast-driven tactics and campaign coordination remain in workstream 06.
+
+All 58 repository regression scripts passed. Economic scenarios additionally cover food-secure roles, treasury pressure, intentional idle/resume, multi-round settlement detours, failed movement, invisible-world changes, rail persistence and purchase limits. The current seeded Scholar and Engineer scenarios won by expedition in round 93 and industry in round 137. CraftOS-PC passed the economic scenario suite, rendering/save smoke test and a full mouse-driven two-human/one-AI game session, including persisted AI planning. See [AI-EVALUATION.md](AI-EVALUATION.md) for timing scope and limitations.
 
 ## Lua style and upstream integration
 
@@ -84,7 +90,6 @@ Rebased onto `main` at `3a7518b` after PR #47 merged. Formatting conflicts were 
 
 ## Remaining workstreams
 
-05. Complete economic utilities, specialization, settlement and infrastructure plans.
 06. Threat maps, tactical campaigns, retreat and coordinated support.
 07. Hybrid peaceful/war-group turns and declaration transitions.
 08. Relations, treaty offers, explicit defense calls and authored conversations.
