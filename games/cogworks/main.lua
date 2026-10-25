@@ -99,15 +99,7 @@ local function start()
         end
         break
       elseif event == "monitor_touch" and a == name then
-        local tx, ty = b, c
-        if renderer.mode == "graphics" then
-          -- monitor_touch is in 1-based text cells even while graphics
-          -- mode is active; renderer hitboxes use zero-based pixels.
-          local cw, ch = monitor.getSize()
-          tx = math.floor((b - 0.5) * renderer.pw / cw)
-          ty = math.floor((c - 0.5) * renderer.ph / ch)
-        end
-        local action, x, y = renderer:hit(tx, ty)
+        local action, x, y = renderer:hitTouch(b, c)
         -- Vanilla Advanced Monitors offer only tap; select occupied cells and
         -- expose small rotate/remove buttons on that cell.
         if action == "cell" then
