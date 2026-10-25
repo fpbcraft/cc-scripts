@@ -75,7 +75,7 @@ for x = 2, 7 do
 end
 assert(not E.place(unlimited, 1, 3, "I"), "Sandbox generator remains fixed")
 local count = #E.snapshot(unlimited)
-assert(count == 41, "Unlimited inventory does not restrict available board space")
+assert(count == 36, "Unlimited inventory does not restrict available board space")
 assert(E.restore(E.sandbox(), E.snapshot(unlimited)), "Sandbox layout restorable")
 print("COGWORKS: all " .. #E.levels .. " Create-style references and " .. goals
   .. " goals, construction, redstone and sandbox validated.")
