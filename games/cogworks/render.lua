@@ -1390,6 +1390,27 @@ function R:draw(m)
   self:flush()
   self.frame = self.frame + 1
 end
+-- Vanilla CC:Tweaked monitor_touch reports 1-based CHARACTER coordinates
+-- even when CC:Graphics mode 2 is enabled. Pixel hitboxes are zero-based.
+-- Sample the center of the touched character cell, allowing the graphics
+-- viewport to letterbox/scalably fill the actual monitor.
+function R:hitTouch(charX, charY)
+  local w, h = self.m.getSize()
+  if
+    type(charX) ~= "number"
+    or type(charY) ~= "number"
+    or charX < 1
+    or charY < 1
+    or charX > w
+    or charY > h
+  then
+    return nil
+  end
+  if self.mode == "graphics" then
+    return self:hit((charX - 0.5) * self.pw / w, (charY - 0.5) * self.ph / h)
+  end
+  return self:hit(charX, charY)
+end
 -- Optional FPB Monitor Input addon exposes normalized left-click positions.
 -- Translate those into the renderer's own pixel or character coordinates.
 function R:hitNormalized(nx, ny)
