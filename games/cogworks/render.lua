@@ -84,7 +84,8 @@ local function fillText(m, x, y, w, fg, bg, text)
   m.write((tostring(text) .. (" "):rep(w)):sub(1, w))
 end
 function R.new(m)
-  local self = setmetatable({ m = m, mode = "text", frame = 0, original = {}, buffer = {}, boardX = 5, boardY = 17, cell = 15 }, R)
+  local self =
+    setmetatable({ m = m, mode = "text", frame = 0, original = {}, buffer = {}, boardX = 5, boardY = 17, cell = 15 }, R)
   self:enable()
   return self
 end
@@ -406,7 +407,13 @@ function R:compactPiece(x, y, size, tile, light)
       self:rect(math.floor(cx + math.cos(angle) * (r + 1)), math.floor(cy + math.sin(angle) * (r + 1)), 1, 1, color)
     end
     if spin then
-      self:rect(math.floor(cx + math.cos(phase) * r), math.floor(cy + math.sin(phase) * r), 1, 1, spin.sign > 0 and 11 or 14)
+      self:rect(
+        math.floor(cx + math.cos(phase) * r),
+        math.floor(cy + math.sin(phase) * r),
+        1,
+        1,
+        spin.sign > 0 and 11 or 14
+      )
     end
   else
     self:rect(cx - 2, cy - 2, 5, 5, tile.kind == "I" and 13 or color)
@@ -568,9 +575,7 @@ function R:drawSpans(g, result)
             local dx = x2 > x1 and 1 or (x2 < x1 and -1 or 0)
             local dy = y2 > y1 and 1 or (y2 < y1 and -1 or 0)
             local inset = math.min(5, math.floor(self.cell / 3))
-            self:drawSpan(
-              x1 + dx * inset, y1 + dy * inset, x2 - dx * inset, y2 - dy * inset, "V", powered, motion
-            )
+            self:drawSpan(x1 + dx * inset, y1 + dy * inset, x2 - dx * inset, y2 - dy * inset, "V", powered, motion)
           else
             local mx = math.floor((x1 + x2) / 2)
             local my = math.floor((y1 + y2) / 2)
@@ -653,8 +658,6 @@ function R:drawGame(m)
   self.cell = math.min(math.floor(105 / g.width), math.floor(90 / g.height))
   self.boardX = 5 + math.floor((105 - g.width * self.cell) / 2)
   self.boardY = 17 + math.floor((90 - g.height * self.cell) / 2)
-  self:drawSpans(g, result)
-  local directions = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } }
   for y = 1, g.height do
     for x = 1, g.width do
       local px = self.boardX + (x - 1) * self.cell
@@ -662,6 +665,16 @@ function R:drawGame(m)
       local size = self.cell - 1
       self:rect(px, py, size, size, 2)
       self:rect(px + math.floor(size / 2), py + math.floor(size / 2), 1, 1, 3)
+    end
+  end
+  -- Spans sit behind components, not behind the board cells.
+  self:drawSpans(g, result)
+  local directions = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } }
+  for y = 1, g.height do
+    for x = 1, g.width do
+      local px = self.boardX + (x - 1) * self.cell
+      local py = self.boardY + (y - 1) * self.cell
+      local size = self.cell - 1
       local tile = E.get(g, x, y)
       if tile then
         if tile.kind == "R" or tile.kind == "B" then
@@ -673,7 +686,13 @@ function R:drawGame(m)
           for d = 0, 3 do
             if E.hasPort(tile, d) and not E.connection(g, tile, d) and tile.kind ~= "Q" then
               local radius = math.max(2, math.floor(size / 2) - 1)
-              self:rect(px + radius + directions[d + 1][1] * radius, py + radius + directions[d + 1][2] * radius, 1, 1, 8)
+              self:rect(
+                px + radius + directions[d + 1][1] * radius,
+                py + radius + directions[d + 1][2] * radius,
+                1,
+                1,
+                8
+              )
             end
           end
         end
@@ -724,8 +743,15 @@ function R:drawGame(m)
     "erase",
     m.selected == "erase" and 8 or 3
   )
-  self:button(157, 77, 38, 9, g.sandbox and ("SIZE " .. g.width) or "ROTATE",
-    g.sandbox and "sandboxSize" or nil, g.sandbox and (5 + g.width % 6) or nil)
+  self:button(
+    157,
+    77,
+    38,
+    9,
+    g.sandbox and ("SIZE " .. g.width) or "ROTATE",
+    g.sandbox and "sandboxSize" or nil,
+    g.sandbox and (5 + g.width % 6) or nil
+  )
   -- Persistent bonus objectives are visible while building, not buried in
   -- a modal screen. Labels are deliberately short enough for this pane.
   self:font(117, 87, g.sandbox and "UNLIMITED PARTS" or "BONUS GOALS", 6)
@@ -781,8 +807,9 @@ function R:drawGame(m)
   local inspected = m.inspected and E.get(g, m.inspected.x, m.inspected.y)
   local light = inspected and result.lights[inspected.id]
   local motion = light and (light.ports[inspected.r] or light.ports[next(light.ports)])
-  local statusText = motion and (inspected.kind .. " " .. (motion.sign > 0 and "CW " or "CCW ")
-    .. (speedLabel(motion.rate) or "?")) or info
+  local statusText = motion
+      and (inspected.kind .. " " .. (motion.sign > 0 and "CW " or "CCW ") .. (speedLabel(motion.rate) or "?"))
+    or info
   self:fontFit(89, 110, statusText, 5, 109)
   local status = m.message
   if status == "" then
