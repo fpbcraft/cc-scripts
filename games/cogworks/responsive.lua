@@ -378,10 +378,16 @@ return function(R)
           self:font(px + 1, py + 1, "+", 0)
           self:add(px, py, hit, hit, "rotate", tile.x, tile.y)
         end
-        if not tile.fixed then
+        if not tile.fixed or g.editor then
           self:rect(px + span - hit, py + 1, hit - 1, hit - 1, 8)
           self:font(px + span - hit, py + 1, "X", 0)
           self:add(px + span - hit, py, hit, hit, "remove", tile.x, tile.y)
+          -- Third corner control: choose a destination, then tap a free cell.
+          local my = py + span - hit
+          local moving = m.moving and m.moving.x == tile.x and m.moving.y == tile.y
+          self:rect(px + 1, my + 1, hit - 1, hit - 1, moving and 9 or 12)
+          self:font(px + 1, my + 1, ">", 0)
+          self:add(px, my, hit, hit, "moveStart", tile.x, tile.y)
         end
       end
     end
