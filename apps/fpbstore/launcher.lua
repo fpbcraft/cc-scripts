@@ -5,8 +5,9 @@ local UI = {}
 function UI.run(manager)
   local native = term.current()
   local prefs = manager.preferences and manager.preferences()
-    or { display = "term", opusStore = true, opusApps = true, launchTargets = {} }
+    or { display = "term", opusStore = true, opusApps = true, launchTargets = {}, opusShortcuts = {} }
   prefs.launchTargets = prefs.launchTargets or {}
+  prefs.opusShortcuts = prefs.opusShortcuts or {}
 
   local monitors = manager.monitors and manager.monitors() or {}
   local function monitor()
@@ -329,7 +330,7 @@ function UI.run(manager)
       end
     end
     installRoot = choices[installIndex] and choices[installIndex].root or app.root
-    installOpus = prefs.opusApps ~= false
+    installOpus = prefs.opusApps ~= false and prefs.opusShortcuts[app.id] ~= false
     installTarget = launchTarget(app)
     page = "install"
   end
@@ -356,7 +357,7 @@ function UI.run(manager)
     local selectedSource = source and source.label or (s.source and s.source.label) or "main"
     put(12, 11, brief(selectedSource, w - 25), colors.lightBlue)
     button(w - 11, 11, "CHANGE", "source")
-    if h >= 20 then
+    if h >= 19 then
       put(2, 13, "OPUS SHORTCUT", colors.lightGray)
       button(19, 13, installOpus and "YES" or "NO", "opus")
       put(2, 14, "START ON", colors.lightGray)
@@ -680,19 +681,12 @@ function UI.run(manager)
       local chosenSource = source
       local chosenTarget = installTarget
       local chosenOpus = installOpus
-      local previousOpus = prefs.opusApps
       local ok = operation(function()
         manager.install(app, chosenSource, chosenRoot)
       end, "Installed " .. app.name .. " to " .. chosenRoot)
       if ok then
         prefs.launchTargets[app.id] = chosenTarget
-        -- An app-level shortcut choice overrides only its registration after the install.
-        if manager.setOpusShortcut then
-          manager.setOpusShortcut(app, chosenOpus)
-        elseif not chosenOpus then
-          message = message .. " (global Opus setting applies)"
-        end
-        prefs.opusApps = previousOpus
+        prefs.opusShortcuts[app.id] = chosenOpus
         if manager.savePreferences then
           manager.savePreferences(prefs)
         end
