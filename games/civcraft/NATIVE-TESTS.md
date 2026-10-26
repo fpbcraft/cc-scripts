@@ -180,3 +180,10 @@ reveals observers and saves/reloads. `/civcraft-world-stress.txt` records per-ma
 and per-actor timings, saved bytes and cooperative checkpoints/yields. The run
 passes on installed CraftOS-PC 2.8.3. It measures early simulation and persistence;
 it does not establish late-game physical-monitor or network performance.
+
+
+`civcraft_compact_toolbar_test.lua` verifies eight text/graphics layouts, including
+51×19 and 57×26: every map control fits, controls do not overlap, and paged map
+tools perform overlays, zoom and overview navigation. `--map-tools` in the native
+full-session driver clicks the actual Map Tools/Zoom/Overview controls on a short
+terminal. Taller sessions retain their direct toolbar.

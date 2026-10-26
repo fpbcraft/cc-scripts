@@ -35,7 +35,8 @@ function G.draw(ui, state, player)
 	local wide = w >= 220 and h >= 140
 	local header = 22
 	local bottom = h - 15
-	local sidebarColumns = h < 145 and 2 or 1
+	local compactToolbar = h < 100
+	local sidebarColumns = not compactToolbar and h < 145 and 2 or 1
 	local left = sidebarColumns == 2 and 30 or 16
 	local right = wide and math.max(92, math.floor(w * 0.32))
 		or math.max(48, math.min(72, math.floor(w * 0.42)))
@@ -191,51 +192,61 @@ function G.draw(ui, state, player)
 		)
 	end)
 
-	local y = header + 3
-	local modeStep = 14
-	for i, mode in ipairs(modes) do
-		local icon = ({ "map", "station", "ore", "food" })[i]
-		local x = 2 + ((i - 1) % sidebarColumns) * 14
-		local width = 12
-		y = header + 3 + math.floor((i - 1) / sidebarColumns) * 14
+	local function setMode(mode)
 		ui.overlays = ui.overlays or {}
-		r:button(x, y, 12, 12, nil, function()
-			if mode == "terrain" then
-				ui.overlays = {}
-			else
-				ui.overlays[mode] = not ui.overlays[mode]
-				if mode == "yields" and ui.overlays.yields then
-					local steps = (math.max(40, ui.mapViewport.tile) - ui.mapViewport.tile) / 4
-					ui:zoom(steps)
-				end
+		if mode == "terrain" then
+			ui.overlays = {}
+		else
+			ui.overlays[mode] = not ui.overlays[mode]
+			if mode == "yields" and ui.overlays.yields then
+				ui:zoom((math.max(40, ui.mapViewport.tile) - ui.mapViewport.tile) / 4)
 			end
-		end, { selected = mode == "terrain" and not next(ui.overlays) or ui.overlays[mode] })
-		do
-			r:icon(
-				icon,
-				x + math.floor((width - 9) / 2),
-				y + math.max(0, math.floor((modeStep - 11) / 2)),
-				1
-			)
-			r.buttons[#r.buttons].label = mode:upper()
 		end
 	end
-	for i, action in ipairs({ { "ZOOM IN", "plus", 1 }, { "ZOOM OUT", "minus", -1 } }) do
-		local slot = #modes + i - 1
-		iconButton(
-			2 + (slot % sidebarColumns) * 14,
-			header + 3 + math.floor(slot / sidebarColumns) * 14,
-			12,
-			action[1],
-			action[2],
-			function()
-				ui:zoom(action[3])
+	if compactToolbar then
+		iconButton(2, header + 3, 12, "MAP TOOLS", "map", function()
+			ui.panel = "mapTools"
+			ui.mapToolsOffset = 0
+		end)
+	else
+		local y = header + 3
+		local modeStep = 14
+		for i, mode in ipairs(modes) do
+			local icon = ({ "map", "station", "ore", "food" })[i]
+			local x = 2 + ((i - 1) % sidebarColumns) * 14
+			local width = 12
+			y = header + 3 + math.floor((i - 1) / sidebarColumns) * 14
+			ui.overlays = ui.overlays or {}
+			r:button(x, y, 12, 12, nil, function()
+				setMode(mode)
+			end, { selected = mode == "terrain" and not next(ui.overlays) or ui.overlays[mode] })
+			do
+				r:icon(
+					icon,
+					x + math.floor((width - 9) / 2),
+					y + math.max(0, math.floor((modeStep - 11) / 2)),
+					1
+				)
+				r.buttons[#r.buttons].label = mode:upper()
 			end
-		)
+		end
+		for i, action in ipairs({ { "ZOOM IN", "plus", 1 }, { "ZOOM OUT", "minus", -1 } }) do
+			local slot = #modes + i - 1
+			iconButton(
+				2 + (slot % sidebarColumns) * 14,
+				header + 3 + math.floor(slot / sidebarColumns) * 14,
+				12,
+				action[1],
+				action[2],
+				function()
+					ui:zoom(action[3])
+				end
+			)
+		end
+		iconButton(2, bottom - 13, 12, "WORLD OVERVIEW", "fullscreen", function()
+			ui.panel = "minimap"
+		end)
 	end
-	iconButton(2, bottom - 13, 12, "WORLD OVERVIEW", "fullscreen", function()
-		ui.panel = "minimap"
-	end)
 	Inspector.draw(
 		ui,
 		state,
@@ -386,6 +397,60 @@ function G.draw(ui, state, player)
 	elseif ui.panel == "conversation" then
 		modal(ui, rect)
 		Conversation.draw(ui, state, player, rect)
+	elseif ui.panel == "mapTools" then
+		modal(ui, rect)
+		r:text(rect.x + 3, rect.y + 4, "MAP TOOLS", 8, 1, rect.w - 45)
+		r:button(rect.x + rect.w - 40, rect.y + 1, 38, 11, "CLOSE", function()
+			ui.panel = "context"
+		end)
+		local rows = {}
+		for _, mode in ipairs(modes) do
+			rows[#rows + 1] = {
+				buttons = {
+					{
+						label = mode:upper(),
+						run = function()
+							ui.panel = "context"
+							setMode(mode)
+						end,
+						style = {
+							selected = mode == "terrain" and not next(ui.overlays or {})
+								or (ui.overlays or {})[mode],
+						},
+					},
+				},
+			}
+		end
+		for _, action in ipairs({ { "ZOOM IN", 1 }, { "ZOOM OUT", -1 } }) do
+			rows[#rows + 1] = {
+				buttons = {
+					{
+						label = action[1],
+						run = function()
+							ui.panel = "context"
+							ui:zoom(action[2])
+						end,
+					},
+				},
+			}
+		end
+		rows[#rows + 1] = {
+			buttons = {
+				{
+					label = "WORLD OVERVIEW",
+					run = function()
+						ui.panel = "minimap"
+					end,
+				},
+			},
+		}
+		Panels.rows(
+			r,
+			{ x = rect.x + 3, y = rect.y + 15, w = rect.w - 6, h = rect.h - 18 },
+			rows,
+			ui,
+			"mapToolsOffset"
+		)
 	elseif ui.panel == "council" then
 		modal(ui, rect)
 		CouncilView.draw(ui, state, player, rect)

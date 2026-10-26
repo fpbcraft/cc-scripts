@@ -599,3 +599,19 @@ saves/reloads in under 50 ms. The driver records checkpoints and actual yields.
 These measurements describe early-game text-backend runtime, not a late-game
 physical-monitor or live network benchmark. The native full-session driver also
 passes at the larger Standard dimensions.
+
+## Short-terminal map controls
+
+Terminals below 100 logical pixels high now use one Map Tools button instead of
+stacking six toolbar controls over the overview button. Its focused menu contains
+terrain/territory/resources/yields, zoom and World Overview; selecting an overlay
+or zoom returns to the map. Taller screens keep direct controls. This also gives
+short screens a wider map by removing the second sidebar column.
+
+Eight text/graphics size combinations verify control bounds, non-overlap,
+accessible paged actions, working zoom/yield magnification and overview return.
+Existing eighteen-layout controls tests, general UI and Council UI checks pass.
+Installed CraftOS-PC passes the new test and a full mouse-driven short-terminal
+session with `--map-tools`, Council, routes, history, conversation, Surprise War,
+research/settings and save reload. The remaining integrated action audit and
+release/network/performance workstreams stay open.

@@ -93,7 +93,7 @@ mechanics[#mechanics + 1] = {
 mechanics[#mechanics + 1] = {
 	id = "icons",
 	name = "ACTION BAR ICONS",
-	text = "The single button below the inspector guides remaining unit, production and research decisions, then becomes End Turn. Left sidebar: plus/minus zoom and fullscreen opens World Overview. Top right: Tech Tree, Factions, Empire, Codex, Report, Event Log, Council and Pause. Status feedback appears below the map. City tabs separate Info, Jobs, Tiles and Production.",
+	text = "The single button below the inspector guides remaining unit, production and research decisions, then becomes End Turn. Left sidebar: plus/minus zoom and fullscreen opens World Overview. Very short terminals place these controls and overlays in Map Tools. Top right: Tech Tree, Factions, Empire, Codex, Report, Event Log, Council and Pause. Status feedback appears below the map. City tabs separate Info, Jobs, Tiles and Production.",
 }
 mechanics[#mechanics + 1] = {
 	id = "gold",

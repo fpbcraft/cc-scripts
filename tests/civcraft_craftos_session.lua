@@ -8,12 +8,16 @@ local includeWar = false
 local includeHost = false
 local includeConversation = false
 local includeHistory = false
+local includeMapTools, mapToolsVerified = false, false
 local includeCouncil, councilVerified = false, false
 local historyVerified = false
 local includeRoutes = false
 local routeRecord
 local routeResumed = false
 for _, argument in ipairs({ ... }) do
+	if argument == "--map-tools" then
+		includeMapTools = true
+	end
 	if argument == "--council" then
 		includeCouncil = true
 	end
@@ -212,6 +216,7 @@ dofile = function(path)
 		local warStep, responseStep = 0, 0
 		local historyStep, historySeq = 0, nil
 		local councilStep = 0
+		local mapToolsStep = 0
 		local conversationStep = 0
 		local routeStep, routeUnit, routeGoal = 0, nil, nil
 		view.draw = function(self, state, observer, options)
@@ -390,6 +395,26 @@ dofile = function(path)
 				}
 				if tap(self, labels[conversationStep + 1]) then
 					conversationStep = conversationStep + 1
+				else
+					tap(self, "NEXT")
+				end
+				return
+			end
+			if includeMapTools and stage == 2 and not options.handoff and mapToolsStep < 7 then
+				local labels = {
+					"MAP TOOLS",
+					"ZOOM IN",
+					"MAP TOOLS",
+					"ZOOM OUT",
+					"MAP TOOLS",
+					"WORLD OVERVIEW",
+					"CLOSE",
+				}
+				if self.r.h >= 100 then
+					mapToolsStep, mapToolsVerified = 7, true
+				elseif tap(self, labels[mapToolsStep + 1]) then
+					mapToolsStep = mapToolsStep + 1
+					mapToolsVerified = mapToolsStep == 7
 				else
 					tap(self, "NEXT")
 				end
@@ -674,6 +699,7 @@ if includeRoutes then
 	end
 	assert(resumed, "Native queued actor survives the save reload")
 end
+assert(not includeMapTools or mapToolsVerified, "Native short-screen map tools must complete")
 assert(not includeCouncil or councilVerified, "Native Council ballot must complete")
 if includeCouncil then
 	assert(state.council.lastRound == state.round, "Council advances at the real round boundary")
@@ -705,6 +731,7 @@ output.write(textutils.serialize({
 	queuedRouteFlow = includeRoutes,
 	eventHistoryFlow = historyVerified,
 	councilFlow = councilVerified,
+	mapToolsFlow = mapToolsVerified,
 	queuedRouteResumed = routeResumed,
 }))
 output.close()
