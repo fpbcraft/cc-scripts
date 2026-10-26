@@ -483,7 +483,14 @@ function A:act(action, x, y)
   elseif scene == "game" then
     local changed = false
     self.message = ""
-    if action == "move" then
+    if action == "inspectBonus" then
+      for _, bonus in ipairs(E.challenges(self.game, self.result)) do
+        if bonus.id == x then
+          self.message = bonus.description
+          break
+        end
+      end
+    elseif action == "move" then
       changed = E.move(self.game, x, y, self.moveX, self.moveY)
       self.inspected = nil
     elseif action == "inspect" then

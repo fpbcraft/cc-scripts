@@ -59,7 +59,7 @@ textutils = {
   end,
 }
 local S = require("games.cogworks.storage")
-assert(S.VERSION == 6 and not S.has(2), "Updated campaign save schema")
+assert(S.VERSION == 7 and not S.has(2), "Updated campaign save schema")
 local old = {
   campaignVersion = 3,
   unlocked = 30,
@@ -90,7 +90,67 @@ local migrated = S.load(3)
 assert(migrated.level == 1 and next(migrated.best) == nil, "Old placeholder campaign is not treated as new puzzles")
 assert(S.save(3, migrated), "Write the new campaign save")
 assert(files[S.path(3) .. ".campaign-v5"] == previousBytes, "The previous campaign save is permanently archived")
-assert(S.load(3).campaignVersion == 6, "Migrate to chapter-based save format")
+assert(S.load(3).campaignVersion == 7, "Migrate to chapter-based save format")
+-- Version-6 boards, medals and Ponder flags belong to different puzzles.
+local version6 = {
+  campaignVersion = 6,
+  level = 44,
+  best = { [44] = 5 },
+  sessions = { [44] = {} },
+  awards = { [44] = { extra1 = true } },
+  tutorials = { G = true },
+}
+local oldBytes = textutils.serialize(version6)
+files[S.path(2)] = oldBytes
+local fresh = S.load(2)
+assert(
+  fresh.level == 1
+    and next(fresh.best) == nil
+    and next(fresh.awards) == nil
+    and next(fresh.sessions) == nil
+    and next(fresh.tutorials) == nil
+)
+local realOpen, realMove = fs.open, fs.move
+fs.open = function(path, mode)
+  if mode == "w" and path == S.path(2) .. ".campaign-v6.next" then
+    return nil
+  end
+  return realOpen(path, mode)
+end
+local ok = S.save(2, fresh)
+assert(not ok and files[S.path(2)] == oldBytes, "Archive creation failure must preserve the previous slot")
+fs.open = function(path, mode)
+  if mode == "r" and path == S.path(2) .. ".campaign-v6.next" then
+    return {
+      readAll = function()
+        return "truncated"
+      end,
+      close = function() end,
+    }
+  end
+  return realOpen(path, mode)
+end
+assert(not S.save(2, fresh) and files[S.path(2)] == oldBytes, "Incomplete archive must not permit replacement")
+fs.open = realOpen
+fs.move = function(a, b)
+  if b == S.path(2) .. ".campaign-v6" then
+    error("archive rename failed")
+  end
+  return realMove(a, b)
+end
+assert(not S.save(2, fresh) and files[S.path(2)] == oldBytes, "Archive rename failure preserves the slot")
+fs.move = realMove
+assert(S.save(2, fresh), "A retry can finish the archive and new campaign save")
+assert(files[S.path(2) .. ".campaign-v6"] == oldBytes and S.load(2).campaignVersion == 7)
+files[S.path(2)] = textutils.serialize({ campaignVersion = 6, level = 45 })
+local changed = files[S.path(2)]
+assert(not S.save(2, fresh), "A different existing permanent archive must not be overwritten")
+assert(files[S.path(2)] == changed and files[S.path(2) .. ".campaign-v6"] == oldBytes)
+files[S.path(2)] = "corrupted old slot"
+assert(
+  S.save(2, fresh) and files[S.path(2) .. ".campaign-vunknown"] == "corrupted old slot",
+  "Even undecodable saves retain their original bytes"
+)
 local settings = S.loadSettings()
 assert(settings.animations and settings.showPorts)
 settings.animations = false
@@ -101,4 +161,4 @@ local loaded = S.loadSettings()
 assert(not loaded.animations and not loaded.showPorts and loaded.lastSlot == 3)
 files[S.path(2)] = "invalid lua"
 assert(not S.load(2) and S.load(1).level == 2, "Corrupted slot stays isolated")
-print("COGWORKS: campaign-v6 migration, slots, settings and corruption isolation passed.")
+print("COGWORKS: campaign-v7 migration, slots, settings and corruption isolation passed.")

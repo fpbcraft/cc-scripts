@@ -1,67 +1,85 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 local E = require("games.cogworks.engine")
 local C = require("games.cogworks.chapters")
+local W = require("games.cogworks.witnesses")
 assert(#E.levels == 64 and #C.chapters == 8)
-local names, distinct, bonusTypes, counts = {}, {}, {}, { [0] = 0, [1] = 0, [2] = 0 }
-local fixedStages, targetCount, totalBonus = 0, 0, 0
-for i, stage in ipairs(E.levels) do
-  assert(not names[stage.name], "Duplicate title: " .. stage.name)
-  names[stage.name] = true
-  assert(stage.role and stage.chapter == math.ceil(i / 8) and stage.stage == (i - 1) % 8 + 1)
-  local n = #stage.bonuses
-  assert(n >= 0 and n <= 2, "Optional objective count out of range: " .. i)
-  counts[n] = counts[n] + 1
-  totalBonus = totalBonus + n
-  for index, bonus in ipairs(stage.bonuses) do
-    assert(bonus.id == "extra" .. index and bonus.name and bonus.type)
-    bonusTypes[bonus.type] = true
+local ids, insights, layouts, bonusTypes = {}, {}, {}, {}
+local counts, totalBonus = { [0] = 0, [1] = 0, [2] = 0 }, 0
+local function signature(g)
+  local out = {}
+  for _, tile in ipairs(g.tiles) do
+    out[#out + 1] = tile.kind .. ":" .. tile.x .. "," .. tile.y .. ":" .. (tile.r % 2)
   end
-  local current = E.new(i)
-  assert(not E.evaluate(current).win, "Starts solved: " .. i)
-  local reference = E.new(i, true)
-  local evaluation = E.evaluate(reference)
+  table.sort(out)
+  return table.concat(out, ";")
+end
+for number, stage in ipairs(E.levels) do
+  assert(stage.id and not ids[stage.id], "Stable, unique level ID")
+  ids[stage.id] = true
   assert(
-    evaluation.win,
-    "Reference unsolved: "
-      .. i
-      .. " ("
-      .. evaluation.correct
-      .. "/"
-      .. evaluation.goals
-      .. ") jam="
-      .. tostring(evaluation.jam)
+    stage.design and #stage.design.insight > 25 and not insights[stage.design.insight],
+    "Distinct authored insight"
   )
-  assert(evaluation.unpowered == 0, "Idle reference machinery: " .. i)
-  assert(#E.challenges(reference, evaluation) == n, "Bonus evaluator honors variable counts")
-  -- A main reference is *not* required to collect optional bonuses.
-  local signature = {}
-  for _, tile in ipairs(reference.tiles) do
-    signature[#signature + 1] = tile.kind .. ":" .. tile.x .. "," .. tile.y .. ":" .. tile.r
-  end
-  table.sort(signature)
-  distinct[table.concat(signature, ";")] = true
-  targetCount = targetCount + #stage.goals
-  if #stage.fixtures > 0 then
-    fixedStages = fixedStages + 1
-    for _, fixture in ipairs(stage.fixtures) do
-      local tile = E.get(current, fixture.x, fixture.y)
-      assert(tile and tile.fixed)
-      assert(not E.rotate(current, fixture.x, fixture.y))
-      assert(not E.remove(current, fixture.x, fixture.y))
+  insights[stage.design.insight] = true
+  assert(#stage.design.failedApproach > 20 and #stage.design.fixturePurpose > 10)
+  assert(stage.chapter == math.ceil(number / 8) and stage.stage == (number - 1) % 8 + 1 and stage.role)
+  assert(not E.evaluate(E.new(number)).win, "Playable initial state must not start solved")
+  local game, result = W.play(number)
+  assert(result.win and result.remaining > 0, "Certified clear with useful inventory alternatives: " .. number)
+  local key = signature(game) .. " INITIAL " .. signature(E.new(number))
+  assert(not layouts[key], "Distinct authored layout")
+  layouts[key] = true
+  for _, tile in ipairs(game.tiles) do
+    if not tile.fixed and tile.kind ~= "B" and tile.kind ~= "R" then
+      assert(result.lights[tile.id].powered, "No idle player machinery in reference: " .. number)
     end
   end
-end
-local function size(t)
-  local n = 0
-  for _ in pairs(t) do
-    n = n + 1
+  local n = #stage.bonuses
+  assert(n >= 0 and n <= 2)
+  counts[n], totalBonus = counts[n] + 1, totalBonus + n
+  for _, bonus in ipairs(E.challenges(game, result)) do
+    assert(not bonus.earned, "A normal reference must not automatically collect " .. number .. "/" .. bonus.id)
   end
-  return n
+  local _, failed = W.play(number, "misconception")
+  assert(not failed.win, "The documented plausible failure must actually fail: " .. number)
+  if number > 2 then
+    local alternate, outcome = W.play(number, "alternate")
+    assert(outcome.win, "Certified alternate clear: " .. number)
+    local differences = 0
+    for y = 1, stage.height do
+      for x = 1, stage.width do
+        local a, b = E.get(game, x, y), E.get(alternate, x, y)
+        if (a and a.kind .. (a.r % 2) or "-") ~= (b and b.kind .. (b.r % 2) or "-") then
+          differences = differences + 1
+        end
+      end
+    end
+    assert(differences >= 2, "Alternate requires more than an incidental part swap: " .. number)
+  end
+  for index, spec in ipairs(stage.bonuses) do
+    assert(spec.id == "extra" .. index and spec.witness and spec.description)
+    assert(spec.type ~= "moves" and spec.type ~= "clean" and spec.type ~= "full_stock")
+    bonusTypes[spec.type] = true
+    local solved, evaluation = W.play(number, spec.id)
+    assert(evaluation.win)
+    assert(E.challenges(solved, evaluation)[index].earned, "Independent bonus witness: " .. number .. "/" .. spec.id)
+    local restored = E.new(number)
+    assert(E.restore(restored, E.snapshot(solved)), "Bonus solution can be saved and restored")
+    local restoredResult = E.evaluate(restored)
+    assert(restoredResult.win and E.challenges(restored, restoredResult)[index].earned)
+  end
+  for _, fixture in ipairs(stage.fixtures) do
+    local initial = E.new(number)
+    assert(not E.remove(initial, fixture.x, fixture.y) and not E.rotate(initial, fixture.x, fixture.y))
+  end
 end
-assert(counts[0] > 0 and counts[1] > 0 and counts[2] > 0, "Some levels have no bonus, some one, some two")
-assert(size(bonusTypes) >= 12, "Bonus catalogue diversity")
-assert(size(distinct) >= 55 and fixedStages >= 32, "Board / fixture diversity")
-assert(totalBonus < 128 and totalBonus > 64, "Optional bonuses do not dominate the main campaign")
+assert(counts[0] > 0 and counts[1] > 0 and counts[2] > 0, "Authored variable objective counts")
+assert(totalBonus == 66, "Every shipped bonus has its own certified witness")
+local ruleCount = 0
+for _ in pairs(bonusTypes) do
+  ruleCount = ruleCount + 1
+end
+assert(ruleCount >= 6, "Different construction challenges, without automatic rewards")
 local progress = { best = {}, awards = {} }
 assert(C.levelUnlocked(progress, 1))
 assert(not C.levelUnlocked(progress, 2) and not C.levelUnlocked(progress, 9))
@@ -96,13 +114,5 @@ for chapter = 1, 8 do
 end
 assert(C.openLevels(alternate) == 64)
 print(
-  "COGWORKS: 64 solver-checked references, spatial map skips, "
-    .. counts[0]
-    .. "/"
-    .. counts[1]
-    .. "/"
-    .. counts[2]
-    .. " stages with 0/1/2 bonuses, "
-    .. size(bonusTypes)
-    .. " bonus rules verified."
+  "COGWORKS: 64 main clears, 62 alternate builds, 64 failed approaches, 66 independently certified bonuses and branching routes passed."
 )

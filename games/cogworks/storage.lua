@@ -5,7 +5,7 @@ S.ROOT = "/games/cogworks"
 S.DIR = S.ROOT .. "/saves"
 S.SETTINGS = S.ROOT .. "/settings.dat"
 S.LEGACY = S.ROOT .. "/save.dat"
-S.VERSION = 6
+S.VERSION = 7
 local function ensure(path)
   if not fs.exists(path) then
     fs.makeDir(path)
@@ -135,21 +135,35 @@ end
 function S.save(slot, data)
   local path = S.path(slot)
   local original = decode(path)
-  -- The previous procedurally generated level campaign has incompatible
-  -- geometry; preserve its save bytes before resetting chapter progress.
-  if original and original.campaignVersion ~= S.VERSION then
-    local backup = path .. ".campaign-v" .. tostring(original.campaignVersion or "unknown")
-    if not fs.exists(backup) then
-      local oldFile = fs.open(path, "r")
-      if oldFile then
-        local bytes = oldFile.readAll()
-        oldFile.close()
-        local archive = fs.open(backup, "w")
-        if archive then
-          archive.write(bytes)
-          archive.close()
-        end
+  -- Never replace an incompatible campaign until its original bytes have
+  -- been archived and read back successfully. A partial archive is not a backup.
+  if fs.exists(path) and (not original or original.campaignVersion ~= S.VERSION) then
+    local version = original and tonumber(original.campaignVersion)
+    local label = version and version >= 0 and version <= 1000000 and version % 1 == 0 and tostring(version)
+      or "unknown"
+    local backup = path .. ".campaign-v" .. label
+    local ok, reason = pcall(function()
+      local oldFile = assert(fs.open(path, "r"), "CANNOT READ PREVIOUS CAMPAIGN")
+      local bytes = oldFile.readAll()
+      oldFile.close()
+      if not fs.exists(backup) then
+        local temporary = backup .. ".next"
+        local archive = assert(fs.open(temporary, "w"), "CANNOT ARCHIVE PREVIOUS CAMPAIGN")
+        archive.write(bytes)
+        archive.close()
+        local check = assert(fs.open(temporary, "r"), "CANNOT VERIFY CAMPAIGN ARCHIVE")
+        local archived = check.readAll()
+        check.close()
+        assert(archived == bytes, "CAMPAIGN ARCHIVE INCOMPLETE")
+        fs.move(temporary, backup)
       end
+      local check = assert(fs.open(backup, "r"), "CANNOT READ CAMPAIGN ARCHIVE")
+      local archived = check.readAll()
+      check.close()
+      assert(archived == bytes, "CAMPAIGN ARCHIVE DOES NOT MATCH SLOT")
+    end)
+    if not ok then
+      return false, tostring(reason)
     end
   end
   return write(path, S.normalize(data))

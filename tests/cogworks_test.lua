@@ -45,7 +45,11 @@ for index, data in ipairs(E.levels) do
       .. ", jam="
       .. tostring(result.jam)
   )
-  assert(result.unpowered == 0, "Reference contains idle parts at " .. index)
+  for _, tile in ipairs(solved.tiles) do
+    if not tile.fixed and tile.kind ~= "R" and tile.kind ~= "B" then
+      assert(result.lights[tile.id].powered, "Reference contains idle player machinery at " .. index)
+    end
+  end
   goals = goals + result.goals
   for _, bonus in ipairs(E.challenges(solved, result)) do
     if bonus.id == "sealed" then
@@ -53,11 +57,11 @@ for index, data in ipairs(E.levels) do
     end
   end
   local manual = E.new(index)
+  for _, position in ipairs(data.removeRedstone or {}) do
+    assert(E.remove(manual, position[1], position[2]), "Reference starting-part removal failed")
+  end
   for _, part in ipairs(data.build) do
     assert(E.place(manual, part.x, part.y, part.kind, part.r), "Reference part placement failed on stage " .. index)
-  end
-  for _, position in ipairs(data.removeRedstone or {}) do
-    assert(E.remove(manual, position[1], position[2]), "Reference redstone removal failed")
   end
   assert(E.evaluate(manual).win, "Building the reference manually failed at " .. index)
   local saved = E.snapshot(manual)

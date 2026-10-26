@@ -722,6 +722,37 @@ function R:page(title, subtitle)
     self:fontFit(10, 19, subtitle, 11, 180)
   end
 end
+function R:bonusMark(g, x, y)
+  if g.sandbox or g.custom or g.editor then
+    return nil
+  end
+  for index, bonus in ipairs(E.levels[g.number].bonuses) do
+    if
+      (bonus.type == "clear_zone" and x >= bonus.x1 and x <= bonus.x2 and y >= bonus.y1 and y <= bonus.y2)
+      or (bonus.type == "required_cell" and x == bonus.x and y == bonus.y)
+    then
+      return index, bonus.type == "clear_zone" and 6 or 11
+    end
+  end
+end
+function R:drawBonusMarks(g)
+  for y = 1, g.height do
+    for x = 1, g.width do
+      local mark, ink = self:bonusMark(g, x, y)
+      if mark then
+        local px, py = self.boardX + (x - 1) * self.cell, self.boardY + (y - 1) * self.cell
+        local span = self.cell - 1
+        self:rect(px, py, span, 1, ink)
+        self:rect(px, py + span - 1, span, 1, ink)
+        self:rect(px, py, 1, span, ink)
+        self:rect(px + span - 1, py, 1, span, ink)
+        if not E.get(g, x, y) and span >= 10 then
+          self:font(px + 2, py + 2, mark == 1 and "A" or "B", ink)
+        end
+      end
+    end
+  end
+end
 function R:drawGame(m)
   local g, result = m.game, m.result
   self:page(
@@ -798,6 +829,7 @@ function R:drawGame(m)
       self:add(px, py, size, size, "cell", x, y)
     end
   end
+  self:drawBonusMarks(g)
   self:rect(114, 16, 83, 93, 1)
   self:rect(114, 16, 83, 1, 12)
   self:font(117, 19, "PARTS", 11)
@@ -880,11 +912,15 @@ function R:drawGame(m)
     local bonuses = E.challenges(g, result)
     local awarded = (m.progress.awards and m.progress.awards[g.number]) or {}
     for i, bonus in ipairs(bonuses) do
-      local y = 93 + (i - 1) * 5
+      local y = 93 + (i - 1) * 8
       local done = awarded[bonus.id] or false
-      local label = bonus.name .. (bonus.progress and " " .. bonus.progress or "")
       self:rect(117, y, 4, 4, done and 9 or (bonus.earned and 6 or 5))
-      self:fontFit(124, y, label, done and 9 or (bonus.earned and 6 or 5), 70)
+      local progressWidth = bonus.progress and (#bonus.progress * 4 + 4) or 0
+      self:fontFit(124, y, bonus.name, done and 9 or (bonus.earned and 6 or 5), 70 - progressWidth)
+      if bonus.progress then
+        self:font(198 - progressWidth, y, bonus.progress, 11)
+      end
+      self:add(116, y - 1, 80, 8, "inspectBonus", bonus.id)
     end
   end
   if m.inspected then
@@ -1416,11 +1452,12 @@ function R:drawText(m)
     local result = m.result
     local x0, y0 = 2, 3
     local columnWidth = math.min(6, math.max(4, math.floor((w - 2) / g.width)))
+    local rowHeight = math.max(2, math.min(3, math.floor((h - 15) / g.height)))
     for y = 1, g.height do
       for x = 1, g.width do
         local p = E.get(g, x, y)
         local px = x0 + (x - 1) * columnWidth
-        local py = y0 + (y - 1) * 3
+        local py = y0 + (y - 1) * rowHeight
         local color = p
             and (p.kind == "M" and colors.blue or (p.kind == "S" and colors.green or (p.kind == "X" and colors.brown or colors.gray)))
           or colors.lightGray
@@ -1429,14 +1466,18 @@ function R:drawText(m)
         for d = 0, 3 do
           slots[d + 1] = p and E.hasPort(p, d)
         end
-        local labelText = p and (p.kind == "M" and (p.sign < 0 and "-" or "+") .. p.speed or p.kind) or "."
+        local mark = self:bonusMark(g, x, y)
+        local labelText = p and (p.kind == "M" and (p.sign < 0 and "-" or "+") .. p.speed or p.kind)
+          or (mark and (mark == 1 and "A" or "B") or ".")
         local motion = p and motionFor(p, result.lights[p.id])
         local readout = motion and ((motion.sign > 0 and ">" or "<") .. (speedLabel(motion.rate) or "?")) or ""
         local readoutColor = motion and (motion.sign > 0 and colors.lightBlue or colors.orange) or fg
-        label(px, py, slots[1] and "  ^  " or "     ", fg, color, columnWidth - 1)
+        if rowHeight == 3 then
+          label(px, py, slots[1] and "  ^  " or "     ", fg, color, columnWidth - 1)
+        end
         label(
           px,
-          py + 1,
+          py + rowHeight - 2,
           (slots[4] and "<" or " ") .. " " .. labelText .. (slots[2] and ">" or " "),
           fg,
           color,
@@ -1444,13 +1485,13 @@ function R:drawText(m)
         )
         label(
           px,
-          py + 2,
+          py + rowHeight - 1,
           (readout .. "    "):sub(1, 4) .. (slots[3] and "v" or " "),
           readoutColor,
           color,
           columnWidth - 1
         )
-        self:add(px, py, columnWidth - 1, 3, "cell", x, y)
+        self:add(px, py, columnWidth - 1, rowHeight, "cell", x, y)
       end
     end
     label(
@@ -1460,18 +1501,13 @@ function R:drawText(m)
         or ("GOALS " .. result.correct .. "/" .. result.goals .. " CW=+ CCW=- MV " .. g.moves),
       colors.lightBlue
     )
-    if g.height <= 6 then
-      local bonuses = E.challenges(g, result)
-      local awards = m.progress.awards[g.number] or {}
-      for i, bonus in ipairs(bonuses) do
-        local name = bonus.name
-        label(
-          2,
-          22 + i,
-          (awards[bonus.id] and "[X] " or "[ ] ") .. name,
-          awards[bonus.id] and colors.lime or colors.white
-        )
-      end
+    local bonuses = E.challenges(g, result)
+    local awards = m.progress.awards[g.number] or {}
+    for i, bonus in ipairs(bonuses) do
+      local row = math.max(23, y0 + g.height * rowHeight) + i - 1
+      local name = bonus.name .. (bonus.progress and " " .. bonus.progress or "")
+      label(2, row, (awards[bonus.id] and "[X] " or "[ ] ") .. name, awards[bonus.id] and colors.lime or colors.white)
+      self:add(2, row, math.min(w - 2, #name + 4), 1, "inspectBonus", bonus.id)
     end
     local size = math.floor(w / 5)
     for i, kind in ipairs(E.order) do
