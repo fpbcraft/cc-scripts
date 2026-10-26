@@ -185,12 +185,15 @@ end
 local function save()
 	trace("save.begin", state.round)
 	World.reveal(state, Hex, Systems)
+	local saved
 	if localMode then
-		Saves.save(slot, state)
-		trace("save.end")
-		return
+		saved = Saves.save(slot, state)
+	else
+		saved = Saves.writeFile(SAVE, state)
 	end
-	Saves.writeFile(SAVE, state)
+	if saved then
+		hasHumanSave = true
+	end
 	trace("save.end")
 end
 local function initMap()
@@ -382,6 +385,9 @@ local function apply(id, req)
 	local current, reason = Actions.validateIntent(state, req)
 	if not current then
 		return false, reason
+	end
+	if req.action == "civ" then
+		return CampaignRules.selectCivilization(state, id, req, Systems.civs)
 	end
 	if req.action == "save" then
 		if state.phase ~= "game" and state.phase ~= "over" then
@@ -847,16 +853,23 @@ local function dispatch(action, params)
 		return
 	end
 	if action == "civ" and state.phase == "lobby" then
-		local p = state.players[params and params.player or 1]
-		if p then
-			local current = 1
-			for i, c in ipairs(Systems.civs) do
-				if c.id == p.civ then
-					current = i
-				end
+		if localHost then
+			local actor = localMode and state.players[1].id or myId
+			local ok, why =
+				CampaignRules.selectCivilization(state, actor, params or {}, Systems.civs)
+			if ok then
+				save()
+			else
+				message = why
 			end
-			p.civ = Systems.civs[current % #Systems.civs + 1].id
-			save()
+		else
+			rednet.send(hostId, {
+				action = "civ",
+				player = params.player,
+				id = params.id,
+				campaignID = snapshot and snapshot.campaignID,
+				round = snapshot and snapshot.round,
+			}, PROTOCOL)
 		end
 		return
 	end

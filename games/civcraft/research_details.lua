@@ -78,8 +78,6 @@ function Details.paragraphs(systems, id)
 		end
 		paragraphs[#paragraphs + 1] = record.name .. ": " .. benefit
 	end
-	paragraphs[#paragraphs + 1] =
-		"Research makes these projects available; cities must still produce them and meet their building, location and material requirements. Open a Codex entry for its costs and rules."
 	return paragraphs
 end
 

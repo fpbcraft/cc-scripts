@@ -263,3 +263,11 @@ Reports distinguish host rejections of unseen completed wonders and movement
 that is legal in the observer's view but blocked in authoritative state. Any
 other rejected AI action fails the run. The test harness may compare full and
 filtered state to classify a denial; the AI itself receives no hidden information.
+
+
+The session launcher also enables `--civilization`: it selects Desert Wanderers
+from the actual dropdown and verifies campaign-save persistence. Research checks
+now use the persistent sidebar's Codex links and pinned Research action, without
+an intermediate Details screen. Wide-inline and compact inspector controls remain
+part of the same mouse/monitor-touch driver. The network test exercises guest
+civilization selection and rejects changing the host's choice.

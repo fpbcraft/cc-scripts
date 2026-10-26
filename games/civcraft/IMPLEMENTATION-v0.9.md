@@ -753,3 +753,38 @@ one movement denial from an unseen obstruction, and no unexplained rejection.
 [AI-BENCHMARK.md](AI-BENCHMARK.md) and its CSV preserve the individual results.
 They remain sampled integration/balance evidence rather than proof of monotonic
 win-rate gains between every tier.
+
+
+## Civilization dropdown and persistent research inspector
+
+Civilization selection opens a paged dropdown anchored to the clicked control
+where space allows; compact screens keep the same ten choices and Close/Escape
+behavior. Existing lobby bonuses and personality descriptions remain available.
+Hosts can select any participant's civilization; remote humans can change their
+own only, and choices are fixed once the campaign starts. The shared campaign
+validator rejects unknown IDs, invalid player indices and unauthorized changes.
+A successfully saved lobby is now recognized as occupied for later overwrite
+confirmation, including saves made while choosing civilizations.
+
+Research uses one graph/sidebar layout on both rendering backends and every
+screen size. The primary research action stays pinned above the tree, independent
+of the sidebar's page. The inspector retains the technology-specific explanation,
+progress, prerequisites, unlocks and Codex buttons; the generic project-production
+paragraph has been removed. Prerequisite/dependent links in the inspector can
+select and focus the corresponding graph node. There is no separate Details
+screen. Selecting a node keeps its text at the normal scale.
+
+Graph columns follow actual prerequisite depth rather than Age labels, so every
+prerequisite is left of its dependent. Stable parent-based row ordering, directed
+arrows, muted unrelated edges and highlighted incoming/outgoing links make the
+selected technology's relationships clearer. Pan, zoom and graph dragging remain
+available on compact text and graphics displays; the sidebar scrolls separately.
+
+All 107 regression scripts pass. New checks reach every civilization on six
+text/graphics layouts, enforce host/guest permissions, assert normal selected-node
+font scale, verify forward prerequisite edges and exercise direct research and
+sidebar Codex links. Fresh native local, host and real emulated-monitor touch
+sessions pass with a saved dropdown selection. The native three-computer modem
+session also rejects a guest's attempt to change the host civilization while
+accepting its own selection, then completes the existing race/war/reconnect flow.
+Compact, medium and wide research canvases were rendered and visually inspected.

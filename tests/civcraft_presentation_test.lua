@@ -156,11 +156,7 @@ for _, graphics in ipairs({ true, false }) do
 	assert(ui:pointerDown(x, y))
 	assert(ui:drag(ex, ey))
 	ui:pointerUp()
-	if graphics then
-		assert(model.panX > 0, "Research graph pans by dragging")
-	else
-		assert(model.offset > 0, "Compact research details scroll by dragging")
-	end
+	assert(model.panX > 0, "Research graph pans by dragging on both backends")
 	assert(
 		model.selected == "engineering" and ui.panX == mapX and ui.panY == mapY,
 		"Research drag never selects nodes or pans the map behind it"

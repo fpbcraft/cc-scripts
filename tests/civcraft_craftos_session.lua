@@ -10,6 +10,7 @@ local includeHost = false
 local includeConversation = false
 local includeHistory = false
 local includeDifficulty = false
+local includeCivilization, civilizationStep = false, 0
 local includeMapTools, mapToolsVerified = false, false
 local includeCouncil, councilVerified = false, false
 local historyVerified = false
@@ -17,6 +18,9 @@ local includeRoutes = false
 local routeRecord
 local routeResumed = false
 for _, argument in ipairs({ ... }) do
+	if argument == "--civilization" then
+		includeCivilization = true
+	end
 	if argument == "--touch-monitor" then
 		touchMonitor = true
 	end
@@ -401,11 +405,25 @@ dofile = function(path)
 				end
 				return
 			end
-			if includeResearch and stage == 2 and not options.handoff and researchStep < 8 then
+			if includeCivilization and stage == 1 and civilizationStep < 2 then
+				local label = civilizationStep == 0 and "CIV" or "DESERT WANDERERS"
+				if tap(self, label) then
+					civilizationStep = civilizationStep + 1
+				else
+					tap(self, "NEXT")
+				end
+				return
+			end
+			if includeCivilization and stage == 1 and civilizationStep == 2 then
+				assert(
+					options.hasSave,
+					"Saved lobby choices must require overwrite confirmation later"
+				)
+			end
+			if includeResearch and stage == 2 and not options.handoff and researchStep < 7 then
 				local labels = {
 					"TECH TREE",
 					"agriculture",
-					"DETAILS",
 					"CODEX WHEAT FARM",
 					"CLOSE",
 					"TECH TREE",
@@ -778,6 +796,9 @@ if includeCouncil then
 end
 assert(not includeHistory or historyVerified, "Native history refresh must complete")
 local Events = native("/games/civcraft/events.lua")
+if includeCivilization then
+	assert(state.players[1].civ == "nomad", "Dropdown selection must persist in the campaign save")
+end
 assert(Events.forPlayer(state, state.players[1].id).lastSeq > 0)
 assert(Events.forPlayer(state, state.players[2].id).lastSeq > 0)
 local output = assert(fs.open("/civcraft-native-session.txt", "w"))

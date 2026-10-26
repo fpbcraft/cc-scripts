@@ -23,7 +23,7 @@ shutil.copytree(repo / "lib/fpb", root / "games/civcraft/_lib/fpb", dirs_exist_o
 shutil.copyfile(repo / "tests/civcraft_craftos_session.lua", root / "tests/civcraft_craftos_session.lua")
 flags = [
     "--settings", "--research", "--campaign", "--conversation", "--routes",
-    "--history", "--council", "--map-tools", "--difficulty",
+    "--history", "--council", "--map-tools", "--difficulty", "--civilization",
 ]
 flags += ["--host-ai"] if args.host else ["--ai", "--war"]
 if args.monitor:

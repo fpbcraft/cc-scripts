@@ -2,6 +2,7 @@
 -- Never mutate simulation here: all commands flow through dispatch().
 local FactionColors = dofile("/games/civcraft/faction_colors.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
+local CivilizationPicker = dofile("/games/civcraft/civilization_picker.lua")
 local CampaignOptions = dofile("/games/civcraft/campaign_options.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
@@ -90,6 +91,17 @@ end
 function UI:command(action, params)
 	if action == "civ" then
 		self.lobbyPlayer = params and params.player or 1
+		if not (params and params.id) then
+			self.civDropdown, self.civOffset = self.lobbyPlayer, 0
+			local visible = {}
+			for _, button in ipairs(self.r.buttons) do
+				if button.label == "CIV" then
+					visible[#visible + 1] = button
+				end
+			end
+			self.civAnchor = visible[self.lobbyPlayer] or visible[1]
+			return true
+		end
 	end
 	if Settings.command(self, action) then
 		return
@@ -733,7 +745,7 @@ function UI:draw(state, playerID, opts)
 							:upper(),
 					}
 				end
-				if opts.localMode then
+				if opts.localMode or opts.host or p.id == playerID then
 					rows[#rows + 1] = {
 						buttons = {
 							{
@@ -750,6 +762,9 @@ function UI:draw(state, playerID, opts)
 							},
 						},
 					}
+					if not opts.localMode then
+						table.remove(rows[#rows].buttons, 1)
+					end
 				end
 			end
 			rows[#rows + 1] =
@@ -837,6 +852,9 @@ function UI:draw(state, playerID, opts)
 				},
 			}
 			Panels.rows(r, { x = 4, y = 14, w = w - 8, h = h - 18 }, rows, self, "lobbyOffset")
+			if self.civDropdown then
+				CivilizationPicker.draw(self, state)
+			end
 			r:finish()
 			return
 		end
@@ -872,6 +890,8 @@ function UI:draw(state, playerID, opts)
 				r:button(math.min(w - 56, 150), row, 23, 11, p.ai and "AI" or "HUMAN", function()
 					self:command("toggleAI", { player = i })
 				end)
+			end
+			if opts.localMode or opts.host or p.id == playerID then
 				r:button(math.min(w - 29, 179), row, 22, 11, "CIV", function()
 					self:command("civ", { player = i })
 				end)
@@ -952,6 +972,9 @@ function UI:draw(state, playerID, opts)
 				1,
 				w - 24
 			)
+		end
+		if self.civDropdown then
+			CivilizationPicker.draw(self, state)
 		end
 		r:finish()
 		return
@@ -1181,6 +1204,10 @@ function UI:confirmMove()
 	return false
 end
 function UI:back()
+	if self.civDropdown then
+		self.civDropdown = nil
+		return true
+	end
 	if self.panel == "conversation" then
 		return Conversation.back(self)
 	end
@@ -1478,6 +1505,13 @@ function UI:tap(x, y)
 	end
 	self.lastDrag = nil
 	self.activeScroll = nil
+	if self.civDropdown and self.modalBounds then
+		local box = self.modalBounds
+		if rx < box.x or rx >= box.x + box.w or ry < box.y or ry >= box.y + box.h then
+			self.civDropdown = nil
+			return true
+		end
+	end
 	-- Modal screens own all input, even outside their visible panel.
 	if
 		self.modalBounds

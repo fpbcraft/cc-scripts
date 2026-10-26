@@ -17,6 +17,7 @@ local commandTag, sentMove, reportedMove, ended, sentSpoof, voted, blockedProbe 
 local prepared, resumed = false, false
 local expected, prediction, attackerID
 local fallbackSent = false
+local civStarted, civOwnSent, civReported = false, false, false
 local blockReconnectUntil
 if id == 1 and fs.exists("/network-reconnect.dat") then
 	local file = assert(fs.open("/network-reconnect.dat", "r"))
@@ -154,7 +155,7 @@ local function hostDraw(ui, state)
 		elseif #state.players == 3 and not addedAI then
 			addedAI = true
 			issue(ui, "addAI")
-		elseif #state.players == 4 and phase == 0 then
+		elseif #state.players == 4 and phase == 0 and controls.civChecked then
 			phase = 1
 			trace("starting four-faction game")
 			issue(ui, "start")
@@ -279,6 +280,21 @@ local function hostDraw(ui, state)
 	end
 end
 local function clientDraw(ui, state)
+	if state and state.phase == "lobby" and id == 1 and not expected then
+		if not civStarted then
+			civStarted = true
+			issue(ui, "civ", { player = 1, id = "nomad" }, "civSpoof")
+		elseif results.civSpoof and not civOwnSent then
+			assert(not results.civSpoof.ok, "A guest changed the host civilization")
+			civOwnSent = true
+			issue(ui, "civ", { player = 2, id = "nomad" }, "civOwn")
+		elseif results.civOwn and playerFor(state, id).civ == "nomad" and not civReported then
+			assert(results.civOwn.ok, "A guest could not select its own civilization")
+			civReported = true
+			sendControl(0, "civChecked")
+		end
+		return
+	end
 	if not state or state.phase ~= "game" then
 		return
 	end

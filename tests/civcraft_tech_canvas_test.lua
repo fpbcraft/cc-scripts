@@ -10,6 +10,9 @@ local Tree = assert(loadfile("games/civcraft/tech_tree.lua"))()
 local player = { techs = {}, science = 100 }
 local buttons, strokes = {}, 0
 local r = { buttons = buttons }
+function r:textWidth(value)
+	return #tostring(value) * 4
+end
 function r:fill(...)
 	strokes = strokes + 1
 end
@@ -19,7 +22,9 @@ end
 function r:icon(...)
 	strokes = strokes + 1
 end
-function r:text(...) end
+function r:text(_, _, _, _, scale)
+	assert(not scale or scale == 1, "Selecting a technology must never enlarge its text")
+end
 function r:button(x, y, w, h, label, fn)
 	buttons[#buttons + 1] = { x = x, y = y, w = w, h = h, label = label, fn = fn }
 end
@@ -80,7 +85,10 @@ assert(model.zoom > 1, "Technology canvas supports zoom")
 local Details = dofile("/games/civcraft/research_details.lua")
 for _, id in ipairs(S.techOrder) do
 	local paragraphs = Details.paragraphs(S, id)
-	assert(#paragraphs >= 3 and #paragraphs[1] >= 50, "Every technology explains its purpose")
+	assert(#paragraphs >= 2 and #paragraphs[1] >= 50, "Every technology explains its purpose")
+	for _, paragraph in ipairs(paragraphs) do
+		assert(not paragraph:find("Research makes these projects available", 1, true))
+	end
 	for _, entry in ipairs(Details.unlocks(S, id)) do
 		assert(entry.record.tech == id and entry.category and entry.id)
 	end
@@ -103,12 +111,12 @@ for _, mode in ipairs({ "text", "graphics" }) do
 	end
 	redraw()
 	assert(compact.dragMode == "graph", "Small screens retain a connected graph")
-	local detailButton, graphNode, rightButton
+	local researchButton, graphNode, rightButton
 	for _, button in ipairs(buttons) do
 		assert(button.x >= small.x and button.x + button.w <= small.x + small.w)
 		assert(button.y >= small.y and button.y + button.h <= small.y + small.h)
-		if button.label == "DETAILS" then
-			detailButton = button
+		if button.label == "RESEARCH" then
+			researchButton = button
 		end
 		if button.label == "agriculture" then
 			graphNode = button
@@ -118,16 +126,17 @@ for _, mode in ipairs({ "text", "graphics" }) do
 		end
 	end
 	assert(
-		graphNode and detailButton and rightButton,
-		"Graph nodes, details and pan remain reachable"
+		graphNode and researchButton and rightButton,
+		"Graph, pinned research action and pan remain reachable"
 	)
 	rightButton.fn()
 	assert(compact.panX > 0)
-	detailButton.fn()
+	researchButton.fn()
+	assert(picked == "agriculture", "Research never requires opening a details dialog")
 	redraw()
 	assert(
-		compact.detail and compact.dragMode == "list",
-		"Only the detailed description scrolls as text"
+		compact.sidebarBounds and compact.dragMode == "graph" and not compact.detail,
+		"Sidebar and connected graph remain visible together"
 	)
 	local found = false
 	for offset = 0, compact.pageMax do
@@ -147,3 +156,13 @@ for _, mode in ipairs({ "text", "graphics" }) do
 	assert(found, "Technology details provide actual project links")
 end
 print("CIVCRAFT: scrollable technology graph, prerequisites, research buttons and zoom passed.")
+
+local layout = Tree.layout(S)
+for _, id in ipairs(S.techOrder) do
+	for _, parent in ipairs(S.techs[id].requires) do
+		assert(
+			layout.nodes[parent].column < layout.nodes[id].column,
+			"Every prerequisite is to the left of its dependent"
+		)
+	end
+end

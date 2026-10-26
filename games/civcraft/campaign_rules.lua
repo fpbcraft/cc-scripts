@@ -8,6 +8,27 @@ local Rules = {
 	victories = { "conquest", "industrial", "expedition", "diplomatic", "score" },
 }
 
+function Rules.selectCivilization(state, actor, request, civilizations)
+	if state.phase ~= "lobby" then
+		return false, "Civilizations are fixed after starting"
+	end
+	local index = tonumber(request.player)
+	local target = index and index % 1 == 0 and state.players[index]
+	if not target then
+		return false, "Choose a registered player"
+	end
+	if actor ~= (state.players[1] or {}).id and (actor ~= target.id or target.ai) then
+		return false, "Only the host may change another civilization"
+	end
+	for _, civilization in ipairs(civilizations) do
+		if civilization.id == request.id then
+			target.civ = civilization.id
+			return true
+		end
+	end
+	return false, "Unknown civilization"
+end
+
 function Rules.cost(value, context)
 	local preset = Rules.presets[context and context.gameSpeed] or Rules.presets.standard
 	return math.max(1, math.ceil(value * preset.factor))

@@ -214,6 +214,7 @@ P.packages.civcraft = {
 		"queued_routes.lua",
 		"module_cache.lua",
 		"campaign_options.lua",
+		"civilization_picker.lua",
 		"faction_view.lua",
 		"hex.lua",
 		"hud.lua",

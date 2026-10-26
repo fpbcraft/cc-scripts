@@ -114,20 +114,20 @@ remains part of release validation.
 
 ## Civilization selection and research usability
 
-- [ ] Replace cycling civilization selection with a dropdown showing the available
+- [x] Replace cycling civilization selection with a dropdown showing the available
   civilizations. Preserve access to bonuses and fixed AI personality information
   on compact and wide displays.
-- [ ] Fix the oversized/corrupted text rendering on the selected research node;
+- [x] Fix the oversized/corrupted text rendering on the selected research node;
   selection must not change its font scale, overflow its bounds or obscure nodes.
-- [ ] Allow choosing active research directly from the tree without first opening
+- [x] Allow choosing active research directly from the tree without first opening
   a separate details screen. Keep host validation and locked-tech feedback.
-- [ ] Replace the research Details menu/dialog with an inspector-style sidebar for
+- [x] Replace the research Details menu/dialog with an inspector-style sidebar for
   the selected technology, including descriptions, progress, requirements and
   unlock/Codex links. Keep the tree visible and usable on small screens.
-- [ ] Remove the generic paragraph beginning “Research makes these projects
+- [x] Remove the generic paragraph beginning “Research makes these projects
   available” and ending “costs and rules” from research details. Retain the
   technology-specific explanations and actual requirements.
-- [ ] Redesign research-tree positioning and dependency edges so prerequisite
+- [x] Redesign research-tree positioning and dependency edges so prerequisite
   relationships are unambiguous. Distinguish selected-node prerequisites and
   dependents, avoid confusing shared crossing lines, and retain readable
   pan/zoom/navigation on compact and wide displays.
