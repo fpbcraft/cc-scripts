@@ -234,8 +234,8 @@ function A:updateGame()
     end
     local previous = self.progress.unlocked
     self.progress.unlocked = Campaign.openLevels(self.progress)
-    self.message = self.progress.unlocked > previous and "CHAPTER UNLOCKED!"
-      or ("LEVEL CLEAR +" .. additions .. " BONUS")
+    self.message = self.progress.unlocked > previous and "NEW DISTRICT OPEN!"
+      or (additions > 0 and ("LEVEL CLEAR +" .. additions .. " BONUS") or "LEVEL CLEAR - NEW PATHS OPEN")
   elseif self.result.jam then
     self.message = "JAM: INCONSISTENT ROTATION"
   end
@@ -536,15 +536,17 @@ function A:act(action, x, y)
           self:playPack(self.activePack, nextIndex)
         end
       end
+    elseif action == "map" and not self.game.sandbox then
+      self:save()
+      self.levelChapter = Campaign.chapterFor(self.game.number)
+      self.levelReturn = "pause"
+      self.scene = "chapter"
     elseif action == "next" or action == "prev" then
-      local nextIndex = self.game.number + (action == "next" and 1 or -1)
-      if not self.game.sandbox and Campaign.levelUnlocked(self.progress, nextIndex, self.devSession) then
-        self:save()
-        self:openLevel(nextIndex)
-        self:save()
-      else
-        self.message = "LEVEL LOCKED"
-      end
+      -- A solved level opens neighboring nodes, not necessarily the next ID.
+      self:save()
+      self.levelChapter = Campaign.chapterFor(self.game.number)
+      self.levelReturn = "pause"
+      self.scene = "chapter"
     elseif action == "clearSandbox" and self.game.sandbox then
       self.game = E.sandbox(self.sandboxSize)
       changed = true
@@ -609,11 +611,9 @@ function A:act(action, x, y)
         self.scene = "chapter"
       else
         local stats = Campaign.stats(self.progress, x - 1)
-        self.message = "NEED "
-          .. math.max(0, 6 - stats.points)
-          .. " POINTS / "
-          .. math.max(0, 4 - stats.main)
-          .. " MAIN CLEARS"
+        self.message = "CLEAR "
+          .. math.max(0, Campaign.chapters[x - 1].requiredMain - stats.main)
+          .. " MORE LEVELS IN THE PREVIOUS AREA"
       end
     end
   elseif scene == "chapter" then
