@@ -56,7 +56,7 @@ peripheral = {
     return { "right", "left" }
   end,
   getType = function(name)
-    return name == "left" or name == "right" and "monitor" or nil
+    return (name == "left" or name == "right") and "monitor" or nil
   end,
   getName = function(device)
     return device == screen and "left" or nil
