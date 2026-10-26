@@ -17,11 +17,11 @@ local palette = {
   [3] = 0x23567B, -- blue grid lines / borders
   [4] = 0x4780A4, -- inactive mechanism / secondary ink
   [5] = 0xC1D8E7, -- text
-  [6] = 0xEBC26A, -- brass selection
-  [7] = 0xA88548, -- brass shadow
-  [8] = 0xEA7750, -- jam / redstone
+  [6] = 0xD9B06B, -- pale wood / brass selection
+  [7] = 0x8D633E, -- oak timber / brass shadow
+  [8] = 0xB94A37, -- jam / redstone tracks
   [9] = 0x91D3B7, -- successful machine
-  [10] = 0x356C5C, -- dark source block
+  [10] = 0x533922, -- dark wood grain / source block
   [11] = 0x64D3F2, -- CW / cyan highlights
   [12] = 0x307FAF, -- bright-blue frame
   [13] = 0xA3B6C3, -- steel
@@ -1928,4 +1928,5 @@ function R:hit(x, y)
 end
 require("games.cogworks.responsive")(R)
 require("games.cogworks.create_art")(R)
+require("games.cogworks.create_textures")(R)
 return R
