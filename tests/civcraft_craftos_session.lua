@@ -5,6 +5,7 @@
 ]]
 local includeAI, includeSettings, includeResearch, includeCampaign = false, false, false, false
 local includeWar = false
+local touchMonitor = false
 local includeHost = false
 local includeConversation = false
 local includeHistory = false
@@ -16,6 +17,9 @@ local includeRoutes = false
 local routeRecord
 local routeResumed = false
 for _, argument in ipairs({ ... }) do
+	if argument == "--touch-monitor" then
+		touchMonitor = true
+	end
 	if argument == "--difficulty" then
 		includeDifficulty, includeAI = true, true
 	end
@@ -57,6 +61,9 @@ assert(
 	not (includeHost and includeWar),
 	"The host AI scenario has one human; use hotseat for defender reactions"
 )
+if touchMonitor then
+	assert(_G.periphemu.create("top", "monitor"), "Use a fresh profile for monitor testing")
+end
 local native = dofile
 local stage = 0
 local settingsExpectedSpeed, settingsExpectedDisplay
@@ -109,8 +116,12 @@ local function tap(view, label)
 			}))
 			trace.close()
 			queued = true
-			os.queueEvent("mouse_click", 1, math.floor(x), math.floor(y))
-			os.queueEvent("mouse_up", 1, math.floor(x), math.floor(y))
+			if touchMonitor then
+				os.queueEvent("monitor_touch", "top", math.floor(x), math.floor(y))
+			else
+				os.queueEvent("mouse_click", 1, math.floor(x), math.floor(y))
+				os.queueEvent("mouse_up", 1, math.floor(x), math.floor(y))
+			end
 			os.queueEvent("civcraft_test_input_complete")
 			return true
 		end
@@ -121,6 +132,12 @@ end
 local function completeDecisions(view)
 	if view.panel == "context" then
 		local label = view:turnAction()
+		if label == "PRODUCTION" and tap(view, "NO PRODUCTION") then
+			return false
+		end
+		if label == "UNIT ORDERS" and tap(view, "SKIP TURN") then
+			return false
+		end
 		if tap(view, label) then
 			return label == "END TURN"
 		end
@@ -610,6 +627,9 @@ end)
 dofile = native
 if term.setGraphicsMode then
 	pcall(term.setGraphicsMode, 0)
+end
+if touchMonitor then
+	_G.periphemu.remove("top")
 end
 assert(success, reason)
 assert(

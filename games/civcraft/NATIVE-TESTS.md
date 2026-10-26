@@ -216,3 +216,50 @@ instrumented graphics frames, panning, zooming and opening Report/Council panels
 The installed runtime passes all 1,000 frames: text 8/13 ms and graphics 18/26 ms
 median/maximum, with collections at most 2 ms. Graphics API calls are instrumented;
 physical monitor performance remains a separate integration check.
+
+## Reusable isolated session launcher
+
+From the repository root, run:
+
+```sh
+python3 tests/run_civcraft_native_session.py
+python3 tests/run_civcraft_native_session.py --host
+python3 tests/run_civcraft_native_session.py --monitor
+python3 tests/run_civcraft_native_network.py
+```
+
+Use `--craftos /path/to/craftos` if the executable is not on PATH or installed in
+its usual macOS location. Each command creates a fresh temporary profile and copies
+only runtime sources and generated test data into it. Existing installed campaigns
+are not read or changed. The printed profile contains diagnostics and results.
+
+The monitor variant requires the GUI: headless CraftOS cannot create monitors.
+It creates an isolated `top` monitor through the real peripheral emulator and sends
+`monitor_touch` events at rendered button coordinates, rather than mouse events.
+It passes title/campaign setup, AI difficulty, settings, research, conversations,
+Council, routes/history, Surprise War/hotseat responses and save reload. Its driver
+handles both inline wide-inspector actions and compact inspector dialogs. This
+verifies native emulated monitor rendering/input; physical Minecraft monitors and
+target-server CC:Tweaked remain separate acceptance checks. See the official
+[peripheral emulator API](https://www.craftos-pc.cc/docs/periphemu).
+
+The three-computer network driver uses genuine emulated modem/rednet traffic on a
+private network ID. It checks simultaneous movement collisions, sender ownership,
+observer filtering, Council votes after Ready, Surprise War budget preservation,
+a mid-response save, client reboot/rejoin and recovery from deliberately dropped
+join/state messages. All three computers report passing results. Its output does
+not establish real-world latency, modem range or Minecraft-server tick behavior.
+
+`civcraft_ai_matrix.lua [rounds]` repeats the tournament across six seeds and nine
+civilizations, including same-civilization mirrors and mixed economic, expansion,
+naval and defensive matchups. Each case uses all five tiers in both seats against
+Prince. It defaults to 100 rounds and writes completed cases progressively to
+`/civcraft-ai-matrix.txt` on CraftOS. Use an isolated profile; it produces sixty
+matches and can take several minutes. `civcraft_ai_tournament.lua` additionally
+accepts an opponent civilization as its fifth argument; pass an empty fourth
+argument when not enabling its diagnostic `--gc` option.
+
+Reports distinguish host rejections of unseen completed wonders and movement
+that is legal in the observer's view but blocked in authoritative state. Any
+other rejected AI action fails the run. The test harness may compare full and
+filtered state to classify a denial; the AI itself receives no hidden information.

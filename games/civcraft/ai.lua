@@ -205,6 +205,11 @@ function A.choose(state, player, city, systems)
 			if ok then
 				return true
 			end
+			if choice.kind == "wonder" and player.aiPlan then
+				-- A failed order is observable; unseen rival construction is not.
+				player.aiPlan.productionRetryAfter = player.aiPlan.productionRetryAfter or {}
+				player.aiPlan.productionRetryAfter["wonder:" .. choice.id] = (state.round or 1) + 10
+			end
 		else
 			return true
 		end

@@ -159,7 +159,7 @@ All 65 regression scripts pass. New scenarios cover transaction validation, doub
 11. Five AI difficulty variants are implemented below; broader balance sampling remains release work.
 12. Save/integration/fuzz/performance/network validation and release metadata.
 
-Remaining foundation concerns: physical monitor and live rednet verification, plus the remaining requirements in FOLLOWUPS-v0.9.md. Native CraftOS-PC event, rendering and save checks complement the automated suite. Public city/unit ratings resolve the earlier hidden-army forecast mismatch; event-time path projection resolves replay visibility, and detached local display snapshots separate simulation from cooperative rendering.
+Remaining foundation concerns: physical Minecraft monitor/target-server verification, release validation, and the remaining requirements in FOLLOWUPS-v0.9.md. Native emulated monitor and three-computer modem sessions now pass, as documented in NATIVE-TESTS.md. Native CraftOS-PC event, rendering and save checks complement the automated suite. Public city/unit ratings resolve the earlier hidden-army forecast mismatch; event-time path projection resolves replay visibility, and detached local display snapshots separate simulation from cooperative rendering.
 
 The full roadmap is not complete. Target-server CC:Tweaked and live rednet validation is still required; do not treat these commits as a v0.9 release.
 
@@ -713,3 +713,43 @@ CraftOS full session passes. A separate native check loads an existing campaign,
 rejects unconfirmed replacement, resumes without replay, explicitly creates a new
 campaign and verifies that the saved file stays intact until a later save.
 Compact and wide rendered menu previews were visually inspected.
+
+
+## Extended AI and native monitor audit
+
+Longer campaigns found repeated wonder attempts when a rival's completed wonder
+was outside the AI's observations. The AI now remembers only its own rejected
+production order and suppresses that wonder for ten rounds before reconsidering.
+It does not consult hidden construction or record the rival's location. This
+optional bounded `aiPlan.productionRetryAfter` table survives normal save migration.
+
+Settlement travel now validates the next planned step against shared observed
+reachability, including attached escorts' remaining allowances and control stops.
+An unaffordable step pauses travel while preserving the destination. Regression
+checks cover denial feedback, expiry, migration and an exhausted escort recovering
+its allowance.
+
+The tournament driver now follows the real boundary sequence: Council/diplomacy,
+healing, production, villages/hostiles, movement reset, observations/promises and
+victory checking. It pumps eligible actors under the scheduler and asserts that
+rounds complete. Different opponent civilizations can be supplied as a fifth
+argument (the optional fourth remains `--gc`). Reports include opponent score,
+winners and victory reasons. Legitimate host denials caused by unseen completed
+wonders or differences between observed and authoritative reachability are counted
+separately; other rejected orders fail the run. Those diagnostics stay in the test
+harness and never feed hidden information into AI planning.
+
+A fresh native sixty-round, ten-match Miners-versus-Scholars matrix passes with
+8,057 orders and zero rejections. The worst actor takes 220 ms and the largest
+collection takes 33 ms under concurrent validation load. These are measured smoke
+and responsiveness results, not a statistically established difficulty ranking.
+All 83 regression scripts pass. A real native emulated-monitor session now passes
+using monitor-touch events through the full game loop; the isolated Python launcher
+makes both monitor and headless/host scenarios reproducible.
+
+The expanded desktop matrix completes sixty 100-round matches across six seeds
+and nine civilizations: 83,633 orders, 156 denials for unseen completed wonders,
+one movement denial from an unseen obstruction, and no unexplained rejection.
+[AI-BENCHMARK.md](AI-BENCHMARK.md) and its CSV preserve the individual results.
+They remain sampled integration/balance evidence rather than proof of monotonic
+win-rate gains between every tier.

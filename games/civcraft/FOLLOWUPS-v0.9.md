@@ -26,10 +26,11 @@ in the design draft. Keep this list alongside the main roadmap until verified.
   of one scrolling stream. Use suitable Basalt 2.5 components (tabs, lists,
   inputs and dialogs); keep overview, deal editing, agreements and messages
   separate. Validate compact and large text/graphics screens visually.
-- Wake units automatically for accepted orders. Verify every applicable action.
+- [x] Wake units automatically for accepted orders, including exploration, route
+  cancellation and linked escorts, without restoring spent actions.
 - [x] Remove green player/faction colors and preserve visibility on terrain.
 - [x] Add a top-right faction/player details button.
-- Show the predicted result when attacking a unit; keep the prediction shared
+- [x] Show the predicted result when attacking a unit; keep the prediction shared
   with authoritative resolution.
 - [x] Add a persistent Settings menu accessible from the title and pause screens,
   covering sound/music, volume, animation/accessibility and display preferences.
@@ -66,8 +67,9 @@ in the design draft. Keep this list alongside the main roadmap until verified.
 Surprise War first strike: the attacker uses **all remaining legal actions**
 before the defender responds. Previously spent movement and attacks stay spent.
 
-Existing implementation already covers accepted-order wake and deterministic
-combat previews; these still need the final integrated interaction checks.
+Accepted-order waking and deterministic combat previews are covered by shared-rule,
+UI, escort and native multi-computer interaction checks. Target-server acceptance
+remains part of release validation.
 
 ## Further interaction and combat requirements
 
@@ -109,3 +111,23 @@ combat previews; these still need the final integrated interaction checks.
   submenus with Back controls. Occupied slots require explicit replacement
   confirmation; deletion remains separately confirmed. Compact and wide layouts
   expose the same actions, using paging where needed.
+
+## Civilization selection and research usability
+
+- [ ] Replace cycling civilization selection with a dropdown showing the available
+  civilizations. Preserve access to bonuses and fixed AI personality information
+  on compact and wide displays.
+- [ ] Fix the oversized/corrupted text rendering on the selected research node;
+  selection must not change its font scale, overflow its bounds or obscure nodes.
+- [ ] Allow choosing active research directly from the tree without first opening
+  a separate details screen. Keep host validation and locked-tech feedback.
+- [ ] Replace the research Details menu/dialog with an inspector-style sidebar for
+  the selected technology, including descriptions, progress, requirements and
+  unlock/Codex links. Keep the tree visible and usable on small screens.
+- [ ] Remove the generic paragraph beginning “Research makes these projects
+  available” and ending “costs and rules” from research details. Retain the
+  technology-specific explanations and actual requirements.
+- [ ] Redesign research-tree positioning and dependency edges so prerequisite
+  relationships are unambiguous. Distinguish selected-node prerequisites and
+  dependents, avoid confusing shared crossing lines, and retain readable
+  pan/zoom/navigation on compact and wide displays.

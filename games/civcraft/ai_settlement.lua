@@ -142,6 +142,16 @@ function Settlement.order(view, player, unit, systems)
 		end
 		local step = target.path[2]
 		if step then
+			local affordable = false
+			for _, choice in ipairs(Hex.reachable(view, unit, player.id, systems)) do
+				if choice.x == step.x and choice.y == step.y and not choice.attack then
+					affordable = true
+					break
+				end
+			end
+			if not affordable then
+				return nil, target
+			end
 			return {
 				action = "move",
 				unitID = unit.id,

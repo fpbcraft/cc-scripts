@@ -23,6 +23,12 @@ local Victory = dofile("/games/civcraft/victory.lua")
 local Movement = dofile("/games/civcraft/movement_budget.lua")
 local Actions = dofile("/games/civcraft/actions.lua")
 local Cooperative = dofile("/games/civcraft/cooperative.lua")
+local Combat = dofile("/games/civcraft/combat.lua")
+local Events = dofile("/games/civcraft/events.lua")
+local Villages = dofile("/games/civcraft/villages.lua")
+local Hostiles = dofile("/games/civcraft/hostiles.lua")
+local Perception = dofile("/games/civcraft/diplomatic_perception.lua")
+local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local work = {}
 local function checkpoint()
 	Cooperative.checkpoint(work, false, true)
@@ -37,9 +43,12 @@ local seed = tonumber(arguments[2]) or 75123
 local civilization = arguments[3] or "forge"
 assert(Systems.civ(civilization).id == civilization, "Choose a known civilization")
 local gcBetweenRounds = arguments[4] == "--gc"
+local opponent = arguments[5] or civilization
+assert(Systems.civ(opponent).id == opponent, "Choose a known opponent civilization")
 local rounds = tonumber(arguments[1]) or 40
 assert(rounds >= 1 and rounds <= 180, "Choose 1 to 180 tournament rounds")
-local report = { rounds = rounds, seed = seed, civilization = civilization, matches = {} }
+local report =
+	{ rounds = rounds, seed = seed, civilization = civilization, opponent = opponent, matches = {} }
 local apply = Actions.apply
 local metrics
 Actions.apply = function(state, actor, request, systems)
@@ -49,6 +58,35 @@ Actions.apply = function(state, actor, request, systems)
 		if not ok then
 			metrics.rejections = metrics.rejections + 1
 			metrics.reasons[reason] = (metrics.reasons[reason] or 0) + 1
+			local unavailable = request.action == "queue"
+				and request.kind == "wonder"
+				and not dofile("/games/civcraft/landmarks.lua").available(state, request.id)
+			local observedMove, actualMove = false, false
+			if request.action == "move" then
+				local unit
+				for _, candidate in ipairs(state.units) do
+					if candidate.id == request.unitID then
+						unit = candidate
+					end
+				end
+				for _, choice in
+					ipairs(Hex.reachable(World.forPlayer(state, actor), unit, actor, systems))
+				do
+					observedMove = observedMove or choice.x == request.x and choice.y == request.y
+				end
+				for _, choice in ipairs(Hex.reachable(state, unit, actor, systems)) do
+					actualMove = actualMove or choice.x == request.x and choice.y == request.y
+				end
+			end
+			assert(
+				unavailable or observedMove and not actualMove,
+				"Unexpected AI rejection: " .. tostring(reason)
+			)
+			if unavailable then
+				metrics.unavailableWonders = (metrics.unavailableWonders or 0) + 1
+			else
+				metrics.observationDenials = (metrics.observationDenials or 0) + 1
+			end
 		end
 	end
 	return ok, reason
@@ -82,7 +120,7 @@ for _, level in ipairs(Difficulty.order) do
 				name = "AI " .. index,
 				ai = true,
 				aiDifficulty = index == seat and level or "prince",
-				civ = civilization,
+				civ = index == seat and civilization or opponent,
 				techs = {},
 				gold = 20,
 			}
@@ -119,28 +157,60 @@ for _, level in ipairs(Difficulty.order) do
 			for _, player in ipairs(state.players) do
 				player.ready = false
 			end
-			Council.advance(state)
-			Diplomacy.boundary(state)
-			World.reveal(state, Hex, Systems)
-			for _ = 1, #state.players do
-				for _, player in ipairs(state.players) do
-					CouncilAI.run(state, player, World.forPlayer(state, player.id))
-					local start = milliseconds()
-					trace(level .. " seat " .. seat .. " round " .. round .. " actor " .. player.id)
-					Systems.aiTurn(state, player, Hex)
-					metrics.worstActor = math.max(metrics.worstActor, milliseconds() - start)
+			if round > 1 then
+				Council.advance(state)
+				Diplomacy.boundary(state)
+				Events.prune(state)
+				Combat.round(state, Systems)
+				Systems.production(state, Hex)
+				Villages.round(state, Systems, Combat)
+				Hostiles.round(state, Systems)
+				for _, unit in ipairs(state.units) do
+					Movement.reset(
+						state,
+						unit,
+						Systems.units[unit.kind],
+						state.players[unit.owner + 1],
+						Hex
+					)
 				end
 			end
-			trace(level .. " seat " .. seat .. " round " .. round .. " production")
-			Systems.production(state, Hex)
+			World.reveal(state, Hex, Systems)
+			Perception.promises(state, Hex, World, Systems.units)
 			Victory.check(state, true)
-			for _, unit in ipairs(state.units) do
-				Movement.reset(
-					{ round = round + 1, world = world },
-					unit,
-					Systems.units[unit.kind],
-					state.players[unit.owner + 1],
-					Hex
+			for _ = 1, #state.players + 1 do
+				local acted = false
+				for _, player in ipairs(state.players) do
+					if state.phase == "game" then
+						Systems.diplomaticResponses(state, player)
+						CouncilAI.run(state, player, World.forPlayer(state, player.id))
+						if Scheduler.canAct(state, player.id) then
+							local start = milliseconds()
+							trace(
+								level
+									.. " seat "
+									.. seat
+									.. " round "
+									.. round
+									.. " actor "
+									.. player.id
+							)
+							Systems.aiTurn(state, player, Hex)
+							metrics.worstActor =
+								math.max(metrics.worstActor, milliseconds() - start)
+							acted = true
+							Victory.check(state, false)
+						end
+					end
+				end
+				if not acted then
+					break
+				end
+			end
+			for _, player in ipairs(state.players) do
+				assert(
+					state.phase ~= "game" or player.ready,
+					"AI scheduler did not finish its round"
 				)
 			end
 			if state.phase == "over" then
@@ -160,6 +230,17 @@ for _, level in ipairs(Difficulty.order) do
 			metrics.techs = metrics.techs + 1
 		end
 		metrics.winnerIDs = state.winnerIDs or {}
+		metrics.victoryReason = state.victoryReason
+		metrics.opponentScore = Victory.score(state, state.players[3 - seat])
+		metrics.won, metrics.tied = false, #metrics.winnerIDs > 1
+		for _, id in ipairs(metrics.winnerIDs) do
+			metrics.won = metrics.won or id == player.id
+		end
+		assert(
+			metrics.rejections
+				== (metrics.unavailableWonders or 0) + (metrics.observationDenials or 0),
+			"Unexpected rejected AI actions"
+		)
 		report.matches[#report.matches + 1] = metrics
 		print(
 			level

@@ -1,12 +1,28 @@
 local rejectMove, commands = false, {}
+local forcedWonder, wonderAttempts = false, 0
 dofile = function(path)
 	-- CraftOS's built-in dofile may use its defining environment. Explicitly carry
 	-- this test's command instrumentation into nested modules on both runtimes.
 	local module = assert(loadfile(path:gsub("^/games/civcraft/", "games/civcraft/"), "t", _ENV))()
+	if path == "/games/civcraft/ai_production.lua" then
+		local ranked = module.ranked
+		module.ranked = function(view, player, city, systems, canExpand)
+			if forcedWonder then
+				return { { kind = "wonder", id = "beacon", tileX = 4, tileY = 5, score = 100 } }, {
+					surplus = 1,
+				}
+			end
+			return ranked(view, player, city, systems, canExpand)
+		end
+	end
 	if path == "/games/civcraft/actions.lua" then
 		local apply = module.apply
 		module.apply = function(state, id, request, systems)
 			commands[#commands + 1] = request.action
+			if forcedWonder and request.kind == "wonder" then
+				wonderAttempts = wonderAttempts + 1
+				return false, "Wonder order unavailable"
+			end
 			if rejectMove and request.action == "move" then
 				return false, "Order changed"
 			end
@@ -258,3 +274,47 @@ assert(
 print(
 	"CIVCRAFT: economic utilities, food-secure staffing, legal persistent settlement/rail plans, budgets and private knowledge passed."
 )
+
+state, player, city = fixture()
+player.techs.diamondworking = true
+local function beaconChoice()
+	local view = World.forPlayer(state, player.id)
+	local ranked = Production.ranked(view, player, view.cities[1], Systems, false)
+	for _, choice in ipairs(ranked) do
+		if choice.kind == "wonder" and choice.id == "beacon" then
+			return true
+		end
+	end
+	return false
+end
+assert(beaconChoice(), "Unseen rival activity cannot suppress a legal observed wonder candidate")
+forcedWonder = true
+AI.choose(state, player, city, Systems)
+forcedWonder = false
+assert(wonderAttempts == 1 and player.aiPlan.productionRetryAfter["wonder:beacon"] == 11)
+assert(not beaconChoice(), "A rejected wonder order suppresses repeated attempts across cities")
+Systems.migrate(state)
+assert(not beaconChoice(), "Feedback survives campaign migration")
+state.round = 11
+assert(beaconChoice(), "Transient rejection is reconsidered after a bounded cooldown")
+print(
+	"CIVCRAFT: AI wonder retries use only command feedback and expire without hidden-map knowledge."
+)
+
+state, player, city = fixture()
+known(state, player)
+local civilian =
+	{ id = 40, owner = 1, kind = "settler", x = 6, y = 5, movesLeft = 3, hp = 100, escortID = 41 }
+local escort =
+	{ id = 41, owner = 1, kind = "warrior", x = 6, y = 5, movesLeft = 0, hp = 100, escortID = 40 }
+state.units = { civilian, escort }
+civilian.aiSettlement = { version = 1, x = 8, y = 5, selectedRound = 1 }
+local request, destination = Settlement.order(World.forPlayer(state, 1), player, civilian, Systems)
+assert(
+	not request and destination,
+	"An exhausted escort pauses settlement travel without discarding its target"
+)
+escort.movesLeft = 2
+request = Settlement.order(World.forPlayer(state, 1), player, civilian, Systems)
+assert(request and request.action == "move", "Settlement travel resumes when both members can move")
+print("CIVCRAFT: settlement routes respect shared escort allowances before issuing movement.")

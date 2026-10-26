@@ -105,7 +105,11 @@ function Production.ranked(view, player, city, systems, canExpand)
 	Values.dependencies(systems.buildings, target, city.buildings, 400, dependencies)
 	local result = {}
 	local function add(kind, id, value, x, y)
-		if value <= 0 then
+		if
+			value <= 0
+			or ((player.aiPlan or {}).productionRetryAfter or {})[kind .. ":" .. id]
+				and player.aiPlan.productionRetryAfter[kind .. ":" .. id] > (view.round or 1)
+		then
 			return
 		end
 		local progress = (city.projectProgress or {})[kind .. ":" .. id] or 0
