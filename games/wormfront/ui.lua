@@ -135,9 +135,9 @@ function UI:draw(g, opts)
   else
     local worm = Sim.worm(g)
     local y = r.h - 29
-    local detail = worm and ("HP " .. worm.hp .. "   ANGLE " .. worm.aim .. "   POWER " .. worm.power
-      .. "   " .. (worm.weapon == 2 and ("MEGA " .. worm.mega) or "ROCKET")
-      .. "   STEPS " .. (4 - g.moves)) or ""
+    local detail = worm
+        and ("HP " .. worm.hp .. "   ANGLE " .. worm.aim .. "   POWER " .. worm.power .. "   " .. (worm.weapon == 2 and ("MEGA " .. worm.mega) or "ROCKET") .. "   STEPS " .. (4 - g.moves))
+      or ""
     r:fill(0, y - 10, r.w, 9, 1)
     r:text(3, y - 8, (mine and "YOUR TURN  " or "WAITING  ") .. detail, mine and 18 or 5, 1, r.w - 6)
     local function act(kind, dir)
