@@ -302,3 +302,23 @@ AI plans, fog memory and journal cursors. It verifies post-load eligibility,
 remaining response budgets, normal-boundary resets and exactly-once route progress.
 It is a desktop installed-loader regression, complementing native session and
 client-reboot tests rather than claiming a physical-server host reboot.
+
+
+## Overlapping network wars
+
+The network driver continues through round four after its original response-window
+reconnect. It exercises an immediate three-member merge, a second waiting-client
+reboot, negotiated peace at the boundary, a peaceful player's independent action,
+a waiting-member rejection, a pending normal declaration and its next-boundary
+merge. It checks explicit remaining budgets before transitions and allowance
+stamps in the final authoritative save. Private snapshots are checked throughout.
+
+```sh
+python3 tests/run_civcraft_native_network.py
+python3 tests/run_civcraft_native_network.py --reverse-race
+```
+
+The second command makes client 2 win the initial collision, also exercising
+client 1's legal fallback movement. Both variants pass. The harness waits for
+individual result packets and updated snapshots separately; receiving a new round
+does not imply that another client's result acknowledgement has already arrived.

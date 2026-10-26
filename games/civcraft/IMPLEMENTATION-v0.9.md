@@ -830,3 +830,29 @@ war-group order and lets the escort finish its queued destination. A repeated
 queue execution cannot move it again or refill movement. All six installed-loader
 cases pass. These are serialized game-rule checks; real multi-computer overlapping
 war transitions remain the next separate acceptance item.
+
+
+## Native overlapping wars and peace splits
+
+The three-computer/four-faction modem test now runs through four rounds. A
+peaceful client spends one movement point, then declares Surprise War against a
+member of the existing host/defender war group. The component immediately merges
+under the new attacker's remaining-action window, preserving its one remaining
+point and the other participants' full new-round budgets. The unrelated AI stays
+outside the component and retains Ready state; host treasury does not advance.
+
+The waiting defender is rebooted and rejoins during the merged group. Its ordinary
+order is still rejected, while it may accept a negotiated peace offer. That peace
+keeps the component intact until the next boundary, then splits the departing
+client back into peaceful concurrency. It can move while the host's remaining
+war group is active, while the waiting group member remains unable to act. A
+normal declaration remains pending for the rest of that round and merges the
+component only at the following boundary. A final authoritative save verifies
+round-four allowance stamps and budgets for all three humans.
+
+Both initial collision winners pass in fresh native profiles, including the
+losing client's fallback movement and the earlier dropped-message/reconnect,
+forecast, sender ownership, Council and snapshot-privacy checks. Client command
+results and host snapshots are awaited independently, since they can arrive in
+either order. This is real emulated modem traffic, not a target-server latency or
+physical-modem test.

@@ -47,10 +47,13 @@ for their stated scope, not a declaration that the full release is complete.
   speeds preserve scheduler reactions, queued escorts, diplomacy/Council records,
   AI plans, fog memory and event cursors; queued movement does not run twice.
 
+- [x] Real multi-computer overlap transitions: immediate three-player merge,
+  waiting-client reboot/rejoin, peace split at the boundary, independent peaceful
+  actions and a later normal-war merge preserve all spent budgets. Both initial
+  collision winners pass in separate fresh native profiles.
+
 ## Remaining before calling the full release complete
 
-- [ ] Extend real multi-computer tests to overlapping war-component merges and
-  peace splits, including disconnected participants and no duplicate resets.
 - [ ] Measure late-game large-map rendering, simulation and network payload costs
   together; early Vast tests and small-map tournaments have narrower coverage.
 - [ ] Verify the final flows on target-server CC:Tweaked and physical advanced

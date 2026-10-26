@@ -1,4 +1,6 @@
 -- Three computers on an isolated emulated-modem network; generated campaigns only.
+local reverseRace = ({ ... })[1] == "--reverse-race"
+local raceReleased = false
 local emulator = assert(_G.periphemu, "Run this test in CraftOS-PC")
 local id = os.getComputerID()
 assert(id >= 0 and id <= 2, "Use dedicated computers 0, 1 and 2")
@@ -143,6 +145,207 @@ function env.rednet.send(to, packet, outgoingProtocol)
 	end
 	return baseNet.send(to, packet, outgoingProtocol)
 end
+local overlapStep, overlapJoin, overlapGold = 0, 0, nil
+local splitVerified, mergeVerified = false, false
+local stepSent, stepReported, roundReported = nil, nil, false
+local function requestStep(target, token, action, values, budget)
+	sendControl(
+		target,
+		"step",
+		{ token = token, action = action, values = values or {}, budget = budget }
+	)
+end
+local function stepResult(target, token, accepted)
+	local result = controls["stepResult" .. target]
+	if not result or result.token ~= token then
+		return nil
+	end
+	assert(result.ok == accepted, token .. ": " .. tostring(result.message))
+	return result
+end
+local function transition(step)
+	overlapStep = step
+	trace("overlap step " .. step)
+end
+local function clientStep(ui, state, unit)
+	local step = controls.step
+	if step then
+		if stepSent ~= step.token then
+			stepSent = step.token
+			local action, values = step.action, step.values
+			if action == "moveOne" then
+				local Hex = env.dofile("/games/civcraft/hex.lua")
+				local Systems = env.dofile("/games/civcraft/systems.lua")
+				local found
+				for _, choice in ipairs(Hex.reachable(state, unit, id, Systems)) do
+					if choice.cost == 1 and not choice.attack then
+						found = choice
+						break
+					end
+				end
+				assert(found, "Generated scene must have a legal one-point move")
+				action, values =
+					"move", { unitID = unit.id, sx = unit.x, sy = unit.y, x = found.x, y = found.y }
+			elseif action == "probeWaiting" then
+				action, values =
+					"standby", { unitID = unit.id, x = unit.x, y = unit.y, value = false }
+			end
+			issue(ui, action, values, step.token)
+		elseif
+			stepReported ~= step.token
+			and results[step.token]
+			and unit.movesLeft == step.budget
+		then
+			local peaceID
+			for _, offer in ipairs(state.diplomacy.offers) do
+				if offer.kind == "peace" and offer.status == "pending" then
+					peaceID = offer.id
+				end
+			end
+			if step.action ~= "diplomaticOffer" or peaceID then
+				stepReported = step.token
+				local result = results[step.token]
+				sendControl(0, "stepResult" .. id, {
+					token = step.token,
+					ok = result.ok,
+					message = result.message,
+					budget = unit.movesLeft,
+					round = state.round,
+					peaceID = peaceID,
+				})
+			end
+		end
+	end
+end
+local function overlap(ui, state)
+	local Scheduler = env.dofile("/games/civcraft/turn_scheduler.lua")
+	local group = Scheduler.group(state, 0)
+	if overlapStep == 0 then
+		overlapGold = playerFor(state, 0).gold
+		requestStep(2, "spendBeforeMerge", "moveOne", {}, 1)
+		transition(1)
+	elseif overlapStep == 1 and stepResult(2, "spendBeforeMerge", true) then
+		requestStep(2, "mergeWars", "declareWar", { target = 1, kind = "surprise" }, 1)
+		transition(2)
+	elseif overlapStep == 2 and stepResult(2, "mergeWars", true) then
+		assert(state.round == 2 and #group.order == 3 and group.active == 2)
+		local peaceful = state.players[4]
+		assert(peaceful and not Scheduler.group(state, peaceful.id) and peaceful.ready)
+		assert(unitFor(state, 0).movesLeft == 2 and playerFor(state, 0).gold == overlapGold)
+		mergeVerified, overlapJoin = true, joins[1]
+		peripheral.call("computer_1", "reboot")
+		transition(3)
+	elseif overlapStep == 3 and joins[1] > overlapJoin then
+		requestStep(1, "rejoinedWaiting", "probeWaiting", {}, 2)
+		transition(4)
+	elseif overlapStep == 4 and stepResult(1, "rejoinedWaiting", false) then
+		requestStep(
+			2,
+			"negotiateSplit",
+			"diplomaticOffer",
+			{ target = 1, kind = "peace", terms = { duration = 5 } },
+			1
+		)
+		transition(5)
+	elseif overlapStep == 5 and stepResult(2, "negotiateSplit", true) then
+		requestStep(
+			1,
+			"acceptSplit",
+			"diplomaticReply",
+			{ offerID = controls.stepResult2.peaceID, response = "accept" },
+			2
+		)
+		transition(6)
+	elseif overlapStep == 6 and stepResult(1, "acceptSplit", true) then
+		assert(state.round == 2 and #group.order == 3 and group.active == 2)
+		requestStep(2, "endMergedFirst", "end", { confirmed = true }, 1)
+		transition(7)
+	elseif overlapStep == 7 and stepResult(2, "endMergedFirst", true) and group.active == 1 then
+		requestStep(1, "spendMergedSecond", "moveOne", {}, 1)
+		transition(8)
+	elseif overlapStep == 8 and stepResult(1, "spendMergedSecond", true) then
+		requestStep(1, "endMergedSecond", "end", { confirmed = true }, 1)
+		transition(9)
+	elseif overlapStep == 9 and stepResult(1, "endMergedSecond", true) and group.active == 0 then
+		assert(state.round == 2 and playerFor(state, 0).gold == overlapGold)
+		local Hex = env.dofile("/games/civcraft/hex.lua")
+		local unit, found = unitFor(state, 0)
+		for _, choice in
+			ipairs(Hex.reachable(state, unit, 0, env.dofile("/games/civcraft/systems.lua")))
+		do
+			if choice.cost == 1 and not choice.attack then
+				found = choice
+				break
+			end
+		end
+		assert(found)
+		issue(ui, "move", { unitID = unit.id, sx = unit.x, sy = unit.y, x = found.x, y = found.y })
+		transition(10)
+	elseif overlapStep == 10 and unitFor(state, 0).movesLeft == 1 then
+		transition(11)
+		issue(ui, "end", { confirmed = true })
+	elseif overlapStep == 11 and state.round == 3 then
+		assert(#group.order == 2 and group.active == 0 and not Scheduler.group(state, 2))
+		assert(unitFor(state, 0).movesLeft == 2 and not state.scheduler.reactions[1])
+		splitVerified = true
+		requestStep(2, "peacefulConcurrentMove", "moveOne", {}, 1)
+		transition(12)
+	elseif overlapStep == 12 and stepResult(2, "peacefulConcurrentMove", true) then
+		assert(group.active == 0 and unitFor(state, 0).movesLeft == 2 and state.round == 3)
+		requestStep(1, "stillWaitingAfterSplit", "probeWaiting", {}, 2)
+		transition(13)
+	elseif overlapStep == 13 and stepResult(1, "stillWaitingAfterSplit", false) then
+		requestStep(2, "normalPending", "declareWar", { target = 0, kind = "normal" }, 1)
+		transition(14)
+	elseif overlapStep == 14 and stepResult(2, "normalPending", true) then
+		assert(state.round == 3 and #group.order == 2 and not Scheduler.group(state, 2))
+		local pending = false
+		for _, war in ipairs(state.diplomacy.wars) do
+			if
+				(war.a == 2 and war.b == 0 or war.a == 0 and war.b == 2)
+				and not war.active
+				and war.activatesRound == 4
+			then
+				pending = true
+			end
+		end
+		assert(pending, "Normal war activated before the boundary")
+		requestStep(2, "endPeaceful", "end", { confirmed = true }, 1)
+		transition(15)
+	elseif overlapStep == 15 and stepResult(2, "endPeaceful", true) then
+		assert(group.active == 0 and unitFor(state, 0).movesLeft == 2)
+		transition(16)
+		issue(ui, "end", { confirmed = true })
+	elseif overlapStep == 16 and group.active == 1 then
+		requestStep(1, "finishBeforeNormal", "end", { confirmed = true }, 2)
+		transition(17)
+	elseif overlapStep == 17 and state.round == 4 and stepResult(1, "finishBeforeNormal", true) then
+		assert(#group.order == 3 and group.active == 0)
+		transition(18)
+		issue(ui, "save")
+	elseif overlapStep == 18 then
+		local file = fs.open("/games/civcraft/data/save.dat", "r")
+		if file then
+			local saved = textutils.unserialize(file.readAll())
+			file.close()
+			if saved.round == 4 then
+				assert(mergeVerified and splitVerified and #saved.scheduler.groups[1].order == 3)
+				for owner = 0, 2 do
+					local unit = unitFor(saved, owner)
+					assert(unit.movesLeft == 2 and unit.movementAllowanceRound == 4)
+				end
+				sendControl(1, "finishTest")
+				sendControl(2, "finishTest")
+				transition(19)
+			end
+		end
+	elseif overlapStep == 19 and controls.finished1 and controls.finished2 then
+		complete = true
+		trace("PASS: merged, reconnected, split and normal-war boundary")
+		issue(ui, "exit")
+	end
+end
+
 local function hostDraw(ui, state)
 	if state.phase == "lobby" then
 		if not created then
@@ -164,6 +367,10 @@ local function hostDraw(ui, state)
 	end
 	if state.phase ~= "game" then
 		return
+	end
+	if phase == 1 and reverseRace and raceAnswers[2] ~= nil and not raceReleased then
+		raceReleased = true
+		sendControl(1, "releaseRace")
 	end
 	if phase == 1 and reports[1] and reports[2] then
 		assert(
@@ -274,9 +481,10 @@ local function hostDraw(ui, state)
 				and not state.scheduler.reactions[1]
 				and unitFor(state, 0).movesLeft == 2
 		)
-		complete = true
-		trace("PASS")
-		issue(ui, "exit")
+		phase = 13
+		overlap(ui, state)
+	elseif phase == 13 then
+		overlap(ui, state)
 	end
 end
 local function clientDraw(ui, state)
@@ -299,6 +507,9 @@ local function clientDraw(ui, state)
 		return
 	end
 	local unit = assert(unitFor(state, id))
+	if state.round >= 2 then
+		clientStep(ui, state, unit)
+	end
 	if expected then
 		if not resumed and state.round == 1 and state.scheduler.reactions[id] then
 			assert(
@@ -316,6 +527,9 @@ local function clientDraw(ui, state)
 		end
 	else
 		if not sentMove then
+			if reverseRace and id == 1 and not controls.releaseRace then
+				return
+			end
 			sentMove = true
 			phase = 1
 			trace("racing for shared tile")
@@ -417,14 +631,18 @@ local function clientDraw(ui, state)
 			trace("saved client expectation before reboot")
 		end
 	end
-	if state.round == 2 and not complete then
+	if state.round == 2 and not roundReported then
 		assert(unit.movesLeft == 2 and not state.scheduler.reactions[id])
-		complete = true
+		roundReported = true
 		sendControl(
 			0,
 			"done" .. id,
 			{ round = state.round, budget = unit.movesLeft, reconnect = expected ~= nil }
 		)
+	end
+	if controls.finishTest and not complete then
+		complete = true
+		sendControl(0, "finished" .. id)
 		trace("PASS")
 		issue(ui, "exit")
 	end
@@ -484,7 +702,7 @@ env.dofile = function(path)
 	return module
 end
 local modemJoins = {}
-local deadline = os.startTimer(30)
+local deadline = os.startTimer(60)
 local ok, why = pcall(function()
 	parallel.waitForAny(function()
 		assert(env.loadfile("/games/civcraft/game.lua"))(
@@ -544,7 +762,11 @@ output.write(textutils.serialize({
 	passed = ok,
 	reason = tostring(why),
 	computer = id,
+	reverseRace = reverseRace,
 	phase = phase,
+	overlapStep = overlapStep,
+	mergeVerified = mergeVerified,
+	splitVerified = splitVerified,
 	joins = joins,
 	raceAnswers = raceAnswers,
 	controls = id == 0 and controls or nil,
