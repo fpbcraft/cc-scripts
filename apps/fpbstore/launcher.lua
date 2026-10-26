@@ -475,7 +475,7 @@ function UI.run(manager)
     put(2, 7, brief(current() and current().name or "", w - 4), colors.white)
     local x = 2
     x = button(x, 10, "TERMINAL", "launch-term")
-    button(x, 10, "MONITOR", "launch-monitor", nil, false, #monitors > 0)
+    button(x, 10, "MONITOR", "launch-monitor", nil, false, #monitors > 0 or manager.ensureMonitor ~= nil)
     button(2, h - 4, "CANCEL", "back")
     bottom("Select display  ESC Cancel")
   end
@@ -597,6 +597,10 @@ function UI.run(manager)
       return
     end
     local dest = target == "monitor" and monitor() or native
+    if target == "monitor" and not dest and manager.ensureMonitor then
+      local entry = manager.ensureMonitor()
+      dest = entry and entry.screen or nil
+    end
     if target == "monitor" and not dest then
       message = "Monitor disconnected. Select terminal."
       page = "launch"
@@ -628,7 +632,7 @@ function UI.run(manager)
       return
     end
     local target = launchTarget(app)
-    if target == "ask" or (target == "monitor" and not monitor()) then
+    if target == "ask" or (target == "monitor" and not monitor() and not manager.ensureMonitor) then
       pendingLaunch = app.id
       page = "launch"
       if target == "monitor" then
