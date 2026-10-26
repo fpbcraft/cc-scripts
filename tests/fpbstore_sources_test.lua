@@ -45,7 +45,7 @@ disk.env.http.get = function(url, ...)
     if url:find("/pulls/52", 1, true) then
       body = "pr"
       responses.pr = { head = { sha = heads.pr, repo = { full_name = "fpbcraft/cc-scripts" } } }
-    elseif url:find("/commits/feature%%2Fexperiment", 1, true) then
+    elseif url:find("/commits/feature%2Fexperiment", 1, true) then
       body = "branch"
       responses.branch = { sha = heads.branch }
     elseif url:find("/commits/main", 1, true) then
