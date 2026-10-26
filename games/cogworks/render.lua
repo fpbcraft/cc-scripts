@@ -858,7 +858,7 @@ function R:drawGame(m)
     self:button(176, 102, 19, 7, "TEST", "editorTest")
   else
     -- Persistent bonus objectives are visible while building.
-    self:font(117, 87, g.sandbox and "UNLIMITED PARTS" or (#E.levels[g.number].bonuses == 0 and "NO BONUS GOALS" or "BONUS GOALS"), 6)
+    self:font(117, 87, (g.sandbox or g.custom) and "UNLIMITED PARTS" or (#E.levels[g.number].bonuses == 0 and "NO BONUS GOALS" or "BONUS GOALS"), 6)
     local bonuses = E.challenges(g, result)
     local awarded = (m.progress.awards and m.progress.awards[g.number]) or {}
     for i, bonus in ipairs(bonuses) do
