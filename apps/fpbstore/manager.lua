@@ -39,8 +39,134 @@ function M.get(id)
   end
   return nil
 end
+function M.installRoot(app)
+  local h = fs.open("/apps/fpbstore/installed/" .. app.id .. ".dat", "r")
+  if h then
+    local ok, marker = pcall(textutils.unserialize, h.readAll())
+    h.close()
+    if ok and type(marker) == "table" and type(marker.root) == "string" then
+      return marker.root
+    end
+  end
+  return app.root
+end
 function M.installed(app)
-  return fs.exists(app.entry) and not fs.isDir(app.entry)
+  local entry = M.installRoot(app) .. app.entry:sub(#app.root + 1)
+  return fs.exists(entry) and not fs.isDir(entry)
+end
+
+local PREF_PATH = "/apps/fpbstore/preferences.dat"
+function M.preferences()
+  local prefs = { display = "auto", opusStore = true, opusApps = true, launchTargets = {}, opusShortcuts = {} }
+  local h = fs.open(PREF_PATH, "r")
+  if h then
+    local ok, data = pcall(textutils.unserialize, h.readAll())
+    h.close()
+    if ok and type(data) == "table" then
+      if data.display == "auto" or data.display == "term" or data.display == "monitor" then
+        prefs.display = data.display
+      end
+      if type(data.opusStore) == "boolean" then
+        prefs.opusStore = data.opusStore
+      end
+      if type(data.opusApps) == "boolean" then
+        prefs.opusApps = data.opusApps
+      end
+      if type(data.opusShortcuts) == "table" then
+        for id, enabled in pairs(data.opusShortcuts) do
+          if type(id) == "string" and type(enabled) == "boolean" then
+            prefs.opusShortcuts[id] = enabled
+          end
+        end
+      end
+      if type(data.launchTargets) == "table" then
+        for id, target in pairs(data.launchTargets) do
+          if target == "term" or target == "monitor" or target == "ask" then
+            prefs.launchTargets[id] = target
+          end
+        end
+      end
+    end
+  end
+  return prefs
+end
+function M.savePreferences(prefs)
+  assert(prefs.display == "auto" or prefs.display == "term" or prefs.display == "monitor")
+  ensure("/apps/fpbstore")
+  write(PREF_PATH, textutils.serialize(prefs))
+  M.syncOpus()
+end
+function M.setLaunchTarget(app, target)
+  assert(app and M.get(app.id) == app)
+  assert(target == "term" or target == "monitor" or target == "ask")
+  local prefs = M.preferences()
+  prefs.launchTargets[app.id] = target
+  M.savePreferences(prefs)
+end
+function M.monitors()
+  local result = {}
+  if peripheral and peripheral.getNames and peripheral.getType and peripheral.wrap then
+    for _, name in ipairs(peripheral.getNames()) do
+      if peripheral.getType(name) == "monitor" then
+        local monitor = peripheral.wrap(name)
+        if monitor and monitor.getSize then
+          result[#result + 1] = { name = name, screen = monitor }
+        end
+      end
+    end
+  end
+  table.sort(result, function(a, b)
+    return a.name < b.name
+  end)
+  return result
+end
+function M.ensureMonitor()
+  local module = type(require) == "function" and require("apps.fpbstore.monitor")
+    or dofile("/apps/fpbstore/monitor.lua")
+  local entry, created, reason = module.ensure()
+  return entry, created, reason
+end
+function M.disks(app)
+  local result = { { name = "Computer", root = app.root, mount = "/" } }
+  if peripheral and peripheral.getNames and peripheral.getType and peripheral.call then
+    for _, name in ipairs(peripheral.getNames()) do
+      if peripheral.getType(name) == "drive" then
+        local ok, mount = pcall(peripheral.call, name, "getMountPath")
+        if ok and type(mount) == "string" and mount ~= "" then
+          local path = "/" .. mount:gsub("^/", "")
+          if fs.exists(path) and (not fs.isReadOnly or not fs.isReadOnly(path)) then
+            result[#result + 1] = {
+              name = path,
+              mount = path,
+              root = path .. "/" .. (app.category == "Games" and "games" or "apps") .. "/" .. app.id,
+            }
+          end
+        end
+      end
+    end
+  end
+  return result
+end
+function M.validateRoot(app, root)
+  root = root or M.installRoot(app)
+  for _, disk in ipairs(M.disks(app)) do
+    if disk.root == root then
+      return root
+    end
+  end
+  error("Installation destination is unavailable or read-only: " .. tostring(root), 0)
+end
+function M.syncOpus()
+  local ok, opus = pcall(function()
+    if type(require) == "function" then
+      return require("apps.fpbstore.opus")
+    end
+    return dofile("/apps/fpbstore/opus.lua")
+  end)
+  if ok and opus and opus.sync then
+    return pcall(opus.sync, M.catalog.apps, M.installed, M.preferences())
+  end
+  return false
 end
 local latest = {}
 local checked = false
@@ -67,7 +193,7 @@ local function readVersion(app)
   if marker and type(marker.version) == "string" then
     return marker.version
   end
-  local h = fs.open(app.entry, "r")
+  local h = fs.open(M.installRoot(app) .. app.entry:sub(#app.root + 1), "r")
   if h then
     local header = (h.read and h.read(400) or h.readAll()) or ""
     h.close()
@@ -372,10 +498,12 @@ function M.status(app)
     source = source,
     commit = marker and marker.commit,
     checked = checked,
+    root = M.installRoot(app),
+    launchTarget = M.preferences().launchTargets[app.id] or "ask",
   }
 end
 
-function M.install(app, ref)
+function M.install(app, ref, root)
   assert(app and M.get(app.id) == app, "Unrecognized app")
   local source
   if ref == nil then
@@ -394,17 +522,21 @@ function M.install(app, ref)
       error("Cannot resolve " .. source.label .. ": " .. tostring(result), 0)
     end
   end
+  root = M.validateRoot(app, root)
   local pinned = snapshot and snapshot.sha or resolveRef("main")
   local code = fetch(M.BASE .. pinned .. "/" .. app.installer)
   local chunk, err = load(code, "@" .. app.installer, "t", _ENV)
   assert(chunk, "Invalid installer: " .. tostring(err))
   local ok, result = xpcall(function()
-    return chunk(pinned, "--no-startup")
+    return chunk(pinned, "--no-startup", "--root=" .. root)
   end, function(e)
     return tostring(e) .. (debug and debug.traceback and ("\n" .. debug.traceback()) or "")
   end)
   assert(ok, "Installation of " .. app.name .. " failed:\n" .. tostring(result))
-  assert(M.installed(app), "Installer returned without installing " .. app.name)
+  assert(
+    fs.exists(root .. app.entry:sub(#app.root + 1)),
+    "Installer returned without installing " .. app.name .. " at " .. root
+  )
   ensure("/apps/fpbstore/installed")
   write(
     markerPath(app),
@@ -416,33 +548,37 @@ function M.install(app, ref)
       fingerprint = snapshot and snapshot.fingerprints[app.id] or nil,
       version = snapshot and snapshot.versions[app.id] or (source.kind == "main" and latest[app.id]) or app.version,
       installedAt = os.epoch and os.epoch("utc") or 0,
+      root = root,
     })
   )
+  M.syncOpus()
   return true
 end
 
 function M.launch(app)
   assert(app and M.get(app.id) == app and M.installed(app), "App not installed")
-  local file, err = loadfile(app.root .. "/_lib/fpb/loader.lua")
+  local root = M.installRoot(app)
+  local file, err = loadfile(root .. "/_lib/fpb/loader.lua")
   assert(file, "Missing app loader; reinstall " .. app.name .. ": " .. tostring(err))
   local loader = file()
   assert(type(loader) == "table" and type(loader.run) == "function", "Invalid app loader")
   local entry = app.entry:sub(#app.root + 2)
   if app.id == "civcraft" then
-    return loader.run(app.root, entry, _ENV, "local")
+    return loader.run(root, entry, _ENV, "local")
   end
-  return loader.run(app.root, entry, _ENV)
+  return loader.run(root, entry, _ENV)
 end
 function M.remove(app, deleteSaves)
   assert(app and M.get(app.id) == app, "Unrecognized app")
   local count = 0
+  local root = M.installRoot(app)
   -- Never delete the game root: unrecognized files may contain user work.
   for _, relative in ipairs(app.managedFiles) do
     assert(
       relative:match("^[%w%._/-]+$") and not relative:find("..", 1, true) and relative:sub(1, 1) ~= "/",
       "Unsafe managed file path"
     )
-    local path = fs.combine(app.root, relative)
+    local path = fs.combine(root, relative)
     if fs.exists(path) and not fs.isDir(path) then
       fs.delete(path)
       count = count + 1
@@ -452,8 +588,9 @@ function M.remove(app, deleteSaves)
   if deleteSaves then
     for _, save in ipairs(app.saves) do
       assert(save:sub(1, #app.root + 1) == app.root .. "/", "Unsafe save path")
-      if fs.exists(save) then
-        fs.delete(save)
+      local actual = root .. save:sub(#app.root + 1)
+      if fs.exists(actual) then
+        fs.delete(actual)
       end
     end
   end
@@ -461,6 +598,7 @@ function M.remove(app, deleteSaves)
   if fs.exists(marker) then
     fs.delete(marker)
   end
+  M.syncOpus()
   return count
 end
 function M.updateStore(ref)

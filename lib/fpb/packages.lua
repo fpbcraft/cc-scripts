@@ -1,5 +1,5 @@
 -- Install manifests: the only source of managed file lists and legacy data paths.
-local P = { schema = 2, storeVersion = "2.0.0", packages = {} }
+local P = { schema = 2, storeVersion = "2.1.0", packages = {} }
 P.packages.cogworks = {
   id = "cogworks",
   source = "games/cogworks",
@@ -238,12 +238,22 @@ P.packages.fpbstore = {
   root = "/apps/fpbstore",
   legacy = "/fpbstore",
   entry = "main.lua",
-  files = { "README.md", "catalog.lua", "launcher.lua", "main.lua", "manager.lua" },
+  files = {
+    "README.md",
+    "catalog.lua",
+    "launcher.lua",
+    "main.lua",
+    "manager.lua",
+    "opus.lua",
+    "launch.lua",
+    "monitor.lua",
+    "basalt_ui.lua",
+  },
   libraries = { "loader", "packages" },
-  data = { "installed" },
+  data = { "installed", "preferences.dat", "shortcuts" },
   startup = false,
   lowDisk = false,
-  basalt = false,
+  basalt = true,
 }
 P.apps = {
   {
@@ -251,7 +261,7 @@ P.apps = {
     id = "cogworks",
     name = "COGWORKS",
     subtitle = "KINETIC LAB",
-    description = "64 Create-inspired kinetic puzzles and a free sandbox.",
+    description = "Solve 64 kinetic puzzles by combining shafts, cogwheels, gearboxes and mechanisms inspired by Create.",
     icon = "C",
     genre = "PUZZLE",
   },
@@ -260,7 +270,7 @@ P.apps = {
     id = "railbreak",
     name = "RAILBREAK",
     subtitle = "KINETIC FRONTIER",
-    description = "Run a railway, manage cargo and improve your trains.",
+    description = "Run a railway, move cargo and improve trains across a growing industrial frontier.",
     icon = "R",
     genre = "STRATEGY",
   },
@@ -269,7 +279,7 @@ P.apps = {
     id = "shattered",
     name = "SHATTERED EXPANSE",
     subtitle = "FOUR EMPIRES",
-    description = "A space 4X with exploration, diplomacy and events.",
+    description = "Command an empire among the stars with exploration, diplomacy, war and branching events.",
     icon = "S",
     genre = "4X / RPG",
   },
@@ -278,7 +288,7 @@ P.apps = {
     id = "ironspire",
     name = "IRONSPIRE",
     subtitle = "CLOCKWORK ASCENT",
-    description = "Solo deckbuilding roguelike with card battles and branching routes.",
+    description = "Climb a clockwork tower in a deckbuilding roguelike with card battles and branching paths.",
     icon = "I",
     genre = "DECKBUILDER",
   },
@@ -287,7 +297,7 @@ P.apps = {
     id = "wormfront",
     name = "WORMFRONT",
     subtitle = "TACTICAL ARTILLERY",
-    description = "Destructible terrain and 2-4 player hotseat or rednet battles.",
+    description = "Fight tactical artillery battles on destructible terrain with 2-4 local or rednet players.",
     icon = "W",
     genre = "MULTIPLAYER",
   },
@@ -296,9 +306,39 @@ P.apps = {
     id = "civcraft",
     name = "CIVCRAFT",
     subtitle = "POCKET CIVILIZATION",
-    description = "Local hotseat or networked 2-4 player civilization-building 4X.",
+    description = "Build a civilization, research technologies and wage war in a compact 2-4 player 4X.",
     icon = "V",
     genre = "4X / STRATEGY",
+  },
+  {
+    version = "1.0.0",
+    id = "airship",
+    name = "AIRSHIP AUTOPILOT",
+    subtitle = "FLIGHT CONTROL",
+    description = "Navigate Create Aeronautics airships with saved routes, waypoints and cockpit controls.",
+    icon = "A",
+    genre = "UTILITY",
+    category = "Apps",
+  },
+  {
+    version = "1.0.0",
+    id = "factory",
+    name = "FACTORY CONTROL",
+    subtitle = "REMOTE OPERATIONS",
+    description = "Monitor and control machines through a networked ComputerCraft factory station.",
+    icon = "F",
+    genre = "UTILITY",
+    category = "Apps",
+  },
+  {
+    version = "1.0.0",
+    id = "node",
+    name = "FACTORY NODE",
+    subtitle = "REMOTE DEVICE",
+    description = "Pair remote computers with Factory Control to share machines and telemetry.",
+    icon = "N",
+    genre = "UTILITY",
+    category = "Apps",
   },
 }
 for _, app in ipairs(P.apps) do
@@ -306,7 +346,7 @@ for _, app in ipairs(P.apps) do
   app.root = spec.root
   app.entry = spec.root .. "/" .. spec.entry
   app.installer = "installers/" .. app.id .. ".lua"
-  app.category = "Games"
+  app.category = app.category or "Games"
   app.managedFiles = {}
   app.saves = {}
   for _, file in ipairs(spec.files) do
