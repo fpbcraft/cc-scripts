@@ -1,5 +1,6 @@
 -- WORMFRONT view: camera-following battlefield, platforms, rope and weapon picker.
 local Canvas = require("lib.fpb.canvas")
+local Pixelbuffer = require("lib.fpb.pixelbuffer")
 local Sim = require("sim")
 local UI = {}
 UI.__index = UI
@@ -29,7 +30,7 @@ local function buttonRow(r, entries, y, enabled)
   end
 end
 function UI.new(mon, dispatch)
-  return setmetatable({ r = Canvas.new(mon), dispatch = dispatch, picker = false }, UI)
+  return setmetatable({ r = Pixelbuffer.attach(Canvas.new(mon)), dispatch = dispatch, picker = false }, UI)
 end
 function UI:resize()
   self.r:resize()
