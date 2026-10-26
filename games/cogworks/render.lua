@@ -925,22 +925,12 @@ function R:drawGame(m)
   local selected = E.parts[m.selected]
   local info = selected and (selected.name .. " - " .. T.descriptions[m.selected])
     or (T.descriptions[m.selected] or "SELECT A PART TO PLACE")
-  -- Permanent, color-and-shape-coded legend. Motion remains readable even
-  -- with animation disabled or an attached low-resolution monitor.
-  self:font(3, 110, "CW", 11)
-  self:font(13, 110, ">", 11)
-  self:font(19, 110, "CCW", 14)
-  self:font(33, 110, "<", 14)
-  self:font(43, 110, "1X", 15)
-  self:font(56, 110, "2X", 11)
-  self:font(69, 110, "0.5", 14)
   local inspected = m.inspected and E.get(g, m.inspected.x, m.inspected.y)
   local light = inspected and result.lights[inspected.id]
   local motion = light and (light.ports[inspected.r] or light.ports[next(light.ports)])
   local statusText = motion
       and (inspected.kind .. " " .. (motion.sign > 0 and "CW " or "CCW ") .. (speedLabel(motion.rate) or "?"))
     or info
-  self:fontFit(89, 110, statusText, 5, 109)
   local status = m.message
   if g.editor and m.inspected then
     local tile = E.get(g, m.inspected.x, m.inspected.y)
@@ -960,10 +950,10 @@ function R:drawGame(m)
     elseif m.hasLeftInput then
       status = "LEFT: PLACE/TURN   RIGHT: REMOVE"
     else
-      status = "BLUE > CW  /  ORANGE < CCW  /  BADGE = SPEED"
+      status = statusText
     end
   end
-  self:fontFit(3, 115, status, result.win and 9 or 5, result.win and 160 or 195)
+  self:fontFit(3, 112, status, result.win and 9 or 5, result.win and 160 or 195)
   if result.win then
     self:button(166, 114, 32, 6, "MAP", "map")
   end
