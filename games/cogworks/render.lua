@@ -1,6 +1,8 @@
 -- COGWORKS / CC: Graphics pixel renderer with text fallback.
--- Coordinates in the pixel renderer are 128x88 logical units. Touch events
--- from Graphics mode 2 are zero-based PIXELS; vanilla monitor touch is 1-based.
+-- Scenes retain a 200x120 authored layout, but pixels are no longer
+-- magnified just to fill the screen. Like CivCraft, graphics density follows
+-- the terminal dimensions (3x4 logical pixels per text cell).
+-- Graphics pointer coordinates are zero-based; vanilla touch is one-based.
 local E = require("games.cogworks.engine")
 local Campaign = require("games.cogworks.chapters")
 local T = require("games.cogworks.tutorials")
@@ -90,6 +92,17 @@ function R.new(m)
   self:enable()
   return self
 end
+-- CivCraft-style density. Keep the legacy 200x120 layout centered while
+-- shrinking its *physical* footprint on large CraftOS screens. This preserves
+-- gameplay hitboxes without stretching tiny 3x5 glyphs into giant pixels.
+function R:fitGraphics()
+  local logicalWidth = math.max(200, self.tw * 3)
+  local logicalHeight = math.max(120, self.th * 4)
+  self.logicalWidth, self.logicalHeight = logicalWidth, logicalHeight
+  self.scale = math.min(self.pw / logicalWidth, self.ph / logicalHeight)
+  self.ox = math.floor((self.pw - 200 * self.scale) / 2)
+  self.oy = math.floor((self.ph - 120 * self.scale) / 2)
+end
 function R:enable()
   local m = self.m
   self.tw, self.th = m.getSize()
@@ -101,9 +114,7 @@ function R:enable()
       if good and type(w) == "number" and w >= 200 and h >= 120 then
         self.mode = "graphics"
         self.pw, self.ph = w, h
-        self.scale = math.min(w / 200, h / 120)
-        self.ox = math.floor((w - 200 * self.scale) / 2)
-        self.oy = math.floor((h - 120 * self.scale) / 2)
+        self:fitGraphics()
         if m.setPaletteColor then
           for i, c in pairs(palette) do
             if m.getPaletteColor then
@@ -127,9 +138,8 @@ function R:resize()
     local ok, w, h = pcall(self.m.getSize, 2)
     if ok and type(w) == "number" then
       self.pw, self.ph = w, h
-      self.scale = math.min(w / 200, h / 120)
-      self.ox = math.floor((w - 200 * self.scale) / 2)
-      self.oy = math.floor((h - 120 * self.scale) / 2)
+      self.tw, self.th = self.m.getSize()
+      self:fitGraphics()
       self.previousBuffer = nil
       -- The previous image and letterbox are still in the monitor's pixel
       -- backing surface after a resize. Discard them before the next draw.
@@ -220,8 +230,8 @@ function R:flush()
     pcall(mon.setFrozen, true)
   end
   if self.needsClear then
-    -- Clear the FULL pixel surface, including bars outside the scaled 200x120
-    -- logical viewport; otherwise old text and white edges survive resizing.
+    -- Clear the full physical pixel surface, including the intentional
+    -- drafting-table margins around the compact 200x120 playfield.
     mon.drawPixels(0, 0, 0, self.pw, self.ph)
     self.needsClear = false
   end
@@ -1181,8 +1191,8 @@ function R:drawSettings(m)
   self:rect(26, 34, 148, 67, 1)
   self:button(37, 43, 126, 13, "ANIMATION " .. (m.settings.animations and "ON" or "OFF"), "toggleAnimations")
   self:button(37, 61, 126, 13, "OPEN PORTS " .. (m.settings.showPorts and "ON" or "OFF"), "togglePorts")
-  self:font(42, 84, "DISPLAY: COMPACT PIXELS", 11)
-  self:font(42, 92, "TEXT SCALE: 0.5", 4)
+  self:font(42, 84, "DISPLAY: CIVCRAFT DENSITY", 11)
+  self:font(42, 92, "MONITOR SCALE: 0.5 IF SUPPORTED", 4)
   self:button(68, 108, 64, 10, "BACK", "back")
 end
 -- Compact navigable world / district maps inspired by spatial overworlds.
