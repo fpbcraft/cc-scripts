@@ -49,6 +49,23 @@ larger controls, branching maps, save slots, menus, tutorial overlays,
 and custom pack browsers. Visual hit targets and input coordinates use
 the same graphics transform, including after a resize.
 
+The gameplay layout now sizes the board as a **square, height-constrained
+workspace** instead of a fixed percentage of window width. It removes
+the redundant board heading, oversized margins and persistent rotation
+legend, giving the board nearly all available vertical space. Any
+remaining horizontal room goes to the component sidebar; the only footer
+is a compact contextual message.
+
+High-resolution parts are redrawn as Create-inspired mechanical sprites:
+wood-and-brass small and large cogwheels with distinct teeth and spokes,
+andesite shafts and gearboxes, pulley wheels and traveling belt/chain
+links, enclosed clutch and gearshift controls, metal-framed motors and
+presses, and redstone signal paths. Clock-based animation phases make
+rotation direction and speed visible independently of frame rate.
+Native CraftOS graphics refresh at approximately 12 frames per second,
+while attached monitors run at a lower rate to reduce peripheral traffic.
+On smaller displays the existing simplified glyphs remain supported.
+
 A compact 200×120 design is retained for smaller graphics monitors and
 the existing text-mode fallback remains supported. On attached monitors,
 Cogworks requests text scale 0.5 before initializing its graphics renderer
