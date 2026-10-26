@@ -254,8 +254,14 @@ local function start()
         if x then
           local action, cx, cy = renderer:hit(x, y)
           trace(
-            "COMPUTER HIT=" .. tostring(action) .. " at=" .. tostring(cx) .. "," .. tostring(cy)
-              .. " selected=" .. tostring(app.selected)
+            "COMPUTER HIT="
+              .. tostring(action)
+              .. " at="
+              .. tostring(cx)
+              .. ","
+              .. tostring(cy)
+              .. " selected="
+              .. tostring(app.selected)
           )
           if action == "cell" then
             drag = pointerTransition(nil, "down", a, cx, cy, app.selected)
