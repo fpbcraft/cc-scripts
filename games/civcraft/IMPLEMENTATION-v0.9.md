@@ -156,7 +156,7 @@ All 65 regression scripts pass. New scenarios cover transaction validation, doub
     Larger presets are implemented below; the final integrated interaction
     audit remains. Frozen grey fog, event history, replay pauses, capture, attached escorts,
     queued movement and sharp zoom labels are implemented below.
-11. AI difficulty variants after the Prince baseline.
+11. Five AI difficulty variants are implemented below; broader balance sampling remains release work.
 12. Save/integration/fuzz/performance/network validation and release metadata.
 
 Remaining foundation concerns: physical monitor and live rednet verification, plus the remaining requirements in FOLLOWUPS-v0.9.md. Native CraftOS-PC event, rendering and save checks complement the automated suite. Public city/unit ratings resolve the earlier hidden-army forecast mismatch; event-time path projection resolves replay visibility, and detached local display snapshots separate simulation from cooperative rendering.
@@ -615,3 +615,74 @@ Installed CraftOS-PC passes the new test and a full mouse-driven short-terminal
 session with `--map-tools`, Council, routes, history, conversation, Surprise War,
 research/settings and save reload. The remaining integrated action audit and
 release/network/performance workstreams stay open.
+
+## 11: Five AI difficulties
+
+The host configures each AI independently in Campaign Options before starting.
+Lobby rows and discovered faction details show its public difficulty separately
+from its fixed civilization personality and hostile-mob setting. Missing saved
+settings mean Prince; configuration changes require the host, an AI participant,
+a known level and the lobby phase. Saved worlds, stock and movement are unchanged.
+
+- Settler searches eight tactical candidates, reviews strategy every fourteen
+  rounds, uses shorter settlement routes and occasionally chooses a near-best
+  economic/tactical option. Proactive wars require seven units and an eight-round
+  opportunity interval.
+- Chieftain searches sixteen candidates, reviews every twelve rounds and has
+  milder near-best choices. Proactive wars require five units and a four-round
+  interval.
+- Prince preserves the existing 24-candidate, ten-round baseline and normal
+  economic, tactical and diplomatic execution.
+- King searches 36 candidates, reviews every five rounds, considers observed
+  second-ring settlement yields and evaluates a legal friendly follow-up from up
+  to two nearby combat units after a hypothetical attack.
+- Deity searches 48 candidates, reviews every three rounds, gives future city
+  yields greater weight, anticipates exposure more strongly and evaluates up to
+  four possible friendly follow-up actors.
+
+Follow-up evaluation clones observed units/cities, applies the first forecast's
+HP/position changes, and uses ordinary reachability and combat prediction for the
+next attack. It does not move units or refresh actions. Tests execute a predicted
+combined kill through the real shared action path. Personality values and all
+production/research costs, combat strength, movement and treasury rules remain
+identical across difficulties. AI cannot acquire unseen knowledge through quality
+settings. Easier sampling is deterministic and stays within a small near-best
+score band; it never rewrites the original ranking.
+
+All 81 repository regression scripts pass. Four compact/wide text/graphics lobby
+layouts cycle every level while preserving mob difficulty. Native local and host
+sessions set an AI to Deity and retain it through gameplay/save reload, alongside
+Council, routes, conversation, research, settings and event history; local also
+covers Surprise War. The native difficulty rules/UI tests pass.
+
+`civcraft_ai_tournament.lua` runs ten same-seed, swapped-seat matches against
+Prince, with identical civilization and starting resources. The initial 40-round
+matrix completes in both Lua 5.3 and native CraftOS, with 4,642 shared-action orders
+and zero rejections. Native execution takes about 27.5 seconds total; the slowest
+actor is 144 ms under concurrent test load. These are legality/progress smoke
+measurements. Multiple seeds, archetypes and longer games remain balance/release
+validation, rather than evidence that every higher tier wins every scenario.
+
+## CraftOS-PC collection stalls
+
+Extended native simulations reproduced a separate pause inside Lua garbage
+collection. Process sampling showed the execution thread repeatedly marking and
+sweeping Lua objects. Unpatched eight-round tournament runs exceeded 180 seconds;
+cooperative input yields alone did not prevent the stalls. Explicit collection
+between chunks avoids the reproduced incremental-collection thrash.
+
+For CraftOS-PC 2.8.3, the shared cooperative checkpoint now completes collection
+before yielding, throttled to at most once per thirty milliseconds per work
+context. It changes no global collector settings. Restricted collector APIs fall
+back to ordinary yielding. Other runtimes retain their existing collection policy.
+Pending mouse/network input and lost-sentinel recovery retain their earlier
+behavior. The optional runtime counters expose collection count and worst pause.
+
+The patched eight-round matrix completes in 2.8 seconds, with a 1 ms maximum
+collection. The forty-round matrix completes in 27.5 seconds, with a 14 ms maximum.
+A further 1,000 native-runtime pan/zoom/report/Council frames pass: real text output
+has 8 ms median / 13 ms maximum; instrumented graphics has 18 ms median / 26 ms
+maximum. Collections in that run take at most 2 ms. Full local/host sessions and
+Vast-map generation, AI and save reload also pass. This addresses the reproduced
+collector stall; recurrence during normal play still needs observation. Physical
+monitor and live modem validation remain part of the final integration work.

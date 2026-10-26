@@ -8,6 +8,7 @@ local includeWar = false
 local includeHost = false
 local includeConversation = false
 local includeHistory = false
+local includeDifficulty = false
 local includeMapTools, mapToolsVerified = false, false
 local includeCouncil, councilVerified = false, false
 local historyVerified = false
@@ -15,6 +16,9 @@ local includeRoutes = false
 local routeRecord
 local routeResumed = false
 for _, argument in ipairs({ ... }) do
+	if argument == "--difficulty" then
+		includeDifficulty, includeAI = true, true
+	end
 	if argument == "--map-tools" then
 		includeMapTools = true
 	end
@@ -211,6 +215,7 @@ dofile = function(path)
 		local draw = view.draw
 		local aiConfigured = false
 		local settingsStep = 0
+		local difficultyStep = 0
 		local researchStep = 0
 		local campaignStep = 0
 		local warStep, responseStep = 0, 0
@@ -264,6 +269,33 @@ dofile = function(path)
 					self:command("toggleAI", { player = 3 })
 					aiConfigured = true
 					os.queueEvent("term_resize")
+				end
+				return
+			end
+			if
+				includeDifficulty
+				and stage == 1
+				and state.phase == "lobby"
+				and difficultyStep < 4
+			then
+				local target
+				for _, player in ipairs(state.players) do
+					if player.ai then
+						target = player
+						break
+					end
+				end
+				assert(target, "Native difficulty scenario needs an AI")
+				local labels = {
+					"CAMPAIGN OPTIONS",
+					target.name .. " PRINCE",
+					target.name .. " KING",
+					"CLOSE",
+				}
+				if tap(self, labels[difficultyStep + 1]) then
+					difficultyStep = difficultyStep + 1
+				else
+					tap(self, difficultyStep == 0 and "PREV" or "NEXT")
 				end
 				return
 			end
@@ -699,6 +731,17 @@ if includeRoutes then
 	end
 	assert(resumed, "Native queued actor survives the save reload")
 end
+if includeDifficulty then
+	local found
+	for _, player in ipairs(state.players) do
+		if player.ai then
+			assert(player.aiDifficulty == "deity")
+			found = true
+			break
+		end
+	end
+	assert(found, "AI difficulty must survive the full session and save reload")
+end
 assert(not includeMapTools or mapToolsVerified, "Native short-screen map tools must complete")
 assert(not includeCouncil or councilVerified, "Native Council ballot must complete")
 if includeCouncil then
@@ -732,6 +775,7 @@ output.write(textutils.serialize({
 	eventHistoryFlow = historyVerified,
 	councilFlow = councilVerified,
 	mapToolsFlow = mapToolsVerified,
+	difficultyFlow = includeDifficulty,
 	queuedRouteResumed = routeResumed,
 }))
 output.close()

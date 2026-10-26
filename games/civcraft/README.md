@@ -143,6 +143,15 @@ wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/codex/expand-civc
 Create a new campaign in an empty slot to get the full expansion. Do not use
 `host --new` on a network save you want to retain.
 
+## AI difficulty
+
+In the lobby, open Campaign Options and select an AI's level to cycle Settler,
+Chieftain, Prince, King and Deity. Each AI can have its own setting, independently
+of hostile mobs. Prince is the default for existing saves. Levels change planning,
+search depth and decision quality; civilization personality, resources, vision,
+combat statistics, costs and action budgets stay the same. King and Deity consider
+legal follow-up attacks and future city yields. Difficulty is fixed after starting.
+
 ## Council of Civilizations
 
 The Council forms after Currency with two living civilizations. Open its top-bar

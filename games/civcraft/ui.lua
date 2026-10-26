@@ -18,6 +18,7 @@ local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local World = dofile("/games/civcraft/world.lua")
 local QueuedRoutes = dofile("/games/civcraft/queued_routes.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
+local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
 local UI = {}
 UI.__index = UI
 local function mapLabel(state)
@@ -702,7 +703,8 @@ function UI:draw(state, playerID, opts)
 				end
 				if p.ai then
 					rows[#rows + 1] = {
-						text = "PERSONALITY: " .. Personalities.forCivilization(p.civ).archetype
+						text = "AI " .. Difficulty.id(p):upper() .. " / " .. Personalities
+							.forCivilization(p.civ).archetype
 							:upper(),
 					}
 				end
@@ -828,8 +830,15 @@ function UI:draw(state, playerID, opts)
 			r:text(
 				22,
 				row + 2,
-				i .. ". " .. clip(p.name, 9) .. " " .. clip(Systems.civ(p.civ).name, 17),
-				7
+				(
+					p.ai and "AI " .. Difficulty.id(p):upper() .. " " .. clip(p.name, 7)
+					or i .. ". " .. clip(p.name, 9)
+				)
+					.. " "
+					.. clip(Systems.civ(p.civ).name, p.ai and 9 or 17),
+				7,
+				1,
+				122
 			)
 			if opts.localMode then
 				r:button(math.min(w - 56, 150), row, 23, 11, p.ai and "AI" or "HUMAN", function()

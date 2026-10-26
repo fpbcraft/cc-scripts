@@ -1,6 +1,7 @@
 local Hex = dofile("/games/civcraft/hex.lua")
 local Routes = dofile("/games/civcraft/ai_routes.lua")
 local World = dofile("/games/civcraft/world.lua")
+local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
 local Settlement = {}
 
 function Settlement.value(view, player, x, y, unit)
@@ -40,6 +41,17 @@ function Settlement.value(view, player, x, y, unit)
 		end
 	end
 	local score = 25 - home * 1.5
+	local future = Difficulty.profile(player).futureSites
+	if future > 0 then
+		for yy = math.max(1, y - 2), math.min(view.world.height, y + 2) do
+			for xx = math.max(1, x - 3), math.min(view.world.width, x + 3) do
+				if Hex.distance(x, y, xx, yy) == 2 and view.world.tiles[World.key(xx, yy)] then
+					local yields = World.yields(view.world, xx, yy)
+					score = score + (yields.food + yields.industry + yields.science) * future
+				end
+			end
+		end
+	end
 	for _, point in ipairs(Hex.neighbours(x, y, view)) do
 		local tileKey = World.key(point.x, point.y)
 		if view.world.tiles[tileKey] then
@@ -71,7 +83,8 @@ function Settlement.value(view, player, x, y, unit)
 end
 
 function Settlement.select(view, player, unit, systems)
-	local routes = Routes.from(view, unit, systems, { maxCost = 16 })
+	local routes =
+		Routes.from(view, unit, systems, { maxCost = Difficulty.profile(player).routeCost })
 	local saved = unit.aiSettlement
 	if saved and Settlement.value(view, player, saved.x, saved.y, unit) then
 		local path = routes.pathTo(saved.x, saved.y)

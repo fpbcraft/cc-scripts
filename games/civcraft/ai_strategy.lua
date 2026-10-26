@@ -3,6 +3,7 @@ local Hex = dofile("/games/civcraft/hex.lua")
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
+local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
 local Strategy = { version = 1, reviewInterval = 10 }
 local preferences = {
 	guardian = { industrial = 75, expedition = 50, conquest = 25, diplomatic = 65, score = 30 },
@@ -152,7 +153,7 @@ function Strategy.review(view, player, seed)
 		if decisiveTech(player) ~= plan.decisiveTech then
 			reason = reason or "decisiveTechnology"
 		end
-		if round - plan.lastReviewRound >= Strategy.reviewInterval then
+		if round - plan.lastReviewRound >= Difficulty.profile(player).review then
 			reason = reason or "periodic"
 		end
 	end

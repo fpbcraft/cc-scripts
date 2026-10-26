@@ -165,6 +165,11 @@ mechanics[#mechanics + 1] = {
 	name = "COUNCIL OF CIVILIZATIONS",
 	text = "The Council forms when two civilizations have cities and one researches Currency. Sessions open every ten speed-scaled rounds, with three rounds to vote. Every civilization receives two delegates; an independent village allied at 60 influence for three rounds grants one extra delegate, capped at one. Allocations are fixed for the session. Ballots stay private until closing. A strict majority elects the leader; diplomatic victory needs two-thirds of all allocated delegates, support from another living civilization, Stock Logistics and a Council Hall. The lobby must enable this victory. Each member may propose one resolution during the opening round. Trade facilitation, embargo, peace and censure need a strict majority and last ten speed-scaled rounds. Council peace also suspends military attacks. Conversation requests can create a voluntary voting pledge: cast the actual ballot separately; honoring earns 10 trust, breaking costs 25 trust and 15 grievances for 30 rounds. Ready members may still vote. Unmet civilizations remain unnamed and cannot be contacted through the Council. Recent Results publishes ballots, AI reasons and tallies.",
 }
+mechanics[#mechanics + 1] = {
+	id = "difficulty",
+	name = "AI DIFFICULTY",
+	text = "The host selects each AI difficulty in Campaign Options before starting. Settler and Chieftain use shorter planning and sometimes choose near-best options; they initiate fewer wars. Prince is the competent baseline. King and Deity search more legal tactical choices, anticipate exposure, plan cooperative follow-up attacks and consider observed future city yields. Difficulty does not grant gold, supplies, combat strength, extra moves, instant production or unexplored map knowledge. Fixed civilization personality still governs preferences. Hostile-mob difficulty is a separate setting. Existing campaigns default to Prince.",
+}
 local function title(id)
 	return id:gsub("_", " "):upper()
 end

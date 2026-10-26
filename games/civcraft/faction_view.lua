@@ -6,6 +6,7 @@ local Panels = dofile("/games/civcraft/panels.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local World = dofile("/games/civcraft/world.lua")
+local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
 local Factions = {}
 
 function Factions.draw(ui, state, observer, rect)
@@ -95,7 +96,12 @@ function Factions.draw(ui, state, observer, rect)
 				end
 			end
 			if player.ai then
-				text("PERSONALITY: " .. Personalities.forCivilization(player.civ).archetype:upper())
+				text(
+					"AI "
+						.. Difficulty.id(player):upper()
+						.. " / "
+						.. Personalities.forCivilization(player.civ).archetype:upper()
+				)
 			end
 			local age = own and Systems.age(player) or player.age
 			text("AGE: " .. (age and Systems.ages[age] and Systems.ages[age].name or "UNKNOWN"))

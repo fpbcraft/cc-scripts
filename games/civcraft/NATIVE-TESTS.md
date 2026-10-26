@@ -187,3 +187,32 @@ it does not establish late-game physical-monitor or network performance.
 tools perform overlays, zoom and overview navigation. `--map-tools` in the native
 full-session driver clicks the actual Map Tools/Zoom/Overview controls on a short
 terminal. Taller sessions retain their direct toolbar.
+
+
+`civcraft_difficulty_test.lua` checks five tiers, host validation, public settings,
+unchanged resources/costs/budgets/personality, deterministic easier choices and a
+legal coordinated kill. `civcraft_difficulty_ui_test.lua` cycles all tiers in four
+compact/wide text/graphics campaign panels. `--difficulty` in the full-session
+driver sets the AI to Deity and verifies save persistence in local or host mode.
+
+`civcraft_ai_tournament.lua [rounds] [seed] [civilization]` runs ten same-seed,
+swapped-seat tier-versus-Prince matches. Defaults are 40 rounds, seed 75123 and
+Andesite Engineers (`forge`). It records score, cities, research, shared-action
+counts/rejection reasons, winning IDs, actor time and collection/yield counters.
+Native results go to `/civcraft-ai-tournament.txt`; a small progress file identifies
+the current stage. These are generated-data smoke tests, not win-rate estimates.
+
+Extended native tournaments exposed collection stalls in CraftOS-PC 2.8.3. The
+shared checkpoint now performs supported collection between work chunks on that
+runtime. Unpatched eight-round matrices exceeded 180 seconds; patched ones finish
+in 2.8 seconds. A forty-round matrix completes in 27.5 seconds with 4,642 orders,
+zero rejections, a 144 ms worst actor and 14 ms maximum collection under concurrent
+load. Collector settings remain unchanged; unsupported operations preserve normal
+yields. The watchdog regression checks throttling and fallback.
+
+`civcraft_craftos_render_stress.lua` executes 500 real text frames and 500
+instrumented graphics frames, panning, zooming and opening Report/Council panels.
+`/civcraft-render-stress.txt` records median/maximum frame time and collector costs.
+The installed runtime passes all 1,000 frames: text 8/13 ms and graphics 18/26 ms
+median/maximum, with collections at most 2 ms. Graphics API calls are instrumented;
+physical monitor performance remains a separate integration check.

@@ -1,5 +1,6 @@
 local Panels = dofile("/games/civcraft/panels.lua")
 local Rules = dofile("/games/civcraft/campaign_rules.lua")
+local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
 local Options = {}
 local names = {
 	diplomatic = "DIPLOMATIC",
@@ -40,6 +41,32 @@ function Options.draw(ui, state)
 		)
 	do
 		rows[#rows + 1] = { text = line }
+	end
+	for _, player in ipairs(state.players) do
+		if player.ai then
+			rows[#rows + 1] = {
+				buttons = {
+					{
+						label = player.name .. " " .. Difficulty.id(player):upper(),
+						run = function()
+							ui:command("aiDifficulty", { playerID = player.id })
+						end,
+					},
+				},
+			}
+			for _, line in
+				ipairs(
+					Panels.wrap(
+						r,
+						Difficulty.profile(player).description
+							.. " No resource, vision or action bonuses.",
+						r.w - 20
+					)
+				)
+			do
+				rows[#rows + 1] = { text = line }
+			end
+		end
 	end
 	for _, victory in ipairs(Rules.victories) do
 		rows[#rows + 1] = {

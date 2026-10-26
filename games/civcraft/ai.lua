@@ -16,6 +16,7 @@ local Workers = dofile("/games/civcraft/ai_workers.lua")
 local Presentation = dofile("/games/civcraft/presentation.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
+local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
 local A = {}
 
 local function attachAssignedEscort(state, player, unit, systems)
@@ -83,7 +84,16 @@ function A.military(state, player, unit, systems)
 			break
 		end
 		local selected, key
-		for _, choice in ipairs(Tactics.ranked(view, player, unit, systems)) do
+		for _, choice in
+			ipairs(
+				Difficulty.choices(
+					Tactics.ranked(view, player, unit, systems),
+					player,
+					view.round,
+					unit.id
+				)
+			)
+		do
 			local request = choice.request
 			key = request.action .. ":" .. request.x .. ":" .. request.y
 			if not failed[key] and DiplomaticAI.allows(view, player, unit, request) then
@@ -126,7 +136,8 @@ function A.strike(state, player, city, systems)
 end
 function A.research(player, systems, view)
 	view = view or { observerID = player.id, players = { player }, cities = {}, units = {} }
-	local choices = Research.ranked(view, player, systems)
+	local choices =
+		Difficulty.choices(Research.ranked(view, player, systems), player, view.round, 0)
 	return choices[1] and choices[1].id
 end
 local function cityIn(view, id)
@@ -161,6 +172,7 @@ function A.choose(state, player, city, systems)
 	local known = cityIn(view, city.id)
 	local canExpand = Settlement.available(view, player, known, systems)
 	local choices, context = Production.ranked(view, player, known, systems, canExpand)
+	choices = Difficulty.choices(choices, player, view.round, city.id)
 	local currentEligible = false
 	for _, choice in ipairs(choices) do
 		if
@@ -288,7 +300,10 @@ function A.diplomacy(state, p, systems)
 				army = army + 1
 			end
 		end
-		if army >= 3 then
+		if
+			army >= Difficulty.profile(p).warArmy
+			and (view.round or 1) % Difficulty.profile(p).warInterval == 0
+		then
 			for _, city in ipairs(view.cities) do
 				if
 					city.owner ~= p.id

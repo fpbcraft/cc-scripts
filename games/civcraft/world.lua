@@ -549,6 +549,7 @@ function W.forPlayer(state, id, afterSeq)
 				name = player.name,
 				civ = player.civ,
 				ai = player.ai,
+				aiDifficulty = player.aiDifficulty,
 				ready = player.ready,
 			}
 		end
@@ -608,6 +609,7 @@ function W.forPlayer(state, id, afterSeq)
 				name = p.name,
 				civ = p.civ,
 				ai = p.ai,
+				aiDifficulty = p.aiDifficulty,
 				ready = p.ready,
 				age = p.age,
 				industryTurns = p.industryTurns,

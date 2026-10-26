@@ -4,6 +4,8 @@ local Personalities = dofile("/games/civcraft/ai_personalities.lua")
 local Threats = dofile("/games/civcraft/threats.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
+local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
+local Coordination = dofile("/games/civcraft/ai_coordination.lua")
 local Tactics = { maxCandidates = 24 }
 local function copy(value)
 	local result = {}
@@ -128,6 +130,7 @@ function Tactics.ranked(view, player, unit, systems)
 	end
 	local map = Threats.build(view, player, systems)
 	local personality = Personalities.forCivilization(player.civ)
+	local difficulty = Difficulty.profile(player)
 	local candidates = Hex.reachable(view, unit, player.id, systems)
 	table.sort(candidates, function(a, b)
 		if (a.attack == true) ~= (b.attack == true) then
@@ -160,7 +163,7 @@ function Tactics.ranked(view, player, unit, systems)
 				- held.damage,
 		},
 	}
-	for index = 1, math.min(Tactics.maxCandidates, #candidates) do
+	for index = 1, math.min(difficulty.candidates, #candidates) do
 		if systems.checkpoint then
 			systems.checkpoint()
 		end
@@ -226,6 +229,17 @@ function Tactics.ranked(view, player, unit, systems)
 				score = score + support(view, player, unit, choice.x, choice.y, systems)
 			end
 		end
+		local coordination = Coordination.followup(
+			view,
+			player,
+			unit,
+			choice,
+			forecast,
+			position,
+			systems,
+			difficulty.followup
+		)
+		score = score + coordination
 		local excluded = {}
 		if forecast and forecast.defenderDied then
 			local defender = at(view.units, choice.x, choice.y)
@@ -234,7 +248,7 @@ function Tactics.ranked(view, player, unit, systems)
 			end
 		end
 		local risk = Threats.at(map, position.x, position.y, position, excluded)
-		score = score - risk.damage * (1.4 - personality.risk / 100)
+		score = score - risk.damage * (1.4 - personality.risk / 100) * difficulty.risk
 		if risk.damage >= (position.hp or 100) then
 			score = score - 160
 		end
@@ -250,6 +264,7 @@ function Tactics.ranked(view, player, unit, systems)
 			},
 			score = score,
 			forecast = forecast,
+			coordination = coordination,
 			risk = risk,
 			x = choice.x,
 			y = choice.y,

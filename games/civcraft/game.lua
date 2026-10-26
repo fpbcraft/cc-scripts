@@ -96,6 +96,7 @@ local CommandQueue = dofile("/games/civcraft/command_queue.lua")
 local Events = dofile("/games/civcraft/events.lua")
 local Council = dofile("/games/civcraft/council.lua")
 local CouncilAI = dofile("/games/civcraft/council_ai.lua")
+local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
 local Presentation = dofile("/games/civcraft/presentation.lua")
 local Snapshots = dofile("/games/civcraft/snapshots.lua")
 local view
@@ -388,6 +389,9 @@ local function apply(id, req)
 		end
 		save()
 		return true, "Game saved"
+	end
+	if req.action == "aiDifficulty" then
+		return Difficulty.configure(state, id, req)
 	end
 	if req.action == "gameSpeed" or req.action == "toggleVictory" then
 		return CampaignRules.configure(state, id, req)
