@@ -351,6 +351,7 @@ function S.apply(g, team, action)
       return false, "Already jumping"
     end
     w.airborne, w.vx, w.vy = true, w.facing * 6, -11
+    w.jumpStartY = w.y
     w.y = w.y - 0.4
   elseif kind == "setAim" then
     if type(action.angle) ~= "number" or action.angle ~= action.angle or action.angle < 0 or action.angle > 180 then
@@ -394,17 +395,23 @@ function S.tick(g, dt)
   -- Movement physics and turn clocks advance exclusively on the host.
   for _, w in ipairs(g.worms) do
     if w.hp > 0 and w.airborne then
-      local oldY = w.y
       local newX = clamp(w.x + w.vx * dt, 2, S.W - 1)
       local newY = w.y + w.vy * dt
       w.vy = w.vy + 25 * dt
       if newY >= ground(g, newX) - 1 and w.vy >= 0 then
         w.x, w.y = newX, ground(g, newX) - 1
         w.airborne, w.vx, w.vy = false, nil, nil
+        local fall = math.max(0, w.y - (w.jumpStartY or w.y))
+        w.jumpStartY = nil
         if w.y >= S.H then
           w.hp = 0
-        elseif w.y - oldY > 4 then
-          w.hp = math.max(0, w.hp - math.floor((w.y - oldY - 4) * 6))
+        elseif fall > 4 then
+          local damage = math.floor((fall - 4) * 6)
+          if w.shield then
+            damage = math.floor(damage / 2)
+            w.shield = false
+          end
+          w.hp = math.max(0, w.hp - damage)
         end
         if w.hp > 0 then
           collect(g, w)
@@ -415,6 +422,10 @@ function S.tick(g, dt)
         w.x, w.y = newX, newY
       end
     end
+  end
+  if g.state == "aim" and not alive(g, g.turn) then
+    nextTurn(g)
+    return true
   end
   if g.state == "aim" then
     g.turnLeft = math.max(0, g.turnLeft - dt)
