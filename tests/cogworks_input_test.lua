@@ -5,10 +5,11 @@ local E, App = api.engine, api.app
 local boardAction = api.boardAction
 assert(boardAction(1, "I", false) == "remove", "Left click removes")
 assert(boardAction(2, "I", false) == "cell", "Right click builds or rotates")
-assert(boardAction(2, "erase", false) == "remove", "Erase tool removes with either button")
+assert(boardAction(2, "erase", false) == "inspect", "Right click must not erase, even with the erase tool")
 assert(boardAction(nil, "I", true) == "inspect", "A buttonless monitor touch still builds / inspects")
 assert(boardAction(1, "I", true) == "remove", "Monitor-window left click removes")
 assert(boardAction(2, "I", true) == "inspect", "Monitor-window right click builds / inspects")
+assert(boardAction(2, "erase", true) == "inspect", "Monitor-window right click never erases")
 assert(boardAction(nil, "erase", true) == "remove", "Buttonless erase still removes")
 
 local game = E.new(1)
@@ -54,6 +55,9 @@ assert(game.remaining[kind] == initialStock, "Removing a part restores stock")
 app:act(boardAction(nil, kind, true), x, y)
 assert(E.get(game, x, y).kind == kind, "Monitor touch places a part")
 app.selected = "erase"
+local beforeErase = game.moves
+app:act(boardAction(2, "erase", false), x, y)
+assert(E.get(game, x, y).kind == kind and game.moves == beforeErase, "Right click with erase selected preserves a tile")
 app:act(boardAction(nil, "erase", true), x, y)
 assert(not E.get(game, x, y), "Monitor touch with erase selected removes a part")
 print("COGWORKS: right-click placement, left-click removal, touch placement and erase controls passed.")
