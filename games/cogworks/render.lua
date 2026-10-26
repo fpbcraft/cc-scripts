@@ -140,6 +140,8 @@ function R:resize()
       self.tw, self.th = self.m.getSize()
       self:fitGraphics()
       self.previousBuffer = nil
+      self.baseBuffer = nil
+      self.previewBounds = nil
       -- The previous image and letterbox are still in the monitor's pixel
       -- backing surface after a resize. Discard them before the next draw.
       self.needsClear = true
@@ -176,9 +178,17 @@ function R:rect(x, y, w, h, color)
     x2, y2 = math.min(x2, clip.x + clip.size), math.min(y2, clip.y + clip.size)
   end
   for py = y1, y2 - 1 do
-    local row = self.buffer[py + 1]
+    -- Preview frames inherit unchanged scanlines from the cached scene.
+    -- Copy only rows touched by the ghost; never mutate the cached board.
+    local row = rawget(self.buffer, py + 1)
     if not row then
       row = {}
+      if self.overlayBase then
+        local baseRow = self.overlayBase[py + 1]
+        if baseRow then
+          setmetatable(row, { __index = baseRow })
+        end
+      end
       self.buffer[py + 1] = row
     end
     for px = x1, x2 - 1 do
@@ -189,14 +199,18 @@ end
 -- CC:Graphics uses the CraftOS-PC drawPixels API and supports indexed
 -- bitmap rows. Upload one changed rectangle per frame instead of invoking
 -- thousands of peripheral methods and freezing the server-side monitor.
-function R:flush()
+function R:flush(bounds)
   local old = self.previousBuffer
   local current = self.buffer
   local left, top, right, bottom = self.canvasW, self.canvasH, -1, -1
-  for y = 0, self.canvasH - 1 do
+  local firstX = bounds and math.max(0, math.floor(bounds.x1)) or 0
+  local firstY = bounds and math.max(0, math.floor(bounds.y1)) or 0
+  local lastX = bounds and math.min(self.canvasW - 1, math.ceil(bounds.x2)) or self.canvasW - 1
+  local lastY = bounds and math.min(self.canvasH - 1, math.ceil(bounds.y2)) or self.canvasH - 1
+  for y = firstY, lastY do
     local row = current[y + 1] or {}
     local prior = old and old[y + 1] or nil
-    for x = 0, self.canvasW - 1 do
+    for x = firstX, lastX do
       if (row[x + 1] or 0) ~= (prior and prior[x + 1] or 0) or not old then
         left = math.min(left, x)
         top = math.min(top, y)
@@ -802,6 +816,46 @@ function R:drawDrag(m)
     self:piece(px, py, size, tile, light)
   end
   self:rect(px, py, size, 1, drag.valid and 11 or 8)
+end
+-- An unmodified full frame is the source for every drag preview.
+-- Keeping the underlying scene intact avoids rebuilding the entire board,
+-- UI and simulation for each mouse_drag event on CraftOS/iPad.
+function R:dragBounds(drag)
+  if not drag or not drag.moved then
+    return nil
+  end
+  local size = self.cell
+  local px, py = drag.cursorX - drag.offsetX, drag.cursorY - drag.offsetY
+  local b = { x1 = px - 2, y1 = py - 2, x2 = px + size + 4, y2 = py + size + 4 }
+  if drag.targetX and drag.targetY then
+    local tx = self.boardX + (drag.targetX - 1) * size
+    local ty = self.boardY + (drag.targetY - 1) * size
+    b.x1, b.y1 = math.min(b.x1, tx - 2), math.min(b.y1, ty - 2)
+    b.x2, b.y2 = math.max(b.x2, tx + size + 2), math.max(b.y2, ty + size + 2)
+  end
+  return b
+end
+function R:drawDragPreview(m)
+  if self.mode ~= "graphics" or not self.baseBuffer or not m.drag or not m.drag.moved then
+    return self:draw(m)
+  end
+  -- The first frame of a board drag must remove its source tile from the
+  -- cached scene. All subsequent pointer moves can use the cheap overlay.
+  if m.drag.origin == "board" and not self.dragSourceHidden then
+    return self:draw(m)
+  end
+  local bounds = self:dragBounds(m.drag)
+  local old = self.previewBounds
+  if old then
+    bounds.x1, bounds.y1 = math.min(bounds.x1, old.x1), math.min(bounds.y1, old.y1)
+    bounds.x2, bounds.y2 = math.max(bounds.x2, old.x2), math.max(bounds.y2, old.y2)
+  end
+  self.buffer = setmetatable({}, { __index = self.baseBuffer })
+  self.overlayBase = self.baseBuffer
+  self:drawDrag(m)
+  self.overlayBase = nil
+  self:flush(bounds)
+  self.previewBounds = self:dragBounds(m.drag)
 end
 function R:drawBonusMarks(g)
   for y = 1, g.height do
@@ -1769,7 +1823,10 @@ function R:draw(m)
   -- A deterministic override is exposed for sprite regression tests.
   self.motionNow = self.motionOverride or (m.settings and m.settings.animations ~= false and os.clock() or 0)
   if (self.wide or m.scene == "game" or m.scene == "editor") and self:drawResponsive(m) then
+    self.baseBuffer = self.buffer
+    self.dragSourceHidden = m.drag and m.drag.moved and m.drag.origin == "board" or false
     self:drawDrag(m)
+    self.previewBounds = self:dragBounds(m.drag)
     self:flush()
     self.frame = self.frame + 1
     return
@@ -1805,7 +1862,10 @@ function R:draw(m)
   else
     self:drawHelp(m)
   end
+  self.baseBuffer = self.buffer
+  self.dragSourceHidden = m.drag and m.drag.moved and m.drag.origin == "board" or false
   self:drawDrag(m)
+  self.previewBounds = self:dragBounds(m.drag)
   self:flush()
   self.frame = self.frame + 1
 end
