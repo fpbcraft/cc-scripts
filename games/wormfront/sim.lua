@@ -32,6 +32,15 @@ local function solid(g, x, y)
   local t = tile(g, x, y)
   return t == "#" or t == "="
 end
+local function groundAt(g, x)
+  x = math.floor(x + 0.5)
+  for y = 1, S.H do
+    if tile(g, x, y) == "#" then
+      return y
+    end
+  end
+  return S.H + 1
+end
 local function floorAt(g, x, from)
   x = math.floor(x + 0.5)
   if x < 1 or x > S.W then
@@ -287,7 +296,7 @@ local function strike(g, w)
         end
       end
     end
-    g.explosion = { x = w.x + vx * 2, y = w.y - 2, radius = 1.5, elapsed = 0 }
+    g.explosion = { x = w.x + math.cos(angle) * 2, y = w.y - 2, radius = 1.5, elapsed = 0 }
   end
   g.state, g.charging = "blast", false
 end
@@ -325,7 +334,7 @@ function S.new(teams, seed)
       local pos = (n - 1) * teams + team
       local x = clamp(math.floor(pos * (S.W - 12) / (teams * 3 + 1)) + 6, 3, S.W - 2)
       g.worms[#g.worms + 1] = {
-        team = team, x = x, y = floorAt(g, x, 36) - 1, hp = 100,
+        team = team, x = x, y = groundAt(g, x) - 1, hp = 100,
         aim = team % 2 == 1 and 45 or 135, facing = team % 2 == 1 and 1 or -1,
         weapon = 1, airborne = false,
       }
@@ -659,5 +668,5 @@ function S.tick(g, dt)
   end
   return true
 end
-S.solid, S.ground, S.floorAt, S.nextTurn = solid, ground, floorAt, finishTurn
+S.solid, S.ground, S.floorAt, S.nextTurn = solid, groundAt, floorAt, finishTurn
 return S
