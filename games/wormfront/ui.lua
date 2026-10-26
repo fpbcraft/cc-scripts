@@ -78,21 +78,28 @@ local function scene(r, g, b, frame)
   local xEnd = math.min(Sim.W, math.ceil(b.scrollX + b.w / b.scale))
   local yStart = math.max(1, math.floor(b.scrollY + 1))
   local yEnd = math.min(Sim.H, math.ceil(b.scrollY + b.h / b.scale))
+  -- Batch contiguous terrain columns. Thousands of tiny drawPixels caused flicker.
   for x = xStart, xEnd do
-    local col = g.terrain[x]
+    local column = g.terrain[x]
+    local px = b.x + (x - 1 - b.scrollX) * b.scale
+    local groundStart
     for y = yStart, yEnd do
-      local t = col:sub(y, y)
-      if t ~= "." then
-        local px, py = screen(b, x, y)
-        if px >= b.x and px + b.scale <= b.x + b.w and py >= b.y and py + b.scale <= b.y + b.h then
-          if t == "=" then
-            fill(r, px, py, b.scale, math.max(1, b.scale - 1), 8)
-            fill(r, px, py + b.scale - 1, b.scale, 1, 16)
-          else
-            local surface = y == 1 or col:sub(y - 1, y - 1) == "."
-            fill(r, px, py, b.scale, b.scale, surface and theme.grass or (x * 13 + y * 7) % 13 == 0 and 17 or theme.ground)
-          end
-        end
+      if column:sub(y, y) == "#" then
+        groundStart = y
+        break
+      end
+    end
+    if groundStart then
+      local py = b.y + (groundStart - 1 - b.scrollY) * b.scale
+      fill(r, px, py, b.scale, (yEnd - groundStart + 1) * b.scale, theme.ground)
+      if groundStart == 1 or column:sub(groundStart - 1, groundStart - 1) == "." then
+        fill(r, px, py, b.scale, math.max(1, b.scale / 2), theme.grass)
+      end
+    end
+    for y = yStart, yEnd do
+      if column:sub(y, y) == "=" then
+        local py = b.y + (y - 1 - b.scrollY) * b.scale
+        fill(r, px, py, b.scale, b.scale, 8)
       end
     end
   end
