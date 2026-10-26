@@ -36,8 +36,16 @@ return function(R)
     return result
   end
   local labels = {
-    I = "SHAFT", G = "COG", O = "LARGE", Q = "GEARBOX", D = "CHAIN",
-    V = "BELT", Z = "SHIFT", C = "CLUTCH", R = "DUST", B = "BLOCK",
+    I = "SHAFT",
+    G = "COG",
+    O = "LARGE",
+    Q = "GEARBOX",
+    D = "CHAIN",
+    V = "BELT",
+    Z = "SHIFT",
+    C = "CLUTCH",
+    R = "DUST",
+    B = "BLOCK",
   }
   function R:wideFrame(title, subtitle)
     local w, h = self.canvasW, self.canvasH
@@ -71,7 +79,10 @@ return function(R)
     end
     local tick = m.settings.animations ~= false and self.briefingFrame or 1000
     self.briefingFrame = math.min(self.briefingFrame + 1, 100000)
-    self:wideFrame("COGWORKS  /  MISSION BRIEF", "DISTRICT " .. b.chapter .. "  /  LEVEL " .. string.format("%02d", b.number))
+    self:wideFrame(
+      "COGWORKS  /  MISSION BRIEF",
+      "DISTRICT " .. b.chapter .. "  /  LEVEL " .. string.format("%02d", b.number)
+    )
     self:font(w - 65, 7, string.format("%02d / %02d", b.number, #E.levels), 15)
     local x, y, heroW, heroH = 9, 33, w - 18, 65
     self:rect(x, y, heroW, heroH, 12)
@@ -109,9 +120,13 @@ return function(R)
         local spin = goal.spin
         self:rect(leftX + 6, gy + 2, 6, 6, spin == "CCW" and 14 or 11)
         panelRow(
-          self, leftX + 16, gy, leftW - 22,
+          self,
+          leftX + 16,
+          gy,
+          leftW - 22,
           string.format("%d  %s %s  C%d R%d", i, spin, shortSpeed(goal.rpm), goal.x, goal.y),
-          15, i % 2 == 0 and 2 or 1
+          15,
+          i % 2 == 0 and 2 or 1
         )
       end
     end
@@ -133,7 +148,8 @@ return function(R)
     for _, bonus in ipairs(b.bonus or {}) do
       bonusNames[#bonusNames + 1] = bonus.name
     end
-    local notice = #bonusNames > 0 and ("OPTIONAL: " .. table.concat(bonusNames, " / ")) or "NO BONUS GOALS / SOLVE THE MAIN PUZZLE"
+    local notice = #bonusNames > 0 and ("OPTIONAL: " .. table.concat(bonusNames, " / "))
+      or "NO BONUS GOALS / SOLVE THE MAIN PUZZLE"
     self:fontFit(9, h - 15, notice, 11, w - 102)
     self:button(w - 86, h - 20, 77, 17, "START LEVEL", "beginLevel", nil, 6)
     -- Tapping the mission card still starts the level, as in compact mode.
@@ -150,7 +166,10 @@ return function(R)
     self:button(w - 27, buttonY, 19, buttonH, "?", "help")
     self:button(w - 67, buttonY, 37, buttonH, g.editor and "MENU" or "PAUSE", g.editor and "editorMenu" or "pause")
     self:button(
-      w - 102, buttonY, 32, buttonH,
+      w - 102,
+      buttonY,
+      32,
+      buttonH,
       g.editor and "SAVE" or (g.sandbox and "CLEAR" or "SAVE"),
       g.editor and "editorSave" or (g.sandbox and "clearSandbox" or "save")
     )
@@ -193,7 +212,9 @@ return function(R)
                 self:rect(
                   px + radius + directions[dir + 1][1] * radius,
                   py + radius + directions[dir + 1][2] * radius,
-                  1, 1, 8
+                  1,
+                  1,
+                  8
                 )
               end
             end
@@ -222,7 +243,10 @@ return function(R)
     local actionW = math.floor((sw - 9) / 2)
     self:button(sx + 4, actionsY, actionW, 13, m.selected == "erase" and "ERASING" or "ERASE", "tool", "erase")
     self:button(
-      sx + 5 + actionW, actionsY, actionW, 13,
+      sx + 5 + actionW,
+      actionsY,
+      actionW,
+      13,
       g.sandbox and ("SIZE " .. g.width) or "ROTATE",
       g.sandbox and "sandboxSize" or nil,
       g.sandbox and (5 + g.width % 6) or nil
@@ -239,7 +263,8 @@ return function(R)
         end
       end
       if available >= 38 then
-        local commands = { { "FIX", "editorFix" }, { "RATE", "editorRate" }, { "DIR", "editorSpin" }, { "TEST", "editorTest" } }
+        local commands =
+          { { "FIX", "editorFix" }, { "RATE", "editorRate" }, { "DIR", "editorSpin" }, { "TEST", "editorTest" } }
         local toolW = math.floor((sw - 9) / 4)
         for i, item in ipairs(commands) do
           self:button(sx + 4 + (i - 1) * toolW, detailY + 22, toolW - 1, 11, item[1], item[2])
@@ -283,7 +308,8 @@ return function(R)
       end
     end
     local selected = E.parts[m.selected]
-    local hint = selected and ((selected.name or labels[m.selected]) .. " / " .. (T.descriptions[m.selected] or "TAP A FREE CELL"))
+    local hint = selected
+        and ((selected.name or labels[m.selected]) .. " / " .. (T.descriptions[m.selected] or "TAP A FREE CELL"))
       or "SELECT A PART TO BUILD"
     self:fontFit(8, h - 17, m.message ~= "" and m.message or hint, result.win and 9 or 5, w - 95)
     self:fontFit(8, h - 9, "CYAN CW  /  ORANGE CCW  /  1X, 2X, 0.5X = SPEED", 11, w - 92)
@@ -333,7 +359,13 @@ return function(R)
         self:rect(point.x + 1, point.y + 1, nodeW - 2, nodeH - 2, 1)
         self:fontFit(point.x + 3, point.y + 3, string.format("%02d", number), unlocked and 15 or 4, nodeW - 6)
         local awards = countAwards(m.progress.awards[number])
-        self:fontFit(point.x + 3, point.y + 12, awards .. "/" .. #stage.bonuses .. " BONUS", unlocked and 11 or 4, nodeW - 5)
+        self:fontFit(
+          point.x + 3,
+          point.y + 12,
+          awards .. "/" .. #stage.bonuses .. " BONUS",
+          unlocked and 11 or 4,
+          nodeW - 5
+        )
         self:fontFit(point.x - 2, point.y + nodeH + 2, stage.name, unlocked and 15 or 4, nodeW + 12)
         if unlocked then
           self:add(point.x, point.y, nodeW, nodeH, "level", number)
@@ -351,13 +383,25 @@ return function(R)
         self:rect(x, y, nodeW, nodeH, active and (stats.main >= 3 and 9 or 6) or 3)
         self:rect(x + 1, y + 1, nodeW - 2, nodeH - 2, 1)
         self:fontFit(x + 5, y + 5, string.format("%02d %s", i, chapterInfo.name), active and 15 or 4, nodeW - 10)
-        self:fontFit(x + 5, y + 16, active and (stats.main .. "/8 MACHINES") or "SEALED", active and 11 or 4, nodeW - 10)
+        self:fontFit(
+          x + 5,
+          y + 16,
+          active and (stats.main .. "/8 MACHINES") or "SEALED",
+          active and 11 or 4,
+          nodeW - 10
+        )
         if active then
           self:add(x, y, nodeW, nodeH, "chapter", i)
         end
       end
     end
-    self:fontFit(10, h - 16, district and "GREEN = CLEARED   GOLD = ACCESSIBLE" or "EXPLORE SIDE PATHS / SKIP AND REVISIT PUZZLES", 11, w - 103)
+    self:fontFit(
+      10,
+      h - 16,
+      district and "GREEN = CLEARED   GOLD = ACCESSIBLE" or "EXPLORE SIDE PATHS / SKIP AND REVISIT PUZZLES",
+      11,
+      w - 103
+    )
     self:button(w - 94, h - 20, 84, 17, district and "WORLD MAP" or "BACK", "back")
   end
   function R:wideMenu(m)
@@ -373,9 +417,12 @@ return function(R)
       end
       items = {
         { "CONTINUE CAMPAIGN", saved and "continue" or nil },
-        { "SELECT SAVE SLOT", "slots" }, { "FREE WORKSHOP", "sandbox" },
-        { "LEVEL EDITOR", "editor" }, { "CUSTOM PUZZLES", "packs" },
-        { "SETTINGS", "settings" }, { "EXIT", "exit" },
+        { "SELECT SAVE SLOT", "slots" },
+        { "FREE WORKSHOP", "sandbox" },
+        { "LEVEL EDITOR", "editor" },
+        { "CUSTOM PUZZLES", "packs" },
+        { "SETTINGS", "settings" },
+        { "EXIT", "exit" },
       }
       if m.dev then
         table.insert(items, 6, { "DEV LEVELS", "devLevels" })
@@ -391,14 +438,20 @@ return function(R)
       title, description = "WORKSHOP PAUSED", m.game.name
       if m.game.sandbox then
         items = {
-          { "RESUME", "resume" }, { "CLEAR WORKSHOP", "clearSandbox" },
-          { "SETTINGS", "settings" }, { "HELP", "help" }, { "TITLE MENU", "title" },
+          { "RESUME", "resume" },
+          { "CLEAR WORKSHOP", "clearSandbox" },
+          { "SETTINGS", "settings" },
+          { "HELP", "help" },
+          { "TITLE MENU", "title" },
         }
       else
         items = {
-          { "RESUME", "resume" }, { "FACTORY MAP", "levels" },
-          { "SAVE PROGRESS", "save" }, { "RESTART PUZZLE", "restart" },
-          { "SETTINGS", "settings" }, { "HELP", "help" },
+          { "RESUME", "resume" },
+          { "FACTORY MAP", "levels" },
+          { "SAVE PROGRESS", "save" },
+          { "RESTART PUZZLE", "restart" },
+          { "SETTINGS", "settings" },
+          { "HELP", "help" },
           { "NEW CAMPAIGN", m.devSession and nil or "newGame" },
           { "TITLE MENU", "title" },
         }
@@ -413,14 +466,18 @@ return function(R)
     elseif scene == "editorMenu" then
       title, description = "LEVEL EDITOR", "CREATE / SAVE / EXPORT MECHANICAL PUZZLES"
       items = {
-        { "RESUME EDITING", "resume" }, { "SAVE LEVEL", "editorSave" },
-        { "LOAD LEVEL", "editorLoad" }, { "COMPILE PACK", "editorCompile" },
-        { "TEST NETWORK", "editorTest" }, { "NEW LEVEL", "editorNew" },
+        { "RESUME EDITING", "resume" },
+        { "SAVE LEVEL", "editorSave" },
+        { "LOAD LEVEL", "editorLoad" },
+        { "COMPILE PACK", "editorCompile" },
+        { "TEST NETWORK", "editorTest" },
+        { "NEW LEVEL", "editorNew" },
         { "TITLE MENU", "title" },
       }
     elseif scene == "confirm" then
       title = "CONFIRM ACTION"
-      description = m.pending == "newGame" and "THIS WILL DELETE SAVE SLOT PROGRESS" or "THE CURRENT MACHINE WILL BE RESET"
+      description = m.pending == "newGame" and "THIS WILL DELETE SAVE SLOT PROGRESS"
+        or "THE CURRENT MACHINE WILL BE RESET"
       items = { { "CANCEL", "cancel" }, { "CONFIRM", "confirm" } }
     elseif scene == "help" then
       title, description = "MECHANICAL REFERENCE", "BUILD CONNECTIONS / POWER PRESSES / AVOID JAMS"
