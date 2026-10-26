@@ -194,7 +194,8 @@ local ok, err = pcall(Store.run, manager)
 os.pullEvent, os.pullEventRaw, os.startTimer = pull, raw, timer
 Renderer.new = oldNew
 package.loaded["games.cogworks.app"] = oldApp
-term, peripheral, config, colors, keys = original.term, original.peripheral, original.config, original.colors, original.keys
+term, peripheral, config, colors, keys =
+  original.term, original.peripheral, original.config, original.colors, original.keys
 assert(ok, tostring(err))
 assert(launched == 1 and pointerEvents == 3, "Store launched the nested game and returned")
 assert(game.moves == 2 and E.get(game, 2, 3).r == 1, "Nested monitor right-click rotated and never removed")
