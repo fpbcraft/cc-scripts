@@ -293,3 +293,12 @@ unavailable. Twenty-four version/ruleset/speed migration combinations preserve
 terrain/deposits/rails, campaign identity, research/production progress and spent
 movement allowances. These complement the shared installer download/move-failure,
 repeat-update, legacy conflict and startup ownership checks.
+
+
+`civcraft_save_resume_test.lua` exercises installed runtime serialization with
+current feature records combined: attacker/defender Surprise War windows across
+all three speeds, linked queued escorts, private deals, Council pledges/votes,
+AI plans, fog memory and journal cursors. It verifies post-load eligibility,
+remaining response budgets, normal-boundary resets and exactly-once route progress.
+It is a desktop installed-loader regression, complementing native session and
+client-reboot tests rather than claiming a physical-server host reboot.

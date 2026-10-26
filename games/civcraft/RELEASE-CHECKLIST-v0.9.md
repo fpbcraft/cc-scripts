@@ -43,10 +43,12 @@ for their stated scope, not a declaration that the full release is complete.
   progress, identity and explicit mid-turn movement budgets. Installer failure,
   rollback, repeat-update and startup ownership checks also pass.
 
+- [x] Combined save/resume audit: six attacker/defender-window cases across all
+  speeds preserve scheduler reactions, queued escorts, diplomacy/Council records,
+  AI plans, fog memory and event cursors; queued movement does not run twice.
+
 ## Remaining before calling the full release complete
 
-- [ ] Finish the combined save/resume audit for current scheduler reactions,
-  queued escort routes, diplomacy/Council records and observer replay cursors.
 - [ ] Extend real multi-computer tests to overlapping war-component merges and
   peace splits, including disconnected participants and no duplicate resets.
 - [ ] Measure late-game large-map rendering, simulation and network payload costs

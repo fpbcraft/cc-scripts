@@ -810,3 +810,23 @@ expansion-branch install command and documents current navigation/research.
 [RELEASE-CHECKLIST-v0.9.md](RELEASE-CHECKLIST-v0.9.md) separates the completed
 feature checks from the remaining combined persistence, overlapping-network-war,
 late-game performance, target-server and release-metadata acceptance work.
+
+
+## Coupled save/resume audit
+
+The installed runtime now has a combined serialization/resume check for both
+Surprise War windows at Quick, Standard and Epic speeds. Each fixture includes a
+partially spent linked escort route, a Ready defender with one remaining move,
+active commerce, a pending private trade, an open Council ballot/pledge, a private
+AI production cooldown and remembered terrain/cities. Saving, loading and repeated
+migration preserve the complete scheduler, diplomacy, Council and event journal,
+as well as individual movement, escort IDs, route cursors and research/production
+progress. The outside observer still receives no private trade, rival ballot or
+AI plan. Existing event cursors yield no invented replay entries.
+
+After loading, the waiting escort cannot act early; the defender spends only its
+remaining allowance. The next normal boundary resets movement once, retains the
+war-group order and lets the escort finish its queued destination. A repeated
+queue execution cannot move it again or refill movement. All six installed-loader
+cases pass. These are serialized game-rule checks; real multi-computer overlapping
+war transitions remain the next separate acceptance item.
