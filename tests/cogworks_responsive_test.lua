@@ -80,7 +80,16 @@ assertTap("tool", "G")
 assertTap("pause")
 assertTap("help")
 assertTap("cell")
-assert(r.boardX >= 8 and r.boardY > 35, "Board sits inside its dedicated panel")
+assert(r.boardX >= 4 and r.boardY >= 22, "The board reaches close to the new header")
+local layout = r.currentGameLayout
+assert(layout.board.w <= layout.board.h and layout.sidebar.w >= 100, "Board is square and extra width goes to sidebar")
+assert(layout.grid.x >= layout.board.x and layout.grid.y >= layout.board.y, "Grid remains inside its board area")
+assert(
+  layout.sidebar.x - (layout.grid.x + layout.grid.w) < 26,
+  "Grid no longer has a large empty right margin"
+)
+assert(layout.grid.y + layout.grid.h <= layout.board.y + layout.board.h, "Grid fits the playable height")
+assert(layout.sidebar.x + layout.sidebar.w <= r.canvasW, "Sidebar fits screen")
 local previousCell = r.cell
 model.game = E.new(64, true)
 model.result = E.evaluate(model.game)
