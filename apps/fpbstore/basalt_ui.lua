@@ -166,8 +166,10 @@ function U.run(manager, basalt)
       page = settingsReturn
     elseif page == "menu" then
       page = "browse"
-    elseif page == "manage" or page == "remove" or page == "about" then
+    elseif page == "manage" or page == "remove" then
       page = "detail"
+    elseif page == "about" then
+      page = compact and "manage" or "detail"
     elseif page == "options" then
       page = "install"
     elseif page == "opus_settings" then
