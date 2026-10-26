@@ -43,7 +43,7 @@ function O.sync(apps, installed, prefs)
     local id = app.id
     local reg = REGISTRY .. "/fpbstore-" .. id
     local entry = shortcut(id)
-    if prefs.opusApps ~= false and installed(app) then
+    if prefs.opusApps ~= false and (not prefs.opusShortcuts or prefs.opusShortcuts[id] ~= false) and installed(app) then
       write(entry, 'return dofile("/apps/fpbstore/launch.lua")(' .. string.format("%q", id) .. ')\n')
       write(reg, textutils.serialize({
         key = "fpbstore-" .. id,
