@@ -23,7 +23,7 @@ for number, stage in ipairs(E.levels) do
     total = total + count
   end
   assert(brief.stockTotal == total, "Briefing inventory matches level")
-  assert(#brief.bonus == 2, "Every mission has exactly two authored bonus objectives")
+  assert(#brief.bonus == #stage.bonuses, "Brief shows precisely the authored optional objectives")
   for slot, entry in ipairs(brief.bonus) do
     assert(entry.id == "extra" .. slot and entry.name and entry.type, "Stable named objective " .. slot)
   end
