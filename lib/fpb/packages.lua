@@ -31,6 +31,7 @@ P.packages.cogworks = {
     "responsive.lua",
     "create_art.lua",
     "create_textures.lua",
+    "approved_atlas.lua",
     "storage.lua",
     "terminal_view.lua",
     "tutorials.lua",
@@ -233,7 +234,7 @@ P.packages.fpbstore = {
 }
 P.apps = {
   {
-    version = "2.1.0",
+    version = "2.2.0",
     id = "cogworks",
     name = "COGWORKS",
     subtitle = "KINETIC LAB",
