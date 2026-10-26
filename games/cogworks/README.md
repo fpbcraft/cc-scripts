@@ -219,9 +219,20 @@ Graphics pixel scaling is separately fitted to the available pixel dimensions.
 
 ## Controls
 
-**Computer / CraftOS-PC mouse:** right-click to place or rotate; left-click
-to delete; drag a movable machine or redstone piece to an empty cell.
+**Computer / CraftOS-PC desktop mouse:** right-click to place or rotate;
+left-click to delete; drag a movable machine or redstone piece to an empty cell.
 Dragging does not consume stock or reset orientation.
+
+**CraftOS-PC mobile terminal (iPad / Android):** the game automatically
+detects the mobile API. Tap an empty square to place a part, or tap an existing
+part to inspect it. Use its top-left Rotate, top-right Delete, or bottom-left
+Move control; the separate REMOVE palette tool also works. Touch drags work
+with the same gesture when mouse drag/up events are available. A synthetic
+left-button mouse click from a finger tap never deletes the board cell.
+
+If a mobile host does not expose the `mobile` API, launch with
+`/games/cogworks/main.lua --touch`. Use `--mouse` on a touchscreen
+computer to force desktop left-click-delete/right-click-build controls.
 
 **Advanced Monitor (tap-only):** tap an empty square to place the selected
 part. Tap an existing part to select it; the small top-left arrow rotates,
