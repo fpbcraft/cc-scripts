@@ -1075,6 +1075,14 @@ function R:drawGame(m)
         self:rect(right + 1, py + 3, 1, 1, 8)
         self:rect(right + 3, py + 3, 1, 1, 8)
         self:add(right, py, hitSize, hitSize, "remove", chosen.x, chosen.y)
+        -- Bottom-left button enters two-tap Move mode; the part's
+        -- orientation is preserved unless manually rotated afterward.
+        local bottom = py + span - hitSize
+        local moving = m.moving and m.moving.x == chosen.x and m.moving.y == chosen.y
+        self:rect(px + 1, bottom + 1, 3, 3, 2)
+        self:rect(px + 1, bottom + 2, 2, 1, moving and 9 or 11)
+        self:rect(px + 3, bottom + 1, 1, 3, moving and 9 or 11)
+        self:add(px, bottom, hitSize, hitSize, "moveStart", chosen.x, chosen.y)
       end
     end
   end
