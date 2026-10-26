@@ -42,6 +42,11 @@ function P.update(drag, g, renderer, px, py)
   local dx, dy = drag.cursorX - drag.startX, drag.cursorY - drag.startY
   drag.moved = drag.moved or dx * dx + dy * dy >= 4
   drag.targetX, drag.targetY = renderer:boardCell(px, py)
+  -- Inventory/paint previews show the same auto-alignment as a click-to-place.
+  -- Board moves deliberately preserve the player's existing rotation.
+  if drag.origin ~= "board" and drag.targetX and drag.targetY then
+    drag.r = E.bestRotation(g, drag.targetX, drag.targetY, drag.kind)
+  end
   drag.valid = P.valid(g, drag, drag.targetX, drag.targetY)
   return drag
 end
