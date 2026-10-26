@@ -37,6 +37,29 @@ campaign when loading incompatible generated-layout saves. A permanent
 `slot-N.dat.campaign-v5` backup is retained before an older slot is
 overwritten. Display settings are preserved.
 
+## High-resolution CraftOS and iPad interface
+
+Cogworks uses CivCraft's graphics density of **three logical pixels wide
+by four high per terminal character** when CC:Graphics is available.
+On larger screens it now renders an actual full-resolution interface,
+rather than magnifying a fixed 200×120 screen or showing that design in
+a small central window. This includes a broad mission briefing, dedicated
+mechanical board, two-column component palette, clear optional goals,
+larger controls, branching maps, save slots, menus, tutorial overlays,
+and custom pack browsers. Visual hit targets and input coordinates use
+the same graphics transform, including after a resize.
+
+A compact 200×120 design is retained for smaller graphics monitors and
+the existing text-mode fallback remains supported. On attached monitors,
+Cogworks requests text scale 0.5 before initializing its graphics renderer
+and restores the original scale on exit; an emulator's built-in terminal
+may not offer the monitor text-scale API.
+
+For CraftOS-PC on iPad, the mouse input handler also accepts click-only
+taps when `mouse_up` is absent, while retaining drag movement when the
+appropriate events are available. Use `--input-debug` to capture the raw
+pointer events and resolved board actions if touch input remains unusual.
+
 ## Mechanical components
 
 COGWORKS uses an intentionally **two-dimensional abstraction** of Create:
