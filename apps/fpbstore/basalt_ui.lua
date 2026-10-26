@@ -90,7 +90,7 @@ function U.run(manager, basalt)
   local sourceMode, sourceInput, sourceValue = "main", "", nil
   local installIndex, installOpus, installTarget = 1, true, "ask"
   local message, failed = "Select a title to view details.", nil
-  local returnCode, previousPage, keyboardField = nil, "browse", nil
+  local returnCode, previousPage, keyboardField, keyboardOffset = nil, "browse", nil, 0
   local actionButtons, focusIndex = {}, 1
   local showPage, runAction
 
@@ -231,7 +231,7 @@ function U.run(manager, basalt)
     end
   end
   local function startKeyboard(field)
-    keyboardField, previousPage, page = field, page, "keyboard"
+    keyboardField, previousPage, keyboardOffset, page = field, page, 0, "keyboard"
     showPage()
   end
   local function source()
@@ -430,39 +430,44 @@ function U.run(manager, basalt)
     keyFocus()
   end
   local function keyboard()
-    title("ON-SCREEN KEYBOARD")
+    title("TOUCH KEYBOARD")
     local text = keyboardField == "search" and searchText or sourceInput
     label(2, 5, shorten(text .. "_", w - 4), colors.yellow)
-    local rows = { "1234567890", "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM-_.", "/:#?" }
-    local y = 6
-    for _, chars in ipairs(rows) do
-      local x = 2
-      for i = 1, #chars do
-        local char = chars:sub(i, i)
-        button(x, y, 3, char, function()
-          if keyboardField == "search" then
-            searchText = searchText .. char:lower()
-          else
-            sourceInput = sourceInput .. char
-          end
-          showPage()
-        end)
-        x = x + 4
-        if x + 3 > w then
-          break
-        end
-      end
-      y = y + 1
-    end
-    button(2, h - 4, 8, "SPACE", function()
+    local alphabet = "1234567890QWERTYUIOPASDFGHJKLZXCVBNM-_. /:#?@"
+    local countPerRow = math.max(1, math.floor((w - 3) / 4))
+    local rows = math.max(1, math.min(3, h - 9))
+    local pageSize = countPerRow * rows
+    local pageCount = math.ceil(#alphabet / pageSize)
+    keyboardOffset = math.max(0, math.min(keyboardOffset, pageCount - 1))
+    local function append(char)
       if keyboardField == "search" then
-        searchText = searchText .. " "
+        searchText = (searchText .. char):sub(1, 100)
       else
-        sourceInput = sourceInput .. " "
+        sourceInput = (sourceInput .. char):sub(1, 200)
       end
       showPage()
+    end
+    for i = 1, pageSize do
+      local index = keyboardOffset * pageSize + i
+      if index > #alphabet then
+        break
+      end
+      local char = alphabet:sub(index, index)
+      local x = 2 + ((i - 1) % countPerRow) * 4
+      local y = 6 + math.floor((i - 1) / countPerRow)
+      button(x, y, 3, char == " " and "_" or char, function()
+        append(char)
+      end)
+    end
+    button(2, h - 3, 8, "PREV", function()
+      keyboardOffset = math.max(0, keyboardOffset - 1)
+      showPage()
     end)
-    button(12, h - 4, 8, "DEL", function()
+    button(11, h - 3, 8, "NEXT", function()
+      keyboardOffset = math.min(pageCount - 1, keyboardOffset + 1)
+      showPage()
+    end)
+    button(20, h - 3, 6, "DEL", function()
       if keyboardField == "search" then
         searchText = searchText:sub(1, -2)
       else
@@ -470,9 +475,13 @@ function U.run(manager, basalt)
       end
       showPage()
     end)
-    button(22, h - 4, 8, "DONE", back)
+    button(2, h - 2, 10, "SPACE", function()
+      append(" ")
+    end)
+    button(14, h - 2, 10, "DONE", back)
     keyFocus()
   end
+
   local function browse()
     title(tab == "GAMES" and "GAME LIBRARY" or tab)
     local input = view:addInput({
