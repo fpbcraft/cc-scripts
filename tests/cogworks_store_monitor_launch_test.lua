@@ -167,7 +167,8 @@ end
 local events = 0
 os.pullEvent = function()
   events = events + 1
-  if events == 1 then
+  if events <= 3 then
+    -- Browse -> Details -> Launch picker -> Terminal (the active monitor).
     return "key", keys.enter
   end
   return "char", "q"
