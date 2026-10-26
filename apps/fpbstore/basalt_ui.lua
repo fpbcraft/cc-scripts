@@ -66,6 +66,7 @@ function U.run(manager, basalt)
     end
   end
   local w, h = host.getSize()
+  local compact = w < 50 or h < 18
   if w < 26 or h < 12 then
     restore()
     error("FPB Store needs at least a 26x12 terminal (monitor scale 0.5)", 0)
@@ -151,6 +152,14 @@ function U.run(manager, basalt)
       page = "browse"
     elseif page == "error" then
       page = "detail"
+    elseif page == "menu" then
+      page = "browse"
+    elseif page == "manage" or page == "remove" then
+      page = "detail"
+    elseif page == "options" then
+      page = "install"
+    elseif page == "opus_settings" then
+      page = "settings"
     else
       page = "detail"
     end
@@ -205,7 +214,7 @@ function U.run(manager, basalt)
   local function nav()
     view:addFrame({ x = 1, y = 1, width = w, height = 1, background = colors.gray })
     label(2, 1, "FPB STORE " .. (manager.storeStatus().installedVersion or ""), colors.orange, 22)
-    local tabs = { "GAMES", "APPS", "INSTALLED", "UPDATES" }
+    local tabs = compact and { "GAMES", "APPS" } or { "GAMES", "APPS", "INSTALLED", "UPDATES" }
     local x = 2
     for _, name in ipairs(tabs) do
       local width = #name + 2
@@ -216,6 +225,22 @@ function U.run(manager, basalt)
         end, tab == name and colors.orange or colors.blue)
         x = x + width + 1
       end
+    end
+    if compact then
+      button(17, 2, 9, "NEXT", function()
+        local order = { "GAMES", "APPS", "INSTALLED", "UPDATES" }
+        for i, name in ipairs(order) do
+          if name == tab then
+            tab, selected, page = order[i % #order + 1], nil, "browse"
+            break
+          end
+        end
+        showPage()
+      end)
+      button(2, 3, 10, "MENU", function()
+        page = "menu"
+        showPage()
+      end)
     end
     label(2, h, shorten(message, w - 3), failed and colors.red or colors.lightGray, w - 2)
   end
@@ -245,6 +270,29 @@ function U.run(manager, basalt)
         showPage()
       end, sourceMode == mode and colors.orange or colors.blue)
       x = x + width + 1
+    end
+    if compact then
+      label(2, 7, sourceMode == "main" and "Stable release" or "PR / branch ref:", colors.lightGray)
+      local input
+      if sourceMode ~= "main" then
+        input = view:addInput({ x = 2, y = 8, width = math.max(8, w - 14), text = sourceInput, placeholder = "Type source" })
+        input:onChange(function(self)
+          sourceInput = self.text
+        end)
+        input:onEnter(function()
+          runAction("source-save")
+        end)
+        registerKey(input)
+        button(w - 10, 8, 9, "KEYS", function()
+          startKeyboard("source")
+        end)
+      end
+      button(2, 9, 13, "USE SOURCE", function()
+        runAction("source-save")
+      end)
+      button(16, 9, 9, "BACK", back)
+      keyFocus(input)
+      return
     end
     local edit
     if sourceMode == "main" then
@@ -283,6 +331,16 @@ function U.run(manager, basalt)
       end, prefs.display == mode and colors.orange or colors.blue)
       x = x + width + 1
     end
+    if compact then
+      label(2, 8, #manager.monitors() .. " monitor(s) attached", colors.cyan)
+      button(2, 9, 12, "OPUS", function()
+        page = "opus_settings"
+        showPage()
+      end)
+      button(14, 9, 10, "BACK", back)
+      keyFocus()
+      return
+    end
     label(2, 9, "Opus shortcuts:", colors.lightGray)
     button(2, 10, 14, prefs.opusStore and "STORE ON" or "STORE OFF", function()
       prefs.opusStore = not prefs.opusStore
@@ -308,6 +366,25 @@ function U.run(manager, basalt)
     local status = manager.status(app)
     title(app.name)
     label(2, 5, (app.subtitle or "") .. " / " .. (app.genre or ""), colors.orange)
+    if compact then
+      for i, line in ipairs(wrap(app.description, w - 4, 2)) do
+        label(2, 5 + i, line, colors.white)
+      end
+      button(2, 8, 10, status.installed and "LAUNCH" or "INSTALL", function()
+        runAction(status.installed and "launch" or "install")
+      end)
+      button(14, 8, 10, "BUILD", function()
+        previousPage, page = "detail", "source"
+        showPage()
+      end)
+      button(2, 9, 10, "MANAGE", function()
+        page = "manage"
+        showPage()
+      end)
+      button(14, 9, 10, "BACK", back)
+      keyFocus()
+      return
+    end
     local lines = wrap(app.description, w - 4, 3)
     for i, line in ipairs(lines) do
       label(2, 6 + i, line, colors.white)
@@ -376,6 +453,33 @@ function U.run(manager, basalt)
     local available = manager.disks(app)
     installIndex = math.min(installIndex, #available)
     local disk = available[installIndex]
+    if compact then
+      title("INSTALL " .. app.name)
+      label(2, 5, "Destination: " .. disk.name, colors.yellow)
+      label(2, 6, disk.root, colors.lightBlue)
+      button(2, 7, 8, "< DISK", function()
+        installIndex = (installIndex - 2 + #available) % #available + 1
+        showPage()
+      end)
+      button(12, 7, 8, "DISK >", function()
+        installIndex = installIndex % #available + 1
+        showPage()
+      end)
+      button(2, 8, 12, "SOURCE", function()
+        previousPage, page = "install", "source"
+        showPage()
+      end)
+      button(15, 8, 11, "OPTIONS", function()
+        page = "options"
+        showPage()
+      end)
+      button(2, 9, 13, "INSTALL NOW", function()
+        runAction("install-now")
+      end)
+      button(16, 9, 9, "BACK", back)
+      keyFocus()
+      return
+    end
     title("INSTALL " .. app.name)
     label(2, 6, "Destination: " .. disk.name, colors.yellow)
     label(2, 7, disk.root, colors.lightBlue)
@@ -544,6 +648,20 @@ function U.run(manager, basalt)
       for i, line in ipairs(wrap(selected.description, w - x - 2, 5)) do
         label(x, i + 11, line, colors.white, w - x - 1)
       end
+    end
+    if compact then
+      button(2, h - 3, 11, "DETAILS", function()
+        if current() then
+          page = "detail"
+          showPage()
+        end
+      end)
+      button(14, h - 3, 10, "MENU", function()
+        page = "menu"
+        showPage()
+      end)
+      keyFocus(list)
+      return
     end
     button(2, h - 3, 11, "DETAILS", function()
       if current() then
