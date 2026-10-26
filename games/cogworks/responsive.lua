@@ -501,6 +501,38 @@ return function(R)
     self:button(19, h - 20, 88, 17, "SKIP TUTORIAL", "tutorialSkip")
     self:button(w - 107, h - 20, 88, 17, m.tutorial.index == #m.tutorial.steps and "GOT IT" or "NEXT", "tutorialNext")
   end
+  function R:wideList(m)
+    local scene, w, h = m.scene, self.canvasW, self.canvasH
+    local entries, action, heading
+    if scene == "editorList" then
+      entries, action, heading = m.editorFiles or {}, "editorLoadFile", "SAVED PUZZLES"
+    elseif scene == "packList" then
+      entries, action, heading = m.packFiles or {}, "pack", "CUSTOM PACKS"
+    else
+      entries = m.activePack and m.activePack.levels or {}
+      action = "packLevel"
+      heading = m.activePack and m.activePack.title or "CUSTOM LEVELS"
+    end
+    self:wideFrame(heading, "SELECT A FILE OR USE THE PAGE BUTTONS")
+    local rows, page = 7, m.catalogPage or 1
+    local left, width, rowH = 12, w - 24, clamp(math.floor((h - 78) / rows), 13, 22)
+    for slot = 1, rows do
+      local index = (page - 1) * rows + slot
+      local item = entries[index]
+      if item then
+        local caption = type(item) == "table" and (item.name or item.title) or item
+        local arg = type(item) == "table" and index or item
+        self:button(left, 34 + (slot - 1) * (rowH + 3), width, rowH, index .. "  " .. tostring(caption), action, arg)
+      end
+    end
+    if page > 1 then
+      self:button(12, h - 20, 63, 17, "PREVIOUS", "catalogPage", page - 1)
+    end
+    self:button(math.floor((w - 68) / 2), h - 20, 68, 17, "BACK", "back")
+    if page * rows < #entries then
+      self:button(w - 75, h - 20, 63, 17, "NEXT", "catalogPage", page + 1)
+    end
+  end
   function R:drawResponsive(m)
     if m.scene == "game" or m.scene == "editor" then
       self:wideGame(m)
@@ -510,6 +542,8 @@ return function(R)
       self:wideTutorial(m)
     elseif m.scene == "levels" or m.scene == "chapter" then
       self:wideMap(m, m.scene == "chapter")
+    elseif m.scene == "editorList" or m.scene == "packList" or m.scene == "packLevels" then
+      self:wideList(m)
     else
       return self:wideMenu(m)
     end
