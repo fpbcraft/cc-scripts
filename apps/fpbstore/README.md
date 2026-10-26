@@ -1,13 +1,13 @@
 # FPB Store 2.1
 
-ComputerCraft-native storefront for CC:Tweaked and CraftOS-PC/iOS, using the 16-color palette, fixed character cells, and no graphics mode or Basalt dependency.
+ComputerCraft-native storefront for CC:Tweaked and CraftOS-PC/iOS, using Basalt 2.5 widgets over the 16-color character-cell display. The previous terminal renderer remains a fallback if Basalt cannot load.
 
 ## Install
 
     wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/installers/fpbstore.lua
     /apps/fpbstore/main.lua
 
-An optional installer --startup flag enables autostart. The UI begins with a short five-line animated FPB logo.
+An optional installer --startup flag enables autostart. The installer bundles Basalt 2.5. The UI begins with a short five-line animated FPB logo.
 
 ## Catalog and controls
 
@@ -28,7 +28,7 @@ Browse Games, Apps, Installed, or Updates. Games: Cogworks, Railbreak, Shattered
 | R | Refresh update status |
 | U | Update and reload FPB Store |
 
-Minimum size: 26 by 12 character cells. Larger monitors show an additional details panel.
+Minimum size: 26 by 12 character cells. Larger monitors show an additional details panel. The compact Basalt UI has Menu, Manage, Install Options, and Opus pages so touch users can reach every action. Native Basalt lists, focusable buttons and one-line inputs support keyboard operation. Search and PR/branch fields offer a paginated on-screen keyboard for monitor-only touch input.
 
 ## Installing to a disk
 
@@ -42,7 +42,7 @@ Changing an install's destination does not automatically migrate earlier save da
 
 Store settings offer Auto (prefer a connected monitor), Terminal, and Monitor (falling back to Terminal when unavailable). The Store automatically sets attached monitors to text scale 0.5.
 
-Every installed program independently supports START ON: TERM, MON, or ASK. When MON is selected but unavailable, a terminal fallback is offered. The Store restores the previous output, graphics mode and palette after launching a program.
+Every installed program independently supports START ON: TERM, MON, or ASK. On CraftOS-PC, choosing MONITOR automatically attaches a virtual monitor via periphemu.create if no monitor exists. This also works from Opus shortcuts and the legacy launcher. In Minecraft, where periphemu is not available, an unattached monitor cannot be created, and a terminal fallback is offered. Existing monitors are reused; no user-owned peripheral is detached. The Store restores the previous output, graphics mode and palette after launching a program. While using a CraftOS monitor as the Store screen, it temporarily turns off CraftOS\x27s monitorsUseMouseEvents compatibility option so Basalt receives ordinary monitor_touch events, then restores the original setting.
 
 ## Opus integration
 
