@@ -16,7 +16,16 @@ local Pointer = require("games.cogworks.pointer")
 -- CC mouse buttons are 1=left (remove), 2=right (build / drag).
 -- Touch input has no mouse button and also supports the erase tool.
 local function boardAction(button, selected, touch)
-  if button == 1 or selected == "erase" then
+  -- Explicit mouse buttons take precedence over the selected inventory tool:
+  -- right click NEVER removes, even when Erase is selected.
+  if button == 1 then
+    return "remove"
+  end
+  if button == 2 and selected == "erase" then
+    return "inspect"
+  end
+  -- Buttonless monitor touches can still use the dedicated Erase tool.
+  if selected == "erase" then
     return "remove"
   end
   return touch and "inspect" or "cell"
@@ -179,7 +188,13 @@ local function start()
       cancelDrag()
       local action, x, y = renderer:hit(mx, my)
       local gameScene = app.scene == "game" or app.scene == "editor"
-      if gameScene and action == "cell" and (button == 1 or app.selected == "erase") then
+      -- Inspect mode draws small rotate/remove overlays over selected cells.
+      -- They are touch controls, not right-click actions: right-clicking
+      -- either overlay must still operate on the underlying board cell.
+      if gameScene and button == 2 and (action == "rotate" or action == "remove") then
+        action = "cell"
+      end
+      if gameScene and action == "cell" and button == 1 then
         return act("remove", x, y)
       end
       if gameScene and (action == "cell" or action == "tool") then
