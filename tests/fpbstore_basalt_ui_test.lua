@@ -237,6 +237,9 @@ local _, _, smallPrefs = scenario(26, 12, {
   "BACK",
   "DETAILS",
   "MANAGE",
+  "ABOUT",
+  "DOWN",
+  "BACK",
   "MON",
 })
 assert(smallPrefs.opusStore == false and smallPrefs.launchTargets.alpha == "monitor")
