@@ -7,6 +7,7 @@ return function(R)
     piece = R.piece,
     redstonePiece = R.redstonePiece,
     drawSpan = R.drawSpan,
+    drawSpans = R.drawSpans,
     toolIcon = R.toolIcon,
   }
   local pi, sin, cos = math.pi, math.sin, math.cos
@@ -318,6 +319,43 @@ return function(R)
         for side = -1, 1, 2 do
           local accent = side < 0 and 15 or 6
           self:rect(nearest(middleX + nx * side * span), nearest(middleY + ny * side * span), 1, 1, accent)
+        end
+      end
+    end
+  end
+  -- Chain-drive graph links were previously drawn as a stationary 5px
+  -- marker. Draw their actual enclosed moving chain alongside the existing
+  -- toothed links. Belt connections already call R:drawSpan above.
+  function R:drawSpans(g, result)
+    original.drawSpans(self, g, result)
+    if not self.wide or self.cell < 16 then
+      return
+    end
+    for _, tile in ipairs(g.tiles) do
+      if tile.kind == "D" then
+        for _, link in ipairs(E.meshes(g, tile)) do
+          local other = link.tile
+          if link.chain and other.id > tile.id then
+            local mid = math.floor(self.cell / 2)
+            local x1 = self.boardX + (tile.x - 1) * self.cell + mid
+            local y1 = self.boardY + (tile.y - 1) * self.cell + mid
+            local x2 = self.boardX + (other.x - 1) * self.cell + mid
+            local y2 = self.boardY + (other.y - 1) * self.cell + mid
+            local dx = x2 > x1 and 1 or (x2 < x1 and -1 or 0)
+            local dy = y2 > y1 and 1 or (y2 < y1 and -1 or 0)
+            local inset = math.min(6, math.floor(self.cell / 3))
+            local first, second = result.lights[tile.id], result.lights[other.id]
+            local active = first and second and first.powered and second.powered
+            self:drawSpan(
+              x1 + dx * inset,
+              y1 + dy * inset,
+              x2 - dx * inset,
+              y2 - dy * inset,
+              "D",
+              active,
+              motion(tile, first)
+            )
+          end
         end
       end
     end
