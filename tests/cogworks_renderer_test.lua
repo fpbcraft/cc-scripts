@@ -78,7 +78,9 @@ function gfx.drawPixels(x, y, fill, w, h)
 end
 local r = R.new(gfx)
 assert(r.mode == "graphics" and gfx.mode == 2)
-assert(math.abs(r.scale - 2) < 0.001, "Graphics virtual dimensions")
+assert(math.abs(r.scale - math.min(gfx.width / (70 * 3), gfx.height / (40 * 4))) < 0.001,
+  "Pixel density follows CivCraft 3x4-per-text-cell dimensions")
+assert(r.scale < 2 and r.ox > 0 and r.oy > 0, "Small Cogworks glyphs are no longer enlarged to full screen")
 assert(gfx.palette[0] == 0x07192D and gfx.palette[11] == 0x64D3F2, "Blueprint ink palette installed")
 assert(
   gfx.palette[14] == 0xF4A25E and gfx.palette[11] ~= gfx.palette[14],
