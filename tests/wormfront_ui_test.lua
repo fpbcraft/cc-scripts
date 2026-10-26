@@ -43,7 +43,11 @@ for _, dimension in ipairs({ { 42, 34 }, { 70, 46 }, { 90, 64 } }) do
   end)
   local g = Sim.new(2, 99)
   ui:draw(g, { role = "local" })
-  assert(ui.r.mode == "graphics" and m.frames > 0, "Expected rendered graphics")
+  assert(ui.r.mode == "graphics" and ui.r.buffered, "Expected buffered graphics")
+  assert(m.frames <= 3, "Initial render must use a batched draw, not hundreds of rectangles")
+  local firstFrames = m.frames
+  ui:draw(g, { role = "local" })
+  assert(m.frames == firstFrames, "An identical frame must not call drawPixels again")
   local fire
   for _, b in ipairs(ui.r.buttons) do
     if b.label == "CHARGE" then
