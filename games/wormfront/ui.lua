@@ -30,7 +30,7 @@ local function buttons(r, items, y, height, usable)
   local width = math.floor((r.w - gap * (#items + 1)) / #items)
   for i, item in ipairs(items) do
     local x = gap + (i - 1) * (width + gap)
-    r:button(x, y, width, height, item[1], usable and item[2] or nil, {
+    r:button(x, y, width, height, item[1], (usable or item[4]) and item[2] or nil, {
       primary = item[3],
     })
   end
@@ -46,7 +46,8 @@ local function drawBoard(r, g)
     local start, oldColor = nil, nil
     for y = 1, Sim.H + 1 do
       local filled = y <= Sim.H and column:sub(y, y) == "#"
-      local color = filled and (y == 1 or column:sub(y - 1, y - 1) == "." and 11 or 16) or nil
+      local surface = y == 1 or column:sub(y - 1, y - 1) == "."
+      local color = filled and (surface and 11 or 16) or nil
       if color ~= oldColor then
         if start then
           r:fill(bx + (x - 1) * size, by + (start - 1) * size, size, (y - start) * size, oldColor)
@@ -156,8 +157,8 @@ function UI:draw(g, opts)
       { "PWR +", act("power", 1) },
       { "WEAPON", act("weapon") },
       { "FIRE", act("fire"), true },
-      { "EXIT", act("exit") },
-    }, y + 14, 12, true)
+      { "EXIT", act("exit"), false, true },
+    }, y + 14, 12, mine)
   end
   r:finish()
 end
