@@ -34,7 +34,8 @@ before using actions.
 | Enter / Escape while searching | Leave the search field |
 | Enter / primary button | Launch an installed game or install a missing one |
 | Space | Launch the selected installed game |
-| I / Reinstall / Update | Explicitly install, reinstall or update |
+| I / Reinstall / Update | Reinstall or update from the app's currently selected source |
+| B / Build Source | Choose `main`, a PR number/URL, or a branch name/URL and install it |
 | D / Remove | Confirm removal of app code; saves stay |
 | R / Refresh | Check the online catalog |
 | U / Store Update | Update and reload the Store |
@@ -56,9 +57,34 @@ files, required library modules, persistent data and presentation there;
 `catalog.lua` is a small adapter. Store removal only deletes allowlisted code and
 bundled dependencies, preserving saves and unknown user files.
 
-Remote checks fetch the same manifest, resolving `main` to an immutable commit
-when GitHub's API is available. Installers fetch program and library files from
-that revision. Self-update uses staged activation and immediately reloads the
+Remote checks fetch the same manifest, resolving each source to an immutable
+commit when GitHub's API is available. Installers fetch program and library files
+from that revision.
+
+### Installing test builds
+
+Select a game, press **B** (or click **BUILD SOURCE**), and choose **MAIN**,
+**PR**, or **BRANCH**. Enter a PR number (such as `52`), a PR URL
+(`https://github.com/fpbcraft/cc-scripts/pull/52`), or a branch name
+(`feat/cogworks-64-campaign-editor`). Paste is supported. Press **Enter**
+or click **INSTALL BUILD**.
+
+The Store records the chosen source and installed commit **per game**.
+Reinstall/Update follows that PR or branch until you explicitly select
+MAIN again. The game list shows PR or branch builds separately from stable
+installs. If a PR or branch moves, Refresh checks its new head, and the
+Store offers an update when that game's actual files have changed.
+
+PRs must currently originate from a branch inside `fpbcraft/cc-scripts`
+(fork-based PRs are not yet supported). Resolving a PR or branch requires
+the GitHub API; if it is unreachable, installation fails without silently
+falling back to `main`.
+
+Update availability is based on each game's managed program and bundled
+library file identities, not every commit to the repository. Updating the
+Store itself or changing another game must not produce unrelated game updates.
+Existing installs without this file fingerprint still fall back to version
+comparison until they are reinstalled. Self-update uses staged activation and immediately reloads the
 installed entrypoint with a fresh module cache.
 
 Store metadata lives at `/apps/fpbstore/installed/<id>.dat`. Unknown installed
