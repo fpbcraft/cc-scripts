@@ -70,7 +70,7 @@ local authored = {
   ),
   level(
     "THE MISPLACED COG",
-    "THE INSTALLED COG IS THE KEY, NOT AN OBSTACLE.",
+    "A FIXED COG BLOCKS THE STRAIGHT ROUTE. THE PRESS IS STILL REACHABLE.",
     5,
     5,
     p("S", 1, 3, 1),
@@ -444,7 +444,7 @@ override(
   20,
   level(
     "TWO CLOCKS",
-    "ONE TRUNK, TWO OUTPUT RATES; SPLIT BEFORE GEARING.",
+    "THE TWO PRESSES DEMAND DIFFERENT SPEEDS FROM ONE MOTOR.",
     7,
     7,
     p("S", 1, 3, 1),
@@ -489,7 +489,7 @@ override(
   28,
   level(
     "CROSSING THE LINE",
-    "THE SHAFT PASSES THROUGH THE LIVE BELT, NOT THROUGH A PULLEY.",
+    "TWO RUNNING TRANSMISSIONS NEED THE SAME NARROW CORRIDOR.",
     6,
     6,
     p("S", 1, 3, 1),
@@ -519,7 +519,7 @@ override(
   44,
   level(
     "TWO DIFFERENT COMMANDS",
-    "POWER THE UPPER SHIFT WHILE LEAVING THE LOWER SHIFT ALONE.",
+    "THE TWO INSTALLED SHIFTS REQUIRE DIFFERENT COMMANDS.",
     7,
     6,
     p("S", 1, 3, 1),
@@ -641,7 +641,7 @@ override(
   64,
   level(
     "THE GRAND COMMISSION",
-    "POWER FOUR PRESSES: BELT CROSS, CHAIN, GEARS AND SELECTIVE REDSTONE.",
+    "COMMISSION THE FACTORY: FOUR PRESSES, FOUR DIFFERENT DEMANDS.",
     10,
     10,
     p("S", 1, 5, 1),
@@ -673,7 +673,7 @@ override(
   9,
   level(
     "BLOCKED PASSAGE",
-    "THE DIRECT ROUTE IS A WALL; TURN THROUGH THE OPEN CORRIDOR.",
+    "THE MAIN PASSAGE IS SEALED. FIND ANOTHER WAY TO RUN THE PRESS.",
     6,
     6,
     p("S", 1, 3, 1),
@@ -840,7 +840,7 @@ override(
   49,
   level(
     "ONE MISSING GEAR",
-    "THE OLD MACHINE IS NEARLY COMPLETE; FIND THE MISSING TOOTHED LINK.",
+    "THIS ASSEMBLY ALMOST WORKS. THE REPAIR IS NOT OBVIOUS.",
     7,
     7,
     p("S", 1, 3, 1),
@@ -953,6 +953,45 @@ local function bonusFor(stage, key, index)
     return bonusFor(stage, "budget", index)
   end
   return spec
+end
+-- Do not distribute a recipe's exact bill of materials to the player.
+-- These pilot puzzles deliberately include plausible competing transmissions.
+-- Stock lists are authored independently from the tested reference assembly.
+local exploratoryStock = {
+  [4] = { Q = 2, I = 1, G = 1 },
+  [9] = { G = 2, I = 1, Q = 1 },
+  [20] = { G = 2, O = 1, Q = 1, I = 2 },
+  [28] = { V = 1, Q = 1, I = 2, D = 2 },
+  [44] = { B = 1, R = 3, G = 1 },
+  [49] = { G = 2, Q = 2, I = 1, D = 1 },
+  [64] = { I = 2, G = 1, O = 1, Q = 1, V = 1, R = 2 },
+}
+for number, spare in pairs(exploratoryStock) do
+  for kind, amount in pairs(spare) do
+    authored[number].stock[kind] = (authored[number].stock[kind] or 0) + amount
+  end
+end
+
+-- Explicit objective counts: discoveries can be reward-free; ordinary
+-- experiments may have one optional challenge, and complex stages up to two.
+-- Stage 64 is deliberately a substantial open-ended main objective, not a
+-- mandatory full-inventory/exact-count checklist.
+local noBonuses = {
+  [1] = true, [2] = true, [9] = true, [17] = true,
+  [25] = true, [33] = true, [41] = true, [64] = true,
+}
+local singleBonus = {
+  [3] = true, [4] = true, [5] = true, [10] = true,
+  [12] = true, [18] = true, [20] = true, [26] = true,
+  [28] = true, [34] = true, [35] = true, [42] = true,
+  [44] = true, [49] = true, [50] = true, [57] = true,
+}
+for number, stage in ipairs(authored) do
+  if noBonuses[number] then
+    stage.bonusKinds = {}
+  elseif singleBonus[number] then
+    stage.bonusKinds = { stage.bonusKinds[1] }
+  end
 end
 for i, stage in ipairs(authored) do
   stage.chapter = math.ceil(i / 8)
