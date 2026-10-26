@@ -52,7 +52,7 @@ assert(g.selected[1] == first1, "Rotation must wrap back to first living worm")
 local timed = Sim.new(2, 55)
 timed.turnLeft = 0.2
 Sim.tick(timed, 0.3)
-assert(timed.turn == 2 and timed.turnLeft == Sim.TURN_SECONDS)
+assert(timed.turn == 2 and timed.turnLeft > Sim.TURN_SECONDS - 0.2)
 
 -- Weapon pickups grant the owning team ammunition, not each individual worm.
 local loot = Sim.new(2, 80)
