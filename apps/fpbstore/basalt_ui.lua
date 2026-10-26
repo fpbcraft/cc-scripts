@@ -736,7 +736,7 @@ function U.run(manager, basalt)
       runAction("refresh")
     end)
     button(28, h - 3, 10, "SETUP", function()
-      page = "settings"
+      settingsReturn, page = "browse", "settings"
       showPage()
     end)
     button(40, h - 3, 10, "EXIT", back)
