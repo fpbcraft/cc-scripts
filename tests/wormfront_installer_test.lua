@@ -1,0 +1,10 @@
+-- Real install/loader smoke check, independent of shell/package globals.
+local disk = dofile("tests/support/craftos.lua").new()
+disk.install("wormfront", "main", "--no-startup")
+disk.withoutRuntime()
+local api = disk.run("wormfront", "--test-api")
+assert(type(api) == "table" and type(api.Sim) == "table" and type(api.UI) == "table")
+local g = api.Sim.new(2, 99)
+assert(g.phase == "playing" and #g.worms == 6)
+assert(not disk.files["/startup.lua"])
+print("WORMFRONT manifest, bootstrap and isolated runtime: OK")
