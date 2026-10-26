@@ -1,7 +1,7 @@
--- WORMFRONT: local hotseat or remote rednet artillery.
+-- WORMFRONT v0.2: timed hotseat or authoritative rednet artillery.
 local bootstrap = loadfile("/games/wormfront/_lib/fpb/loader.lua")
 if bootstrap and _G.__fpbRoot ~= "/games/wormfront" then
-  -- selene: allow(undefined_variable) -- Forward launch arguments to the isolated loader.
+  -- selene: allow(undefined_variable) -- Forward launch arguments through the isolated loader.
   return bootstrap().run("/games/wormfront", "main.lua", _ENV, ...)
 end
 
@@ -9,12 +9,19 @@ local args = { ... }
 local Sim = require("sim")
 local UI = require("ui")
 local Display = require("lib.fpb.display")
-local protocol = "fpb.wormfront.v1"
+local protocol = "fpb.wormfront.v2"
 local role = args[1] or "local"
 if role == "--test-api" then
   return { UI = UI, Sim = Sim }
 end
 assert(role == "local" or role == "host" or role == "join", "Usage: main.lua [local [2-4] | host | join [ID]]")
+
+local function now()
+  if os.epoch then
+    return os.epoch("utc") / 1000
+  end
+  return os.clock()
+end
 
 local modemSide
 if role ~= "local" then
@@ -30,15 +37,15 @@ if role ~= "local" then
 end
 
 local players, slot, hostId, count = {}, nil, nil, 1
-local game, status, quit = nil, "", false
+local game, status, quit, frame = nil, "", false, 0
 if role == "local" then
   game = Sim.new(math.max(2, math.min(4, tonumber(args[2]) or 2)), os.epoch and os.epoch("utc") or 42)
   slot = 0
 elseif role == "host" then
-  local id = os.getComputerID()
-  players[1] = id
-  slot, hostId = 1, id
-  rednet.host(protocol, "wormfront-" .. id)
+  hostId = os.getComputerID()
+  slot = 1
+  players[1] = hostId
+  rednet.host(protocol, "wormfront-" .. hostId)
   status = "WAITING FOR PLAYERS"
 elseif role == "join" then
   hostId = tonumber(args[2])
@@ -49,23 +56,23 @@ elseif role == "join" then
   end
   assert(hostId, "No WORMFRONT host found; use join HOST_ID")
   status = "CONNECTING TO " .. hostId
-  rednet.send(hostId, { tag = protocol, type = "join" }, protocol)
 end
 
 local monitor, monitorName
 if peripheral and peripheral.getNames then
-  local area = -1
+  local largest = -1
   for _, name in ipairs(peripheral.getNames()) do
     if peripheral.getType(name) == "monitor" then
-      local found = peripheral.wrap(name)
-      local w, h = found.getSize()
-      if w * h > area then
-        monitor, monitorName, area = found, name, w * h
+      local candidate = peripheral.wrap(name)
+      local w, h = candidate.getSize()
+      if w * h > largest then
+        monitor, monitorName, largest = candidate, name, w * h
       end
     end
   end
 end
-local oldScale = monitor and monitor.getTextScale and monitor.getTextScale() or nil
+
+local originalScale = monitor and monitor.getTextScale and monitor.getTextScale() or nil
 if monitor and monitor.setTextScale then
   monitor.setTextScale(0.5)
 end
@@ -75,8 +82,7 @@ local computerMode = Display.isComputer(mode)
 
 local function packet(kind, extra)
   local data = extra or {}
-  data.tag = protocol
-  data.type = kind
+  data.tag, data.type = protocol, kind
   return data
 end
 
@@ -84,27 +90,32 @@ local function send(id, kind, extra)
   rednet.send(id, packet(kind, extra), protocol)
 end
 
+local sequence = 0
 local function publish()
-  if role ~= "host" then
+  if role ~= "host" or not game then
     return
   end
+  sequence = sequence + 1
   for i = 2, #players do
-    send(players[i], "state", { game = game, count = #players })
+    send(players[i], "state", { game = game, count = #players, seq = sequence })
   end
 end
 
 local ui
 local function redraw()
+  frame = frame + 1
   ui:draw(game, {
     role = role,
     slot = slot,
     count = count,
     hostId = hostId,
     status = status,
+    frame = frame,
   })
   Display.present(monitor, mode)
 end
 
+local lastNetwork = 0
 local function dispatch(action)
   if action.kind == "exit" then
     quit = true
@@ -129,7 +140,7 @@ local function dispatch(action)
     return
   end
   if role == "join" then
-    if slot and game.turn == slot then
+    if slot and game.turn == slot and game.state == "aim" then
       send(hostId, "action", { action = action })
     end
     return
@@ -138,15 +149,13 @@ local function dispatch(action)
   local ok, err = Sim.apply(game, team, action)
   if not ok then
     status = err
-    game.message = err
   elseif role == "host" then
     publish()
   end
 end
 
--- UI callbacks are invoked only after the complete UI has been initialized.
 ui = UI.new(monitor, dispatch)
-
+local newestState = -1
 local function network(sender, data, channel)
   if channel ~= protocol or type(data) ~= "table" or data.tag ~= protocol then
     return
@@ -177,7 +186,7 @@ local function network(sender, data, channel)
         if ok then
           publish()
         else
-          send(sender, "state", { game = game, count = #players })
+          send(sender, "state", { game = game, count = #players, seq = sequence })
         end
       end
     end
@@ -185,23 +194,83 @@ local function network(sender, data, channel)
     if data.type == "welcome" then
       slot, count = data.slot, data.count
       status = "CONNECTED AS TEAM " .. tostring(slot)
-    elseif data.type == "state" then
-      game, count = data.game, data.count
-      status = ""
+    elseif data.type == "state" and type(data.game) == "table" and type(data.seq) == "number" then
+      if data.seq >= newestState then
+        newestState = data.seq
+        game, count = data.game, data.count
+        status = ""
+      end
     elseif data.type == "denied" then
       status = "MATCH FULL OR ALREADY STARTED"
     elseif data.type == "closed" then
-      status = "HOST CLOSED THE MATCH"
+      status = "HOST CLOSED MATCH"
       quit = true
     end
   end
 end
 
+local held = {}
+local function keyAction(key)
+  if key == keys.left then
+    return { kind = "move", dir = -1 }
+  elseif key == keys.right then
+    return { kind = "move", dir = 1 }
+  elseif key == keys.up then
+    return { kind = "aim", dir = 1 }
+  elseif key == keys.down then
+    return { kind = "aim", dir = -1 }
+  end
+end
+
+local lastTime = now()
+local lastBroadcast = now()
+local lastDraw = now()
+local lastJoin = 0
+local function simulationStep()
+  local current = now()
+  local dt = math.max(0, current - lastTime)
+  lastTime = current
+  if role ~= "join" and game then
+    Sim.tick(game, dt)
+  end
+  if role == "join" and not slot and current - lastJoin >= 3 then
+    send(hostId, "join")
+    lastJoin = current
+  end
+  if keys then
+    for key, nextAt in pairs(held) do
+      if current >= nextAt then
+        local action = keyAction(key)
+        if action then
+          dispatch(action)
+          held[key] = current + 0.11
+        end
+      end
+    end
+  end
+  if role == "host" and game and current - lastBroadcast >= 0.15 then
+    publish()
+    lastBroadcast = current
+  end
+  if current - lastDraw >= 0.11 then
+    redraw()
+    lastDraw = current
+  end
+end
+
 local function run()
   redraw()
+  if role == "join" then
+    send(hostId, "join")
+    lastJoin = now()
+  end
+  local timer = os.startTimer(0.1)
   while not quit do
     local event, a, b, c = os.pullEvent()
-    if event == "monitor_touch" and (not monitorName or a == monitorName) then
+    if event == "timer" and a == timer then
+      simulationStep()
+      timer = os.startTimer(0.1)
+    elseif event == "monitor_touch" and (not monitorName or a == monitorName) then
       ui:touch(b, c)
       redraw()
     elseif event == "mouse_click" and computerMode then
@@ -213,32 +282,36 @@ local function run()
     elseif event == "mouse_scroll" and mode == "virtual-text" then
       monitor.pan(0, a * 4)
     elseif event == "key" and keys then
-      local action
-      if a == keys.left then
-        action = { kind = "move", dir = -1 }
-      elseif a == keys.right then
-        action = { kind = "move", dir = 1 }
-      elseif a == keys.up then
-        action = { kind = "aim", dir = 1 }
-      elseif a == keys.down then
-        action = { kind = "aim", dir = -1 }
-      elseif a == keys.pageUp then
-        action = { kind = "power", dir = 1 }
-      elseif a == keys.pageDown then
-        action = { kind = "power", dir = -1 }
-      elseif a == keys.tab then
-        action = { kind = "select" }
-      elseif a == keys.space then
-        action = { kind = "fire" }
-      end
+      local key = a
+      local action = keyAction(key)
       if action then
-        dispatch(action)
-        redraw()
+        if not held[key] then
+          dispatch(action)
+          held[key] = now() + 0.2
+        end
+      elseif key == keys.space then
+        if not held[key] then
+          dispatch({ kind = "charge" })
+          held[key] = math.huge
+        end
+      elseif key == keys.j then
+        dispatch({ kind = "jump" })
+      elseif key == keys.tab then
+        dispatch({ kind = "select" })
+      elseif key == keys.enter then
+        dispatch({ kind = "pass" })
       end
+      redraw()
+    elseif event == "key_up" and keys then
+      if a == keys.space and held[a] then
+        dispatch({ kind = "release" })
+      end
+      held[a] = nil
+      redraw()
     elseif event == "char" then
-      local action = a == "m" and "weapon" or a == "q" and "exit" or nil
-      if action then
-        dispatch({ kind = action })
+      local kind = (a == "w" and "weapon") or (a == "j" and "jump") or (a == "f" and "fire") or (a == "q" and "exit") or nil
+      if kind then
+        dispatch({ kind = kind })
         redraw()
       end
     elseif event == "rednet_message" then
@@ -256,8 +329,8 @@ local success, failure = xpcall(run, function(err)
 end)
 ui:close()
 Display.close(monitor, mode)
-if oldScale and monitor.setTextScale then
-  pcall(monitor.setTextScale, oldScale)
+if originalScale and monitor.setTextScale then
+  pcall(monitor.setTextScale, originalScale)
 end
 if role == "host" then
   rednet.unhost(protocol, "wormfront-" .. hostId)
