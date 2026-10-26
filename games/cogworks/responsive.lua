@@ -349,7 +349,13 @@ return function(R)
     local hint = selected
         and ((selected.name or labels[m.selected]) .. " / " .. (T.descriptions[m.selected] or "TAP A FREE CELL"))
       or "SELECT A PART TO BUILD"
-    self:fontFit(7, h - 9, m.message ~= "" and m.message or hint, result.win and 9 or 5, result.win and w - 78 or w - 14)
+    self:fontFit(
+      7,
+      h - 9,
+      m.message ~= "" and m.message or hint,
+      result.win and 9 or 5,
+      result.win and w - 78 or w - 14
+    )
     if result.win then
       self:button(w - 70, h - 11, 66, 10, "FACTORY MAP", "map", nil, 9)
     end
