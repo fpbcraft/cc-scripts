@@ -46,15 +46,21 @@ for _, dimension in ipairs({ { 42, 34 }, { 70, 46 }, { 90, 64 } }) do
   assert(ui.r.mode == "graphics" and m.frames > 0, "Expected rendered graphics")
   local fire
   for _, b in ipairs(ui.r.buttons) do
-    if b.label == "FIRE" then
+    if b.label == "CHARGE" then
       fire = b
     end
   end
-  assert(fire, "Fire control must be visible")
+  assert(fire, "Charge control must be visible")
   local x = ui.r.ox + (fire.x + fire.w / 2) * ui.r.sx
   local y = ui.r.oy + (fire.y + fire.h / 2) * ui.r.sy
   ui:touch(x, y)
-  assert(actions[#actions].kind == "fire", "Touch must activate FIRE")
+  assert(actions[#actions].kind == "fire", "Touch must activate charge/release")
+  -- Tapping the playfield changes barrel angle through an authenticated action.
+  local b = ui.board
+  local targetX = b.x + (Sim.W - 2) * b.scale
+  local targetY = b.y + 2 * b.scale
+  ui:touch(ui.r.ox + targetX * ui.r.sx, ui.r.oy + targetY * ui.r.sy)
+  assert(actions[#actions].kind == "setAim", "Board tap should aim the barrel")
   ui:draw(g, { role = "join", slot = 2 })
   for _, b in ipairs(ui.r.buttons) do
     assert(b.label == "EXIT", "Off-turn controls must be inactive")
