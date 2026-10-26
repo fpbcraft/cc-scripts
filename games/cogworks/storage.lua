@@ -76,7 +76,7 @@ function S.path(slot)
   return S.DIR .. "/slot-" .. slot .. ".dat"
 end
 function S.newProgress()
-  return { campaignVersion = S.VERSION, unlocked = 1, level = 1, best = {}, sessions = {}, awards = {}, tutorials = {} }
+  return { campaignVersion = S.VERSION, unlocked = 8, level = 1, best = {}, sessions = {}, awards = {}, tutorials = {} }
 end
 function S.normalize(data)
   local p = S.newProgress()
