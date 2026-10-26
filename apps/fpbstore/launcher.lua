@@ -5,6 +5,7 @@ function UI.run(manager)
   local selected, offset, filter, query, editing = 1, 0, "all", "", false
   local notice = "Ready"
   local confirmation = nil
+  local build = nil
   local hits = {}
   local saved = {}
   if host.getPaletteColor then
@@ -78,6 +79,28 @@ function UI.run(manager)
       return {}, 0
     end
     local apps = list()
+    if build then
+      local current = manager.installedSource and manager.installedSource(build.app) or { label = "main" }
+      put(2, 3, "BUILD: " .. build.app.name, colors.yellow, nil, w - 2)
+      local third = math.floor((w - 4) / 3)
+      button(2, 4, third, (build.mode == "main" and "> " or "") .. "MAIN", "source-mode", "main")
+      button(3 + third, 4, third, (build.mode == "pr" and "> " or "") .. "PR", "source-mode", "pr")
+      button(4 + third * 2, 4, third, (build.mode == "branch" and "> " or "") .. "BRANCH", "source-mode", "branch")
+      put(2, 6, "Installed source: " .. (current.label or "main"), colors.lightBlue, nil, w - 2)
+      if build.mode == "main" then
+        put(2, 7, "Install the stable main branch.", colors.white, nil, w - 2)
+      else
+        local prompt = build.mode == "pr" and "PR number or GitHub PR URL:" or "Branch name or GitHub URL:"
+        put(2, 7, prompt, colors.lightGray, nil, w - 2)
+        put(2, 8, "> " .. build.input .. "_", colors.yellow, nil, w - 2)
+      end
+      button(2, h - 3, math.floor((w - 3) / 2), "INSTALL BUILD", "install-source")
+      button(3 + math.floor((w - 3) / 2), h - 3, math.floor((w - 3) / 2), "CANCEL", "cancel-source")
+      put(2, h - 2, "Enter: install | Esc: back", colors.lightGray, nil, w - 2)
+      put(1, h - 1, " Paste supported for PR and branch URLs", colors.white, colors.gray, w)
+      put(1, h, " MAIN / PR / BRANCH - choose a source", colors.lightGray, nil, w)
+      return apps, 0
+    end
     local tabs = math.floor((w - 3) / 2)
     button(2, 3, tabs, (filter == "all" and "> " or "  ") .. "ALL APPS", "all")
     button(3 + tabs, 3, tabs, (filter == "installed" and "> " or "  ") .. "INSTALLED", "installed")
@@ -100,7 +123,14 @@ function UI.run(manager)
       if app then
         local y = 5 + (row - 1) * step
         local status = manager.status(app)
-        local tag = status.installed and (status.updateAvailable and "UPDATE" or "READY") or "GET"
+        local source = status.source or { kind = "main" }
+        local tag = "GET"
+        if status.installed then
+          tag = status.updateAvailable and "UPDATE"
+            or (source.kind == "pr" and ("PR #" .. source.value))
+            or (source.kind == "branch" and "BRANCH")
+            or "READY"
+        end
         local active = index == selected
         put(2, y, (active and "> " or "  ") .. app.name, active and colors.yellow or colors.white, nil, w - 10)
         put(w - 7, y, tag, colors.lightBlue, nil, 7)
@@ -122,7 +152,7 @@ function UI.run(manager)
         2,
         h - 5,
         app
-            and ((status.installed and "Installed v" .. (status.installedVersion or "?") .. " | " or "") .. "Latest v" .. (status.latestVersion or app.version or "?") .. " | " .. (app.description or ""))
+            and ((status.installed and "v" .. (status.installedVersion or "?") .. " | " or "") .. "Source: " .. ((status.source and status.source.label) or "main") .. " | Latest v" .. (status.latestVersion or app.version or "?"))
           or "Choose All apps to browse.",
         colors.lightBlue
       )
@@ -138,6 +168,7 @@ function UI.run(manager)
       )
       button(4 + third * 2, h - 4, third, "REMOVE", "remove", nil, status and status.installed or false)
     end
+    button(2, h - 3, w - 2, "B BUILD SOURCE", "source", nil, app ~= nil)
     button(2, h - 2, math.floor((w - 4) / 2), "R REFRESH", "refresh")
     button(
       3 + math.floor((w - 4) / 2),
@@ -185,6 +216,38 @@ function UI.run(manager)
   local function perform(action, arg)
     local apps = list()
     local app = apps[selected]
+    local targetSource = nil
+    if build then
+      if action == "cancel-source" then
+        build = nil
+        return
+      elseif action == "source-mode" then
+        build.mode = arg
+        build.input = ""
+        return
+      elseif action == "install-source" then
+        local ok, parsed = pcall(function()
+          return manager.parseSource(build.mode == "main" and "main" or build.input, build.mode)
+        end)
+        if not ok then
+          diagnostic(parsed)
+          return
+        end
+        targetSource = parsed
+        app = build.app
+        build = nil
+        action = "install"
+      else
+        return
+      end
+    end
+    if action == "source" then
+      if app then
+        local source = manager.installedSource and manager.installedSource(app) or { kind = "main", value = "main" }
+        build = { app = app, mode = source.kind, input = source.kind == "main" and "" or source.value }
+      end
+      return
+    end
     if confirmation and action ~= "confirm" and action ~= "cancel" then
       return
     end
@@ -231,7 +294,7 @@ function UI.run(manager)
       elseif action == "launch" then
         return manager.launch(app)
       elseif action == "install" then
-        return manager.install(app)
+        return manager.install(app, targetSource)
       elseif action == "remove-code" then
         return manager.remove(app, false)
       elseif action == "store-update" then
@@ -260,6 +323,34 @@ function UI.run(manager)
       if w < 26 or h < 12 then
         if (event == "char" and a:lower() == "q") or (event == "key" and a == keys.escape) then
           return
+        end
+      elseif build then
+        if event == "char" then
+          if build.mode ~= "main" then
+            build.input = build.input .. a
+          end
+        elseif event == "paste" then
+          if build.mode ~= "main" then
+            build.input = build.input .. a
+          end
+        elseif event == "key" then
+          if a == keys.escape then
+            action = "cancel-source"
+          elseif a == keys.enter then
+            action = "install-source"
+          elseif a == keys.backspace then
+            build.input = build.input:sub(1, -2)
+          elseif a == keys.tab then
+            action = "source-mode"
+            arg = build.mode == "main" and "pr" or (build.mode == "pr" and "branch" or "main")
+          end
+        elseif event == "mouse_click" or event == "monitor_touch" then
+          for _, hit in ipairs(hits) do
+            if b >= hit.x and b < hit.x + hit.w and c == hit.y then
+              action, arg = hit.action, hit.arg
+              break
+            end
+          end
         end
       elseif editing then
         if event == "char" then
@@ -317,6 +408,8 @@ function UI.run(manager)
           action = "install"
         elseif ch == "d" then
           action = "remove"
+        elseif ch == "b" then
+          action = "source"
         end
       elseif event == "mouse_scroll" and not confirmation then
         selected = math.max(1, math.min(#apps, selected + a))
