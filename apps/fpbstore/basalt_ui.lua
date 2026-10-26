@@ -170,24 +170,6 @@ function U.run(manager, basalt)
       page = "detail"
     elseif page == "options" then
       page = "install"
-    elseif page == "about" then
-      title(current() and current().name or "ABOUT")
-      local lines = wrap(current() and current().description or "", w - 4, 1000)
-      local capacity = math.max(2, h - 9)
-      aboutOffset = math.max(0, math.min(aboutOffset, math.max(0, #lines - capacity)))
-      for i = 1, capacity do
-        label(2, 4 + i, lines[aboutOffset + i] or "", colors.white)
-      end
-      button(2, h - 3, 6, "UP", function()
-        aboutOffset = math.max(0, aboutOffset - 1)
-        showPage()
-      end)
-      button(9, h - 3, 7, "DOWN", function()
-        aboutOffset = math.min(math.max(0, #lines - capacity), aboutOffset + 1)
-        showPage()
-      end)
-      button(17, h - 3, 8, "BACK", back)
-      keyFocus()
     elseif page == "opus_settings" then
       page = "settings"
     else
@@ -832,6 +814,24 @@ function U.run(manager, basalt)
         showPage()
       end)
       button(2, 9, 9, "BACK", back)
+      keyFocus()
+    elseif page == "about" then
+      title(current() and current().name or "ABOUT")
+      local lines = wrap(current() and current().description or "", w - 4, 1000)
+      local capacity = math.max(2, h - 9)
+      aboutOffset = math.max(0, math.min(aboutOffset, math.max(0, #lines - capacity)))
+      for i = 1, capacity do
+        label(2, 4 + i, lines[aboutOffset + i] or "", colors.white)
+      end
+      button(2, h - 3, 6, "UP", function()
+        aboutOffset = math.max(0, aboutOffset - 1)
+        showPage()
+      end)
+      button(9, h - 3, 7, "DOWN", function()
+        aboutOffset = math.min(math.max(0, #lines - capacity), aboutOffset + 1)
+        showPage()
+      end)
+      button(17, h - 3, 8, "BACK", back)
       keyFocus()
     elseif page == "opus_settings" then
       title("OPUS INTEGRATION")
