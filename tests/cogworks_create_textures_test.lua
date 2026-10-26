@@ -93,9 +93,17 @@ local tx = r.boardX + 2 * r.cell
 local ty = r.boardY + 2 * r.cell
 local function move(x, y)
   model.drag = {
-    origin = "inventory", kind = "G", r = 1, moved = true, valid = true,
-    cursorX = x, cursorY = y, offsetX = r.cell / 2, offsetY = r.cell / 2,
-    targetX = 3, targetY = 3,
+    origin = "inventory",
+    kind = "G",
+    r = 1,
+    moved = true,
+    valid = true,
+    cursorX = x,
+    cursorY = y,
+    offsetX = r.cell / 2,
+    offsetY = r.cell / 2,
+    targetX = 3,
+    targetY = 3,
   }
   r:drawDragPreview(model)
   assert(r.baseBuffer == base, "Pointer update must reuse board instead of rebuilding scene")
@@ -105,4 +113,6 @@ move(tx + r.cell / 2 + 4, ty + r.cell / 2 + 3)
 local last = display.updates[#display.updates]
 assert(last and last.w * last.h < display.pw * display.ph / 4, "Drag sends a small damage region")
 assert(#display.updates >= 2, "Moved preview uploads a changed region")
-print("COGWORKS: edge-on cogs, directional top textures, animated teeth and cached small-region pointer painting passed.")
+print(
+  "COGWORKS: edge-on cogs, directional top textures, animated teeth and cached small-region pointer painting passed."
+)
