@@ -299,7 +299,7 @@ P.apps = {
     description = "Build a civilization, research technologies and wage war in a compact 2-4 player 4X.",
     icon = "V",
     genre = "4X / STRATEGY",
-  },,
+  },
   {
     version = "1.0.0",
     id = "airship",
