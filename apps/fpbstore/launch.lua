@@ -12,7 +12,9 @@ return function(id)
     end
     if target == "monitor" and #monitors == 0 and manager.ensureMonitor then
       local entry = manager.ensureMonitor()
-      if entry then monitors = { entry } end
+      if entry then
+        monitors = { entry }
+      end
     end
     if target == "monitor" and #monitors == 0 then
       print("Preferred monitor disconnected. Launch on terminal? [Y/n]")
@@ -33,7 +35,9 @@ return function(id)
     end
     if #monitors == 0 and manager.ensureMonitor then
       local entry = manager.ensureMonitor()
-      if entry then monitors = { entry } end
+      if entry then
+        monitors = { entry }
+      end
     end
     return monitors[1] and monitors[1].screen or nil
   end

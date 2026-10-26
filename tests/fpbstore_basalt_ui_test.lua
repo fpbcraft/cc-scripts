@@ -39,8 +39,14 @@ local function scenario(w, h, actions)
   end
   local prefs = { display = "term", launchTargets = {}, opusShortcuts = {}, opusStore = true, opusApps = true }
   local app = {
-    id = "alpha", name = "ALPHA", category = "Games", subtitle = "KINETIC",
-    version = "1.0", genre = "PUZZLE", description = "Build gears and mechanisms", root = "/games/alpha",
+    id = "alpha",
+    name = "ALPHA",
+    category = "Games",
+    subtitle = "KINETIC",
+    version = "1.0",
+    genre = "PUZZLE",
+    description = "Build gears and mechanisms",
+    root = "/games/alpha",
   }
   local calls = {}
   local manager = { catalog = { apps = { app } } }
@@ -94,9 +100,11 @@ local function scenario(w, h, actions)
     created = created + 1
     return { name = "fpbstore_monitor", screen = monitor }, true
   end
-  periphemu = { create = function()
-    return true
-  end }
+  periphemu = {
+    create = function()
+      return true
+    end,
+  }
 
   local root = { children = {} }
   local function add(parent, kind, props)
@@ -169,7 +177,9 @@ local function scenario(w, h, actions)
   local function find(kind, text)
     local result
     local function visit(node)
-      if node.destroyed then return end
+      if node.destroyed then
+        return
+      end
       if node.kind == kind and (not text or node.text == text) then
         result = node
       end

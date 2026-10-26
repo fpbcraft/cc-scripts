@@ -121,7 +121,8 @@ function M.monitors()
   return result
 end
 function M.ensureMonitor()
-  local module = type(require) == "function" and require("apps.fpbstore.monitor") or dofile("/apps/fpbstore/monitor.lua")
+  local module = type(require) == "function" and require("apps.fpbstore.monitor")
+    or dofile("/apps/fpbstore/monitor.lua")
   local entry, created, reason = module.ensure()
   return entry, created, reason
 end

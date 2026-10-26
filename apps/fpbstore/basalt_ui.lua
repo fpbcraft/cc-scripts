@@ -75,7 +75,8 @@ function U.run(manager, basalt)
   host.setBackgroundColor(colors.black)
   host.setTextColor(colors.orange)
   host.clear()
-  local splash = { "FFFF  PPPP  BBBB", "F     P   P B   B", "FFF   PPPP  BBBB", "F     P     B   B", "F     P     BBBB" }
+  local splash =
+    { "FFFF  PPPP  BBBB", "F     P   P B   B", "FFF   PPPP  BBBB", "F     P     B   B", "F     P     BBBB" }
   for i, line in ipairs(splash) do
     host.setCursorPos(math.max(1, math.floor((w - #line) / 2)), math.max(1, math.floor((h - 6) / 2)) + i - 1)
     host.write(line)
@@ -104,7 +105,15 @@ function U.run(manager, basalt)
         or (tab == "APPS" and category == "Apps")
         or (tab == "INSTALLED" and status.installed)
         or (tab == "UPDATES" and status.installed and status.updateAvailable)
-      local haystack = (app.name .. " " .. (app.subtitle or "") .. " " .. (app.genre or "") .. " " .. (app.description or "")):lower()
+      local haystack = (
+        app.name
+        .. " "
+        .. (app.subtitle or "")
+        .. " "
+        .. (app.genre or "")
+        .. " "
+        .. (app.description or "")
+      ):lower()
       if categoryMatch and haystack:find(searchText:lower(), 1, true) then
         result[#result + 1] = app
       end
@@ -275,7 +284,8 @@ function U.run(manager, basalt)
       label(2, 7, sourceMode == "main" and "Stable release" or "PR / branch ref:", colors.lightGray)
       local input
       if sourceMode ~= "main" then
-        input = view:addInput({ x = 2, y = 8, width = math.max(8, w - 14), text = sourceInput, placeholder = "Type source" })
+        input =
+          view:addInput({ x = 2, y = 8, width = math.max(8, w - 14), text = sourceInput, placeholder = "Type source" })
         input:onChange(function(self)
           sourceInput = self.text
         end)
@@ -299,7 +309,8 @@ function U.run(manager, basalt)
       label(2, 8, "Install from stable main.", colors.white)
     else
       label(2, 8, sourceMode == "pr" and "PR number / URL" or "Branch name / URL", colors.lightGray)
-      edit = view:addInput({ x = 2, y = 9, width = math.max(8, w - 14), text = sourceInput, placeholder = "Type source" })
+      edit =
+        view:addInput({ x = 2, y = 9, width = math.max(8, w - 14), text = sourceInput, placeholder = "Type source" })
       edit:onChange(function(self)
         sourceInput = self.text
       end)
@@ -389,7 +400,12 @@ function U.run(manager, basalt)
     for i, line in ipairs(lines) do
       label(2, 6 + i, line, colors.white)
     end
-    label(2, 10, status.installed and (status.updateAvailable and "UPDATE AVAILABLE" or "INSTALLED") or "NOT INSTALLED", status.installed and colors.lime or colors.yellow)
+    label(
+      2,
+      10,
+      status.installed and (status.updateAvailable and "UPDATE AVAILABLE" or "INSTALLED") or "NOT INSTALLED",
+      status.installed and colors.lime or colors.yellow
+    )
     label(2, 11, "Source: " .. (status.source and status.source.label or "main"), colors.lightBlue)
     label(2, 12, "Path: " .. (status.root or app.root), colors.lightGray)
     if h >= 17 then
@@ -877,9 +893,11 @@ function U.run(manager, basalt)
       end
     elseif action == "install-now" then
       local drive = manager.disks(app)[installIndex]
-      if execute(function()
-        manager.install(app, sourceValue, drive.root)
-      end, "Installed " .. app.name) then
+      if
+        execute(function()
+          manager.install(app, sourceValue, drive.root)
+        end, "Installed " .. app.name)
+      then
         prefs.launchTargets[app.id] = installTarget
         prefs.opusShortcuts[app.id] = installOpus
         save()
@@ -887,9 +905,11 @@ function U.run(manager, basalt)
         page = "detail"
       end
     elseif action == "remove" then
-      if execute(function()
-        manager.remove(app, false)
-      end, "Removed " .. app.name .. " (saves kept)") then
+      if
+        execute(function()
+          manager.remove(app, false)
+        end, "Removed " .. app.name .. " (saves kept)")
+      then
         page = "browse"
       end
     end

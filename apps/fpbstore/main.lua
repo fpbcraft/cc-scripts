@@ -19,8 +19,13 @@ end
 -- on existing installations until the Store's Basalt dependency is installed.
 local runner
 local ok, basalt = pcall(module, "basalt")
-if ok and type(basalt) == "table" and type(basalt.getMainFrame) == "function"
-  and type(basalt.run) == "function" and type(basalt.stop) == "function" then
+if
+  ok
+  and type(basalt) == "table"
+  and type(basalt.getMainFrame) == "function"
+  and type(basalt.run) == "function"
+  and type(basalt.stop) == "function"
+then
   runner = module("apps.fpbstore.basalt_ui")
 else
   runner = module("apps.fpbstore.launcher")
