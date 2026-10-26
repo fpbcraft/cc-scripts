@@ -423,6 +423,9 @@ function S.apply(g, team, action)
     return false, "No living worm"
   end
   local kind, dir = action.kind, action.dir
+  if g.charging and kind ~= "release" and kind ~= "fire" then
+    return false, "Release shot first"
+  end
   if kind == "select" then
     return false, "Worm selection is automatic"
   elseif kind == "weapon" then
