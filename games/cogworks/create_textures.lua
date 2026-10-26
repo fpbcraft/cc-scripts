@@ -93,8 +93,7 @@ return function(R)
     if not light or not light.powered then
       return nil
     end
-    return light.ports and (light.ports[tile.r] or light.ports[next(light.ports)])
-      or (light.rate and light)
+    return light.ports and (light.ports[tile.r] or light.ports[next(light.ports)]) or (light.rate and light)
   end
   local function phase(self, spin)
     if not spin then
