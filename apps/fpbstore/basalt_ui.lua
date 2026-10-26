@@ -93,7 +93,7 @@ function U.run(manager, basalt)
   local installIndex, installOpus, installTarget = 1, true, "ask"
   local message, failed = "Select a title to view details.", nil
   local returnCode, previousPage, keyboardField, keyboardOffset = nil, "browse", nil, 0
-  local keyboardShift, aboutOffset = false, 0
+  local keyboardShift, aboutOffset, settingsReturn = false, 0, "browse"
   local actionButtons, focusIndex = {}, 1
   local showPage, runAction
 
@@ -162,6 +162,8 @@ function U.run(manager, basalt)
       page = "browse"
     elseif page == "error" then
       page = "detail"
+    elseif page == "settings" then
+      page = settingsReturn
     elseif page == "menu" then
       page = "browse"
     elseif page == "manage" or page == "remove" or page == "about" then
@@ -768,7 +770,7 @@ function U.run(manager, basalt)
     elseif page == "menu" then
       title("STORE MENU")
       button(2, 6, 14, "SETTINGS", function()
-        page = "settings"
+        settingsReturn, page = "menu", "settings"
         showPage()
       end)
       button(2, 7, 14, "REFRESH", function()
