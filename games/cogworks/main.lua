@@ -122,6 +122,12 @@ local function start()
       renderer:draw(app:model())
       Display.present(monitor, mode)
     end
+    local function redrawPointer()
+      -- Recompose only the ghost and its old footprint while dragging.
+      -- Full-screen redraws here stall queued pointer events on CraftOS.
+      renderer:drawDragPreview(app:model())
+      Display.present(monitor, mode)
+    end
     local function act(action, x, y)
       if not action then
         return true
@@ -270,13 +276,18 @@ local function start()
           if drag.moved then
             app.inspected = nil
           end
-          redraw()
+          if drag.moved then
+            redrawPointer()
+          end
         end
       elseif event == "mouse_move" and drag then
         local mx, my = Display.click(monitor, mode, a, b)
         if mx then
           Pointer.update(drag, app.game, renderer, mx, my)
-          redraw()
+          if drag.moved then
+            app.inspected = nil
+            redrawPointer()
+          end
         end
       elseif (event == "mouse_up" or (event == "monitor_mouse_up" and a == name)) and drag then
         local button, mx, my = mousePosition(event, a, b, c, d)
@@ -313,7 +324,11 @@ local function start()
           and (app.settings.animations or (drag and drag.moved))
           and (app.scene == "game" or app.scene == "editor" or app.scene == "briefing" or app.scene == "tutorial")
         then
-          redraw()
+          if drag and drag.moved then
+            redrawPointer()
+          else
+            redraw()
+          end
         end
         -- Peripheral monitor graphics need fewer pushes than native CraftOS-PC.
         timer = os.startTimer(app.scene == "briefing" and 0.12 or frameInterval)
