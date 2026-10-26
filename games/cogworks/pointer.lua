@@ -18,7 +18,15 @@ function P.valid(g, drag, x, y)
 end
 function P.begin(g, renderer, button, action, x, y, px, py, selected, touch)
   local cx, cy = renderer:toCanvas(px, py)
-  local drag = { button = button, touch = touch == true, startX = cx, startY = cy, cursorX = cx, cursorY = cy, moved = false }
+  local drag = {
+    button = button,
+    touch = touch == true,
+    startX = cx,
+    startY = cy,
+    cursorX = cx,
+    cursorY = cy,
+    moved = false,
+  }
   if action == "tool" and E.parts[x] then
     drag.origin, drag.kind, drag.r = "inventory", x, 0
     drag.offsetX, drag.offsetY = renderer.cell / 2, renderer.cell / 2
