@@ -160,6 +160,7 @@ local function start()
       if not action then
         return true
       end
+      trace("BOARD " .. phase .. " action=" .. tostring(action) .. " at=" .. tostring(px) .. "," .. tostring(py))
       if action == "move" then
         app.moveX, app.moveY = tx, ty
       end
@@ -252,6 +253,10 @@ local function start()
         local x, y = Display.click(monitor, mode, b, c)
         if x then
           local action, cx, cy = renderer:hit(x, y)
+          trace(
+            "COMPUTER HIT=" .. tostring(action) .. " at=" .. tostring(cx) .. "," .. tostring(cy)
+              .. " selected=" .. tostring(app.selected)
+          )
           if action == "cell" then
             drag = pointerTransition(nil, "down", a, cx, cy, app.selected)
             drag.timer = os.startTimer(0.12)
