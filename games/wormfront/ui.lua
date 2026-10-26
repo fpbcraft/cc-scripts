@@ -85,28 +85,22 @@ local function scene(r, g, b, frame)
   local xEnd = math.min(Sim.W, math.ceil(b.scrollX + b.w / b.scale))
   local yStart = math.max(1, math.floor(b.scrollY + 1))
   local yEnd = math.min(Sim.H, math.ceil(b.scrollY + b.h / b.scale))
-  -- Batch contiguous terrain columns. Thousands of tiny drawPixels caused flicker.
+  -- Render solid runs, not every terrain cell. Open craters stay open.
   for x = xStart, xEnd do
     local column = g.terrain[x]
     local px = b.x + (x - 1 - b.scrollX) * b.scale
-    local groundStart
-    for y = yStart, yEnd do
-      if column:sub(y, y) == "#" then
-        groundStart = y
-        break
-      end
-    end
-    if groundStart then
-      local py = b.y + (groundStart - 1 - b.scrollY) * b.scale
-      fill(r, px, py, b.scale, (yEnd - groundStart + 1) * b.scale, theme.ground)
-      if groundStart == 1 or column:sub(groundStart - 1, groundStart - 1) == "." then
-        fill(r, px, py, b.scale, math.max(1, b.scale / 2), theme.grass)
-      end
-    end
-    for y = yStart, yEnd do
-      if column:sub(y, y) == "=" then
-        local py = b.y + (y - 1 - b.scrollY) * b.scale
-        fill(r, px, py, b.scale, b.scale, 8)
+    local runStart, runType = nil, nil
+    for y = yStart, yEnd + 1 do
+      local kind = y <= yEnd and column:sub(y, y) or "."
+      if kind ~= runType then
+        if runStart and runType ~= "." then
+          local py = b.y + (runStart - 1 - b.scrollY) * b.scale
+          fill(r, px, py, b.scale, (y - runStart) * b.scale, runType == "=" and 8 or theme.ground)
+          if runType == "#" and (runStart == 1 or column:sub(runStart - 1, runStart - 1) == ".") then
+            fill(r, px, py, b.scale, math.max(1, b.scale / 2), theme.grass)
+          end
+        end
+        runStart, runType = y, kind
       end
     end
   end
