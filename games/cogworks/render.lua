@@ -92,16 +92,18 @@ function R.new(m)
   self:enable()
   return self
 end
--- CivCraft-style density. Keep the legacy 200x120 layout centered while
--- shrinking its *physical* footprint on large CraftOS screens. This preserves
--- gameplay hitboxes without stretching tiny 3x5 glyphs into giant pixels.
+-- Follow CivCraft's 3x4 logical pixels per text cell. Large devices get a
+-- full responsive canvas; small monitors retain the authored 200x120 layout.
+-- A single transform is shared by rendering and hit detection.
 function R:fitGraphics()
-  local logicalWidth = math.max(200, self.tw * 3)
-  local logicalHeight = math.max(120, self.th * 4)
-  self.logicalWidth, self.logicalHeight = logicalWidth, logicalHeight
-  self.scale = math.min(self.pw / logicalWidth, self.ph / logicalHeight)
-  self.ox = math.floor((self.pw - 200 * self.scale) / 2)
-  self.oy = math.floor((self.ph - 120 * self.scale) / 2)
+  self.logicalWidth = math.max(200, self.tw * 3)
+  self.logicalHeight = math.max(120, self.th * 4)
+  self.wide = self.logicalWidth >= 260 and self.logicalHeight >= 160
+  self.canvasW = self.wide and self.logicalWidth or 200
+  self.canvasH = self.wide and self.logicalHeight or 120
+  self.scale = math.min(self.pw / self.logicalWidth, self.ph / self.logicalHeight)
+  self.ox = math.floor((self.pw - self.canvasW * self.scale) / 2)
+  self.oy = math.floor((self.ph - self.canvasH * self.scale) / 2)
 end
 function R:enable()
   local m = self.m
@@ -170,7 +172,7 @@ function R:rect(x, y, w, h, color)
   -- peripheral calls. At presentation time only changed horizontal runs are
   -- sent to the attached monitor.
   local x1, y1 = math.max(0, math.floor(x)), math.max(0, math.floor(y))
-  local x2, y2 = math.min(200, math.ceil(x + w)), math.min(120, math.ceil(y + h))
+  local x2, y2 = math.min(self.canvasW, math.ceil(x + w)), math.min(self.canvasH, math.ceil(y + h))
   for py = y1, y2 - 1 do
     local row = self.buffer[py + 1]
     if not row then
@@ -188,11 +190,11 @@ end
 function R:flush()
   local old = self.previousBuffer
   local current = self.buffer
-  local left, top, right, bottom = 200, 120, -1, -1
-  for y = 0, 119 do
+  local left, top, right, bottom = self.canvasW, self.canvasH, -1, -1
+  for y = 0, self.canvasH - 1 do
     local row = current[y + 1] or {}
     local prior = old and old[y + 1] or nil
-    for x = 0, 199 do
+    for x = 0, self.canvasW - 1 do
       if (row[x + 1] or 0) ~= (prior and prior[x + 1] or 0) or not old then
         left = math.min(left, x)
         top = math.min(top, y)
@@ -216,11 +218,11 @@ function R:flush()
   end
   local rows = {}
   for py = y1, y2 - 1 do
-    local sy = math.max(0, math.min(119, math.floor((py - self.oy) / self.scale)))
+    local sy = math.max(0, math.min(self.canvasH - 1, math.floor((py - self.oy) / self.scale)))
     local source = current[sy + 1] or {}
     local bytes = {}
     for px = x1, x2 - 1 do
-      local sx = math.max(0, math.min(199, math.floor((px - self.ox) / self.scale)))
+      local sx = math.max(0, math.min(self.canvasW - 1, math.floor((px - self.ox) / self.scale)))
       bytes[#bytes + 1] = string.char(source[sx + 1] or 0)
     end
     rows[#rows + 1] = table.concat(bytes)
@@ -1667,6 +1669,11 @@ function R:draw(m)
     return
   end
   self.buffer = {}
+  if self.wide and self:drawResponsive(m) then
+    self:flush()
+    self.frame = self.frame + 1
+    return
+  end
   if m.scene == "game" or m.scene == "editor" then
     self:drawGame(m)
   elseif m.scene == "briefing" then
@@ -1748,4 +1755,5 @@ function R:hit(x, y)
   end
   return nil
 end
+require("games.cogworks.responsive")(R)
 return R
