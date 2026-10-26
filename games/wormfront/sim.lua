@@ -305,9 +305,9 @@ function S.apply(g, team, action)
     return false, "No living worm"
   end
   local kind, dir = action.kind, action.dir
-  if kind == "release" then
+  if kind == "release" or (kind == "fire" and g.charging) then
     return release(g, w)
-  elseif kind == "charge" then
+  elseif kind == "fire" or kind == "charge" then
     if w.airborne then
       return false, "Land before firing"
     end
@@ -351,6 +351,12 @@ function S.apply(g, team, action)
     end
     w.airborne, w.vx, w.vy = true, w.facing * 6, -11
     w.y = w.y - 0.4
+  elseif kind == "setAim" then
+    if type(action.angle) ~= "number" or action.angle ~= action.angle or action.angle < 0 or action.angle > 180 then
+      return false, "Invalid aim angle"
+    end
+    w.aim = clamp(math.floor(action.angle + 0.5), 5, 175)
+    w.facing = w.aim <= 90 and 1 or -1
   elseif kind == "aim" then
     if dir ~= -1 and dir ~= 1 then
       return false, "Invalid aim"
@@ -368,14 +374,8 @@ function S.apply(g, team, action)
     end
   elseif kind == "weapon" then
     w.weapon = w.weapon == 1 and w.mega > 0 and 2 or 1
-  elseif kind == "fire" then
-    -- Compatibility with click-only monitors: fire is a toggle (first tap
-    -- starts charging; second tap releases). Space uses key/key_up instead.
-    if not g.charging then
-      g.charging, g.charge = true, 0
-    else
-      return release(g, w)
-    end
+  elseif kind == "pass" then
+    nextTurn(g)
   else
     return false, "Unknown action"
   end
@@ -386,11 +386,10 @@ function S.tick(g, dt)
   if not g or g.phase ~= "playing" or type(dt) ~= "number" or dt < 0 or dt ~= dt then
     return false
   end
-  dt = math.min(dt, 0.3)
+  dt = math.min(dt, 2)
   if dt == 0 then
     return false
   end
-  local previousState, previousTurn = g.state, g.turn
   -- Movement physics and turn clocks advance exclusively on the host.
   for _, w in ipairs(g.worms) do
     if w.hp > 0 and w.airborne then
@@ -469,7 +468,7 @@ function S.tick(g, dt)
       nextTurn(g)
     end
   end
-  return previousState ~= g.state or previousTurn ~= g.turn or true
+  return true
 end
 
 S.solid, S.ground, S.alive, S.nextTurn = solid, ground, alive, nextTurn
