@@ -309,7 +309,11 @@ local function run()
       held[a] = nil
       redraw()
     elseif event == "char" then
-      local kind = (a == "w" and "weapon") or (a == "j" and "jump") or (a == "f" and "fire") or (a == "q" and "exit") or nil
+      local kind = (a == "w" and "weapon")
+        or (a == "j" and "jump")
+        or (a == "f" and "fire")
+        or (a == "q" and "exit")
+        or nil
       if kind then
         dispatch({ kind = kind })
         redraw()
