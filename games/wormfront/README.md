@@ -1,90 +1,110 @@
-# WORMFRONT — Tactical Artillery v0.1
+# WORMFRONT v0.2 — Tactical Artillery
 
-A small Worms-inspired artillery game for **CC:Tweaked** with destructible terrain.
-It supports **2–4 players** over **rednet** on separate computers, or 2–4 local
-hotseat players on one computer. Each player has three worms. This is an original,
-simplified game with procedural art; no Worms assets are included.
+A lightweight, original Worms-inspired game for **CC:Tweaked**. Two to four
+teams battle with three worms each across procedurally generated, destructible
+landscapes. Compatible with **local hotseat** or **rednet multiplayer** on the
+same wired or wireless modem network.
 
-## Install
+## Install the feature branch
 
-On every computer that will play:
-
-```sh
-wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/installers/wormfront.lua
-```
-
-To install the development branch before merge, use **both** the branch URL
-and the branch argument:
+Run this command **on each participating computer** before the PR merges:
 
 ```sh
 wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/codex/wormfront-multiplayer/installers/wormfront.lua codex/wormfront-multiplayer
 ```
 
-Installations are under `/games/wormfront`. The installer uses the common
-FPB manifest engine, stages files, and rolls back interrupted updates.
-The game is also listed in FPB Store after that catalog is updated.
-
-## Start a game
-
-**Hotseat, without a modem:**
+After merge, the regular command is:
 
 ```sh
-/games/wormfront/main.lua local 2
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/installers/wormfront.lua
 ```
 
-You can replace `2` with `3` or `4`.
+## Start
 
-**Remote, using modems on the same Minecraft server/network:**
+- Single terminal, 2–4 hotseat teams:
+  `/games/wormfront/main.lua local 2`
+- Create a remote match:
+  `/games/wormfront/main.lua host`
+- Join from each separate ComputerCraft computer:
+  `/games/wormfront/main.lua join`
+- If multiple hosts exist:
+  `/games/wormfront/main.lua join <HOST_ID>`
 
-1. Attach a wired or wireless modem to every participating computer.
-2. On one computer run `/games/wormfront/main.lua host`.
-3. On each other computer run `/games/wormfront/main.lua join`.
-   If more than one host is available, use `join <HOST_ID>` (the host ID is
-   visible in its lobby).
-4. When at least two players have joined, the host presses **START**.
-   Participants can play on separate Advanced Monitors.
+The host presses **START** once 2–4 players are connected. A disconnected
+player can rejoin from the **same computer ID** as long as the host is still
+running. Different Minecraft servers do not automatically connect through
+rednet: an external relay is outside this release.
 
-A player can reconnect from the **same ComputerCraft computer ID** by joining
-the original host again. Joining with a new computer ID during an active match
-is not supported. The host must stay online. The first version does not save
-in-progress matches, use accounts, or support internet matchmaking.
+## Gameplay
 
-rednet works across suitably connected modem networks (including Ender Modems).
-It does not automatically connect separate Minecraft servers or emulator
-instances on the public internet.
+- Each team gets three worms with 100 HP.
+- **45-second turns** tick in real time on the authoritative host, independent
+  of how many movements a player makes.
+- **Walking:** as many steps as time permits, with small slope climbing.
+- **Jumping:** forward ballistic leap with gravity, optional air steering.
+- **Aim:** change the barrel angle in 3-degree increments; a visible barrel,
+  angle readout and protractor ticks indicate direction.
+- **Power:** hold Space to charge, release to shoot. A moving bar shows charge
+  progress up to maximum power in 1.8 seconds. On touchscreens, tap **CHARGE**
+  once to begin and **RELEASE** once to launch.
+- **Wind** affects the rocket's flight; projectiles visibly arc over terrain.
+- Rocket ammo is unlimited. Each worm starts with two **MEGA** shots, which
+  have a larger blast radius.
+- **Random crates** can contain a 30-HP medkit, another MEGA round or a
+  damage-reducing shield. Crates appear at match start and over subsequent
+  rounds and can be collected by walking or jumping into them.
+- The last surviving team wins. Falling into deep holes can eliminate worms.
 
-## Controls
+### Controls
 
-| Action | Touchscreen | Keyboard |
+| Action | Advanced Monitor | Keyboard |
 | --- | --- | --- |
-| Choose another living worm | WORM | Tab |
-| Move (maximum four steps per turn) | LEFT / RIGHT | Left / Right |
-| Aim in 5-degree increments | AIM - / AIM + | Down / Up |
-| Adjust shot power | PWR - / PWR + | Page Down / Page Up |
-| Switch between rocket / mega bomb | WEAPON | M |
-| Fire and end turn | FIRE | Space |
+| Walk left/right | LEFT / RIGHT | Left / Right (hold) |
+| Rotate barrel | AIM - / AIM + or tap battlefield | Down / Up (hold) |
+| Jump | JUMP | J |
+| Change active worm | WORM | Tab |
+| Choose weapon | WEAPON | W |
+| Charge / shoot | CHARGE then RELEASE | Hold Space, then release (or F twice) |
+| End turn without a shot | PASS | Enter |
 | Exit | EXIT | Q |
 
-- **Rocket:** unlimited ammunition, small crater, up to 42 damage.
-- **Mega bomb:** two per worm, larger crater, up to 60 damage.
-- Wind changes between turns and affects projectile flight.
-- Splash damage and falling into craters can damage or eliminate worms.
-- The last team with surviving worms wins; simultaneous elimination is a draw.
-- Weapons are physical projectiles rather than instant hits.
+The controls disable battle actions on spectators' screens or out-of-turn
+players. Remote players see the same real-time projectiles and explosions.
 
-The game automatically selects the largest attached monitor and requests
-text scale **0.5**. It also supports CraftOS-PC's pixel-graphics terminal,
-plus a simpler text fallback on ordinary computers.
+### Graphics and hardware
 
-## Technical scope
+The game **automatically sets an attached Advanced Monitor to text scale 0.5**
+before initializing the shared FPB pixel canvas, and restores its previous
+scale on exit. It chooses the largest monitor automatically.
 
-`sim.lua` is the rules engine; `ui.lua` handles procedural pixel graphics
-using the shared FPB canvas, and `main.lua` handles the local and rednet
-event loops. The host validates whose turn it is, simulates actions, and
-broadcasts the authoritative state. Clients never decide damage or winners.
+The updated graphics include four themed randomized battlefields, layered
+terrain, background clouds and hills, helmeted worms with team colors and
+health bars, aiming guides, animated projectiles and smoke trails, and
+multi-stage explosions. Animations use the event/timer loop; no animations
+are played synchronously inside input callbacks.
 
-v0.1 deliberately omits animations, jumping/ropes, item drops, customizable
-teams, terrain themes, matchmaking, turn timers, and persistent campaigns.
-All display art is original and procedural.
+Native CraftOS-PC pixel graphics are supported when available; regular
+text-mode computers use the existing virtual terminal fallback. A large
+Advanced Monitor is recommended to see fine sprite details.
 
-Run `texlua tests/wormfront_test.lua` at the repository root for rules tests.
+## Architecture and limitations
+
+`sim.lua` owns authoritative rules and time-stepped projectile/jump physics.
+`ui.lua` renders the pixel battlefield and normalizes pointer input using
+`lib/fpb/canvas.lua`. `main.lua` runs the event loop, host, client, and hotseat
+modes. Host state is sent approximately every 150 ms to all clients and
+validated actions are applied only on the host.
+
+For this first expanded edition there are no saved or persistent matches,
+ropes, terrain editor, matchmaking service, or support for reconnecting from
+a different computer ID. Animations and performance should be verified on a
+real multiplayer CC:Tweaked monitor setup before merging.
+
+## Tests
+
+```sh
+lua5.3 tests/wormfront_test.lua
+lua5.3 tests/wormfront_ui_test.lua
+lua5.3 tests/wormfront_installer_test.lua
+make style-check
+```
