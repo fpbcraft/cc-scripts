@@ -93,6 +93,7 @@ function U.run(manager, basalt)
   local installIndex, installOpus, installTarget = 1, true, "ask"
   local message, failed = "Select a title to view details.", nil
   local returnCode, previousPage, keyboardField, keyboardOffset = nil, "browse", nil, 0
+  local keyboardShift, aboutOffset = false, 0
   local actionButtons, focusIndex = {}, 1
   local showPage, runAction
 
@@ -163,10 +164,28 @@ function U.run(manager, basalt)
       page = "detail"
     elseif page == "menu" then
       page = "browse"
-    elseif page == "manage" or page == "remove" then
+    elseif page == "manage" or page == "remove" or page == "about" then
       page = "detail"
     elseif page == "options" then
       page = "install"
+    elseif page == "about" then
+      title(current() and current().name or "ABOUT")
+      local lines = wrap(current() and current().description or "", w - 4, 1000)
+      local capacity = math.max(2, h - 9)
+      aboutOffset = math.max(0, math.min(aboutOffset, math.max(0, #lines - capacity)))
+      for i = 1, capacity do
+        label(2, 4 + i, lines[aboutOffset + i] or "", colors.white)
+      end
+      button(2, h - 3, 8, "UP", function()
+        aboutOffset = math.max(0, aboutOffset - 1)
+        showPage()
+      end)
+      button(11, h - 3, 8, "DOWN", function()
+        aboutOffset = math.min(math.max(0, #lines - capacity), aboutOffset + 1)
+        showPage()
+      end)
+      button(20, h - 3, 9, "BACK", back)
+      keyFocus()
     elseif page == "opus_settings" then
       page = "settings"
     else
@@ -179,6 +198,9 @@ function U.run(manager, basalt)
     element:onKey(function(_, code)
       if code == keys.escape then
         back()
+      elseif page == "about" and (code == keys.up or code == keys.down) then
+        aboutOffset = math.max(0, aboutOffset + (code == keys.up and -1 or 1))
+        showPage()
       elseif code == keys.tab then
         if #actionButtons > 0 then
           focusIndex = focusIndex % #actionButtons + 1
@@ -265,7 +287,7 @@ function U.run(manager, basalt)
     end
   end
   local function startKeyboard(field)
-    keyboardField, previousPage, keyboardOffset, page = field, page, 0, "keyboard"
+    keyboardField, previousPage, keyboardOffset, keyboardShift, page = field, page, 0, false, "keyboard"
     showPage()
   end
   local function source()
@@ -366,6 +388,9 @@ function U.run(manager, basalt)
     local available = manager.monitors()
     label(2, 12, #available .. " attached monitor(s)", colors.cyan)
     button(2, h - 3, 12, "BACK", back)
+    button(16, h - 3, 16, "UPDATE STORE", function()
+      runAction("store-update")
+    end)
     keyFocus()
   end
   local function detail()
@@ -422,6 +447,10 @@ function U.run(manager, basalt)
         x = x + width + 1
       end
     end
+    button(2, 14, 10, "ABOUT", function()
+      aboutOffset, page = 0, "about"
+      showPage()
+    end)
     local x = 2
     local primary = status.installed and "LAUNCH" or "INSTALL"
     button(x, h - 4, 11, primary, function()
@@ -573,6 +602,9 @@ function U.run(manager, basalt)
         break
       end
       local char = alphabet:sub(index, index)
+      if keyboardField == "source" and not keyboardShift then
+        char = char:lower()
+      end
       local x = 2 + ((i - 1) % countPerRow) * 4
       local y = 6 + math.floor((i - 1) / countPerRow)
       button(x, y, 3, char == " " and "_" or char, function()
@@ -595,6 +627,12 @@ function U.run(manager, basalt)
       end
       showPage()
     end)
+    if keyboardField == "source" then
+      button(28, h - 3, 8, keyboardShift and "LOWER" or "SHIFT", function()
+        keyboardShift = not keyboardShift
+        showPage()
+      end)
+    end
     button(2, h - 2, 10, "SPACE", function()
       append(" ")
     end)
@@ -753,6 +791,10 @@ function U.run(manager, basalt)
         end, target == mode and colors.orange or colors.blue)
         x = x + width + 1
       end
+      button(2, 7, 10, "ABOUT", function()
+        aboutOffset, page = 0, "about"
+        showPage()
+      end)
       button(2, 8, 11, "REINSTALL", function()
         runAction("install")
       end)
