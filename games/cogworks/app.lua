@@ -5,6 +5,7 @@ local T = require("games.cogworks.tutorials")
 local B = require("games.cogworks.briefing")
 local Campaign = require("games.cogworks.chapters")
 local Packs = require("games.cogworks.packs")
+local Pointer = require("games.cogworks.pointer")
 local A = {}
 A.__index = A
 local function countAward(awards)
@@ -255,6 +256,8 @@ function A:model()
     returnScene = self.returnScene,
     pending = self.pending,
     inspected = self.inspected,
+    moving = self.moving,
+    drag = self.drag,
     tutorial = self.tutorial,
     briefing = self.briefing,
     hasLeftInput = self.hasLeftInput or false,
@@ -273,9 +276,73 @@ function A:model()
     catalogPage = self.catalogPage,
   }
 end
+function A:dropDrag(x, y)
+  local drag = self.drag
+  self.drag, self.inspected = nil, nil
+  if not drag or not drag.moved or not Pointer.valid(self.game, drag, x, y) then
+    self.message = "DROP CANCELLED"
+    return false
+  end
+  local changed
+  if drag.origin == "board" then
+    if x == drag.fromX and y == drag.fromY then
+      return false
+    end
+    changed = E.move(self.game, drag.fromX, drag.fromY, x, y)
+  else
+    changed = E.place(self.game, x, y, drag.kind, drag.r)
+  end
+  if changed then
+    self.message = ""
+    if self.game.editor then
+      self.result = E.evaluate(self.game)
+    else
+      self:updateGame()
+    end
+  end
+  return changed
+end
 -- Return 'exit' only in direct response to player choosing Exit.
 function A:act(action, x, y)
   local scene = self.scene
+  if scene == "game" or scene == "editor" then
+    if action == "moveStart" then
+      local part = E.get(self.game, x, y)
+      if part and (not part.fixed or self.game.editor) then
+        if self.moving and self.moving.x == x and self.moving.y == y then
+          self.moving = nil
+          self.message = "MOVE CANCELLED"
+        else
+          self.moving = { x = x, y = y }
+          self.inspected = { x = x, y = y }
+          self.message = "MOVE: SELECT AN EMPTY CELL"
+        end
+      end
+      return nil
+    end
+    if self.moving and (action == "cell" or action == "inspect" or action == "moveTo" or action == "remove") then
+      local from = self.moving
+      if from.x == x and from.y == y then
+        self.moving = nil
+        self.message = "MOVE CANCELLED"
+      elseif E.move(self.game, from.x, from.y, x, y) then
+        self.moving = nil
+        self.inspected = { x = x, y = y }
+        if self.game.editor then
+          self.result = E.evaluate(self.game)
+        else
+          self:updateGame()
+        end
+        self.message = "PART MOVED"
+      else
+        self.message = "MOVE: CHOOSE AN EMPTY CELL"
+      end
+      return nil
+    end
+    if action == "tool" or action == "editorTool" or action == "pause" or action == "editorMenu" then
+      self.moving = nil
+    end
+  end
   if action == "exit" then
     if self.game then
       self:save()
@@ -386,8 +453,6 @@ function A:act(action, x, y)
       else
         changed = E.place(self.game, x, y, self.selected)
       end
-    elseif action == "move" then
-      changed = E.move(self.game, x, y, self.moveX, self.moveY)
     elseif action == "editorFix" and self.inspected then
       local t = E.get(self.game, self.inspected.x, self.inspected.y)
       if t and t.kind ~= "S" and t.kind ~= "M" and t.kind ~= "X" then
@@ -490,9 +555,6 @@ function A:act(action, x, y)
           break
         end
       end
-    elseif action == "move" then
-      changed = E.move(self.game, x, y, self.moveX, self.moveY)
-      self.inspected = nil
     elseif action == "inspect" then
       local tile = E.get(self.game, x, y)
       if tile then

@@ -15,13 +15,13 @@ local palette = {
   [1] = 0x0D2844, -- deep panel
   [2] = 0x173B5A, -- tile/background fill
   [3] = 0x23567B, -- blue grid lines / borders
-  [4] = 0x4780A4, -- inactive mechanism / secondary ink
+  [4] = 0x61696B, -- dark andesite steel / inactive ink
   [5] = 0xC1D8E7, -- text
-  [6] = 0xEBC26A, -- brass selection
-  [7] = 0xA88548, -- brass shadow
-  [8] = 0xEA7750, -- jam / redstone
+  [6] = 0xAF8652, -- oak highlights / brass selection
+  [7] = 0x805832, -- oak wood / brass shadow
+  [8] = 0x570C08, -- unpowered redstone channels
   [9] = 0x91D3B7, -- successful machine
-  [10] = 0x356C5C, -- dark source block
+  [10] = 0x45301F, -- dark oak grain / source block
   [11] = 0x64D3F2, -- CW / cyan highlights
   [12] = 0x307FAF, -- bright-blue frame
   [13] = 0xA3B6C3, -- steel
@@ -92,18 +92,15 @@ function R.new(m)
   self:enable()
   return self
 end
--- Follow CivCraft's 3x4 logical pixels per text cell. Large devices get a
--- full responsive canvas; small monitors retain the authored 200x120 layout.
--- A single transform is shared by rendering and hit detection.
+-- Keep one isotropic pixel scale, but derive both canvas dimensions from
+-- the actual raster. Window shape never introduces a letterbox or pillarbox.
 function R:fitGraphics()
-  self.logicalWidth = math.max(200, self.tw * 3)
-  self.logicalHeight = math.max(120, self.th * 4)
-  self.wide = self.logicalWidth >= 260 and self.logicalHeight >= 160
-  self.canvasW = self.wide and self.logicalWidth or 200
-  self.canvasH = self.wide and self.logicalHeight or 120
-  self.scale = math.min(self.pw / self.logicalWidth, self.ph / self.logicalHeight)
-  self.ox = math.floor((self.pw - self.canvasW * self.scale) / 2)
-  self.oy = math.floor((self.ph - self.canvasH * self.scale) / 2)
+  self.scale = math.min(self.pw / math.max(200, self.tw * 3), self.ph / 120)
+  self.canvasW = math.ceil(self.pw / self.scale)
+  self.canvasH = math.ceil(self.ph / self.scale)
+  self.logicalWidth, self.logicalHeight = self.canvasW, self.canvasH
+  self.wide = self.canvasW >= 200 and self.canvasH >= 160
+  self.ox, self.oy = 0, 0
 end
 function R:enable()
   local m = self.m
@@ -143,6 +140,8 @@ function R:resize()
       self.tw, self.th = self.m.getSize()
       self:fitGraphics()
       self.previousBuffer = nil
+      self.baseBuffer = nil
+      self.previewBounds = nil
       -- The previous image and letterbox are still in the monitor's pixel
       -- backing surface after a resize. Discard them before the next draw.
       self.needsClear = true
@@ -173,10 +172,23 @@ function R:rect(x, y, w, h, color)
   -- sent to the attached monitor.
   local x1, y1 = math.max(0, math.floor(x)), math.max(0, math.floor(y))
   local x2, y2 = math.min(self.canvasW, math.ceil(x + w)), math.min(self.canvasH, math.ceil(y + h))
+  if self.spriteClip then
+    local clip = self.spriteClip
+    x1, y1 = math.max(x1, clip.x), math.max(y1, clip.y)
+    x2, y2 = math.min(x2, clip.x + clip.size), math.min(y2, clip.y + clip.size)
+  end
   for py = y1, y2 - 1 do
-    local row = self.buffer[py + 1]
+    -- Preview frames inherit unchanged scanlines from the cached scene.
+    -- Copy only rows touched by the ghost; never mutate the cached board.
+    local row = rawget(self.buffer, py + 1)
     if not row then
       row = {}
+      if self.overlayBase then
+        local baseRow = self.overlayBase[py + 1]
+        if baseRow then
+          setmetatable(row, { __index = baseRow })
+        end
+      end
       self.buffer[py + 1] = row
     end
     for px = x1, x2 - 1 do
@@ -187,14 +199,18 @@ end
 -- CC:Graphics uses the CraftOS-PC drawPixels API and supports indexed
 -- bitmap rows. Upload one changed rectangle per frame instead of invoking
 -- thousands of peripheral methods and freezing the server-side monitor.
-function R:flush()
+function R:flush(bounds)
   local old = self.previousBuffer
   local current = self.buffer
   local left, top, right, bottom = self.canvasW, self.canvasH, -1, -1
-  for y = 0, self.canvasH - 1 do
+  local firstX = bounds and math.max(0, math.floor(bounds.x1)) or 0
+  local firstY = bounds and math.max(0, math.floor(bounds.y1)) or 0
+  local lastX = bounds and math.min(self.canvasW - 1, math.ceil(bounds.x2)) or self.canvasW - 1
+  local lastY = bounds and math.min(self.canvasH - 1, math.ceil(bounds.y2)) or self.canvasH - 1
+  for y = firstY, lastY do
     local row = current[y + 1] or {}
     local prior = old and old[y + 1] or nil
-    for x = 0, self.canvasW - 1 do
+    for x = firstX, lastX do
       if (row[x + 1] or 0) ~= (prior and prior[x + 1] or 0) or not old then
         left = math.min(left, x)
         top = math.min(top, y)
@@ -735,6 +751,112 @@ function R:bonusMark(g, x, y)
     end
   end
 end
+function R:toCanvas(x, y)
+  if self.mode == "graphics" then
+    return (x - self.ox) / self.scale, (y - self.oy) / self.scale
+  end
+  return x, y
+end
+function R:boardCell(x, y)
+  local px, py = self:toCanvas(x, y)
+  local board = self.textBoard
+  if self.mode == "graphics" then
+    board = self.currentGameLayout and self.currentGameLayout.grid
+    if not board then
+      return nil
+    end
+    local cx, cy = math.floor((px - board.x) / self.cell) + 1, math.floor((py - board.y) / self.cell) + 1
+    if px >= board.x and py >= board.y and px < board.x + board.w and py < board.y + board.h then
+      return cx, cy
+    end
+  elseif board and px >= board.x and py >= board.y and px < board.x + board.w and py < board.y + board.h then
+    return math.floor((px - board.x) / board.cellW) + 1, math.floor((py - board.y) / board.cellH) + 1
+  end
+end
+function R:fixedFrame(x, y, size, tile, editor)
+  if not tile.fixed or editor then
+    return
+  end
+  self:rect(x, y, size, 1, 6)
+  self:rect(x, y + size - 1, size, 1, 6)
+  self:rect(x, y, 1, size, 6)
+  self:rect(x + size - 1, y, 1, size, 6)
+  self:rect(x, y, 2, 2, 15)
+  if size >= 12 then
+    self:rect(x + size - 5, y + 1, 3, 4, 1)
+    self:rect(x + size - 4, y + 1, 1, 2, 15)
+    self:rect(x + size - 5, y + 3, 3, 2, 6)
+  end
+end
+function R:drawDrag(m)
+  local drag = m.drag
+  if self.mode ~= "graphics" or not drag or not drag.moved or (m.scene ~= "game" and m.scene ~= "editor") then
+    return
+  end
+  local size = self.cell
+  if drag.targetX and drag.targetY then
+    local tx, ty = self.boardX + (drag.targetX - 1) * size, self.boardY + (drag.targetY - 1) * size
+    local ink = drag.valid and 9 or 8
+    self:rect(tx, ty, size, 2, ink)
+    self:rect(tx, ty + size - 2, size, 2, ink)
+    self:rect(tx, ty, 2, size, ink)
+    self:rect(tx + size - 2, ty, 2, size, ink)
+  end
+  local px, py = drag.cursorX - drag.offsetX, drag.cursorY - drag.offsetY
+  self:rect(px + 2, py + 2, size, size, 1)
+  local tile = { kind = drag.kind, r = drag.r, id = -1, x = drag.targetX or 0, y = drag.targetY or 0 }
+  local light = { powered = false }
+  if drag.origin == "board" then
+    local source = E.get(m.game, drag.fromX, drag.fromY)
+    light = source and m.result.lights[source.id] or light
+  end
+  if tile.kind == "R" or tile.kind == "B" then
+    self:redstonePiece(m.game, tile, { redstone = {} }, px, py, size)
+  else
+    self:piece(px, py, size, tile, light)
+  end
+  self:rect(px, py, size, 1, drag.valid and 11 or 8)
+end
+-- An unmodified full frame is the source for every drag preview.
+-- Keeping the underlying scene intact avoids rebuilding the entire board,
+-- UI and simulation for each mouse_drag event on CraftOS/iPad.
+function R:dragBounds(drag)
+  if not drag or not drag.moved then
+    return nil
+  end
+  local size = self.cell
+  local px, py = drag.cursorX - drag.offsetX, drag.cursorY - drag.offsetY
+  local b = { x1 = px - 2, y1 = py - 2, x2 = px + size + 4, y2 = py + size + 4 }
+  if drag.targetX and drag.targetY then
+    local tx = self.boardX + (drag.targetX - 1) * size
+    local ty = self.boardY + (drag.targetY - 1) * size
+    b.x1, b.y1 = math.min(b.x1, tx - 2), math.min(b.y1, ty - 2)
+    b.x2, b.y2 = math.max(b.x2, tx + size + 2), math.max(b.y2, ty + size + 2)
+  end
+  return b
+end
+function R:drawDragPreview(m)
+  if self.mode ~= "graphics" or not self.baseBuffer or not m.drag or not m.drag.moved then
+    return self:draw(m)
+  end
+  -- The first frame of a board drag must remove its source tile from the
+  -- cached scene. All subsequent pointer moves can use the cheap overlay.
+  if m.drag.origin == "board" and not self.dragSourceHidden then
+    return self:draw(m)
+  end
+  local bounds = self:dragBounds(m.drag)
+  local old = self.previewBounds
+  if old then
+    bounds.x1, bounds.y1 = math.min(bounds.x1, old.x1), math.min(bounds.y1, old.y1)
+    bounds.x2, bounds.y2 = math.max(bounds.x2, old.x2), math.max(bounds.y2, old.y2)
+  end
+  self.buffer = setmetatable({}, { __index = self.baseBuffer })
+  self.overlayBase = self.baseBuffer
+  self:drawDrag(m)
+  self.overlayBase = nil
+  self:flush(bounds)
+  self.previewBounds = self:dragBounds(m.drag)
+end
 function R:drawBonusMarks(g)
   for y = 1, g.height do
     for x = 1, g.width do
@@ -953,6 +1075,14 @@ function R:drawGame(m)
         self:rect(right + 1, py + 3, 1, 1, 8)
         self:rect(right + 3, py + 3, 1, 1, 8)
         self:add(right, py, hitSize, hitSize, "remove", chosen.x, chosen.y)
+        -- Bottom-left button enters two-tap Move mode; the part's
+        -- orientation is preserved unless manually rotated afterward.
+        local bottom = py + span - hitSize
+        local moving = m.moving and m.moving.x == chosen.x and m.moving.y == chosen.y
+        self:rect(px + 1, bottom + 1, 3, 3, 2)
+        self:rect(px + 1, bottom + 2, 2, 1, moving and 9 or 11)
+        self:rect(px + 3, bottom + 1, 1, 3, moving and 9 or 11)
+        self:add(px, bottom, hitSize, hitSize, "moveStart", chosen.x, chosen.y)
       end
     end
   end
@@ -1453,6 +1583,8 @@ function R:drawText(m)
     local x0, y0 = 2, 3
     local columnWidth = math.min(6, math.max(4, math.floor((w - 2) / g.width)))
     local rowHeight = math.max(2, math.min(3, math.floor((h - 15) / g.height)))
+    self.textBoard =
+      { x = x0, y = y0, w = columnWidth * g.width, h = rowHeight * g.height, cellW = columnWidth, cellH = rowHeight }
     for y = 1, g.height do
       for x = 1, g.width do
         local p = E.get(g, x, y)
@@ -1698,7 +1830,16 @@ function R:draw(m)
   -- Time-derived angles do not depend on how frequently UI events redraw.
   -- A deterministic override is exposed for sprite regression tests.
   self.motionNow = self.motionOverride or (m.settings and m.settings.animations ~= false and os.clock() or 0)
-  if self.wide and self:drawResponsive(m) then
+  if (self.wide or m.scene == "game" or m.scene == "editor") and self:drawResponsive(m) then
+    self.baseBuffer = self.buffer
+    self.dragSourceHidden = m.drag and m.drag.moved and m.drag.origin == "board" or false
+    if m.drag and m.drag.moved then
+      self.buffer = setmetatable({}, { __index = self.baseBuffer })
+      self.overlayBase = self.baseBuffer
+      self:drawDrag(m)
+      self.overlayBase = nil
+    end
+    self.previewBounds = self:dragBounds(m.drag)
     self:flush()
     self.frame = self.frame + 1
     return
@@ -1734,6 +1875,15 @@ function R:draw(m)
   else
     self:drawHelp(m)
   end
+  self.baseBuffer = self.buffer
+  self.dragSourceHidden = m.drag and m.drag.moved and m.drag.origin == "board" or false
+  if m.drag and m.drag.moved then
+    self.buffer = setmetatable({}, { __index = self.baseBuffer })
+    self.overlayBase = self.baseBuffer
+    self:drawDrag(m)
+    self.overlayBase = nil
+  end
+  self.previewBounds = self:dragBounds(m.drag)
   self:flush()
   self.frame = self.frame + 1
 end
@@ -1786,4 +1936,5 @@ function R:hit(x, y)
 end
 require("games.cogworks.responsive")(R)
 require("games.cogworks.create_art")(R)
+require("games.cogworks.create_textures")(R)
 return R

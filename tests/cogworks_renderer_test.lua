@@ -78,11 +78,9 @@ function gfx.drawPixels(x, y, fill, w, h)
 end
 local r = R.new(gfx)
 assert(r.mode == "graphics" and gfx.mode == 2)
-assert(
-  math.abs(r.scale - math.min(gfx.width / (70 * 3), gfx.height / (40 * 4))) < 0.001,
-  "Pixel density follows CivCraft 3x4-per-text-cell dimensions"
-)
-assert(r.scale < 2 and r.ox > 0 and r.oy > 0, "Small Cogworks glyphs are no longer enlarged to full screen")
+assert(r.ox == 0 and r.oy == 0, "No letterbox margins")
+assert(math.abs(r.canvasW * r.scale - r.pw) < r.scale + 0.001)
+assert(math.abs(r.canvasH * r.scale - r.ph) < r.scale + 0.001)
 assert(gfx.palette[0] == 0x07192D and gfx.palette[11] == 0x64D3F2, "Blueprint ink palette installed")
 assert(
   gfx.palette[14] == 0xF4A25E and gfx.palette[11] ~= gfx.palette[14],
@@ -96,20 +94,18 @@ local cog = E.get(wheel, 2, 4)
 r.frame = 0
 r.buffer = {}
 r:piece(20, 20, 13, cog, wheelInfo.lights[cog.id])
-assert(r.buffer[27] and r.buffer[27][30] == 15, "Small pinion highlights its first gear tooth at frame zero")
-r.frame = 1
+local still = r.buffer
+r.motionOverride = 0.14
 r.buffer = {}
 r:piece(20, 20, 13, cog, wheelInfo.lights[cog.id])
-assert(r.buffer[27][30] ~= 15, "Highlighted tooth must move to a new location on the next frame")
-local pixels = 0
-for _, row in pairs(r.buffer) do
-  for _, ink in pairs(row) do
-    if ink == 14 then
-      pixels = pixels + 1
-    end
+local changed = false
+for y = 21, 33 do
+  for x = 21, 33 do
+    changed = changed or ((still[y] or {})[x] ~= (r.buffer[y] or {})[x])
   end
 end
-assert(pixels > 0, "Rotation marker remains visible after stepping to next frame")
+assert(changed, "Native sprite motion advances between subsecond frames")
+r.motionOverride = nil
 -- Pixel geometry matches the approved 200x120 HTML prototype:
 -- radius 3/4, eight protruding 2x2 teeth, and a blue/orange steel spoke.
 local function gearFrame(large, spin, frame)

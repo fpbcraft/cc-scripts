@@ -160,21 +160,28 @@ return function(R)
   -- to the component palette. Board and sidebar are adjacent with a 5px gap.
   function R:gameLayout(g)
     local w, h = self.canvasW, self.canvasH
-    local left, top, gap, right = 4, 22, 5, 4
-    local height = h - top - 14
-    local width = math.min(height, math.floor((w - 13) * 0.62), w - left - gap - right - 100)
-    width = math.max(50, width)
-    local sideX = left + width + gap
-    local sideWidth = w - sideX - right
-    local cell = math.max(6, math.floor(math.min((width - 4) / g.width, (height - 4) / g.height)))
+    local left, top, gap, bottom = 3, 22, 5, h - 14
+    local height = bottom - top
+    local sideWidth = clamp(math.floor(w * 0.29), 100, 170)
+    local sideCell = math.floor(math.min((w - sideWidth - gap - 8) / g.width, (height - 4) / g.height))
+    local dockHeight = g.editor and 82 or 70
+    local dockCell = math.floor(math.min((w - 8) / g.width, (height - dockHeight - gap - 4) / g.height))
+    local docked = dockCell > sideCell
+    local cell = math.max(4, docked and dockCell or sideCell)
     local gridWidth, gridHeight = cell * g.width, cell * g.height
-    local gridX = left + math.floor((width - gridWidth) / 2)
-    local gridY = top + math.floor((height - gridHeight) / 2)
+    local boardWidth = docked and w - 6 or gridWidth + 4
+    local boardHeight = docked and gridHeight + 4 or height
+    local gridX = left + math.floor((boardWidth - gridWidth) / 2)
+    local gridY = top + math.floor((boardHeight - gridHeight) / 2)
+    local sidebar = docked and { x = left, y = top + boardHeight + gap, w = w - 6, h = height - boardHeight - gap }
+      or { x = left + boardWidth + gap, y = top, w = w - left - boardWidth - gap - 3, h = height }
     return {
-      board = { x = left, y = top, w = width, h = height },
+      board = { x = left, y = top, w = boardWidth, h = boardHeight },
       grid = { x = gridX, y = gridY, w = gridWidth, h = gridHeight },
-      sidebar = { x = sideX, y = top, w = sideWidth, h = height },
+      sidebar = sidebar,
       cell = cell,
+      docked = docked,
+      columns = (docked or sidebar.h < 165) and 5 or 2,
     }
   end
   function R:wideGame(m)
@@ -206,7 +213,7 @@ return function(R)
     self:button(w - 135, buttonY, 30, buttonH, m.settings.animations and "RUN" or "OFF", "toggleAnimations")
     self.currentGameLayout = self:gameLayout(g)
     local layout = self.currentGameLayout
-    local bx, by, bw, bh = layout.board.x, layout.board.y, layout.board.w, layout.board.h
+    local by, bh = layout.sidebar.y, layout.sidebar.h
     local sx, sw = layout.sidebar.x, layout.sidebar.w
     local cell = layout.cell
     self.cell, self.boardX, self.boardY = cell, layout.grid.x, layout.grid.y
@@ -218,7 +225,9 @@ return function(R)
       for x = 1, g.width do
         local px = self.boardX + (x - 1) * cell
         local py = self.boardY + (y - 1) * cell
-        self:rect(px, py, cell - 1, cell - 1, 2)
+        self:rect(px, py, cell, cell, 2)
+        self:rect(px, py, cell, 1, 3)
+        self:rect(px, py, 1, cell, 3)
         self:rect(px + math.floor(cell / 2), py + math.floor(cell / 2), 1, 1, 3)
       end
     end
@@ -228,13 +237,24 @@ return function(R)
       for x = 1, g.width do
         local px = self.boardX + (x - 1) * cell
         local py = self.boardY + (y - 1) * cell
-        local span = cell - 1
+        local span = cell
         local tile = E.get(g, x, y)
-        if tile then
+        if
+          tile
+          and not (
+            m.drag
+            and m.drag.moved
+            and m.drag.origin == "board"
+            and tile.x == m.drag.fromX
+            and tile.y == m.drag.fromY
+          )
+        then
           if tile.kind == "R" or tile.kind == "B" then
             self:redstonePiece(g, tile, result, px, py, span)
+            self:fixedFrame(px, py, span, tile, g.editor)
           else
-            self:piece(px + 1, py + 1, span - 2, tile, result.lights[tile.id])
+            self:piece(px, py, span, tile, result.lights[tile.id])
+            self:fixedFrame(px, py, span, tile, g.editor)
           end
           if m.settings.showPorts and tile.kind ~= "X" then
             for dir = 0, 3 do
@@ -263,34 +283,38 @@ return function(R)
       result.win and 9 or 11,
       38
     )
-    local columnW = math.floor((sw - 11) / 2)
-    local buttonH = clamp(math.floor((bh - 72) / 5), 11, 16)
+    local columns = layout.columns
+    local rows = math.ceil(#E.order / columns)
+    local columnW = math.floor((sw - 8) / columns)
+    local buttonH = clamp(math.floor((bh - 70) / rows), 9, 16)
     for i, kind in ipairs(E.order) do
-      local col, row = (i - 1) % 2, math.floor((i - 1) / 2)
+      local col, row = (i - 1) % columns, math.floor((i - 1) / columns)
       local px, py = sx + 4 + col * columnW, by + 16 + row * (buttonH + 2)
       local count = g.remaining[kind] or 0
       local active = m.selected == kind
       self:rect(px, py, columnW - 2, buttonH, active and 6 or 12)
       self:rect(px + 1, py + 1, columnW - 4, buttonH - 2, active and 3 or 1)
-      self:toolIcon(px + 3, py + 2, kind)
-      self:fontFit(px + 12, py + 4, labels[kind], count > 0 and 15 or 4, columnW - 29)
-      self:fontFit(px + columnW - 16, py + 4, count == math.huge and "++" or tostring(count), count > 0 and 9 or 4, 13)
+      self:toolIcon(px + 1, py + 1, kind)
+      if columnW >= 32 then
+        self:fontFit(px + 10, py + 3, labels[kind], count > 0 and 15 or 4, columnW - 24)
+      end
+      self:fontFit(px + columnW - 10, py + 3, count == math.huge and "++" or tostring(count), count > 0 and 9 or 4, 9)
       self:add(px, py, columnW - 2, buttonH, "tool", kind)
     end
-    local actionsY = by + 18 + 5 * (buttonH + 2)
-    local gap = 3
+    local actionsY = by + 17 + rows * (buttonH + 2)
+    local actionH = columns == 5 and 10 or 13
     local actionW = math.floor((sw - 9) / 2)
-    self:button(sx + 4, actionsY, actionW, 13, m.selected == "erase" and "ERASING" or "ERASE", "tool", "erase")
+    self:button(sx + 4, actionsY, actionW, actionH, m.selected == "erase" and "ERASING" or "ERASE", "tool", "erase")
     self:button(
       sx + 5 + actionW,
       actionsY,
       actionW,
-      13,
+      actionH,
       g.sandbox and ("SIZE " .. g.width) or "ROTATE",
       g.sandbox and "sandboxSize" or nil,
       g.sandbox and (5 + g.width % 6) or nil
     )
-    local detailY = actionsY + 17
+    local detailY = actionsY + actionH + 3
     local available = by + bh - detailY
     if g.editor then
       if available >= 16 then
@@ -301,32 +325,34 @@ return function(R)
           self:button(sx + 4 + (i - 1) * toolW, detailY + 8, toolW - 1, 11, item[1], "editorTool", item[2])
         end
       end
-      if available >= 38 then
+      if available >= 30 then
         local commands =
           { { "FIX", "editorFix" }, { "RATE", "editorRate" }, { "DIR", "editorSpin" }, { "TEST", "editorTest" } }
         local toolW = math.floor((sw - 9) / 4)
         for i, item in ipairs(commands) do
-          self:button(sx + 4 + (i - 1) * toolW, detailY + 22, toolW - 1, 11, item[1], item[2])
+          self:button(sx + 4 + (i - 1) * toolW, detailY + 19, toolW - 1, 9, item[1], item[2])
         end
       end
     else
       local awards = (m.progress and m.progress.awards and m.progress.awards[g.number]) or {}
       local bonuses = E.challenges(g, result)
       local y = detailY
-      self:fontFit(sx + 4, y, #bonuses > 0 and "OPTIONAL CHALLENGES" or "NO OPTIONAL CHALLENGES", 6, sw - 8)
-      y = y + 9
+      if columns == 2 then
+        self:fontFit(sx + 4, y, #bonuses > 0 and "BONUS GOALS" or "NO BONUS GOALS", 6, sw - 8)
+        y = y + 9
+      end
       for index, bonus in ipairs(bonuses) do
-        if y + 9 <= by + bh - 2 then
+        if y + 7 <= by + bh - 2 then
           self:rect(sx + 4, y + 1, 6, 6, awards[bonus.id] and 9 or (bonus.earned and 6 or 4))
           local progressWidth = bonus.progress and (#bonus.progress * 4 + 4) or 0
           self:fontFit(sx + 14, y + 2, bonus.name, awards[bonus.id] and 9 or 15, sw - 19 - progressWidth)
           if bonus.progress then
             self:font(sx + sw - progressWidth, y + 2, bonus.progress, 11)
           end
-          self:add(sx + 3, y, sw - 6, 10, "inspectBonus", bonus.id)
-          y = y + 12
+          self:add(sx + 3, y, sw - 6, columns == 5 and 8 or 10, "inspectBonus", bonus.id)
+          y = y + (columns == 5 and 9 or 12)
           local lines = wrapWords(bonus.description, math.max(10, math.floor((sw - 20) / 4)))
-          if y + #lines * 7 + (#bonuses - index) * 12 <= by + bh - 2 then
+          if y + #lines * 7 + (#bonuses - index) * (columns == 5 and 9 or 12) <= by + bh - 2 then
             for _, line in ipairs(lines) do
               self:fontFit(sx + 14, y, line, 11, sw - 19)
               y = y + 7
@@ -341,7 +367,7 @@ return function(R)
       if tile then
         local px = self.boardX + (tile.x - 1) * cell
         local py = self.boardY + (tile.y - 1) * cell
-        local span = cell - 1
+        local span = cell
         self:rect(px, py, span, 1, 11)
         self:rect(px, py + span - 1, span, 1, 11)
         self:rect(px, py, 1, span, 11)
@@ -352,10 +378,16 @@ return function(R)
           self:font(px + 1, py + 1, "+", 0)
           self:add(px, py, hit, hit, "rotate", tile.x, tile.y)
         end
-        if not tile.fixed then
+        if not tile.fixed or g.editor then
           self:rect(px + span - hit, py + 1, hit - 1, hit - 1, 8)
           self:font(px + span - hit, py + 1, "X", 0)
           self:add(px + span - hit, py, hit, hit, "remove", tile.x, tile.y)
+          -- Third corner control: choose a destination, then tap a free cell.
+          local my = py + span - hit
+          local moving = m.moving and m.moving.x == tile.x and m.moving.y == tile.y
+          self:rect(px + 1, my + 1, hit - 1, hit - 1, moving and 9 or 12)
+          self:font(px + 1, my + 1, ">", 0)
+          self:add(px, my, hit, hit, "moveStart", tile.x, tile.y)
         end
       end
     end
