@@ -10,6 +10,10 @@ return function(id)
     if target == "term" then
       return nil
     end
+    if target == "monitor" and #monitors == 0 and manager.ensureMonitor then
+      local entry = manager.ensureMonitor()
+      if entry then monitors = { entry } end
+    end
     if target == "monitor" and #monitors == 0 then
       print("Preferred monitor disconnected. Launch on terminal? [Y/n]")
       if read and (read() or ""):lower() == "n" then
@@ -18,7 +22,7 @@ return function(id)
       return nil
     end
     if target == "ask" then
-      if #monitors == 0 then
+      if #monitors == 0 and not (type(periphemu) == "table" and type(periphemu.create) == "function") then
         return nil
       end
       print("Launch " .. app.name .. " on: [T]erminal / [M]onitor")
@@ -27,7 +31,11 @@ return function(id)
         return nil
       end
     end
-    return monitors[1].screen
+    if #monitors == 0 and manager.ensureMonitor then
+      local entry = manager.ensureMonitor()
+      if entry then monitors = { entry } end
+    end
+    return monitors[1] and monitors[1].screen or nil
   end
   local display = choose()
   if display == false then
