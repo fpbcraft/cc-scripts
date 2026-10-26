@@ -71,24 +71,26 @@ requested spin and speed.
 
 ### Campaign
 
-Sixty-four levels in **eight branching chapters** (eight stages each), on
-5×5 to 10×10 boards, progress from basic mechanical intuition through
-surprising routes, gear ratios, transmission crossings, distribution,
-redstone, factory repair and a four-press final examination. Each level starts with a mission briefing;
-a one-time Ponder explains newly introduced parts. Complete all required
-presses at their requested relative speed and rotation without jamming
-the mechanism. Each level has **two different, named bonus objectives** in addition to the
-main clear, including transmission and geometry checks, redstone, fixture
-restoration, resource limits and more.
+Sixty-four levels occupy **eight interconnected factory districts**. Touch a
+district on the overworld, then follow dotted tracks between puzzle nodes.
+Completing a puzzle reveals adjacent nodes; different routes let players
+skip a troublesome puzzle and return to it later. **Any three distinct
+clears within a district unlock the next district**. Bonus objectives
+never gate access to required campaign content.
 
-Each chapter offers six main puzzles, an optional difficult remix (#7) and
-an optional examination (#8). Stages 2 and 3 open after stage 1; stages
-4 and 5 after either 2 or 3; stage 6 after two earlier branch clears;
-the extra after stage 4 plus another clear; and the examination after four
-main clears. To unlock the next chapter, earn at least **six objective points
-and four main clears from its first six levels**. Optional exams and remixes
-are never mandatory. A level's clear state and its two independent bonus
-states appear on the chapter selection screen.
+Each district contains a network of six ordinary puzzles, an optional
+expert side path (#7), and an optional finale (#8). The finale can be
+reached via either the main route or the expert detour, and neither extra
+stage is required to leave a district. Clear status and optional rewards
+appear on each map node. Puzzles have **zero, one or two optional bonuses**
+depending on the design; bonuses are awarded independently on separate
+replays if desired, and can require different constructions.
+
+Each level starts with a mission briefing and may introduce mechanics
+through a one-time Ponder tutorial. Main objectives are always to power
+the required presses at their target spin and relative speed without a jam.
+Some pilot puzzles intentionally offer more than the exact parts in the
+author's reference solution, encouraging alternate engineering approaches.
 
 Progress and awards are stored in three independent save slots. Each stage
 retains its own construction snapshot, including placed and removed redstone parts. Existing campaign unlocks are
@@ -98,10 +100,11 @@ retained; incompatible old board arrangements reset when the level is opened.
 
 Each authored stage has a playable starting state, a separate reference
 construction, an explicit stock inventory, optional immovable fixtures,
-and two typed bonuses. `tests/cogworks_campaign_design_test.lua` verifies
-all 64 reference solutions with the actual kinetic simulator; it also
-checks both authored bonuses, fixed-piece protections, board diversity,
-and progression without needing to complete optional chapter exams.
+and zero to two typed optional bonuses. `tests/cogworks_campaign_design_test.lua`
+verifies all 64 main reference solutions with the actual kinetic simulator,
+variable bonus counts, immovable fixtures, board diversity, and alternate
+map routes that bypass optional levels. Main references are **not** expected
+to automatically earn bonuses.
 
 The 30 levels derived from earlier proven kinetic layouts are **intentional
 first-pass variations, not yet final playtested puzzles**. Their discovery
