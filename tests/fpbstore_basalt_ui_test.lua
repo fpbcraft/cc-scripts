@@ -271,5 +271,15 @@ local keyboardResult, keyboardCalls = scenario(51, 19, {
 assert(keyboardResult == "exit", "Escape exits the Store on keyboard only")
 assert(keyboardCalls.stopped, "Basalt event loop stopped cleanly")
 
+local _, compactLaunchCalls, _, createdCompact, launchedCompact = scenario(26, 12, {
+  "DETAILS",
+  "INSTALL",
+  "INSTALL NOW",
+  "LAUNCH",
+  "MONITOR",
+})
+assert(createdCompact == 1 and launchedCompact == 1 and compactLaunchCalls.launchTarget,
+  "Touch-only monitor selection provisions CraftOS screen even on 26x12")
+
 term, colors, keys, periphemu, sleep = old.term, old.colors, old.keys, old.periphemu, old.sleep
 print("Store Basalt: touch flows, PRs, disk, Opus, compact menus and virtual monitors passed")
