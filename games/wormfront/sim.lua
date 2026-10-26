@@ -2,7 +2,8 @@
 -- The same state and actions work in hotseat mode and over rednet.
 local S = {}
 S.W, S.H = 72, 36
-local weapons = { { name = "ROCKET", radius = 4, damage = 42, speed = 1 }, { name = "MEGA", radius = 7, damage = 60, speed = 0.8 } }
+local weapons =
+  { { name = "ROCKET", radius = 4, damage = 42, speed = 1 }, { name = "MEGA", radius = 7, damage = 60, speed = 0.8 } }
 
 local function clamp(n, lo, hi)
   return math.max(lo, math.min(hi, n))
