@@ -15,19 +15,16 @@ local function monitor(w, h)
 end
 local function setup()
   local g = E.new(4)
-  local app = setmetatable(
-    {
-      game = g,
-      result = E.evaluate(g),
-      scene = "game",
-      devSession = true,
-      progress = { best = {}, awards = {} },
-      selected = "G",
-      message = "",
-      settings = { animations = false, showPorts = true },
-    },
-    App
-  )
+  local app = setmetatable({
+    game = g,
+    result = E.evaluate(g),
+    scene = "game",
+    devSession = true,
+    progress = { best = {}, awards = {} },
+    selected = "G",
+    message = "",
+    settings = { animations = false, showPorts = true },
+  }, App)
   local renderer = R.new(monitor(700, 600))
   renderer:draw(app)
   return app, renderer
