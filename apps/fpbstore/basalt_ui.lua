@@ -176,15 +176,15 @@ function U.run(manager, basalt)
       for i = 1, capacity do
         label(2, 4 + i, lines[aboutOffset + i] or "", colors.white)
       end
-      button(2, h - 3, 8, "UP", function()
+      button(2, h - 3, 6, "UP", function()
         aboutOffset = math.max(0, aboutOffset - 1)
         showPage()
       end)
-      button(11, h - 3, 8, "DOWN", function()
+      button(9, h - 3, 7, "DOWN", function()
         aboutOffset = math.min(math.max(0, #lines - capacity), aboutOffset + 1)
         showPage()
       end)
-      button(20, h - 3, 9, "BACK", back)
+      button(17, h - 3, 8, "BACK", back)
       keyFocus()
     elseif page == "opus_settings" then
       page = "settings"
@@ -355,8 +355,9 @@ function U.run(manager, basalt)
     label(2, 6, "Store display:", colors.lightGray)
     local x = 2
     for _, mode in ipairs({ "auto", "term", "monitor" }) do
-      local width = #mode + 3
-      button(x, 7, width, mode:upper(), function()
+      local text = compact and mode == "monitor" and "MON" or mode:upper()
+      local width = #text + 3
+      button(x, 7, width, text, function()
         prefs.display = mode
         save()
         returnCode = "restart"
@@ -627,16 +628,22 @@ function U.run(manager, basalt)
       end
       showPage()
     end)
-    if keyboardField == "source" then
-      button(28, h - 3, 8, keyboardShift and "LOWER" or "SHIFT", function()
-        keyboardShift = not keyboardShift
-        showPage()
-      end)
-    end
-    button(2, h - 2, 10, "SPACE", function()
+    local function space()
       append(" ")
-    end)
-    button(14, h - 2, 10, "DONE", back)
+    end
+    local function shift()
+      keyboardShift = not keyboardShift
+      showPage()
+    end
+    if compact then
+      button(2, h - 2, 7, "SPACE", space)
+      button(10, h - 2, 8, keyboardShift and "LOWER" or "SHIFT", shift)
+      button(19, h - 2, 7, "DONE", back)
+    else
+      button(2, h - 2, 10, "SPACE", space)
+      button(14, h - 2, 10, "DONE", back)
+      button(28, h - 2, 8, keyboardShift and "LOWER" or "SHIFT", shift)
+    end
     keyFocus()
   end
 
