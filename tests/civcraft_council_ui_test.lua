@@ -17,6 +17,7 @@ colors = colors
 		red = 16384,
 		brown = 4096,
 	}
+dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local UI = dofile("/games/civcraft/ui.lua")
 local Council = dofile("/games/civcraft/council.lua")
 local World = dofile("/games/civcraft/world.lua")
@@ -93,6 +94,10 @@ for _, graphics in ipairs({ false, true }) do
 			assert(Actions.apply(state, 1, request, Systems))
 		end)
 		local function draw()
+			if os and os.queueEvent and os.pullEvent then
+				os.queueEvent("council_test_yield")
+				os.pullEvent("council_test_yield")
+			end
 			ui:draw(World.forPlayer(state, 1), 1, { screen = "game" })
 			for _, button in ipairs(ui.r.buttons) do
 				if ui.panel == "council" or button.label == "COUNCIL" then
@@ -107,6 +112,17 @@ for _, graphics in ipairs({ false, true }) do
 			end
 		end
 		local function tap(label)
+			while ui.councilModel and (ui.councilModel.offset or 0) > 0 do
+				draw()
+				local previous
+				for _, button in ipairs(ui.r.buttons) do
+					if button.label == "PREV" then
+						previous = button
+					end
+				end
+				assert(previous, "A scrolled Council page must have a Previous control")
+				previous.fn()
+			end
 			for attempt = 1, 30 do
 				draw()
 				for _, button in ipairs(ui.r.buttons) do

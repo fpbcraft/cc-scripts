@@ -93,7 +93,7 @@ mechanics[#mechanics + 1] = {
 mechanics[#mechanics + 1] = {
 	id = "icons",
 	name = "ACTION BAR ICONS",
-	text = "The single button below the inspector guides remaining unit, production and research decisions, then becomes End Turn. Left sidebar: plus/minus zoom and fullscreen opens World Overview. Top right: Tech Tree, Factions, Empire, Codex, Report and Pause. Status feedback appears below the map. City tabs separate Info, Jobs, Tiles and Production.",
+	text = "The single button below the inspector guides remaining unit, production and research decisions, then becomes End Turn. Left sidebar: plus/minus zoom and fullscreen opens World Overview. Top right: Tech Tree, Factions, Empire, Codex, Report, Event Log, Council and Pause. Status feedback appears below the map. City tabs separate Info, Jobs, Tiles and Production.",
 }
 mechanics[#mechanics + 1] = {
 	id = "gold",
@@ -159,6 +159,11 @@ mechanics[#mechanics + 1] = {
 	id = "wonders",
 	name = "SPECIAL TILES AND WONDERS",
 	text = "Natural landmarks are seeded map tiles that reward citizens working them. City production has a WONDER category: select a unique constructed wonder and choose a highlighted empty city-owned land hex. Finish it through ordinary industry. A competing completion ends your queue while preserving invested progress. Its benefits belong to the city controlling that tile. Wonders cannot overlap cities, other landmarks or rails.",
+}
+mechanics[#mechanics + 1] = {
+	id = "council",
+	name = "COUNCIL OF CIVILIZATIONS",
+	text = "The Council forms when two civilizations have cities and one researches Currency. Sessions open every ten speed-scaled rounds, with three rounds to vote. Every civilization receives two delegates; an independent village allied at 60 influence for three rounds grants one extra delegate, capped at one. Allocations are fixed for the session. Ballots stay private until closing. A strict majority elects the leader; diplomatic victory needs two-thirds of all allocated delegates, support from another living civilization, Stock Logistics and a Council Hall. The lobby must enable this victory. Each member may propose one resolution during the opening round. Trade facilitation, embargo, peace and censure need a strict majority and last ten speed-scaled rounds. Council peace also suspends military attacks. Conversation requests can create a voluntary voting pledge: cast the actual ballot separately; honoring earns 10 trust, breaking costs 25 trust and 15 grievances for 30 rounds. Ready members may still vote. Unmet civilizations remain unnamed and cannot be contacted through the Council. Recent Results publishes ballots, AI reasons and tallies.",
 }
 local function title(id)
 	return id:gsub("_", " "):upper()

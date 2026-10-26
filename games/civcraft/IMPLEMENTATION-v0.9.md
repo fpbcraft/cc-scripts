@@ -143,7 +143,7 @@ Host-validated offers support gold/material exchanges, open borders, commerce, a
 
 Defensive pacts create explicit Calls to Arms with a round deadline and refusal consequences. They never force entry. Acceptance schedules intervention at the next boundary without replenishing actions; rejection or expiry harms trust/reputation. Conflicting alliances must be ended explicitly. If peace makes an invitation obsolete, it is withdrawn without punishing the ally, and a pending intervention is cancelled before activation. Active joint-war commitments record a separate-peace breach; simultaneous coalition peace does not arbitrarily blame one participant.
 
-Conversations are accessible through each faction's Talk button. Authored topics cover greeting, warning, apology, denunciation, trade, borders, peace, alliances, defense, joint war and withdrawal. Players see actual terms, pending responses, AI acceptance/refusal reasons, attitudes, remembered causes and agreement states. Repeated greetings cannot farm trust. AI decisions use their own treasury, supplies, known deposits, observed forces, own war progress and fixed personality. Diplomatic replies remain possible after End Turn but do not grant unit actions. AI withdrawal promises take priority over exploration and route through normal movement; verification uses the recipient's observations after two following rounds. Private offers, treaty identities, drafts and other parties' relations remain private, including across hotseat handoffs and campaign switches. Council-vote discussion belongs to workstream 09.
+Conversations are accessible through each faction's Talk button. Authored topics cover greeting, warning, apology, denunciation, trade, borders, peace, alliances, defense, joint war and withdrawal. Players see actual terms, pending responses, AI acceptance/refusal reasons, attitudes, remembered causes and agreement states. Repeated greetings cannot farm trust. AI decisions use their own treasury, supplies, known deposits, observed forces, own war progress and fixed personality. Diplomatic replies remain possible after End Turn but do not grant unit actions. AI withdrawal promises take priority over exploration and route through normal movement; verification uses the recipient's observations after two following rounds. Private offers, treaty identities, drafts and other parties' relations remain private, including across hotseat handoffs and campaign switches. Council-vote requests and voluntary pledges are implemented in workstream 09 below.
 
 Optional version 1 diplomacy records gain offers, treaties, pair-scoped offer counters, promises and armistices; existing schema 6 saves normalize missing collections without replacing their worlds or budgets. Public war records whitelist fields and expose only the observer's own starting-city baseline, not private intervention source IDs or rival counts.
 
@@ -151,7 +151,7 @@ All 65 regression scripts pass. New scenarios cover transaction validation, doub
 
 ## Remaining workstreams
 
-09. Council elections, resolutions and diplomatic victory.
+09. Council elections, resolutions and diplomatic victory are implemented below.
 10. Remaining display integration, faction diplomacy controls and larger map presets.
     Remaining work includes larger presets and the final integrated interaction
     audit. Frozen grey fog, event history, replay pauses, capture, attached escorts,
@@ -529,6 +529,50 @@ campaign in native CraftOS-PC. Native core/normal-session checks and the 76-file
 regression suite pass. This fixes the reproduced paths; it does not establish
 that every possible renderer, modem or emulator stall is eliminated.
 
-## Council checkpoint (in progress)
+## 09: Council of Civilizations
 
-Council host rules, private ballots, limited village delegates, voting AI, temporary trade/embargo/peace/censure effects, diplomatic victory and conversation pledges are implemented. Focused Status/Election/Agenda panels and installer entries are connected. The Council rules regression passes. Compact panel navigation is still being corrected; the full regression and native CraftOS session are not yet complete. This checkpoint is not a release milestone.
+Council sessions open once two civilizations own cities and one knows Currency.
+The initial balance is two delegates per civilization, plus at most one from an
+independent village allied at 60 influence for three consecutive rounds. Delegate
+allocations are frozen for each ballot. City spam and conquest create no extra
+votes. Sessions open every ten speed-scaled rounds and close after three.
+
+Leadership requires a strict majority of all allocated delegates. Diplomatic
+victory requires at least two thirds, another living civilization's support,
+Stock Logistics and a Council Hall. The new hall requires a Trading Hall and
+90 base industry. New campaigns enable this selectable victory; existing saves
+without an explicit diplomatic-victory setting retain their earlier conditions.
+
+Each member may add one opening-round proposal. Trade facilitation reduces
+material purchases from 20 to 15 gold and adds one commerce income. Embargoes
+block material purchases, new trade/commerce agreements and pending acceptances,
+while suspending existing commerce income. Peace initiatives end the named war
+at the closing boundary and prevent renewed attacks/declarations/interventions;
+forced peace does not punish joint-war partners. Censure subtracts 20 public
+reputation. Resolutions need a strict majority and expire after ten speed-scaled
+rounds. Existing agreements resume after an embargo expires.
+
+Voting uses the shared host command path, including campaign/round/session
+validation. Ready or inactive members can vote without gaining unit actions.
+Ballots remain private until closing, then publish counts and AI explanations.
+AI uses its own observed relationships, economic interests, war aims and victory
+risks. The merchant's diplomatic goal now researches commerce and builds a hall.
+Conversation requests create a voluntary ballot pledge, never an automatic vote:
+honoring it earns ten trust; breaking it costs 25 trust and 15 grievances for
+30 rounds. Obsolete offers withdraw when the ballot becomes unavailable.
+
+The top-bar Council opens separate Status, Election and Agenda panels, resolution
+ballot/details, a staged proposal dialog and Recent Results. Controls are paged
+at compact sizes; hotseat/campaign changes clear drafts. Council membership does
+not discover another civilization or reveal city locations and private plans.
+
+Validation: Council rules cover 2/3/4-civilization voting, computer ID zero and
+negative IDs, fixed allocations, elimination, disabled/legacy victories, privacy,
+pledges, actual market/commerce changes, pending-trade validation, Council peace,
+joint-war obligations and reversible reputation. Six text/graphics layout tests
+exercise actual ballot/proposal clicks, Codex navigation and hotseat reset.
+Installed CraftOS-PC passes both Council tests and full local/host-mode sessions
+with Council ballots, conversations, research, settings, history, queued routes
+and save reload; the local session also tests Surprise War responses. Native
+sessions use isolated profiles and the text renderer. Physical monitors and live
+modem traffic remain release validation work.

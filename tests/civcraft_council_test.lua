@@ -2,6 +2,7 @@ local native = dofile
 dofile = function(path)
 	return native(path:gsub("^/games/civcraft/", "games/civcraft/"))
 end
+dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local Council = dofile("/games/civcraft/council.lua")
 local Rules = dofile("/games/civcraft/council_rules.lua")
 local AI = dofile("/games/civcraft/council_ai.lua")
@@ -235,6 +236,109 @@ local stale = state.diplomacy.offers[#state.diplomacy.offers]
 close(state)
 Offers.advance(state)
 assert(stale.status == "withdrawn", "Unanswered Council requests expire with their ballot")
+-- Resolutions revalidate pending transactions and preserve suspended agreements.
+state = fixture()
+assert(propose(state, -1, 0, "commerce", { duration = 20 }))
+local commerce = state.diplomacy.offers[#state.diplomacy.offers]
+assert(Offers.respond(state, 0, { offerID = commerce.id, response = "accept" }, Systems, Diplomacy))
+assert(propose(state, 1, 0, "trade", { gold = 10 }))
+local pending = state.diplomacy.offers[#state.diplomacy.offers]
+local baseIncome = Systems.treasury(state.players[2], state).income
+state.council.effects = { { kind = "trade", startsRound = 1, endsRound = 12 } }
+assert(Systems.treasury(state.players[2], state).income == baseIncome + 1)
+state.council.effects[2] = { kind = "embargo", target = 0, startsRound = 1, endsRound = 5 }
+assert(Systems.treasury(state.players[2], state).income == baseIncome - 2)
+local gold = state.players[2].gold
+assert(
+	not Offers.respond(state, 0, { offerID = pending.id, response = "accept" }, Systems, Diplomacy)
+)
+assert(state.players[2].gold == gold and pending.status == "pending")
+state.round = 5
+Council.advance(state)
+assert(Systems.treasury(state.players[2], state).income == baseIncome + 1)
+assert(Offers.treaty(state, -1, 0, "commerce"), "Embargo expiry preserves the agreement")
+state = fixture()
+state.diplomacy.wars[1] = { a = -1, b = 0, active = true, declaredRound = 1, activatesRound = 1 }
+state.diplomacy.treaties[1] = {
+	id = "joint",
+	kind = "jointWar",
+	a = -1,
+	b = 1,
+	status = "active",
+	startsRound = 1,
+	endsRound = 20,
+	terms = { enemy = 0 },
+}
+assert(Council.propose(state, 1, { session = 1, kind = "peace", target = -1, other = 0 }))
+assert(resolution(state, -1, 2, true) and resolution(state, 1, 2, true))
+close(state)
+Diplomacy.boundary(state)
+assert(not Diplomacy.war(state, -1, 0) and state.diplomacy.treaties[1].status == "completed")
+assert(not Diplomacy.declare(state, -1, 0, "surprise"))
+assert(not Diplomacy.join(state, -1, 0, { defender = 1 }))
+state.round = state.council.effects[1].endsRound
+Council.advance(state)
+assert(Diplomacy.declare(state, -1, 0, "normal"), "Council peace expires")
+state = fixture()
+assert(Rules.pledge(state, -1, 0, 1))
+assert(vote(state, -1, false))
+close(state)
+local Memory = dofile("/games/civcraft/diplomatic_memory.lua")
+local relation = Memory.relation(state, 0, -1)
+assert(relation.trust == -25 and relation.grievances == 15)
+state.round = state.round + 30
+Memory.advance(state)
+assert(relation.trust == 0 and relation.grievances == 0)
+state = fixture()
+assert(Rules.pledge(state, -1, 0, 1))
+assert(vote(state, -1, 0))
+close(state)
+assert(Memory.relation(state, 0, -1).trust == 10)
+state = fixture()
+state.council.effects[1] = { kind = "censure", target = 0, startsRound = 1, endsRound = 4 }
+state.diplomacy.reputation[0] = 7
+assert(Diplomacy.public(state, -1).reputation[0] == -13)
+state.round = 4
+assert(Diplomacy.public(state, -1).reputation[0] == 7)
+state = fixture()
+state.players[1].aiPlan = { primary = "diplomatic" }
+state.cities[1].buildings.councilhall = nil
+local Production = dofile("/games/civcraft/ai_production.lua")
+local ranked =
+	Production.ranked(World.forPlayer(state, -1), state.players[1], state.cities[1], Systems, false)
+local hall
+for _, project in ipairs(ranked) do
+	if project.id == "councilhall" then
+		hall = project
+	end
+end
+assert(hall and hall.score > 0, "Diplomatic AI can prepare its victory building")
+
+state = fixture()
+Memory.add(state, -1, 0, "lastingCooperation", 180, 0, 30, "Long-term cooperation")
+state.diplomacy.treaties[1] = {
+	id = "ally",
+	kind = "alliance",
+	a = -1,
+	b = 0,
+	status = "active",
+	startsRound = 1,
+	endsRound = 20,
+}
+view = World.forPlayer(state, -1)
+assert(AI.election(view, view.players[1]) == 0, "Deep cooperation can outweigh rival-victory risk")
+state = fixture()
+assert(Rules.pledge(state, -1, 0, 1))
+state.diplomacy.wars[1] = { a = -1, b = 0, active = true, declaredRound = 1 }
+view = World.forPlayer(state, -1)
+assert(AI.election(view, view.players[1]) == -1, "A new war can change the AI's pledge decision")
+state = fixture()
+assert(Council.propose(state, -1, { session = 1, kind = "embargo", target = 0, other = 999 }))
+assert(
+	not Council.propose(state, 1, { session = 1, kind = "embargo", target = 0 }),
+	"Irrelevant fields cannot duplicate a resolution"
+)
+
 print(
 	"CIVCRAFT: Council secrets, frozen delegates, voting validation, AI, pledges and real resolutions passed."
 )

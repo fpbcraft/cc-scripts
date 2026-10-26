@@ -143,6 +143,22 @@ wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/codex/expand-civc
 Create a new campaign in an empty slot to get the full expansion. Do not use
 `host --new` on a network save you want to retain.
 
+## Council of Civilizations
+
+The Council forms after Currency with two living civilizations. Open its top-bar
+button for Status, Election or Agenda. Sessions recur every ten speed-scaled
+rounds; ballots close after three. Each civilization has two delegates, with at
+most one extra from a village allied at 60 influence for three rounds. Votes are
+secret until closing; Recent Results shows public ballots and AI explanations.
+
+A strict majority elects leadership. Diplomatic victory additionally needs two
+thirds of all delegates, another civilization's support, Stock Logistics and a
+Council Hall. It is selectable in new campaigns; older saves retain their victory
+settings. Each member can propose one opening-round resolution. Temporary trade
+facilitation, embargo, peace and censure affect real market, commerce, combat and
+reputation rules. Conversation Requests can ask for a voting pledge; the ballot
+must still be cast in Council. Ready members may vote without gaining actions.
+
 ## Shared gameplay and controls
 
 CIVCRAFT is a turn-based 4X game on a **seeded hexagonal world**. In the lobby,
@@ -164,7 +180,7 @@ Names appear above cities and in city navigation, and remain stable in saves.
   first. Winning melee combat captures the remaining settler, while defeating
   the protector at range leaves its settler unprotected. Captured settlers have
   no movement until a later turn. Use Select Settler / Select Guard in the
-  inspector to order the intended unit. Linked escort movement is still pending.
+  inspector to order the intended unit. Use Attach Escort to link their movement; both units must afford each step.
 - **Zone of control:** Hostile melee land units control adjacent passable land,
   combat ships control adjacent water, and cities control both. Entering control
   stops further movement for the current turn; military units can still attack

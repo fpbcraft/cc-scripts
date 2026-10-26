@@ -273,6 +273,7 @@ local function nextTurn()
 	for _, p in ipairs(state.players) do
 		p.ready = false
 	end
+	Council.advance(state)
 	Diplomacy.boundary(state)
 	Events.prune(state)
 	Combat.round(state, Systems)

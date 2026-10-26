@@ -159,3 +159,15 @@ and copy them into a separate profile before running it. The original serializer
 reproduced a watchdog on the largest copied save; patched load/save/reload cycles
 finished in 34-35 ms. An isolated real-game continue/render/save/reload also passes.
 No production save files are required in the repository.
+
+
+`civcraft_council_test.lua` checks private/frozen ballots, delegate safeguards,
+ID zero, victory prerequisites, AI incentives, voluntary pledges, actual market
+and commerce restrictions, forced peace and expiry. `civcraft_council_ui_test.lua`
+uses actual click coordinates in six text/graphics layouts and resets hotseat
+drafts. Both install the same module cache as the game. The full-session driver
+accepts `--council`: its explicit Currency-era fixture opens a normal session and
+casts an abstention through the top-bar menu and host dispatch. Combine it with
+`--history --routes --conversation --settings --research --campaign` and either
+`--ai --war` or `--host-ai`. Isolated native local and host runs pass. These are
+text-backend runtime checks; graphics layout tests use an instrumented display.

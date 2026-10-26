@@ -8,11 +8,15 @@ local includeWar = false
 local includeHost = false
 local includeConversation = false
 local includeHistory = false
+local includeCouncil, councilVerified = false, false
 local historyVerified = false
 local includeRoutes = false
 local routeRecord
 local routeResumed = false
 for _, argument in ipairs({ ... }) do
+	if argument == "--council" then
+		includeCouncil = true
+	end
 	if argument == "--history" then
 		includeHistory = true
 	end
@@ -156,6 +160,16 @@ end
 
 dofile = function(path)
 	local module = native(path)
+	if includeCouncil and path == "/games/civcraft/council.lua" then
+		local advance = module.advance
+		module.advance = function(state)
+			-- An explicit Currency-era test fixture; all ballots still use normal commands.
+			if state.phase == "game" then
+				state.players[1].techs.currency = true
+			end
+			return advance(state)
+		end
+	end
 	if path == "/games/civcraft/world.lua" and (includeConversation or includeWar) then
 		local generate = module.generate
 		module.generate = function(...)
@@ -197,6 +211,7 @@ dofile = function(path)
 		local campaignStep = 0
 		local warStep, responseStep = 0, 0
 		local historyStep, historySeq = 0, nil
+		local councilStep = 0
 		local conversationStep = 0
 		local routeStep, routeUnit, routeGoal = 0, nil, nil
 		view.draw = function(self, state, observer, options)
@@ -375,6 +390,22 @@ dofile = function(path)
 				}
 				if tap(self, labels[conversationStep + 1]) then
 					conversationStep = conversationStep + 1
+				else
+					tap(self, "NEXT")
+				end
+				return
+			end
+			if includeCouncil and stage == 2 and not options.handoff and councilStep < 6 then
+				local labels = { "COUNCIL", "ELECTION", "ABSTAIN", "AGENDA", "STATUS", "CLOSE" }
+				if councilStep == 3 then
+					assert(
+						state.council.session.ownElection.candidate == false,
+						"Native Council ballot must reach the host"
+					)
+					councilVerified = true
+				end
+				if tap(self, labels[councilStep + 1]) then
+					councilStep = councilStep + 1
 				else
 					tap(self, "NEXT")
 				end
@@ -643,6 +674,14 @@ if includeRoutes then
 	end
 	assert(resumed, "Native queued actor survives the save reload")
 end
+assert(not includeCouncil or councilVerified, "Native Council ballot must complete")
+if includeCouncil then
+	assert(state.council.lastRound == state.round, "Council advances at the real round boundary")
+	assert(
+		state.council.session.election[state.players[1].id].candidate == false,
+		"Council ballot survives saving and reloading"
+	)
+end
 assert(not includeHistory or historyVerified, "Native history refresh must complete")
 local Events = native("/games/civcraft/events.lua")
 assert(Events.forPlayer(state, state.players[1].id).lastSeq > 0)
@@ -665,6 +704,7 @@ output.write(textutils.serialize({
 	conversationFlow = includeConversation,
 	queuedRouteFlow = includeRoutes,
 	eventHistoryFlow = historyVerified,
+	councilFlow = councilVerified,
 	queuedRouteResumed = routeResumed,
 }))
 output.close()

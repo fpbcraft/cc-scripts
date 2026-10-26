@@ -48,7 +48,8 @@ function View.draw(ui, state, player, rect)
 	end
 	local model = ui.councilModel
 	local function mode(tab)
-		model.tab, model.offset, model.detail, model.draft = tab, 0, nil, nil
+		model.tab, model.offset, model.detail, model.draft, model.detailSession =
+			tab, 0, nil, nil, nil
 	end
 	local function command(action, values)
 		values.session = session.id
@@ -72,6 +73,12 @@ function View.draw(ui, state, player, rect)
 			{ selected = model.tab == tab }
 		)
 	end
+	if
+		model.draft
+		and (not session or session.status ~= "voting" or state.round ~= session.opensRound)
+	then
+		model.draft, model.offset = nil, 0
+	end
 	local rows = {}
 	local function text(value)
 		for _, line in ipairs(Panels.wrap(r, value, rect.w - 18)) do
@@ -87,9 +94,21 @@ function View.draw(ui, state, player, rect)
 		and state.round < session.closesRound
 		and Rules.member(session, player.id)
 	if model.detail then
-		local item = model.detail
+		local ballotSession = session
+		if model.detailSession then
+			for _, archived in ipairs(public.history or {}) do
+				if archived.id == model.detailSession then
+					ballotSession = archived
+				end
+			end
+		end
+		local item = ballotSession and ballotSession.agenda[model.detail] or nil
+		if not item then
+			model.detail = nil
+			return
+		end
 		button("BACK", function()
-			model.detail, model.offset = nil, 0
+			model.detail, model.detailSession, model.offset = nil, nil, 0
 		end)
 		text(title(state, player.id, item))
 		text(descriptions[item.kind])
@@ -112,7 +131,7 @@ function View.draw(ui, state, player, rect)
 				command("councilVote", { resolution = item.id, support = false })
 			end, item.ownVote and item.ownVote.support == false)
 		end
-		for _, member in ipairs(session and session.members or {}) do
+		for _, member in ipairs(ballotSession and ballotSession.members or {}) do
 			local ballot = item.votes and item.votes[member.id]
 			if ballot then
 				text(name(state, player.id, member.id) .. (ballot.support and ": YES" or ": NO"))
@@ -226,6 +245,9 @@ function View.draw(ui, state, player, rect)
 				end
 			end
 			for _, item in ipairs(result.agenda) do
+				button("RESULT " .. result.id .. ": " .. Council.names[item.kind], function()
+					model.detail, model.detailSession, model.offset = item.id, result.id, 0
+				end)
 				text(
 					title(state, player.id, item) .. (item.result.passed and " PASSED" or " FAILED")
 				)
@@ -290,7 +312,7 @@ function View.draw(ui, state, player, rect)
 		end
 		for _, item in ipairs(session.agenda) do
 			button(title(state, player.id, item), function()
-				model.detail, model.offset = item, 0
+				model.detail, model.offset = item.id, 0
 			end)
 			text(
 				item.ownVote and (item.ownVote.support and "YOUR VOTE: YES" or "YOUR VOTE: NO")

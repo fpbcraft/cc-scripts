@@ -310,29 +310,34 @@ function Council.propose(state, actor, request)
 	if not kinds[request.kind] then
 		return false, "Choose a Council resolution"
 	end
+	local target = request.kind ~= "trade" and request.target or nil
+	local other = request.kind == "peace" and request.other or nil
+	if type(target) == "number" and type(other) == "number" and other < target then
+		target, other = other, target
+	end
 	for _, resolution in ipairs(session.agenda) do
 		if resolution.sponsor == actor then
 			return false, "One proposal per civilization per session"
 		end
 		if
 			resolution.kind == request.kind
-			and resolution.target == request.target
-			and resolution.other == request.other
+			and resolution.target == target
+			and resolution.other == other
 		then
 			return false, "That proposal is already on the agenda"
 		end
 	end
 	if request.kind ~= "trade" then
-		if not Rules.member(session, request.target) or not Rules.alive(state, request.target) then
+		if not Rules.member(session, target) or not Rules.alive(state, target) then
 			return false, "Choose a Council member"
 		end
 		if
 			request.kind == "peace"
 			and (
-				request.other == request.target
-				or not Rules.member(session, request.other)
-				or not Rules.alive(state, request.other)
-				or not war(state, request.target, request.other)
+				other == target
+				or not Rules.member(session, other)
+				or not Rules.alive(state, other)
+				or not war(state, target, other)
 			)
 		then
 			return false, "Choose two civilizations in an announced or active war"
@@ -341,8 +346,8 @@ function Council.propose(state, actor, request)
 	session.agenda[#session.agenda + 1] = {
 		id = #session.agenda + 1,
 		kind = request.kind,
-		target = request.kind ~= "trade" and request.target or nil,
-		other = request.kind == "peace" and request.other or nil,
+		target = request.kind ~= "trade" and target or nil,
+		other = request.kind == "peace" and other or nil,
 		sponsor = actor,
 		votes = {},
 	}
