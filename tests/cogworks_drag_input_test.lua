@@ -180,8 +180,43 @@ local steps = {
     native.pw, native.ph = 800, 450
     return "term_resize"
   end,
+  -- Selected-cell remove/rotate hit targets must never hijack a right click.
   function()
     assert(not app.drag and not E.get(game, 4, 4))
+    assert(E.get(game, 2, 2).kind == "G")
+    app:act("inspect", 2, 2)
+    renderer:draw(app:model())
+    for _, target in ipairs(renderer.targets) do
+      if target.action == "remove" and target.arg == 2 and target.arg2 == 2 then
+        local px = (target.x + target.w / 2) * renderer.scale
+        local py = (target.y + target.h / 2) * renderer.scale
+        assert(renderer:hit(px, py) == "remove", "Remove overlay is reachable")
+        app.testRemoveX, app.testRemoveY = px, py
+        return "mouse_click", 2, px, py
+      end
+    end
+    error("Missing selected-cell remove overlay")
+  end,
+  function()
+    assert(E.get(game, 2, 2), "Right press on remove overlay must not delete")
+    return "mouse_up", 2, app.testRemoveX, app.testRemoveY
+  end,
+  function()
+    assert(E.get(game, 2, 2), "Right release on remove overlay must not delete")
+    app.selected = "erase"
+    return event("mouse_click", 2, 2, 2)
+  end,
+  function()
+    assert(E.get(game, 2, 2), "Right click with erase selected must not delete")
+    return event("mouse_up", 2, 2, 2)
+  end,
+  function()
+    assert(E.get(game, 2, 2), "Right release with erase selected must not delete")
+    return event("mouse_click", 1, 2, 2)
+  end,
+  function()
+    assert(not E.get(game, 2, 2), "Left click should still delete with erase selected")
+    assert(E.get(game, 3, 3), "Unrelated part was preserved")
     return "terminate"
   end,
 }
