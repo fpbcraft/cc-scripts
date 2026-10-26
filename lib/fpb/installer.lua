@@ -215,7 +215,7 @@ function I.install(id, ref, args)
         new[#new + 1] = path
       end
     end
-    if id == "railbreak" or id == "ironspire" then
+    if id == "railbreak" or id == "ironspire" or id == "wormfront" then
       local loader = assert(loadfile(spec.root .. "/_lib/fpb/loader.lua"))()
       local api = loader.run(spec.root, spec.entry, _ENV, "--test-api")
       assert(type(api) == "table" and api.UI, "Installed API health check failed")
