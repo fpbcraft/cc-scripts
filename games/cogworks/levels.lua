@@ -977,14 +977,32 @@ end
 -- Stage 64 is deliberately a substantial open-ended main objective, not a
 -- mandatory full-inventory/exact-count checklist.
 local noBonuses = {
-  [1] = true, [2] = true, [9] = true, [17] = true,
-  [25] = true, [33] = true, [41] = true, [64] = true,
+  [1] = true,
+  [2] = true,
+  [9] = true,
+  [17] = true,
+  [25] = true,
+  [33] = true,
+  [41] = true,
+  [64] = true,
 }
 local singleBonus = {
-  [3] = true, [4] = true, [5] = true, [10] = true,
-  [12] = true, [18] = true, [20] = true, [26] = true,
-  [28] = true, [34] = true, [35] = true, [42] = true,
-  [44] = true, [49] = true, [50] = true, [57] = true,
+  [3] = true,
+  [4] = true,
+  [5] = true,
+  [10] = true,
+  [12] = true,
+  [18] = true,
+  [20] = true,
+  [26] = true,
+  [28] = true,
+  [34] = true,
+  [35] = true,
+  [42] = true,
+  [44] = true,
+  [49] = true,
+  [50] = true,
+  [57] = true,
 }
 for number, stage in ipairs(authored) do
   if noBonuses[number] then
