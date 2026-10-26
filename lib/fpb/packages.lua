@@ -280,11 +280,11 @@ P.apps = {
     genre = "DECKBUILDER",
   },
   {
-    version = "0.1.0",
+    version = "0.3.0",
     id = "wormfront",
     name = "WORMFRONT",
     subtitle = "TACTICAL ARTILLERY",
-    description = "Destructible terrain and 2-4 player hotseat or rednet battles.",
+    description = "Timed artillery with rope physics, ten weapons, crates and remote matches.",
     icon = "W",
     genre = "MULTIPLAYER",
   },
