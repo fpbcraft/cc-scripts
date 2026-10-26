@@ -30,18 +30,36 @@ local function boardAction(button, selected, touch)
   end
   return touch and "inspect" or "cell"
 end
+-- CraftOS-PC mobile synthesizes primary mouse clicks for finger taps.
+-- Detect its mobile API so terminal taps use monitor-like selection rather
+-- than the desktop left-click-to-delete shortcut.
+local function terminalTouchMode(computerMode, override, mobileApi)
+  return computerMode and (override == true or (override == nil and type(mobileApi) == "table"))
+end
 local args = { ... }
 if args[1] == "--test-api" then
-  return { app = App, engine = E, renderer = Renderer, boardAction = boardAction, pointer = Pointer }
+  return {
+    app = App,
+    engine = E,
+    renderer = Renderer,
+    boardAction = boardAction,
+    pointer = Pointer,
+    terminalTouchMode = terminalTouchMode,
+  }
 end
 local dev = false
 local debugInput = false
+local touchOverride = nil
 local preferredMonitor = nil
 for _, arg in ipairs(args) do
   if arg == "--dev" then
     dev = true
   elseif arg == "--input-debug" then
     debugInput = true
+  elseif arg == "--touch" then
+    touchOverride = true
+  elseif arg == "--mouse" then
+    touchOverride = false
   elseif arg:sub(1, 2) == "--" then
     error("Unknown option: " .. arg)
   elseif not preferredMonitor then
@@ -115,13 +133,14 @@ local function start()
   local mode
   monitor, mode = Display.select(monitor, native, require("games.cogworks.terminal_view"), 70, 40)
   local computerMode = Display.isComputer(mode)
+  local touchComputer = terminalTouchMode(computerMode, touchOverride, rawget(_G, "mobile"))
   local inputLog = debugInput and fs.open("/games/cogworks/input-debug.log", "w") or nil
   local function trace(message)
     if inputLog then
       inputLog.write(tostring(message) .. "\n")
     end
   end
-  trace("COGWORKS MONITOR=" .. tostring(name) .. " MODE=" .. tostring(mode))
+  trace("COGWORKS MONITOR=" .. tostring(name) .. " MODE=" .. tostring(mode) .. " TOUCH=" .. tostring(touchComputer))
   local renderer, app
   local ok, reason = xpcall(function()
     renderer = Renderer.new(monitor)
@@ -186,12 +205,15 @@ local function start()
       if pointer.origin ~= "inventory" then
         -- Every mouse_click/mouse_up is button-aware, even on a monitor.
         -- Only the monitor_touch event uses touch-style inspection.
-        return act(boardAction(pointer.button, app.selected, false), pointer.fromX, pointer.fromY)
+        local action = pointer.touch and boardAction(nil, app.selected, true)
+          or boardAction(pointer.button, app.selected, false)
+        return act(action, pointer.fromX, pointer.fromY)
       end
       redraw()
       return true
     end
     local function pressPointer(button, mx, my)
+      local touch = touchComputer and button == 1
       if drag and drag.origin == "paint" and not drag.moved then
         if not act("cell", drag.fromX, drag.fromY) then
           return false
@@ -210,14 +232,14 @@ local function start()
       if gameScene and app.moving and action == "cell" then
         return act("moveTo", x, y)
       end
-      if gameScene and action == "cell" and button == 1 then
+      if gameScene and action == "cell" and button == 1 and not touch then
         return act("remove", x, y)
       end
       if gameScene and (action == "cell" or action == "tool") then
         if action == "tool" and not act(action, x, y) then
           return false
         end
-        drag = Pointer.begin(app.game, renderer, button, action, x, y, mx, my, app.selected)
+        drag = Pointer.begin(app.game, renderer, button, action, x, y, mx, my, app.selected, touch)
         if drag then
           app.drag = drag
           if drag.origin ~= "inventory" then
@@ -230,7 +252,7 @@ local function start()
         end
       end
       if action == "cell" then
-        action = boardAction(button, app.selected, false)
+        action = touch and boardAction(nil, app.selected, true) or boardAction(button, app.selected, false)
       end
       return act(action, x, y)
     end
@@ -285,6 +307,10 @@ local function start()
         if not act(action, x, y) then
           break
         end
+      elseif event == "_CCPC_finger_touch" and computerMode and touchOverride == nil then
+        -- Some CraftOS-PC mobile versions expose finger events but not the
+        -- mobile API. The paired mouse events still perform the actual action.
+        touchComputer = true
       elseif event == "monitor_left_click" and a == name then
         local action, x, y = renderer:hitNormalized(b, c)
         app.hasLeftInput = true
