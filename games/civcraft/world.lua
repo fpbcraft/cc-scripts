@@ -13,14 +13,11 @@ local Villages = dofile("/games/civcraft/villages.lua")
 local Council = dofile("/games/civcraft/council.lua")
 local W = {}
 W.sizes = {
-	compact = { 18, 12 },
-	standard = { 28, 18 },
-	large = { 40, 26 },
-	huge = { 48, 32 },
-	vast = {
-		64,
-		40,
-	},
+	compact = { 24, 16 },
+	standard = { 40, 26 },
+	large = { 56, 36 },
+	huge = { 72, 46 },
+	vast = { 96, 60 },
 }
 W.sizeOrder = { "compact", "standard", "large", "huge", "vast" }
 W.types = { "continents", "archipelago", "pangaea", "highlands" }

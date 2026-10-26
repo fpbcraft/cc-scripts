@@ -16,7 +16,8 @@ in the design draft. Keep this list alongside the main roadmap until verified.
   Limit the bottom bar to the inspector width and give the map the freed height.
 - [x] Expand technology descriptions and add Codex links for unlocked buildings and
   units. Keep the connected research tree on small screens.
-- Increase map preset dimensions further, preserving existing saved worlds.
+- [x] Increase map preset dimensions further, preserving existing saved worlds.
+  Compact 24x16, Standard 40x26, Large 56x36, Huge 72x46 and Vast 96x60.
 - [x] Add Civilization-style conversations with AI factions.
 - [x] Require discovery of another civilization before conversations or proactive
   diplomacy, enforced by the host as well as the faction UI. Persist first contact

@@ -171,3 +171,12 @@ casts an abstention through the top-bar menu and host dispatch. Combine it with
 `--history --routes --conversation --settings --research --campaign` and either
 `--ai --war` or `--host-ai`. Isolated native local and host runs pass. These are
 text-backend runtime checks; graphics layout tests use an instrumented display.
+
+
+`civcraft_craftos_world_stress.lua` is for a dedicated temporary profile: it
+overwrites slot 1 with generated benchmark data. It generates every size/type
+pair, executes three early rounds for four AI actors on the 96×60 Vast map,
+reveals observers and saves/reloads. `/civcraft-world-stress.txt` records per-map
+and per-actor timings, saved bytes and cooperative checkpoints/yields. The run
+passes on installed CraftOS-PC 2.8.3. It measures early simulation and persistence;
+it does not establish late-game physical-monitor or network performance.

@@ -152,9 +152,9 @@ All 65 regression scripts pass. New scenarios cover transaction validation, doub
 ## Remaining workstreams
 
 09. Council elections, resolutions and diplomatic victory are implemented below.
-10. Remaining display integration, faction diplomacy controls and larger map presets.
-    Remaining work includes larger presets and the final integrated interaction
-    audit. Frozen grey fog, event history, replay pauses, capture, attached escorts,
+10. Final display/diplomacy interaction audit.
+    Larger presets are implemented below; the final integrated interaction
+    audit remains. Frozen grey fog, event history, replay pauses, capture, attached escorts,
     queued movement and sharp zoom labels are implemented below.
 11. AI difficulty variants after the Prince baseline.
 12. Save/integration/fuzz/performance/network validation and release metadata.
@@ -576,3 +576,26 @@ with Council ballots, conversations, research, settings, history, queued routes
 and save reload; the local session also tests Surprise War responses. Native
 sessions use isolated profiles and the text renderer. Physical monitors and live
 modem traffic remain release validation work.
+
+## Larger world presets
+
+New campaigns now use Compact 24×16, Standard 40×26, Large 56×36, Huge 72×46
+and Vast 96×60. All five presets increase; the largest has 5,760 hexes. Existing
+saves retain their stored dimensions, terrain, deposits, geography and seed even
+when their preset name matches an updated size. The seeded generation algorithm
+remains version 2; only new-campaign dimensions change.
+
+The 600-world audit passes all sizes, four map types and 2–4 civilizations. Its
+minimum open traversable land is 55%, coherent neighboring biomes average 76%,
+all worlds have at least two eligible wonders, and starts retain 18 connected
+usable nearby tiles. Migration assertions explicitly retain a 28×18 version 2
+world labeled Standard.
+
+The isolated CraftOS world stress driver generates all twenty size/type pairs,
+executes three early rounds for four AI actors on Vast, reveals observers and
+saves/reloads the resulting campaign. On this machine, Vast generation takes
+roughly 100 ms, each early actor takes under 100 ms and a roughly 600 KB campaign
+saves/reloads in under 50 ms. The driver records checkpoints and actual yields.
+These measurements describe early-game text-backend runtime, not a late-game
+physical-monitor or live network benchmark. The native full-session driver also
+passes at the larger Standard dimensions.

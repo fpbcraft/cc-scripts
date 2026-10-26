@@ -10,6 +10,40 @@ local W = assert(loadfile("games/civcraft/world.lua"))()
 local H = assert(loadfile("games/civcraft/hex.lua"))()
 local S = assert(loadfile("games/civcraft/systems.lua"))()
 dofile = oldDofile
+local expectedSizes = {
+	compact = { 24, 16 },
+	standard = { 40, 26 },
+	large = { 56, 36 },
+	huge = { 72, 46 },
+	vast = { 96, 60 },
+}
+for size, dimensions in pairs(expectedSizes) do
+	assert(W.sizes[size][1] == dimensions[1] and W.sizes[size][2] == dimensions[2])
+end
+local existing = {
+	world = {
+		width = 28,
+		height = 18,
+		size = "standard",
+		generationVersion = 2,
+		tiles = { ["28:18"] = "forest" },
+		geography = { ["28:18"] = { biome = "forest", elevation = "flat", feature = "woods" } },
+		resources = { ["28:18"] = "iron" },
+		seed = 12345,
+	},
+	cities = {},
+	units = {},
+	players = {},
+}
+local savedTiles, savedGeography = existing.world.tiles, existing.world.geography
+W.migrate(existing)
+assert(existing.world.width == 28 and existing.world.height == 18 and existing.world.seed == 12345)
+assert(
+	existing.world.tiles == savedTiles
+		and existing.world.geography == savedGeography
+		and existing.world.resources["28:18"] == "iron",
+	"Larger presets must never resize or regenerate saved worlds"
+)
 local a = W.generate(12345, "standard", 3)
 local b = W.generate(12345, "standard", 3)
 local c = W.generate(12346, "standard", 3)
@@ -22,7 +56,7 @@ for k, v in pairs(islands.tiles) do
 	end
 end
 assert(differing > 30, "Map presets produce distinct geography")
-assert(a.width == 28 and a.height == 18)
+assert(a.width == 40 and a.height == 26)
 for y = 1, a.height do
 	for x = 1, a.width do
 		assert(a.tiles[W.key(x, y)] == b.tiles[W.key(x, y)])

@@ -162,7 +162,8 @@ must still be cast in Council. Ready members may vote without gaining actions.
 ## Shared gameplay and controls
 
 CIVCRAFT is a turn-based 4X game on a **seeded hexagonal world**. In the lobby,
-choose a map size (**Compact 18×12**, **Standard 28×18**, or **Large 40×26**),
+choose a map size (**Compact 24×16**, **Standard 40×26**, **Large 56×36**,
+**Huge 72×46**, or **Vast 96×60**),
 a map type (**Continents**, **Archipelago**, **Pangaea**, or **Highlands**),
 the seed, and each participant's civilization. Two to four human/AI empires
 compete to explore, settle, develop, research, and conquer. Saves preserve the
