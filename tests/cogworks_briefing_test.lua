@@ -23,12 +23,10 @@ for number, stage in ipairs(E.levels) do
     total = total + count
   end
   assert(brief.stockTotal == total, "Briefing inventory matches level")
-  assert(
-    brief.bonus.sealed == (number >= 2)
-      and brief.bonus.fullFactory == (number >= 3)
-      and brief.bonus.precision == (number >= 5),
-    "Bonus gates match simulator"
-  )
+  assert(#brief.bonus == #stage.bonuses, "Brief shows precisely the authored optional objectives")
+  for slot, entry in ipairs(brief.bonus) do
+    assert(entry.id == "extra" .. slot and entry.name and entry.type, "Stable named objective " .. slot)
+  end
   local stockKinds = 0
   for _, kind in ipairs(E.order) do
     if (stage.stock[kind] or 0) > 0 then
@@ -37,5 +35,5 @@ for number, stage in ipairs(E.levels) do
   end
   assert(stockKinds == #brief.stock, "Only real parts included in brief")
 end
-assert(goals >= #E.levels and #E.levels == 16, "All sixteen new mission briefs ready")
+assert(goals >= #E.levels and #E.levels == 64, "All eight campaign chapters have eight briefs each")
 print("COGWORKS: " .. #E.levels .. " revised mission briefs and " .. goals .. " targets passed.")

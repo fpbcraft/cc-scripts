@@ -1,11 +1,17 @@
 # COGWORKS: Kinetic Lab
 
+> **Campaign redesign:** [Discovery-Driven 64-Level Campaign Design](CAMPAIGN_DESIGN.md)
+> specifies the intended puzzle insights and variations. This branch now contains
+> a **playable first implementation**: 64 distinct solver-verified layouts,
+> including 34 bespoke circuits and 30 authored variations of proven kinetic
+> constructions. Further manual playtesting and refining the remixes against
+> their design briefs remains necessary.
+
 A touchscreen-first construction puzzle for CC:Tweaked, based on the rotational
 transmission mechanics in the Minecraft [Create mod](https://github.com/Creators-of-Create/Create/wiki).
 
 The previous 30-stage campaign and its fictitious elbow, splitter, inline-speed
-drive and inline-reversing gear have been **removed entirely**. The new
-**16-stage campaign** introduces the actual principles of shaft axes, side-meshing
+drive and inline-reversing gear have been **removed entirely**. The **64-stage, eight-chapter campaign** introduces the actual principles of shaft axes, side-meshing
 cogs, bevel gearboxes, encased chain drives, mechanical belts and redstone
 devices. COGWORKS is a standalone game; it does **not** control Minecraft machines.
 
@@ -22,14 +28,54 @@ To try this branch before merging, run the branch's installer and pass the branc
 name as the positional ref:
 
 ```lua
-wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/feat/cogworks-v03-craftos/installers/cogworks.lua feat/cogworks-create-kinetics-sandbox
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/feat/cogworks-64-campaign-editor/installers/cogworks.lua feat/cogworks-64-campaign-editor
 /games/cogworks/main.lua --dev
 ```
 
-The installer preserves saves and settings. The new campaign uses version-4
-save data and resets old puzzle sessions/unlocks, because the old solutions are
-mechanically incompatible. Previous save files remain on disk; they are not
-deleted. Display options are preserved.
+The installer preserves saves and settings. The handcrafted campaign uses **version-6** save data and starts a new
+campaign when loading incompatible generated-layout saves. A permanent
+`slot-N.dat.campaign-v5` backup is retained before an older slot is
+overwritten. Display settings are preserved.
+
+## High-resolution CraftOS and iPad interface
+
+Cogworks uses CivCraft's graphics density of **three logical pixels wide
+by four high per terminal character** when CC:Graphics is available.
+On larger screens it now renders an actual full-resolution interface,
+rather than magnifying a fixed 200×120 screen or showing that design in
+a small central window. This includes a broad mission briefing, dedicated
+mechanical board, two-column component palette, clear optional goals,
+larger controls, branching maps, save slots, menus, tutorial overlays,
+and custom pack browsers. Visual hit targets and input coordinates use
+the same graphics transform, including after a resize.
+
+The gameplay layout now sizes the board as a **square, height-constrained
+workspace** instead of a fixed percentage of window width. It removes
+the redundant board heading, oversized margins and persistent rotation
+legend, giving the board nearly all available vertical space. Any
+remaining horizontal room goes to the component sidebar; the only footer
+is a compact contextual message.
+
+High-resolution parts are redrawn as Create-inspired mechanical sprites:
+wood-and-brass small and large cogwheels with distinct teeth and spokes,
+andesite shafts and gearboxes, pulley wheels and traveling belt/chain
+links, enclosed clutch and gearshift controls, metal-framed motors and
+presses, and redstone signal paths. Clock-based animation phases make
+rotation direction and speed visible independently of frame rate.
+Native CraftOS graphics refresh at approximately 12 frames per second,
+while attached monitors run at a lower rate to reduce peripheral traffic.
+On smaller displays the existing simplified glyphs remain supported.
+
+A compact 200×120 design is retained for smaller graphics monitors and
+the existing text-mode fallback remains supported. On attached monitors,
+Cogworks requests text scale 0.5 before initializing its graphics renderer
+and restores the original scale on exit; an emulator's built-in terminal
+may not offer the monitor text-scale API.
+
+For CraftOS-PC on iPad, the mouse input handler also accepts click-only
+taps when `mouse_up` is absent, while retaining drag movement when the
+appropriate events are available. Use `--input-debug` to capture the raw
+pointer events and resolved board actions if touch input remains unusual.
 
 ## Mechanical components
 
@@ -65,16 +111,45 @@ requested spin and speed.
 
 ### Campaign
 
-Sixteen new levels, from 5×5 to 10×10, progress from straight powerlines and gearbox reversals
-through perpendicular cog teeth, chain drives, clutches/gearshifts, 2:1 gearing,
-belts and branching networks. Each level starts with a mission briefing;
-a one-time Ponder explains newly introduced parts. Complete all required
-presses at their requested relative speed and rotation without jamming
-the mechanism. Optional bonus challenges do not block advancement.
+Sixty-four levels occupy **eight interconnected factory districts**. Touch a
+district on the overworld, then follow dotted tracks between puzzle nodes.
+Completing a puzzle reveals adjacent nodes; different routes let players
+skip a troublesome puzzle and return to it later. **Any three distinct
+clears within a district unlock the next district**. Bonus objectives
+never gate access to required campaign content.
+
+Each district contains a network of six ordinary puzzles, an optional
+expert side path (#7), and an optional finale (#8). The finale can be
+reached via either the main route or the expert detour, and neither extra
+stage is required to leave a district. Clear status and optional rewards
+appear on each map node. Puzzles have **zero, one or two optional bonuses**
+depending on the design; bonuses are awarded independently on separate
+replays if desired, and can require different constructions.
+
+Each level starts with a mission briefing and may introduce mechanics
+through a one-time Ponder tutorial. Main objectives are always to power
+the required presses at their target spin and relative speed without a jam.
+Some pilot puzzles intentionally offer more than the exact parts in the
+author's reference solution, encouraging alternate engineering approaches.
 
 Progress and awards are stored in three independent save slots. Each stage
 retains its own construction snapshot, including placed and removed redstone parts. Existing campaign unlocks are
 retained; incompatible old board arrangements reset when the level is opened.
+
+### Campaign reference and validation
+
+Each authored stage has a playable starting state, a separate reference
+construction, an explicit stock inventory, optional immovable fixtures,
+and zero to two typed optional bonuses. `tests/cogworks_campaign_design_test.lua`
+verifies all 64 main reference solutions with the actual kinetic simulator,
+variable bonus counts, immovable fixtures, board diversity, and alternate
+map routes that bypass optional levels. Main references are **not** expected
+to automatically earn bonuses.
+
+The 30 levels derived from earlier proven kinetic layouts are **intentional
+first-pass variations, not yet final playtested puzzles**. Their discovery
+quality and authored twists should be checked during in-game playtesting
+and revised where a familiar solution still works trivially.
 
 ### Development mode
 
@@ -178,6 +253,7 @@ old graphics viewport moving or changing size.
 ## Regression tests
 
 ```sh
+lua5.3 tests/cogworks_campaign_design_test.lua
 lua5.3 tests/cogworks_test.lua
 lua5.3 tests/cogworks_mechanics_test.lua
 lua5.3 tests/cogworks_briefing_test.lua

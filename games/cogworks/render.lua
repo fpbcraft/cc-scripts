@@ -1,7 +1,10 @@
 -- COGWORKS / CC: Graphics pixel renderer with text fallback.
--- Coordinates in the pixel renderer are 128x88 logical units. Touch events
--- from Graphics mode 2 are zero-based PIXELS; vanilla monitor touch is 1-based.
+-- Scenes retain a 200x120 authored layout, but pixels are no longer
+-- magnified just to fill the screen. Like CivCraft, graphics density follows
+-- the terminal dimensions (3x4 logical pixels per text cell).
+-- Graphics pointer coordinates are zero-based; vanilla touch is one-based.
 local E = require("games.cogworks.engine")
+local Campaign = require("games.cogworks.chapters")
 local T = require("games.cogworks.tutorials")
 local R = {}
 R.__index = R
@@ -89,6 +92,19 @@ function R.new(m)
   self:enable()
   return self
 end
+-- Follow CivCraft's 3x4 logical pixels per text cell. Large devices get a
+-- full responsive canvas; small monitors retain the authored 200x120 layout.
+-- A single transform is shared by rendering and hit detection.
+function R:fitGraphics()
+  self.logicalWidth = math.max(200, self.tw * 3)
+  self.logicalHeight = math.max(120, self.th * 4)
+  self.wide = self.logicalWidth >= 260 and self.logicalHeight >= 160
+  self.canvasW = self.wide and self.logicalWidth or 200
+  self.canvasH = self.wide and self.logicalHeight or 120
+  self.scale = math.min(self.pw / self.logicalWidth, self.ph / self.logicalHeight)
+  self.ox = math.floor((self.pw - self.canvasW * self.scale) / 2)
+  self.oy = math.floor((self.ph - self.canvasH * self.scale) / 2)
+end
 function R:enable()
   local m = self.m
   self.tw, self.th = m.getSize()
@@ -100,9 +116,7 @@ function R:enable()
       if good and type(w) == "number" and w >= 200 and h >= 120 then
         self.mode = "graphics"
         self.pw, self.ph = w, h
-        self.scale = math.min(w / 200, h / 120)
-        self.ox = math.floor((w - 200 * self.scale) / 2)
-        self.oy = math.floor((h - 120 * self.scale) / 2)
+        self:fitGraphics()
         if m.setPaletteColor then
           for i, c in pairs(palette) do
             if m.getPaletteColor then
@@ -126,9 +140,8 @@ function R:resize()
     local ok, w, h = pcall(self.m.getSize, 2)
     if ok and type(w) == "number" then
       self.pw, self.ph = w, h
-      self.scale = math.min(w / 200, h / 120)
-      self.ox = math.floor((w - 200 * self.scale) / 2)
-      self.oy = math.floor((h - 120 * self.scale) / 2)
+      self.tw, self.th = self.m.getSize()
+      self:fitGraphics()
       self.previousBuffer = nil
       -- The previous image and letterbox are still in the monitor's pixel
       -- backing surface after a resize. Discard them before the next draw.
@@ -159,7 +172,7 @@ function R:rect(x, y, w, h, color)
   -- peripheral calls. At presentation time only changed horizontal runs are
   -- sent to the attached monitor.
   local x1, y1 = math.max(0, math.floor(x)), math.max(0, math.floor(y))
-  local x2, y2 = math.min(200, math.ceil(x + w)), math.min(120, math.ceil(y + h))
+  local x2, y2 = math.min(self.canvasW, math.ceil(x + w)), math.min(self.canvasH, math.ceil(y + h))
   for py = y1, y2 - 1 do
     local row = self.buffer[py + 1]
     if not row then
@@ -177,11 +190,11 @@ end
 function R:flush()
   local old = self.previousBuffer
   local current = self.buffer
-  local left, top, right, bottom = 200, 120, -1, -1
-  for y = 0, 119 do
+  local left, top, right, bottom = self.canvasW, self.canvasH, -1, -1
+  for y = 0, self.canvasH - 1 do
     local row = current[y + 1] or {}
     local prior = old and old[y + 1] or nil
-    for x = 0, 199 do
+    for x = 0, self.canvasW - 1 do
       if (row[x + 1] or 0) ~= (prior and prior[x + 1] or 0) or not old then
         left = math.min(left, x)
         top = math.min(top, y)
@@ -205,11 +218,11 @@ function R:flush()
   end
   local rows = {}
   for py = y1, y2 - 1 do
-    local sy = math.max(0, math.min(119, math.floor((py - self.oy) / self.scale)))
+    local sy = math.max(0, math.min(self.canvasH - 1, math.floor((py - self.oy) / self.scale)))
     local source = current[sy + 1] or {}
     local bytes = {}
     for px = x1, x2 - 1 do
-      local sx = math.max(0, math.min(199, math.floor((px - self.ox) / self.scale)))
+      local sx = math.max(0, math.min(self.canvasW - 1, math.floor((px - self.ox) / self.scale)))
       bytes[#bytes + 1] = string.char(source[sx + 1] or 0)
     end
     rows[#rows + 1] = table.concat(bytes)
@@ -219,8 +232,8 @@ function R:flush()
     pcall(mon.setFrozen, true)
   end
   if self.needsClear then
-    -- Clear the FULL pixel surface, including bars outside the scaled 200x120
-    -- logical viewport; otherwise old text and white edges survive resizing.
+    -- Clear the full physical pixel surface, including the intentional
+    -- drafting-table margins around the compact 200x120 playfield.
     mon.drawPixels(0, 0, 0, self.pw, self.ph)
     self.needsClear = false
   end
@@ -711,7 +724,11 @@ function R:page(title, subtitle)
 end
 function R:drawGame(m)
   local g, result = m.game, m.result
-  self:page(g.sandbox and "COGWORKS  SANDBOX" or ("COGWORKS  " .. string.format("%02d/%02d", g.number, #E.levels)))
+  self:page(
+    g.editor and "COGWORKS  EDITOR"
+      or (g.custom and "COGWORKS  USER PACK")
+      or (g.sandbox and "COGWORKS  SANDBOX" or ("COGWORKS  " .. string.format("%02d/%02d", g.number, #E.levels)))
+  )
   self:font(77, 5, "MV " .. g.moves, 4)
   -- Quick visible animation control: saves may have animations disabled.
   self:button(
@@ -724,8 +741,15 @@ function R:drawGame(m)
     nil,
     m.settings.animations and 9 or 8
   )
-  self:button(120, 2, 28, 11, g.sandbox and "CLEAR" or "SAVE", g.sandbox and "clearSandbox" or "save")
-  self:button(150, 2, 36, 11, "PAUSE", "pause")
+  self:button(
+    120,
+    2,
+    28,
+    11,
+    g.editor and "SAVE" or (g.sandbox and "CLEAR" or "SAVE"),
+    g.editor and "editorSave" or (g.sandbox and "clearSandbox" or "save")
+  )
+  self:button(150, 2, 36, 11, g.editor and "MENU" or "PAUSE", g.editor and "editorMenu" or "pause")
   self:button(188, 2, 11, 11, "?", "help")
   self:rect(3, 16, 109, 94, 1)
   self:rect(4, 17, 107, 92, 3)
@@ -835,21 +859,33 @@ function R:drawGame(m)
     g.sandbox and "sandboxSize" or nil,
     g.sandbox and (5 + g.width % 6) or nil
   )
-  -- Persistent bonus objectives are visible while building, not buried in
-  -- a modal screen. Labels are deliberately short enough for this pane.
-  self:font(117, 87, g.sandbox and "UNLIMITED PARTS" or "BONUS GOALS", 6)
-  local bonuses = E.challenges(g, result)
-  local awarded = (m.progress.awards and m.progress.awards[g.number]) or {}
-  for i, bonus in ipairs(bonuses) do
-    local y = 93 + (i - 1) * 5
-    local done = awarded[bonus.id] or false
-    local label = bonus.id == "sealed" and "NO IDLE PARTS"
-      or (bonus.id == "master" and "ALL STOCK USED" or (bonus.description:match("%d+") or "?") .. " MOVE PAR")
-    self:rect(117, y, 4, 4, done and 9 or (bonus.earned and 6 or 3))
-    self:fontFit(124, y, label, done and 9 or (bonus.earned and 6 or 5), 70)
-  end
-  if #bonuses == 0 and not g.sandbox then
-    self:font(124, 94, "FROM LEVEL 2", 4)
+  if g.editor then
+    self:font(117, 87, "EDITOR / SELECT A TOOL", 6)
+    self:button(116, 93, 25, 8, "SRC", "editorTool", "S")
+    self:button(143, 93, 25, 8, "GOAL", "editorTool", "M")
+    self:button(170, 93, 25, 8, "WALL", "editorTool", "X")
+    self:button(116, 102, 19, 7, "FIX", "editorFix")
+    self:button(136, 102, 19, 7, "RATE", "editorRate")
+    self:button(156, 102, 19, 7, "DIR", "editorSpin")
+    self:button(176, 102, 19, 7, "TEST", "editorTest")
+  else
+    -- Persistent bonus objectives are visible while building.
+    self:font(
+      117,
+      87,
+      (g.sandbox or g.custom) and "UNLIMITED PARTS"
+        or (#E.levels[g.number].bonuses == 0 and "NO BONUS GOALS" or "BONUS GOALS"),
+      6
+    )
+    local bonuses = E.challenges(g, result)
+    local awarded = (m.progress.awards and m.progress.awards[g.number]) or {}
+    for i, bonus in ipairs(bonuses) do
+      local y = 93 + (i - 1) * 5
+      local done = awarded[bonus.id] or false
+      local label = bonus.name .. (bonus.progress and " " .. bonus.progress or "")
+      self:rect(117, y, 4, 4, done and 9 or (bonus.earned and 6 or 5))
+      self:fontFit(124, y, label, done and 9 or (bonus.earned and 6 or 5), 70)
+    end
   end
   if m.inspected then
     local chosen = E.get(g, m.inspected.x, m.inspected.y)
@@ -889,23 +925,21 @@ function R:drawGame(m)
   local selected = E.parts[m.selected]
   local info = selected and (selected.name .. " - " .. T.descriptions[m.selected])
     or (T.descriptions[m.selected] or "SELECT A PART TO PLACE")
-  -- Permanent, color-and-shape-coded legend. Motion remains readable even
-  -- with animation disabled or an attached low-resolution monitor.
-  self:font(3, 110, "CW", 11)
-  self:font(13, 110, ">", 11)
-  self:font(19, 110, "CCW", 14)
-  self:font(33, 110, "<", 14)
-  self:font(43, 110, "1X", 15)
-  self:font(56, 110, "2X", 11)
-  self:font(69, 110, "0.5", 14)
   local inspected = m.inspected and E.get(g, m.inspected.x, m.inspected.y)
   local light = inspected and result.lights[inspected.id]
   local motion = light and (light.ports[inspected.r] or light.ports[next(light.ports)])
   local statusText = motion
       and (inspected.kind .. " " .. (motion.sign > 0 and "CW " or "CCW ") .. (speedLabel(motion.rate) or "?"))
     or info
-  self:fontFit(89, 110, statusText, 5, 109)
   local status = m.message
+  if g.editor and m.inspected then
+    local tile = E.get(g, m.inspected.x, m.inspected.y)
+    if tile and tile.kind == "M" then
+      status = "GOAL " .. tile.speed .. "X " .. (tile.sign == 1 and "CW" or "CCW") .. " / RATE + DIR TO EDIT"
+    elseif tile then
+      status = tile.kind .. (tile.fixed and " FIXED" or " MOVABLE") .. " / FIX TO TOGGLE"
+    end
+  end
   if status == "" then
     if result.win then
       status = "CLEARED! BONUS TASKS ARE OPTIONAL"
@@ -916,12 +950,12 @@ function R:drawGame(m)
     elseif m.hasLeftInput then
       status = "LEFT: PLACE/TURN   RIGHT: REMOVE"
     else
-      status = "BLUE > CW  /  ORANGE < CCW  /  BADGE = SPEED"
+      status = statusText
     end
   end
-  self:fontFit(3, 115, status, result.win and 9 or 5, result.win and 160 or 195)
+  self:fontFit(3, 112, status, result.win and 9 or 5, result.win and 160 or 195)
   if result.win then
-    self:button(166, 114, 32, 6, "NEXT", "next")
+    self:button(166, 114, 32, 6, "MAP", "map")
   end
 end
 -- All briefings use the authored mission targets and inventory, never
@@ -1006,7 +1040,18 @@ function R:drawBriefing(m)
       self:rect(x, y - 1, 31, 6, 2)
       self:rect(x + 1, y, 6, 5, E.parts[part.kind].color)
       self:font(x + 2, y, part.kind, 0)
-      local labels = { I = "SHFT", G = "COG", O = "LG", Q = "BOX", D = "CHN", V = "BELT", Z = "SHIFT", C = "CLTCH" }
+      local labels = {
+        I = "SHFT",
+        G = "COG",
+        O = "LG",
+        Q = "BOX",
+        D = "CHN",
+        V = "BELT",
+        Z = "SHIFT",
+        C = "CLTCH",
+        R = "DUST",
+        B = "BLOCK",
+      }
       self:fontFit(x + 9, y, labels[part.kind], 15, 16)
       self:font(x + 26, y, tostring(part.count), 6)
     end
@@ -1014,16 +1059,10 @@ function R:drawBriefing(m)
   self:rect(0, 107, 200, 13, 1)
   self:rect(0, 107, 200, 1, 7)
   local extras = {}
-  if b.bonus.sealed then
-    extras[#extras + 1] = "SEAL"
+  for _, objective in ipairs(b.bonus or {}) do
+    extras[#extras + 1] = objective.name
   end
-  if b.bonus.fullFactory then
-    extras[#extras + 1] = "STOCK"
-  end
-  if b.bonus.precision then
-    extras[#extras + 1] = "PAR"
-  end
-  local bonus = #extras > 0 and ("BONUS " .. table.concat(extras, "/")) or "BUILD TO BEGIN"
+  local bonus = #extras > 0 and ("BONUS " .. table.concat(extras, " / ")) or "BUILD TO BEGIN"
   self:fontFit(9, 111, bonus, 11, 121)
   self:rect(131, 112, 4, 4, motion and tick % 8 < 4 and 9 or 6)
   -- Entire screen is a usable tap target, with a prominent START button.
@@ -1077,15 +1116,17 @@ function R:drawTitle(m)
     { "CONTINUE", hasSave and "continue" or nil },
     { "SAVE SLOTS", "slots" },
     { "FREE SANDBOX", "sandbox" },
+    { "LEVEL EDITOR", "editor" },
+    { "CUSTOM PACKS", "packs" },
   }
   if m.dev then
     options[#options + 1] = { "DEV: ALL LEVELS", "devLevels" }
   end
   options[#options + 1] = { "SETTINGS", "settings" }
   options[#options + 1] = { "EXIT", "exit" }
-  local spacing = m.dev and 11 or 13
+  local spacing = 10
   for i, item in ipairs(options) do
-    self:button(54, 43 + (i - 1) * spacing, 92, 10, item[1], item[2])
+    self:button(54, 39 + (i - 1) * spacing, 92, 9, item[1], item[2])
   end
 end
 function R:drawSlots(m)
@@ -1142,28 +1183,163 @@ function R:drawSettings(m)
   self:rect(26, 34, 148, 67, 1)
   self:button(37, 43, 126, 13, "ANIMATION " .. (m.settings.animations and "ON" or "OFF"), "toggleAnimations")
   self:button(37, 61, 126, 13, "OPEN PORTS " .. (m.settings.showPorts and "ON" or "OFF"), "togglePorts")
-  self:font(42, 84, "DISPLAY: COMPACT PIXELS", 11)
-  self:font(42, 92, "TEXT SCALE: 0.5", 4)
+  self:font(42, 84, "DISPLAY: CIVCRAFT DENSITY", 11)
+  self:font(42, 92, "MONITOR SCALE: 0.5 IF SUPPORTED", 4)
   self:button(68, 108, 64, 10, "BACK", "back")
 end
-function R:drawLevels(m)
-  self:page("CHOOSE LEVEL", "UNLOCKED: " .. m.progress.unlocked .. "/" .. #E.levels)
-  for i = 1, #E.levels do
-    local x = 10 + ((i - 1) % 6) * 30
-    local y = 30 + math.floor((i - 1) / 6) * 15
-    local unlocked = m.devSession or i <= m.progress.unlocked
-    self:button(
-      x,
-      y,
-      28,
-      12,
-      string.format("%02d", i),
-      unlocked and "level" or nil,
-      i,
-      m.game and i == m.game.number and 6 or 3
-    )
+-- Compact navigable world / district maps inspired by spatial overworlds.
+-- Dashed tracks are the actual adjacency graph, not decorative ordering.
+local districtCoords = {
+  { 8, 34 },
+  { 56, 38 },
+  { 104, 32 },
+  { 152, 38 },
+  { 152, 79 },
+  { 104, 81 },
+  { 56, 77 },
+  { 8, 81 },
+}
+local districtNames = { "APPRENTICE", "ROUTES", "MOTION", "BELTS", "BRANCHES", "CONTROL", "REPAIRS", "MASTER" }
+local function dottedTrack(renderer, x1, y1, x2, y2, shade)
+  local dx, dy = x2 - x1, y2 - y1
+  local distance = math.sqrt(dx * dx + dy * dy)
+  for t = 0, distance, 6 do
+    local f = distance == 0 and 0 or t / distance
+    renderer:rect(math.floor(x1 + dx * f), math.floor(y1 + dy * f), 2, 2, shade)
   end
-  self:button(70, 108, 60, 10, "BACK", "back")
+end
+function R:drawLevels(m)
+  local cleared = 0
+  for _, chapter in ipairs(m.chapters) do
+    cleared = cleared + Campaign.stats(m.progress, chapter.number).main
+  end
+  self:page("FACTORY OVERWORLD", "EXPLORE THE TRACKS / " .. cleared .. " OF 64 MACHINES RESTORED")
+  -- Draw rails first so touch targets stay above them.
+  for i = 1, 7 do
+    local a, b = districtCoords[i], districtCoords[i + 1]
+    local open = m.devSession or Campaign.unlocked(m.progress, i + 1)
+    dottedTrack(self, a[1] + 20, a[2] + 8, b[1] + 20, b[2] + 8, open and 11 or 3)
+  end
+  for i, chapter in ipairs(m.chapters) do
+    local x, y = districtCoords[i][1], districtCoords[i][2]
+    local active = m.devSession or Campaign.unlocked(m.progress, i)
+    local stats = Campaign.stats(m.progress, i)
+    local color = active and (stats.main >= 3 and 9 or 6) or 3
+    self:rect(x, y, 42, 19, color)
+    self:rect(x + 1, y + 1, 40, 17, active and 1 or 0)
+    self:fontFit(x + 3, y + 2, string.format("%d %s", i, districtNames[i]), active and 15 or 4, 36)
+    local status = active and (stats.main .. "/8 CLEARED") or "SEALED"
+    self:fontFit(x + 3, y + 10, status, active and 11 or 8, 36)
+    if active then
+      self:add(x, y, 42, 19, "chapter", i)
+    end
+  end
+  self:fontFit(6, 105, "THREE CLEARS OPEN THE NEXT DISTRICT / REVISIT ANY TIME", 11, 188)
+  self:button(78, 111, 44, 9, "BACK", "back")
+end
+function R:drawChapter(m)
+  local chapter = m.chapters[m.levelChapter]
+  local status = Campaign.stats(m.progress, m.levelChapter)
+  self:page(
+    "DISTRICT " .. m.levelChapter .. ": " .. chapter.name,
+    status.main .. "/8 CLEARED / " .. status.bonuses .. " BONUS / PATHS OPEN FROM CLEARED NODES"
+  )
+  for _, edge in ipairs(Campaign.paths) do
+    local a, b = Campaign.mapNodes[edge[1]], Campaign.mapNodes[edge[2]]
+    local aLevel, bLevel = chapter.first + edge[1] - 1, chapter.first + edge[2] - 1
+    local available = m.devSession
+      or Campaign.levelUnlocked(m.progress, aLevel) and Campaign.levelUnlocked(m.progress, bLevel)
+    dottedTrack(self, a[1] + 11, a[2] + 7, b[1] + 11, b[2] + 7, available and 11 or 3)
+  end
+  for i, pos in ipairs(Campaign.mapNodes) do
+    local number = chapter.first + i - 1
+    local stage = E.levels[number]
+    local active = Campaign.levelUnlocked(m.progress, number, m.devSession)
+    local finished = (m.progress.best or {})[number] ~= nil
+    local awardCount = 0
+    for _, yes in pairs(m.progress.awards[number] or {}) do
+      if yes then
+        awardCount = awardCount + 1
+      end
+    end
+    local totalBonuses = #stage.bonuses
+    local color = finished and 9 or (active and 6 or 3)
+    local x, y = pos[1], pos[2]
+    self:rect(x, y, 23, 15, color)
+    self:rect(x + 1, y + 1, 21, 13, active and 1 or 0)
+    local label = i == 7 and "EX" or (i == 8 and "FIN" or string.format("%02d", i))
+    self:fontFit(x + 3, y + 2, label, active and 15 or 4, 17)
+    if finished then
+      self:rect(x + 18, y + 2, 3, 3, 9)
+    end
+    if totalBonuses > 0 and active then
+      self:fontFit(x + 3, y + 9, awardCount .. "/" .. totalBonuses, 11, 17)
+    end
+    self:fontFit(math.max(1, x - 4), y + 16, stage.name, active and 11 or 8, 33)
+    if active then
+      self:add(x, y, 23, 16, "level", number)
+    end
+  end
+  self:fontFit(5, 108, "EX = OPTIONAL EXPERT / FIN = OPTIONAL FINALE", 11, 185)
+  self:button(77, 112, 46, 8, "WORLD MAP", "back")
+end
+local function listMenu(self, title, entries, action, page)
+  self:page(title, "TOUCH A ROW TO SELECT / USE PAGE BUTTONS")
+  page = page or 1
+  for slot = 1, 7 do
+    local index = (page - 1) * 7 + slot
+    local item = entries[index]
+    if item then
+      local label = type(item) == "table" and (item.name or item.title) or item
+      self:button(
+        23,
+        21 + slot * 11,
+        154,
+        10,
+        tostring(index) .. " " .. tostring(label),
+        action,
+        type(item) == "table" and index or item
+      )
+    end
+  end
+  if page > 1 then
+    self:button(15, 109, 48, 10, "PREV", "catalogPage", page - 1)
+  end
+  if page * 7 < #entries then
+    self:button(136, 109, 48, 10, "NEXT", "catalogPage", page + 1)
+  end
+  self:button(72, 109, 56, 10, "BACK", "back")
+end
+function R:drawEditorMenu(m)
+  self:page("LEVEL EDITOR", "SOURCE / TARGET / FIXTURES / STOCK")
+  local options = {
+    { "RESUME EDITING", "resume" },
+    { "SAVE .COGLEVEL", "editorSave" },
+    { "LOAD SAVED LEVEL", "editorLoad" },
+    { "COMPILE .COGPACK", "editorCompile" },
+    { "TEST GOAL NETWORK", "editorTest" },
+    { "START NEW LEVEL", "editorNew" },
+    { "TITLE MENU", "title" },
+  }
+  for i, item in ipairs(options) do
+    self:button(34, 23 + i * 11, 132, 10, item[1], item[2])
+  end
+  self:fontFit(12, 108, m.message, 9, 170)
+end
+function R:drawEditorList(m)
+  listMenu(self, "SAVED LEVEL FILES", m.editorFiles or {}, "editorLoadFile", m.catalogPage)
+end
+function R:drawPackList(m)
+  listMenu(self, "COMPILED PACKS", m.packFiles or {}, "pack", m.catalogPage)
+end
+function R:drawPackLevels(m)
+  listMenu(
+    self,
+    m.activePack and m.activePack.title or "USER PACK",
+    m.activePack and m.activePack.levels or {},
+    "packLevel",
+    m.catalogPage
+  )
 end
 function R:drawConfirm(m)
   self:page("CONFIRM ACTION")
@@ -1288,8 +1464,7 @@ function R:drawText(m)
       local bonuses = E.challenges(g, result)
       local awards = m.progress.awards[g.number] or {}
       for i, bonus in ipairs(bonuses) do
-        local name = bonus.id == "sealed" and "NO IDLE PARTS"
-          or (bonus.id == "master" and "USE ALL STOCK" or "PRECISION MOVES")
+        local name = bonus.name
         label(
           2,
           22 + i,
@@ -1386,14 +1561,50 @@ function R:drawText(m)
     end
     btn(4, h - 2, 16, "BACK", "back")
   elseif m.scene == "levels" then
-    for i = 1, #E.levels do
-      local col = (i - 1) % 6
-      local row = math.floor((i - 1) / 6)
-      local x = 2 + col * 7
-      local y = 4 + row * 3
-      btn(x, y, 6, string.format("%02d", i), (m.devSession or i <= m.progress.unlocked) and "level" or nil, i)
+    label(2, 3, "FACTORY OVERWORLD - CLEAR 3 IN EACH AREA TO ADVANCE", colors.lightBlue)
+    for i, chapter in ipairs(m.chapters) do
+      local open = m.devSession or Campaign.unlocked(m.progress, i)
+      local stats = Campaign.stats(m.progress, i)
+      btn(
+        3,
+        4 + i * 3,
+        math.min(w - 6, 45),
+        i .. " " .. chapter.name .. (open and (" " .. stats.main .. "/8") or " LOCKED"),
+        open and "chapter" or nil,
+        i
+      )
     end
     btn(3, h - 2, 16, "BACK", "back")
+  elseif m.scene == "chapter" then
+    local chapter = m.chapters[m.levelChapter]
+    label(2, 3, "CHAPTER " .. m.levelChapter .. " " .. chapter.name, colors.lightBlue)
+    for step = 1, 8 do
+      local i = chapter.first + step - 1
+      local clear = (m.progress.best or {})[i] ~= nil
+      local count = 0
+      for _, yes in pairs(m.progress.awards[i] or {}) do
+        if yes then
+          count = count + 1
+        end
+      end
+      local active = Campaign.levelUnlocked(m.progress, i, m.devSession)
+      btn(
+        3,
+        4 + step * 3,
+        math.min(w - 6, 50),
+        string.format(
+          "%02d %s %s B:%d/%d",
+          i,
+          E.levels[i].name,
+          clear and "CLEAR" or (active and "OPEN" or "LOCK"),
+          count,
+          #E.levels[i].bonuses
+        ),
+        active and "level" or nil,
+        i
+      )
+    end
+    btn(3, h - 2, 16, "CHAPTERS", "back")
   else
     local choices = {}
     if m.scene == "pause" then
@@ -1448,7 +1659,15 @@ function R:draw(m)
     return
   end
   self.buffer = {}
-  if m.scene == "game" then
+  -- Time-derived angles do not depend on how frequently UI events redraw.
+  -- A deterministic override is exposed for sprite regression tests.
+  self.motionNow = self.motionOverride or (m.settings and m.settings.animations ~= false and os.clock() or 0)
+  if self.wide and self:drawResponsive(m) then
+    self:flush()
+    self.frame = self.frame + 1
+    return
+  end
+  if m.scene == "game" or m.scene == "editor" then
     self:drawGame(m)
   elseif m.scene == "briefing" then
     self:drawBriefing(m)
@@ -1464,6 +1683,16 @@ function R:draw(m)
     self:drawSettings(m)
   elseif m.scene == "levels" then
     self:drawLevels(m)
+  elseif m.scene == "chapter" then
+    self:drawChapter(m)
+  elseif m.scene == "editorMenu" then
+    self:drawEditorMenu(m)
+  elseif m.scene == "editorList" then
+    self:drawEditorList(m)
+  elseif m.scene == "packList" then
+    self:drawPackList(m)
+  elseif m.scene == "packLevels" then
+    self:drawPackLevels(m)
   elseif m.scene == "confirm" then
     self:drawConfirm(m)
   else
@@ -1519,4 +1748,6 @@ function R:hit(x, y)
   end
   return nil
 end
+require("games.cogworks.responsive")(R)
+require("games.cogworks.create_art")(R)
 return R

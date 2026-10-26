@@ -2,6 +2,7 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 local E = require("games.cogworks.engine")
 local R = require("games.cogworks.render")
 local B = require("games.cogworks.briefing")
+local Campaign = require("games.cogworks.chapters")
 colors = {
   black = 32768,
   white = 1,
@@ -23,6 +24,10 @@ local model = {
   game = game,
   result = E.evaluate(game),
   progress = progress,
+  chapters = Campaign.chapters,
+  objectives = 0,
+  levelChapter = 8,
+  catalogPage = 1,
   slot = 1,
   selected = "I",
   message = "",
@@ -73,7 +78,11 @@ function gfx.drawPixels(x, y, fill, w, h)
 end
 local r = R.new(gfx)
 assert(r.mode == "graphics" and gfx.mode == 2)
-assert(math.abs(r.scale - 2) < 0.001, "Graphics virtual dimensions")
+assert(
+  math.abs(r.scale - math.min(gfx.width / (70 * 3), gfx.height / (40 * 4))) < 0.001,
+  "Pixel density follows CivCraft 3x4-per-text-cell dimensions"
+)
+assert(r.scale < 2 and r.ox > 0 and r.oy > 0, "Small Cogworks glyphs are no longer enlarged to full screen")
 assert(gfx.palette[0] == 0x07192D and gfx.palette[11] == 0x64D3F2, "Blueprint ink palette installed")
 assert(
   gfx.palette[14] == 0xF4A25E and gfx.palette[11] ~= gfx.palette[14],
@@ -230,9 +239,15 @@ click("levels")
 click("settings")
 click("title")
 model.scene = "levels"
+model.devSession = true
 r:draw(model)
-click("level", 1)
+click("chapter", 1)
+click("chapter", 8)
+click("back")
+model.scene = "chapter"
+r:draw(model)
 click("level", #E.levels)
+click("level", #E.levels - 7)
 click("back")
 model.scene = "settings"
 r:draw(model)
@@ -247,14 +262,14 @@ model.pending = "newGame"
 r:draw(model)
 click("confirm")
 click("cancel")
--- Draw the belt between parallel pulleys on the new stage eleven.
+-- Draw a verified belt span in chapter four's transmission-yard stage.
 local spanCount = 0
 local originalSpan = r.drawSpan
 function r:drawSpan(...)
   spanCount = spanCount + 1
   return originalSpan(self, ...)
 end
-model.game = E.new(11, true)
+model.game = E.new(26, true)
 model.result = E.evaluate(model.game)
 model.scene = "game"
 r:draw(model)
@@ -281,7 +296,7 @@ function r:fontLarge(...)
   return large(self, ...)
 end
 model.scene = "briefing"
-model.briefing = B.forLevel(11)
+model.briefing = B.forLevel(26)
 model.settings.animations = true
 r:draw(model)
 assert(largeTitles == 0, "Briefing title animates into view")
@@ -334,12 +349,44 @@ assert(gfx.batches == beforeAnimated + 1, "Two consecutive animated frames uploa
 model.scene = "title"
 model.dev = true
 r:draw(model)
+click("editor")
+click("packs")
 click("devLevels")
 model.scene = "levels"
 model.game = nil
 model.devSession = true
 r:draw(model)
+click("chapter", 8)
+model.scene = "chapter"
+r:draw(model)
 click("level", #E.levels)
+local editor = E.editor(7, 7)
+model.game, model.result, model.scene = editor, E.evaluate(editor), "editor"
+model.selected, model.inspected = "I", nil
+r:draw(model)
+click("editorTool", "S")
+click("editorTool", "M")
+click("editorTool", "X")
+click("editorFix")
+click("editorRate")
+click("editorSpin")
+click("editorTest")
+click("editorSave")
+click("editorMenu")
+model.scene = "editorMenu"
+r:draw(model)
+click("editorSave")
+click("editorLoad")
+click("editorCompile")
+model.scene, model.editorFiles = "editorList", { "level-001" }
+r:draw(model)
+click("editorLoadFile", "level-001")
+model.scene, model.packFiles = "packList", { "workshop-pack" }
+r:draw(model)
+click("pack", "workshop-pack")
+model.scene, model.activePack = "packLevels", { title = "WORKSHOP PACK", levels = { E.levels[1] } }
+r:draw(model)
+click("packLevel", 1)
 local long = r:wrapBriefingTip("BUILD EVERY CONNECTION; UNUSED PORTS LEAK POWER.")
 assert(#long == 2, "Long instruction must wrap instead of truncating")
 model.settings.animations = true

@@ -143,8 +143,59 @@ function E.sandbox(width, height)
   add(g, { kind = "S", x = 1, y = 3, r = 1 }, true)
   return g
 end
+-- Editor games use the same simulation as campaign play, but permit placing
+-- fixed sources, goals and obstacles. All authored geometry is serialized
+-- as data and validated before being loaded in playable packs.
+function E.editor(width, height)
+  local g = E.sandbox(width or 7, height or width or 7)
+  g.editor = true
+  g.name = "UNNAMED WORKSHOP"
+  add(g, { kind = "M", x = g.width, y = 3, r = 3, speed = 1, sign = 1 }, true)
+  return g
+end
+function E.fromDefinition(data, solved)
+  local g = {
+    number = 0,
+    width = data.width,
+    height = data.height,
+    name = data.name,
+    tip = data.tip,
+    tiles = {},
+    map = {},
+    stock = copy(data.stock or {}),
+    remaining = copy(data.stock or {}),
+    moves = 0,
+    sandbox = false,
+    custom = true,
+  }
+  add(g, data.source, true)
+  for _, goal in ipairs(data.goals or {}) do
+    add(g, goal, true)
+  end
+  for _, fixture in ipairs(data.fixtures or {}) do
+    add(g, fixture, true)
+  end
+  for _, v in ipairs(data.blocks or {}) do
+    add(g, { kind = "X", x = v[1], y = v[2] }, true)
+  end
+  for _, wire in ipairs(data.redstone or {}) do
+    add(g, wire, false)
+  end
+  if solved then
+    for _, piece in ipairs(data.build or {}) do
+      assert(g.remaining[piece.kind] and g.remaining[piece.kind] > 0, "Invalid custom inventory")
+      g.remaining[piece.kind] = g.remaining[piece.kind] - 1
+      add(g, piece, false)
+    end
+  end
+  return g
+end
 function E.place(g, x, y, kind, rotation)
-  if not E.inside(x, y, g) or not E.parts[kind] or E.get(g, x, y) then
+  if
+    not E.inside(x, y, g)
+    or not (E.parts[kind] or g.editor and (kind == "S" or kind == "M" or kind == "X"))
+    or E.get(g, x, y)
+  then
     return false
   end
   if not g.sandbox and (g.remaining[kind] or 0) < 1 then
@@ -153,13 +204,29 @@ function E.place(g, x, y, kind, rotation)
   if not g.sandbox then
     g.remaining[kind] = g.remaining[kind] - 1
   end
-  add(g, { kind = kind, x = x, y = y, r = (rotation or 0) % 4 }, false)
+  if g.editor and kind == "S" then
+    for _, tile in ipairs(g.tiles) do
+      if tile.kind == "S" then
+        E.remove(g, tile.x, tile.y)
+        break
+      end
+    end
+  end
+  local special = g.editor and (kind == "S" or kind == "M" or kind == "X")
+  add(g, {
+    kind = kind,
+    x = x,
+    y = y,
+    r = (rotation or 0) % 4,
+    speed = kind == "M" and (g.goalRate or 1) or nil,
+    sign = kind == "M" and (g.goalSign or 1) or nil,
+  }, special)
   g.moves = g.moves + 1
   return true
 end
 function E.remove(g, x, y)
   local tile = E.get(g, x, y)
-  if not tile or tile.fixed then
+  if not tile or tile.fixed and not g.editor then
     return false
   end
   g.map[tile.id] = nil
@@ -177,7 +244,7 @@ function E.remove(g, x, y)
 end
 function E.rotate(g, x, y)
   local tile = E.get(g, x, y)
-  if not tile or tile.fixed or tile.kind == "R" or tile.kind == "B" then
+  if not tile or (tile.fixed and not g.editor) or tile.kind == "R" or tile.kind == "B" then
     return false
   end
   tile.r = (tile.r + 1) % 4
@@ -186,7 +253,7 @@ function E.rotate(g, x, y)
 end
 function E.move(g, x, y, tx, ty)
   local tile = E.get(g, x, y)
-  if not tile or tile.fixed or not E.inside(tx, ty, g) or E.get(g, tx, ty) then
+  if not tile or tile.fixed and not g.editor or not E.inside(tx, ty, g) or E.get(g, tx, ty) then
     return false
   end
   g.map[tile.id] = nil
@@ -508,35 +575,177 @@ function E.evaluate(g)
     unpowered = unpowered,
     remaining = remaining,
     complete = not jam and goals == correct,
-    win = not g.sandbox and not jam and goals > 0 and goals == correct,
+    win = (not g.sandbox or g.editor) and not jam and goals > 0 and goals == correct,
   }
 end
+-- Authored two-slot bonus predicates; each predicate is evaluated against the
+-- *actual* powered graph, not the author's saved reference.
 function E.challenges(g, result)
-  if g.sandbox then
+  if g.sandbox or g.custom or g.editor then
     return {}
   end
+  local stage = levels[g.number]
+  local bonuses = stage.bonuses or {}
+  local placed, gears, gearboxes, dust, blocks = 0, 0, 0, 0, 0
+  local cw, ccw, energizedFixed = false, false, 0
+  for _, tile in ipairs(g.tiles) do
+    if not tile.fixed and tile.kind ~= "R" and tile.kind ~= "B" then
+      placed = placed + 1
+    end
+    if not tile.fixed and (tile.kind == "G" or tile.kind == "O") then
+      gears = gears + 1
+    end
+    if not tile.fixed and tile.kind == "Q" then
+      gearboxes = gearboxes + 1
+    end
+    if not tile.fixed and tile.kind == "R" then
+      dust = dust + 1
+    end
+    if not tile.fixed and tile.kind == "B" then
+      blocks = blocks + 1
+    end
+    local light = result.lights[tile.id]
+    if light and light.powered then
+      cw = cw or light.sign == 1
+      ccw = ccw or light.sign == -1
+      if tile.fixed and E.parts[tile.kind] then
+        energizedFixed = energizedFixed + 1
+      end
+    end
+  end
+  local function poweredLink(typeName, minimum)
+    for _, tile in ipairs(g.tiles) do
+      local light = result.lights[tile.id]
+      if light and light.powered then
+        for _, link in ipairs(E.meshes(g, tile)) do
+          local other = result.lights[link.tile.id]
+          if link[typeName] and other and other.powered then
+            local span = math.abs(tile.x - link.tile.x) + math.abs(tile.y - link.tile.y)
+            if span >= (minimum or 1) then
+              return true
+            end
+          end
+        end
+      end
+    end
+    return false
+  end
+  local function diagonal()
+    for _, tile in ipairs(g.tiles) do
+      if (tile.kind == "G" or tile.kind == "O") and result.lights[tile.id].powered then
+        for _, link in ipairs(E.meshes(g, tile)) do
+          if
+            link.tile.kind ~= tile.kind
+            and math.abs(tile.x - link.tile.x) == 1
+            and math.abs(tile.y - link.tile.y) == 1
+            and result.lights[link.tile.id].powered
+          then
+            return true
+          end
+        end
+      end
+    end
+    return false
+  end
+  local function occupiesZone(predicate)
+    for _, tile in ipairs(g.tiles) do
+      if not tile.fixed and predicate(tile) then
+        return true
+      end
+    end
+    return false
+  end
   local list = {}
-  local par = 0
-  for _, tile in ipairs(levels[g.number].build) do
-    par = par + 1 + (tile.r or 0)
-  end
-  par = par + #(levels[g.number].toggles or {})
-  local function add(id, name, description, earned)
+  for _, spec in ipairs(bonuses) do
+    local goal = spec.value or 0
+    local typeName = spec.type
+    local achieved = false
+    local progress = nil
+    if typeName == "budget" then
+      achieved, progress = placed <= goal, tostring(placed) .. "/" .. goal
+    elseif typeName == "moves" then
+      achieved, progress = g.moves <= goal, tostring(g.moves) .. "/" .. goal
+    elseif typeName == "exact_parts" then
+      achieved, progress = placed == goal, tostring(placed) .. "/" .. goal
+    elseif typeName == "clean" then
+      achieved = result.unpowered == 0
+    elseif typeName == "full_stock" then
+      achieved = result.remaining == 0 and result.unpowered == 0
+    elseif typeName == "no_gearbox" then
+      achieved = gearboxes == 0
+    elseif typeName == "gear_limit" then
+      achieved, progress = gears <= goal, tostring(gears) .. "/" .. goal
+    elseif typeName == "belt_span" then
+      achieved = poweredLink("belt", goal)
+    elseif typeName == "belt_cross" then
+      for _, tile in ipairs(g.tiles) do
+        if tile.kind == "V" and result.lights[tile.id].powered then
+          for _, link in ipairs(E.meshes(g, tile)) do
+            if link.belt and result.lights[link.tile.id].powered then
+              local stepX = link.tile.x == tile.x and 0 or (link.tile.x > tile.x and 1 or -1)
+              local stepY = link.tile.y == tile.y and 0 or (link.tile.y > tile.y and 1 or -1)
+              local x, y = tile.x + stepX, tile.y + stepY
+              while x ~= link.tile.x or y ~= link.tile.y do
+                local shaft = E.get(g, x, y)
+                if shaft and shaft.kind == "I" and result.lights[shaft.id].powered then
+                  achieved = true
+                end
+                x, y = x + stepX, y + stepY
+              end
+            end
+          end
+        end
+      end
+    elseif typeName == "chain_link" then
+      achieved = poweredLink("chain", 1)
+    elseif typeName == "diagonal" then
+      achieved = diagonal()
+    elseif typeName == "dual_rotation" then
+      achieved = cw and ccw
+    elseif typeName == "redstone_limit" then
+      achieved, progress = dust <= goal, tostring(dust) .. "/" .. goal
+    elseif typeName == "single_block" then
+      achieved, progress = blocks <= 1, tostring(blocks) .. "/1"
+    elseif typeName == "fixed_power" then
+      achieved = energizedFixed >= goal
+    elseif typeName == "no_belt" then
+      achieved = not occupiesZone(function(tile)
+        return tile.kind == "V"
+      end)
+    elseif typeName == "no_chain" then
+      achieved = not occupiesZone(function(tile)
+        return tile.kind == "D"
+      end)
+    elseif typeName == "clear_zone" then
+      achieved = not occupiesZone(function(tile)
+        return tile.x >= spec.x1 and tile.x <= spec.x2 and tile.y >= spec.y1 and tile.y <= spec.y2
+      end)
+    elseif typeName == "use_cell" then
+      local tile = E.get(g, spec.x, spec.y)
+      achieved = tile ~= nil and not tile.fixed and result.lights[tile.id].powered
+    elseif typeName == "no_kind" then
+      achieved = not occupiesZone(function(tile)
+        return tile.kind == spec.kind
+      end)
+    elseif typeName == "mechanical_override" then
+      local tile = E.get(g, spec.x, spec.y)
+      achieved = tile and (tile.kind == "Z" or tile.kind == "C") and not result.switches[tile.id] or false
+    elseif typeName == "signal_sharing" then
+      local count = 0
+      for _, tile in ipairs(g.tiles) do
+        if (tile.kind == "Z" or tile.kind == "C") and result.switches[tile.id] then
+          count = count + 1
+        end
+      end
+      achieved = count >= 2
+    end
     list[#list + 1] = {
-      id = id,
-      name = name,
-      description = description,
-      earned = result.win and earned or false,
+      id = spec.id,
+      name = spec.name,
+      description = spec.description or spec.name,
+      earned = result.win and not not achieved,
+      progress = progress,
     }
-  end
-  if g.number >= 2 then
-    add("sealed", "NO IDLE PARTS", "EVERY PLACED PART GETS POWER", result.unpowered == 0)
-  end
-  if g.number >= 3 then
-    add("master", "USE EVERY PART", "ALL STOCK USED AND POWERED", result.remaining == 0 and result.unpowered == 0)
-  end
-  if g.number >= 5 then
-    add("precision", "PRECISION", "AT MOST " .. par .. " MOVES", g.moves <= par)
   end
   return list
 end

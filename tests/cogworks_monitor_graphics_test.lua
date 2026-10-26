@@ -90,11 +90,11 @@ function App:act(action, x, y)
 end
 package.loaded["games.cogworks.app"] = App
 local events = {
-  { "monitor_touch", "top", 36, 25 }, -- title: Free Sandbox, in character cells
-  { "monitor_touch", "top", 9, 14 }, -- graphics board: empty cell to place shaft
-  { "monitor_touch", "top", 9, 14 }, -- occupied cell: expose corner controls
+  { "monitor_touch", "top", 36, 21 }, -- title: Free Sandbox, now below editor/pack menu entries
+  { "monitor_touch", "top", 14, 15 }, -- centered dense canvas: empty cell to place shaft
+  { "monitor_touch", "top", 14, 15 }, -- occupied cell: expose corner controls
   { "resize" }, -- simulates a monitor_resize after changed pixel dimensions
-  { "mouse_click", 2, 51, 90 }, -- monitor-window mouse input fallback, pixel coords
+  { "mouse_click", 2, 108, 89 }, -- monitor-window mouse input fallback, pixel coords
   { "terminate" },
 }
 local sequence, oldPull, oldTimer = 0, os.pullEventRaw, os.startTimer

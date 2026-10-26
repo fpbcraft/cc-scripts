@@ -5,7 +5,7 @@ S.ROOT = "/games/cogworks"
 S.DIR = S.ROOT .. "/saves"
 S.SETTINGS = S.ROOT .. "/settings.dat"
 S.LEGACY = S.ROOT .. "/save.dat"
-S.VERSION = 4
+S.VERSION = 6
 local function ensure(path)
   if not fs.exists(path) then
     fs.makeDir(path)
@@ -76,23 +76,27 @@ function S.path(slot)
   return S.DIR .. "/slot-" .. slot .. ".dat"
 end
 function S.newProgress()
-  return { campaignVersion = S.VERSION, unlocked = 1, level = 1, best = {}, sessions = {}, awards = {}, tutorials = {} }
+  return { campaignVersion = S.VERSION, unlocked = 8, level = 1, best = {}, sessions = {}, awards = {}, tutorials = {} }
 end
 function S.normalize(data)
   local p = S.newProgress()
   if type(data) ~= "table" then
     return p
   end
-  -- The previous thirty-level campaign used incompatible mechanics and layouts.
-  -- Preserve its on-disk file as a backup but start a fresh v4 campaign.
+  -- The 64-level chapter campaign has different layouts; incompatible saves
+  -- start at chapter one rather than applying solutions to the wrong stages.
   if data.campaignVersion ~= S.VERSION then
     return p
   end
-  p.unlocked = clamp(data.unlocked, 1, #(require("games.cogworks.levels")), 1)
-  p.level = clamp(data.level, 1, p.unlocked, 1)
+  local chapters = require("games.cogworks.chapters")
   p.best = type(data.best) == "table" and data.best or {}
-  p.sessions = type(data.sessions) == "table" and data.sessions or {}
   p.awards = type(data.awards) == "table" and data.awards or {}
+  p.unlocked = chapters.openLevels(p)
+  p.level = clamp(data.level, 1, p.unlocked, 1)
+  if not chapters.levelUnlocked(p, p.level) then
+    p.level = 1
+  end
+  p.sessions = type(data.sessions) == "table" and data.sessions or {}
   if type(data.tutorials) == "table" then
     for key, value in pairs(data.tutorials) do
       if type(key) == "string" and value == true then
@@ -129,6 +133,25 @@ function S.has(slot)
   return S.load(slot) ~= nil
 end
 function S.save(slot, data)
-  return write(S.path(slot), S.normalize(data))
+  local path = S.path(slot)
+  local original = decode(path)
+  -- The previous procedurally generated level campaign has incompatible
+  -- geometry; preserve its save bytes before resetting chapter progress.
+  if original and original.campaignVersion ~= S.VERSION then
+    local backup = path .. ".campaign-v" .. tostring(original.campaignVersion or "unknown")
+    if not fs.exists(backup) then
+      local oldFile = fs.open(path, "r")
+      if oldFile then
+        local bytes = oldFile.readAll()
+        oldFile.close()
+        local archive = fs.open(backup, "w")
+        if archive then
+          archive.write(bytes)
+          archive.close()
+        end
+      end
+    end
+  end
+  return write(path, S.normalize(data))
 end
 return S
