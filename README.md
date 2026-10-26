@@ -8,6 +8,7 @@ ComputerCraft/CC:Tweaked programs for the FPBCRAFT Minecraft server.
 - [RAILBREAK](games/railbreak/README.md) — railway adventure, cargo and train upgrades.
 - [SHATTERED](games/shattered/README.md) — space 4X with human and AI empires.
 - [IRONSPIRE](games/ironspire/README.md) — touchscreen deckbuilding roguelike.
+- [WORMFRONT](games/wormfront/README.md) — 2–4 player artillery battles with destructible terrain and rednet multiplayer.
 - [CIVCRAFT](games/civcraft/README.md) — local hotseat and networked civilization building.
 
 ## Apps
@@ -26,7 +27,7 @@ wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/installers/f
 /apps/fpbstore/main.lua
 ```
 
-Use `cogworks`, `railbreak`, `shattered`, `ironspire`, `civcraft`, `airship`,
+Use `cogworks`, `railbreak`, `shattered`, `ironspire`, `wormfront`, `civcraft`, `airship`,
 `factory` or `node` instead of `fpbstore` for a direct install. An optional first
 argument selects a Git ref; `--startup` and `--no-startup` control autostart.
 Airship, factory and node enable autostart by default; games and Store do not.

@@ -114,6 +114,19 @@ P.packages.ironspire = {
   lowDisk = false,
   basalt = false,
 }
+P.packages.wormfront = {
+  id = "wormfront",
+  source = "games/wormfront",
+  root = "/games/wormfront",
+  legacy = "/wormfront",
+  entry = "main.lua",
+  files = { "README.md", "main.lua", "sim.lua", "ui.lua" },
+  libraries = { "loader", "canvas", "display", "terminal_view" },
+  data = {},
+  startup = false,
+  lowDisk = false,
+  basalt = false,
+}
 P.packages.civcraft = {
   id = "civcraft",
   source = "games/civcraft",
@@ -265,6 +278,15 @@ P.apps = {
     description = "Solo deckbuilding roguelike with card battles and branching routes.",
     icon = "I",
     genre = "DECKBUILDER",
+  },
+  {
+    version = "0.1.0",
+    id = "wormfront",
+    name = "WORMFRONT",
+    subtitle = "TACTICAL ARTILLERY",
+    description = "Destructible terrain and 2-4 player hotseat or rednet battles.",
+    icon = "W",
+    genre = "MULTIPLAYER",
   },
   {
     version = "0.8.0",
