@@ -11,9 +11,18 @@ local App = require("games.cogworks.app")
 local Renderer = require("games.cogworks.render")
 local E = require("games.cogworks.engine")
 local Display = require("games.cogworks.display")
+-- Translate a pointer press on the board, not on toolbar/menu controls.
+-- CC mouse buttons are 1=left, 2=right. A normal left press must build.
+-- Touch input has no mouse button and also supports the erase tool.
+local function boardAction(button, selected, touch)
+  if button == 2 or selected == "erase" then
+    return "remove"
+  end
+  return touch and "inspect" or "cell"
+end
 local args = { ... }
 if args[1] == "--test-api" then
-  return { app = App, engine = E, renderer = Renderer }
+  return { app = App, engine = E, renderer = Renderer, boardAction = boardAction }
 end
 local dev = false
 local debugInput = false
@@ -138,7 +147,7 @@ local function start()
           action, x, y = renderer:hit(b, c)
         end
         if action == "cell" then
-          action = app.selected == "erase" and "remove" or "inspect"
+          action = boardAction(nil, app.selected, true)
         end
         trace("MONITOR HIT=" .. tostring(action) .. " part=" .. tostring(x) .. "," .. tostring(y))
         if not act(action, x, y) then
@@ -159,7 +168,8 @@ local function start()
             action, x, y = renderer:hitTouch(mx, my)
           end
           if action == "cell" then
-            action = app.selected == "erase" and "remove" or "inspect"
+            local button = event == "mouse_click" and a or (d ~= nil and b or 1)
+            action = boardAction(button, app.selected, true)
           end
           if not act(action, x, y) then
             break
@@ -172,7 +182,7 @@ local function start()
         if action then
           app.hasLeftInput = true
           if action == "cell" then
-            action = app.selected == "erase" and "remove" or "inspect"
+            action = boardAction(1, app.selected, true)
           end
           if not act(action, x, y) then
             break
@@ -211,7 +221,7 @@ local function start()
               break
             end
           end
-        elseif not act(start.button == 1 and "remove" or "cell", start.x, start.y) then
+        elseif not act(boardAction(start.button, app.selected, false), start.x, start.y) then
           break
         end
       elseif mode == "virtual-text" and event == "mouse_scroll" then
