@@ -3,6 +3,28 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 local api = assert(loadfile("games/cogworks/main.lua"))("--test-api")
 local E, App = api.engine, api.app
 local boardAction = api.boardAction
+local pointerTransition = api.pointerTransition
+-- iPad: a tap can send mouse_click with no matching mouse_up.
+local pointer = pointerTransition(nil, "down", 1, 2, 3, "I")
+assert(pointer and pointer.x == 2 and pointer.y == 3)
+local action, px, py
+pointer, action, px, py = pointerTransition(pointer, "timeout", nil, nil, nil, "I")
+assert(pointer == nil and action == "cell" and px == 2 and py == 3,
+  "Timer must commit mouse_click even when iPad omits mouse_up")
+pointer, action = pointerTransition(pointer, "up", 1, 2, 3, "I")
+assert(pointer == nil and action == nil, "Late release must not duplicate a tap")
+pointer = pointerTransition(nil, "down", 2, 3, 4, "G")
+pointer, action, px, py = pointerTransition(pointer, "up", 2, 3, 4, "G")
+assert(pointer == nil and action == "remove" and px == 3 and py == 4,
+  "Right-button mouse_up commits removal")
+pointer = pointerTransition(nil, "down", 1, 2, 3, "G")
+pointer = pointerTransition(pointer, "drag", 1, 4, 3, "G")
+local _, fallback = pointerTransition(pointer, "timeout", nil, nil, nil, "G")
+assert(fallback == nil, "Tap timeout cannot rotate a piece being dragged")
+local destX, destY
+pointer, action, px, py, destX, destY = pointerTransition(pointer, "up", 1, 4, 3, "G")
+assert(pointer == nil and action == "move" and px == 2 and py == 3 and destX == 4 and destY == 3,
+  "Drag must retain movement instead of rotating on pointer-down")
 assert(boardAction(1, "I", false) == "cell", "Left mouse button must place / rotate")
 assert(boardAction(2, "I", false) == "remove", "Right mouse button must remove")
 assert(boardAction(1, "erase", false) == "remove", "Erase tool removes with left mouse button")
