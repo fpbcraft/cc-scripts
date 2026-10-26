@@ -1009,7 +1009,10 @@ for i, stage in ipairs(authored) do
   })[stage.stage]
   stage.title = stage.chapter .. "-" .. stage.stage .. " " .. stage.name
   local bonuses = stage.bonusKinds or { "budget", "clean" }
-  stage.bonuses = { bonusFor(stage, bonuses[1], 1), bonusFor(stage, bonuses[2], 2) }
+  stage.bonuses = {}
+  for index, key in ipairs(bonuses) do
+    stage.bonuses[index] = bonusFor(stage, key, index)
+  end
   stage.bonusKinds = nil
 end
 return authored
