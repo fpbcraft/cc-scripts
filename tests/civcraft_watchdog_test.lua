@@ -85,6 +85,36 @@ assert(
 		and startup.pendingEvents[2][1] == "rednet_message",
 	"Watchdog yields preserve pending input"
 )
+local oldHost, oldGC = _G._HOST, collectgarbage
+_G._HOST = "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)"
+local collections = 0
+collectgarbage = function(operation)
+	assert(operation == "collect")
+	collections = collections + 1
+end
+local nativeWork = {}
+Coop.checkpoint(nativeWork, true, true)
+assert(collections == 1 and nativeWork.gcCycles == 1)
+Coop.checkpoint(nativeWork, true, true)
+assert(collections == 1, "Forced redraws do not collect repeatedly in the same work interval")
+now = now + 40
+collectgarbage = function()
+	error("Unsupported collector operation")
+end
+Coop.checkpoint(nativeWork, true, true)
+assert(nativeWork.gcUnsupported, "A restricted collector must not break watchdog yielding")
+now = now + 40
+collectgarbage = function()
+	error("Do not retry unsupported collection")
+end
+Coop.checkpoint(nativeWork, true, true)
+_G._HOST = "ComputerCraft 1.112.0 (CraftOS-PC v2.8.30)"
+Coop.checkpoint({}, true, true)
+_G._HOST = "ComputerCraft 1.112.0"
+Coop.checkpoint({}, true, true)
+assert(collections == 1, "Other runtime versions retain their own collection policy")
+_G._HOST, collectgarbage = oldHost, oldGC
+
 os.epoch, os.queueEvent, os.pullEvent, os.startTimer, os.cancelTimer =
 	oldEpoch, oldQueue, oldPull, oldStart, oldCancel
 local state = {

@@ -1,5 +1,26 @@
 -- Shared watchdog checkpoints preserve input while long host work yields.
 local Cooperative = {}
+local function collectNative(self, now)
+	local host = _G._HOST
+	if
+		type(host) ~= "string"
+		or host:match("CraftOS%-PC v([%d.]+)") ~= "2.8.3"
+		or self.gcUnsupported
+		or type(collectgarbage) ~= "function"
+		or now - (self.lastGC or -math.huge) < 30
+	then
+		return
+	end
+	-- This runtime can spend seconds repeatedly marking short-lived snapshots.
+	-- A full cycle between cooperative chunks avoids that incremental-GC thrash.
+	local ok = pcall(collectgarbage, "collect")
+	self.gcUnsupported = not ok
+	self.lastGC = os.epoch("utc")
+	if ok then
+		self.gcCycles = (self.gcCycles or 0) + 1
+		self.gcMaxMillis = math.max(self.gcMaxMillis or 0, self.lastGC - now)
+	end
+end
 function Cooperative.checkpoint(self, force, probe)
 	if not (os.epoch and os.queueEvent and os.pullEvent) then
 		return
@@ -18,6 +39,7 @@ function Cooperative.checkpoint(self, force, probe)
 	if self.trace then
 		self.trace("yield.begin", token)
 	end
+	collectNative(self, now)
 	local timer = os.startTimer and os.startTimer(0.05)
 	os.queueEvent("civcraft_render_yield", token)
 	while true do
