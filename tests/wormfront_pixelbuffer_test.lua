@@ -6,8 +6,16 @@ function device.drawPixels(x, y, pixels, width, height)
   calls[#calls + 1] = { x = x, y = y, pixels = pixels, width = width, height = height }
 end
 local canvas = {
-  mode = "graphics", m = device, sx = 2, sy = 2, ox = 0, oy = 0,
-  w = 12, h = 6, pw = 24, ph = 12,
+  mode = "graphics",
+  m = device,
+  sx = 2,
+  sy = 2,
+  ox = 0,
+  oy = 0,
+  w = 12,
+  h = 6,
+  pw = 24,
+  ph = 12,
 }
 function canvas:resize() end
 function canvas:close() end
