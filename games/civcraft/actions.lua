@@ -16,6 +16,7 @@ local Zone = dofile("/games/civcraft/zone_control.lua")
 local TurnTasks = dofile("/games/civcraft/turn_tasks.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local Queue = dofile("/games/civcraft/queued_routes.lua")
+local Council = dofile("/games/civcraft/council.lua")
 local A = {}
 
 function A.validateIntent(state, request)
@@ -49,8 +50,20 @@ local function apply(state, id, req, Systems)
 		return false, reason
 	end
 	local eligible, waiting = Scheduler.canAct(state, id)
-	if not eligible and req.action ~= "diplomaticReply" and req.action ~= "diplomaticCounter" then
+	if
+		not eligible
+		and req.action ~= "diplomaticReply"
+		and req.action ~= "diplomaticCounter"
+		and req.action ~= "councilVote"
+		and req.action ~= "councilPropose"
+	then
 		return false, waiting
+	end
+	if req.action == "councilVote" then
+		return Council.vote(state, id, req)
+	end
+	if req.action == "councilPropose" then
+		return Council.propose(state, id, req)
 	end
 	local outcome
 	local function at(list, x, y)

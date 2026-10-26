@@ -1,6 +1,7 @@
 local Hex = dofile("/games/civcraft/hex.lua")
 local Landmarks = dofile("/games/civcraft/landmarks.lua")
 local Values = dofile("/games/civcraft/ai_economy_values.lua")
+local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local Production = {}
 
 local function inventory(view, player, systems, currentCity)
@@ -98,7 +99,9 @@ function Production.ranked(view, player, city, systems, canExpand)
 	local context = Values.context(view, player, city, systems)
 	local counts = inventory(view, player, systems, city.id)
 	local dependencies = {}
-	local target = context.goal == "expedition" and "dragon" or "bank"
+	local target = context.goal == "expedition" and "dragon"
+		or context.goal == "diplomatic" and not CouncilRules.eligible(view, player.id) and "councilhall"
+		or "bank"
 	Values.dependencies(systems.buildings, target, city.buildings, 400, dependencies)
 	local result = {}
 	local function add(kind, id, value, x, y)
@@ -124,6 +127,15 @@ function Production.ranked(view, player, city, systems, canExpand)
 	for id, building in pairs(systems.buildings) do
 		if systems.canBuild(player, city, id, view) then
 			local value = Values.effects(building.effects, context) * 12 + (dependencies[id] or 0)
+			if id == "councilhall" then
+				local exists = false
+				for _, owned in ipairs(view.cities) do
+					exists = exists
+						or owned.owner == player.id
+							and (owned.buildings or {}).councilhall == true
+				end
+				value = exists and 0 or value + (context.goal == "diplomatic" and 300 or 60)
+			end
 			if id == "walls" then
 				value = value + (context.emergency == "defendCapital" and 240 or 12)
 			end

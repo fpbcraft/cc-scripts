@@ -1,4 +1,5 @@
 local Villages = dofile("/games/civcraft/villages.lua")
+local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local Materials = {}
 
 function Materials.orders(view, player, systems)
@@ -24,9 +25,10 @@ function Materials.orders(view, player, systems)
 	if cities >= 2 and player.techs.railways then
 		targets.iron = math.max(targets.iron or 0, 4)
 	end
-	if not player.techs.currency or not market then
+	if not player.techs.currency or not market or CouncilRules.embargoed(view, player.id) then
 		return {}, targets
 	end
+	local price = CouncilRules.exchangeCost(view)
 	local reserve = math.max(40, -systems.treasury(player, view).net * 6)
 	local gold, requests = player.gold or 0, {}
 	for _, id in ipairs(systems.resourceOrder) do
@@ -37,9 +39,9 @@ function Materials.orders(view, player, systems)
 			and id ~= "saltpeter"
 			and (not record.tech or player.techs[record.tech])
 		then
-			while have < (targets[id] or 0) and gold - 20 >= reserve and #requests < 2 do
+			while have < (targets[id] or 0) and gold - price >= reserve and #requests < 2 do
 				requests[#requests + 1] = { action = "exchange", resource = id }
-				have, gold = have + 1, gold - 20
+				have, gold = have + 1, gold - price
 			end
 		end
 	end

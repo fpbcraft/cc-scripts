@@ -10,6 +10,7 @@ local Content = dofile("/games/civcraft/content.lua")
 local Events = dofile("/games/civcraft/events.lua")
 local Generator = dofile("/games/civcraft/worldgen.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
+local Council = dofile("/games/civcraft/council.lua")
 local W = {}
 W.sizes = {
 	compact = { 18, 12 },
@@ -527,6 +528,8 @@ function W.forPlayer(state, id, afterSeq)
 		ruleset = state.ruleset,
 		roundLimit = state.roundLimit,
 		gameSpeed = state.gameSpeed,
+		victoryRulesVersion = state.victoryRulesVersion,
+		council = Council.public(state, id),
 		diplomacy = Diplomacy.public(state, id, Hex, Content.units),
 		scheduler = Scheduler.public(state),
 		victories = state.victories and {},

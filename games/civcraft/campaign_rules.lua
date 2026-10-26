@@ -5,7 +5,7 @@ local Rules = {
 		standard = { factor = 1, rounds = 180 },
 		epic = { factor = 1.5, rounds = 270 },
 	},
-	victories = { "conquest", "industrial", "expedition", "score" },
+	victories = { "conquest", "industrial", "expedition", "diplomatic", "score" },
 }
 
 function Rules.cost(value, context)
@@ -14,6 +14,13 @@ function Rules.cost(value, context)
 end
 
 function Rules.enabled(state, victory)
+	if
+		victory == "diplomatic"
+		and state.victoryRulesVersion ~= 2
+		and (not state.victories or state.victories.diplomatic == nil)
+	then
+		return false
+	end
 	return not state.victories or state.victories[victory] ~= false
 end
 

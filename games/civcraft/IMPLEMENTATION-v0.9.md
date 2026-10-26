@@ -528,3 +528,7 @@ actual game also selected, continued, rendered, saved and reloaded that copied
 campaign in native CraftOS-PC. Native core/normal-session checks and the 76-file
 regression suite pass. This fixes the reproduced paths; it does not establish
 that every possible renderer, modem or emulator stall is eliminated.
+
+## Council checkpoint (in progress)
+
+Council host rules, private ballots, limited village delegates, voting AI, temporary trade/embargo/peace/censure effects, diplomatic victory and conversation pledges are implemented. Focused Status/Election/Agenda panels and installer entries are connected. The Council rules regression passes. Compact panel navigation is still being corrected; the full regression and native CraftOS session are not yet complete. This checkpoint is not a release milestone.

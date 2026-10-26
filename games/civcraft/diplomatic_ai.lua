@@ -4,6 +4,8 @@ local Offers = dofile("/games/civcraft/diplomatic_offers.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local World = dofile("/games/civcraft/world.lua")
+local CouncilAI = dofile("/games/civcraft/council_ai.lua")
+local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local AI = {}
 local function strength(view, owner, systems)
 	local total = 0
@@ -41,7 +43,32 @@ function AI.evaluate(view, player, offer, systems)
 	local profile = Personalities.forCivilization(player.civ)
 	local trust, grievances = relation.trust or 0, relation.grievances or 0
 	local terms, utility = offer.terms, 0
-	if offer.kind == "trade" then
+	if
+		(offer.kind == "trade" or offer.kind == "commerce")
+		and CouncilRules.embargoed(view, player.id, offer.from)
+	then
+		return "reject", "Council embargo prevents this agreement"
+	end
+	if offer.kind == "councilSupport" then
+		local session = view.council and view.council.session
+		if
+			not session
+			or session.id ~= terms.session
+			or session.status ~= "voting"
+			or view.round >= session.closesRound
+		then
+			return "reject", "Council ballot is no longer available"
+		end
+		for _, pledge in ipairs(session.pledges or {}) do
+			if pledge.from == player.id then
+				return "reject", "Our ballot is already pledged"
+			end
+		end
+		local preferred = CouncilAI.election(view, player)
+		return preferred == offer.from and "accept" or "reject",
+			preferred == offer.from and "Our voting interests support this pledge"
+				or "We prefer a different Council candidate"
+	elseif offer.kind == "trade" then
 		if
 			(player.gold or 0) < terms.requestGold
 			or terms.askAmount > 0

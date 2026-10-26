@@ -6,6 +6,7 @@ local Surface = dofile("/games/civcraft/basalt_surface.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
+local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local Conversation = {}
 local greetings = {
 	guardian = "Our villages value dependable neighbors. Show us that your word can be trusted.",
@@ -51,6 +52,10 @@ local function terms(state, offer)
 					and "Refusing or ignoring this call costs 25 trust and 10 reputation. Conflicting alliances must be ended explicitly."
 				or "Acceptance schedules your intervention; it does not refresh actions."
 			)
+	elseif offer.kind == "councilSupport" then
+		return "Pledge your leadership ballot to the requester in Council session "
+			.. t.session
+			.. ". Cast the vote separately in Council. Honoring earns 10 trust; breaking costs 25 trust and adds 15 grievances for 30 rounds."
 	elseif offer.kind == "peace" then
 		return "Peace begins next round, followed by a " .. t.duration .. "-round armistice."
 	elseif offer.kind == "withdrawal" then
@@ -363,6 +368,21 @@ local function build(ui, rect, targetID)
 					}
 				end
 			end
+		end
+		local session = ui.state.council and ui.state.council.session
+		if
+			session
+			and session.status == "voting"
+			and ui.state.round < session.closesRound
+			and CouncilRules.member(session, ui.playerID)
+			and CouncilRules.member(session, targetID)
+		then
+			options[#options + 1] = {
+				"REQUEST COUNCIL VOTE",
+				function()
+					proposal("councilSupport", { session = session.id })
+				end,
+			}
 		end
 		menu("REQUESTS", options)
 	end)

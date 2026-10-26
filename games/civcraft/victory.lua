@@ -1,5 +1,6 @@
 local Rails = dofile("/games/civcraft/railways.lua")
 local Rules = dofile("/games/civcraft/campaign_rules.lua")
+local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local V = {}
 function V.score(state, p)
 	local score = 0
@@ -50,6 +51,12 @@ function V.status(state, p)
 		industryTurns = p.industryTurns or 0,
 		industryTarget = Rules.cost(10, state),
 		score = V.score(state, p),
+		diplomatic = state.council
+				and state.council.victory
+				and state.council.victory.id == p.id
+				and state.council.victory.round == state.round
+				and CouncilRules.eligible(state, p.id)
+			or false,
 	}
 end
 function V.check(state, advance)
@@ -85,6 +92,7 @@ function V.check(state, advance)
 			or Rules.enabled(state, "industrial")
 				and (p.industryTurns or 0) >= status.industryTarget
 				and "INDUSTRIAL"
+		reason = reason or Rules.enabled(state, "diplomatic") and status.diplomatic and "DIPLOMATIC"
 		if reason then
 			qualifiers[#qualifiers + 1] = p
 			reasons[#reasons + 1] = reason

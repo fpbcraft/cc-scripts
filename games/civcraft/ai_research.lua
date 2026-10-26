@@ -8,6 +8,7 @@ function Research.ranked(view, player, systems)
 	local dependencies = {}
 	local terminal = goal == "expedition" and "enlightenment"
 		or goal == "conquest" and "netherite"
+		or goal == "diplomatic" and "commerce"
 		or "economics"
 	Values.dependencies(systems.techs, terminal, player.techs, 48, dependencies)
 	if goal == "conquest" then

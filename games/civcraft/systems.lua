@@ -1,6 +1,7 @@
 -- CIVCRAFT 4X data & deterministic mechanics, no dependencies on UI/peripherals.
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local Queue = dofile("/games/civcraft/queued_routes.lua")
+local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local M = {}
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
@@ -304,8 +305,12 @@ end
 function M.treasury(p, state)
 	local income, upkeep = 0, 0
 	for _, other in ipairs(state.players or {}) do
-		if other.id ~= p.id and DiplomaticOffers.treaty(state, p.id, other.id, "commerce") then
-			income = income + 2
+		if
+			other.id ~= p.id
+			and not CouncilRules.embargoed(state, p.id, other.id)
+			and DiplomaticOffers.treaty(state, p.id, other.id, "commerce")
+		then
+			income = income + 2 + CouncilRules.commerceBonus(state)
 		end
 	end
 	for _, city in ipairs(state.cities or {}) do

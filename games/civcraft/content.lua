@@ -570,6 +570,9 @@ building(
 	{ description = "100 wall HP; enables ranged city strikes" }
 )
 building("market", "Trading Hall", "currency", 30, { food = 2, gold = 3 })
+building("councilhall", "Council Hall", "commerce", 90, {}, { "market" }, {
+	description = "Qualifies your civilization for diplomatic victory through Council elections. Requires two-thirds of all allocated delegates and another civilization's support. Does not create extra delegates.",
+})
 building("deepmine", "Deep Mine", "deepmining", 40, { industry = 2 }, { "furnace" })
 building("academy", "Enchanting Room", "philosophy", 38, { science = 3 })
 building("redstoneworkshop", "Redstone Workshop", "redstone", 40, { science = 2 })

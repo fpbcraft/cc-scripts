@@ -2,6 +2,7 @@ local Systems = dofile("/games/civcraft/systems.lua")
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Icons = dofile("/games/civcraft/icons.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
+local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local H = {}
 local function compact(value)
 	value = math.floor(value or 0)
@@ -106,7 +107,10 @@ function H.ledger(ui, rect, player)
 			rows[#rows + 1] = {
 				buttons = {
 					{
-						label = "TRADE 20 GOLD FOR 1 " .. kind:upper(),
+						label = "TRADE "
+							.. CouncilRules.exchangeCost(ui.state)
+							.. " GOLD FOR 1 "
+							.. kind:upper(),
 						run = function()
 							ui:command("exchange", { resource = kind })
 						end,

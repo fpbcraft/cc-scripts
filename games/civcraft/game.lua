@@ -94,6 +94,8 @@ local Villages = dofile("/games/civcraft/villages.lua")
 local Victory = dofile("/games/civcraft/victory.lua")
 local CommandQueue = dofile("/games/civcraft/command_queue.lua")
 local Events = dofile("/games/civcraft/events.lua")
+local Council = dofile("/games/civcraft/council.lua")
+local CouncilAI = dofile("/games/civcraft/council_ai.lua")
 local Presentation = dofile("/games/civcraft/presentation.lua")
 local Snapshots = dofile("/games/civcraft/snapshots.lua")
 local view
@@ -131,6 +133,7 @@ local function newGame()
 		ruleset = "create",
 		roundLimit = 180,
 		gameSpeed = "standard",
+		victoryRulesVersion = 2,
 		diplomacy = Diplomacy.new(),
 		scheduler = Scheduler.new(),
 		hostileMode = "standard",
@@ -224,6 +227,7 @@ local function initMap()
 	Hostiles.generate(state)
 	Villages.generate(state)
 	Systems.migrate(state)
+	Council.advance(state)
 	Diplomacy.boundary(state)
 	World.reveal(state, Hex, Systems)
 	pumpActors()
@@ -318,6 +322,13 @@ pumpActors = function()
 		for _, participant in ipairs(state.players) do
 			if participant.ai then
 				Systems.diplomaticResponses(state, participant)
+				if
+					state.council
+					and state.council.session
+					and state.council.session.status == "voting"
+				then
+					CouncilAI.run(state, participant, Presentation.capture(state, participant.id))
+				end
 			end
 			if Scheduler.canAct(state, participant.id) then
 				for _, unit in ipairs(state.units) do
@@ -433,7 +444,12 @@ local function apply(id, req)
 	if state.phase ~= "game" then
 		return false, "Game not running"
 	end
-	if req.action == "diplomaticReply" or req.action == "diplomaticCounter" then
+	if
+		req.action == "diplomaticReply"
+		or req.action == "diplomaticCounter"
+		or req.action == "councilVote"
+		or req.action == "councilPropose"
+	then
 		local ok, why = Actions.apply(state, id, req, Systems)
 		if ok then
 			pumpActors()

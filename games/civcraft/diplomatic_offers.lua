@@ -2,12 +2,14 @@ local Memory = dofile("/games/civcraft/diplomatic_memory.lua")
 local Events = dofile("/games/civcraft/events.lua")
 local Contacts = dofile("/games/civcraft/contacts.lua")
 local Offers = {}
+local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local labels = {
 	openBorders = "OPEN BORDERS",
 	defensivePact = "DEFENSIVE PACT",
 	jointWar = "JOINT WAR",
 	defenseCall = "CALL TO ARMS",
 	commerce = "COMMERCE",
+	councilSupport = "COUNCIL VOTE PLEDGE",
 	peace = "PEACE",
 	alliance = "ALLIANCE",
 	trade = "TRADE",
@@ -20,6 +22,7 @@ local kinds = {
 	peace = true,
 	openBorders = true,
 	commerce = true,
+	councilSupport = true,
 	alliance = true,
 	defensivePact = true,
 	jointWar = true,
@@ -128,6 +131,11 @@ function Offers.propose(state, sender, request, systems, diplomacy)
 	then
 		return false, "Choose a civilization and a supported offer"
 	end
+	if
+		(kind == "trade" or kind == "commerce") and CouncilRules.embargoed(state, sender, recipient)
+	then
+		return false, "Council embargo prevents this trade agreement"
+	end
 	local data = Offers.ensure(state)
 	local pending = 0
 	for _, offer in ipairs(data.offers) do
@@ -162,7 +170,13 @@ function Offers.propose(state, sender, request, systems, diplomacy)
 	if Offers.treaty(state, sender, recipient, kind) then
 		return false, "This agreement is already active"
 	end
-	if kind == "jointWar" then
+	if kind == "councilSupport" then
+		local ok, why = CouncilRules.canPledge(state, recipient, sender, input.session)
+		if not ok then
+			return false, why
+		end
+		terms.session = input.session
+	elseif kind == "jointWar" then
 		terms.enemy = input.enemy
 		if
 			not player(state, terms.enemy)
@@ -266,6 +280,12 @@ function Offers.respond(state, actor, request, systems, diplomacy)
 		return true, "Offer rejected"
 	end
 	local sender, recipient, terms = player(state, offer.from), player(state, actor), offer.terms
+	if
+		(offer.kind == "trade" or offer.kind == "commerce")
+		and CouncilRules.embargoed(state, offer.from, actor)
+	then
+		return false, "Council embargo now prevents this agreement"
+	end
 	if not sender or not recipient then
 		return false, "A signatory is no longer available"
 	end
@@ -288,6 +308,12 @@ function Offers.respond(state, actor, request, systems, diplomacy)
 		return false, "War changed the terms; negotiate peace first"
 	elseif Offers.treaty(state, sender.id, actor, offer.kind) then
 		return false, "This agreement is already active"
+	end
+	if offer.kind == "councilSupport" then
+		local ok, reason = CouncilRules.pledge(state, actor, offer.from, terms.session)
+		if not ok then
+			return false, reason
+		end
 	end
 	local data = Offers.ensure(state)
 	if offer.kind == "trade" then
@@ -332,6 +358,8 @@ function Offers.respond(state, actor, request, systems, diplomacy)
 			status = "active",
 			terms = { enemy = terms.enemy },
 		}
+	elseif offer.kind == "councilSupport" then
+		-- The session owns the pledge; voting remains a separate explicit action.
 	elseif offer.kind == "withdrawal" then
 		data.promises[#data.promises + 1] = {
 			id = offer.id,
@@ -466,6 +494,13 @@ function Offers.advance(state)
 		end
 	end
 	for _, offer in ipairs(data.offers) do
+		if offer.status == "pending" and offer.kind == "councilSupport" then
+			local available, why =
+				CouncilRules.canPledge(state, offer.to, offer.from, offer.terms.session)
+			if not available then
+				offer.status, offer.reason = "withdrawn", why
+			end
+		end
 		if
 			offer.status == "pending" and (offer.kind == "defenseCall" or offer.kind == "jointWar")
 		then

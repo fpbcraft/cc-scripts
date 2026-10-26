@@ -13,6 +13,7 @@ local Reports = dofile("/games/civcraft/reports.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local TechTree = dofile("/games/civcraft/tech_tree.lua")
+local CouncilView = dofile("/games/civcraft/council_view.lua")
 local G = {}
 local modes = { "terrain", "territory", "resources", "yields" }
 local function modal(ui, rect, preserve)
@@ -51,6 +52,8 @@ function G.draw(ui, state, player)
 	if not compactHeader then
 		r:text(4, 3, "CIVCRAFT", 8, 1, 40)
 	end
+	local actionStep = w < 140 and 11 or 13
+	local actionStart = w - 8 * actionStep + 1
 	local infoX = compactHeader and (w < 120 and 1 or 4) or 12 + r:textWidth("CIVCRAFT")
 	r:text(
 		infoX,
@@ -66,7 +69,7 @@ function G.draw(ui, state, player)
 			),
 		7,
 		1,
-		w - 93 - infoX
+		actionStart - infoX - 2
 	)
 	HUD.resources(ui, state, player)
 	local turnStatus
@@ -144,6 +147,13 @@ function G.draw(ui, state, player)
 			end,
 		},
 		{
+			"COUNCIL",
+			"village",
+			function()
+				ui.panel = "council"
+			end,
+		},
+		{
 			"PAUSE",
 			"pause",
 			function()
@@ -151,7 +161,14 @@ function G.draw(ui, state, player)
 			end,
 		},
 	}) do
-		iconButton(w - 91 + (i - 1) * 13, 1, 12, action[1], action[2], action[3])
+		iconButton(
+			actionStart + (i - 1) * actionStep,
+			1,
+			actionStep - 1,
+			action[1],
+			action[2],
+			action[3]
+		)
 	end
 	Map.draw(
 		ui,
@@ -369,6 +386,9 @@ function G.draw(ui, state, player)
 	elseif ui.panel == "conversation" then
 		modal(ui, rect)
 		Conversation.draw(ui, state, player, rect)
+	elseif ui.panel == "council" then
+		modal(ui, rect)
+		CouncilView.draw(ui, state, player, rect)
 	elseif ui.panel == "factions" then
 		modal(ui, rect)
 		Factions.draw(ui, state, player, rect)

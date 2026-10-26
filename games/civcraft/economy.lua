@@ -2,6 +2,7 @@ local Content = dofile("/games/civcraft/content.lua")
 local Rails = dofile("/games/civcraft/railways.lua")
 local Landmarks = dofile("/games/civcraft/landmarks.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
+local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local E = {}
 function E.effects(city, state, systems)
 	local result = { food = 0, industry = 0, science = 0, gold = 0 }
@@ -87,6 +88,10 @@ function E.rates(p, state, owned)
 	return rates
 end
 function E.exchange(state, p, resource)
+	if CouncilRules.embargoed(state, p.id) then
+		return false, "Council embargo prevents material exchange"
+	end
+	local price = CouncilRules.exchangeCost(state)
 	local record = Content.resources[resource]
 	if
 		not record
@@ -114,12 +119,12 @@ function E.exchange(state, p, resource)
 			end
 		end
 	end
-	if not market or (p.gold or 0) < 20 then
-		return false, "Need a trading hall or friendly village, and 20 gold"
+	if not market or (p.gold or 0) < price then
+		return false, "Need a trading hall or friendly village, and " .. price .. " gold"
 	end
 	E.stocks(p)
-	p.gold = p.gold - 20
+	p.gold = p.gold - price
 	p.stockpile[resource] = p.stockpile[resource] + 1
-	return true, "Traded 20 gold for 1 " .. resource
+	return true, "Traded " .. price .. " gold for 1 " .. resource
 end
 return E

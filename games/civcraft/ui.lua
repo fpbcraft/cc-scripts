@@ -443,6 +443,7 @@ function UI:draw(state, playerID, opts)
 		self.conversationOffset = 0
 		self.trade = nil
 		self.factionOffset = 0
+		self.councilModel = nil
 		self.historyPage, self.historyCursors, self.historyLoading = nil, {}, false
 		self.historyRequestID = (self.historyRequestID or 0) + 1
 		self.workCity = nil

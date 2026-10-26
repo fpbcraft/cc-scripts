@@ -2,6 +2,7 @@ local Panels = dofile("/games/civcraft/panels.lua")
 local Rules = dofile("/games/civcraft/campaign_rules.lua")
 local Options = {}
 local names = {
+	diplomatic = "DIPLOMATIC",
 	conquest = "CONQUEST",
 	industrial = "INDUSTRIAL",
 	expedition = "END EXPEDITION",

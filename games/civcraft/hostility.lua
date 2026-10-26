@@ -1,7 +1,11 @@
 -- Pure attack eligibility, independent of diplomacy UI, events and pathfinding.
+local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local Hostility = {}
 function Hostility.canAttack(state, a, b)
 	if a == b or a == nil or b == nil then
+		return false
+	end
+	if CouncilRules.peaceProtected(state, a, b) then
 		return false
 	end
 	local first, second = false, false

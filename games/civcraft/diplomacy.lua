@@ -5,6 +5,7 @@ local Offers = dofile("/games/civcraft/diplomatic_offers.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
 local Perception = dofile("/games/civcraft/diplomatic_perception.lua")
 local Hostility = dofile("/games/civcraft/hostility.lua")
+local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local Diplomacy = {}
 local function cityCount(state, id)
 	local count = 0
@@ -99,6 +100,9 @@ function Diplomacy.declare(state, attacker, defender, kind)
 	local allowed, reason = Scheduler.canAct(state, attacker)
 	if not allowed then
 		return false, reason
+	end
+	if CouncilRules.peaceProtected(state, attacker, defender) then
+		return false, "The Council peace initiative is still in force"
 	end
 	if kind ~= "normal" and kind ~= "surprise" then
 		return false, "Choose normal or surprise war"
@@ -258,7 +262,7 @@ function Diplomacy.boundary(state)
 					and treaty.endsRound > state.round
 				then
 					local partner = treaty.a == withdrawing and treaty.b or treaty.a
-					if ending[Memory.key(partner, enemy)] then
+					if war.forcedPeace or ending[Memory.key(partner, enemy)] then
 						treaty.status = "completed"
 					else
 						treaty.status = "broken"
@@ -315,6 +319,9 @@ function Diplomacy.boundary(state)
 end
 
 function Diplomacy.join(state, ally, enemy, supporting)
+	if CouncilRules.peaceProtected(state, ally, enemy) then
+		return false, "The Council peace initiative prevents intervention"
+	end
 	if not registered(state, ally) or not registered(state, enemy) or ally == enemy then
 		return false, "Invalid war participants"
 	end
@@ -440,7 +447,12 @@ function Diplomacy.public(state, observer, hex, units)
 		result.wars[#result.wars + 1] = copy
 	end
 	for id, value in pairs(state.diplomacy.reputation) do
-		result.reputation[id] = value
+		result.reputation[id] = value + CouncilRules.reputation(state, id)
+	end
+	for _, player in ipairs(state.players or {}) do
+		if result.reputation[player.id] == nil then
+			result.reputation[player.id] = CouncilRules.reputation(state, player.id)
+		end
 	end
 	if observer ~= nil then
 		for key, relation in pairs(state.diplomacy.relations) do
