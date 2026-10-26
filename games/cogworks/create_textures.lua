@@ -8,10 +8,13 @@ return function(R)
     return math.max(lo, math.min(hi, v))
   end
   local function phase(self, spin)
-    if not spin or not spin.sign or spin.sign == 0 then
+    if spin and spin.ports then
+      spin = spin.ports[1] or spin.ports[next(spin.ports)]
+    end
+    if not spin or spin.sign == 0 then
       return 0
     end
-    return (self.motionOverride or self.motionNow or 0) * pi * 1.8 * clamp(spin.rate or 1, 0, 8) * spin.sign
+    return (self.motionOverride or self.motionNow or 0) * pi * 1.8 * clamp(spin.rate or 1, 0, 8) * (spin.sign or 1)
   end
   -- The top of a Create gearbox/gearshift/clutch is WOOD, with inset dark
   -- joinery, redstone routes and an outer andesite rim. In particular, the
@@ -43,14 +46,10 @@ return function(R)
       end
     elseif kind == "Z" then
       -- Gearshift: redstone crosses the lid beneath two raised wood slats.
-      if (u == 4 or u == 5 or v == 4 or v == 5)
-        or (u == 11 or v == 11) and (u < 5 or v < 5)
-      then
+      if (u == 4 or u == 5 or v == 4 or v == 5) or (u == 11 or v == 11) and (u < 5 or v < 5) then
         return powered and 14 or 8
       end
-      if (u >= 6 and u <= 9 and v >= 3 and v <= 12)
-        or (v == 8 or v == 9) and u >= 3 and u <= 12
-      then
+      if (u >= 6 and u <= 9 and v >= 3 and v <= 12) or (v == 8 or v == 9) and u >= 3 and u <= 12 then
         return (u + v) % 4 == 0 and 6 or 7
       end
     elseif kind == "C" then
@@ -191,10 +190,11 @@ return function(R)
     end
     local spin
     if light and light.powered then
-      spin = light.ports and (light.ports[tile.r] or light.ports[next(light.ports)])
-        or (light.rate and light)
+      spin = light.ports and (light.ports[tile.r] or light.ports[next(light.ports)]) or (light.rate and light)
     end
-    -- Create_art's tile clipping still applies: this override lives inside it.
+    -- Clip these high-resolution silhouettes to their own board cell.
+    local previousClip = self.spriteClip
+    self.spriteClip = { x = floor(x), y = floor(y), size = size }
     if tile.kind == "G" then
       sideCog(self, x, y, size, tile, spin)
     elseif tile.kind == "V" then
@@ -202,6 +202,7 @@ return function(R)
     else
       topFace(self, x, y, size, tile, light and light.redstone, spin)
     end
+    self.spriteClip = previousClip
   end
   function R:drawSpan(x1, y1, x2, y2, kind, powered, motion)
     if kind ~= "V" or self.cell < 12 then
@@ -216,8 +217,11 @@ return function(R)
     local nx, ny = -uy, ux
     local function stroke(offset, ink)
       self:line(
-        floor(x1 + nx * offset + 0.5), floor(y1 + ny * offset + 0.5),
-        floor(x2 + nx * offset + 0.5), floor(y2 + ny * offset + 0.5), ink
+        floor(x1 + nx * offset + 0.5),
+        floor(y1 + ny * offset + 0.5),
+        floor(x2 + nx * offset + 0.5),
+        floor(y2 + ny * offset + 0.5),
+        ink
       )
     end
     -- Belt body is continuous dark rubber framed by gray mechanical edging.
@@ -231,8 +235,10 @@ return function(R)
       if pos >= 1 and pos <= length - 2 then
         local px, py = x1 + ux * pos, y1 + uy * pos
         self:line(
-          floor(px - nx * 2 + 0.5), floor(py - ny * 2 + 0.5),
-          floor(px + nx * 2 + ux + 0.5), floor(py + ny * 2 + uy + 0.5),
+          floor(px - nx * 2 + 0.5),
+          floor(py - ny * 2 + 0.5),
+          floor(px + nx * 2 + ux + 0.5),
+          floor(py + ny * 2 + uy + 0.5),
           (distance % 8 == 0) and 7 or 4
         )
       end
