@@ -20,9 +20,39 @@ local function boardAction(button, selected, touch)
   end
   return touch and "inspect" or "cell"
 end
+-- CraftOS-PC on iPad can deliver mouse_click without a corresponding
+-- mouse_up. Hold taps briefly to distinguish them from drag gestures, then
+-- commit even if the platform never sends a release event.
+local function pointerTransition(pointer, phase, button, x, y, selected)
+  if phase == "down" then
+    return { button = button, x = x, y = y, moved = false }
+  end
+  if not pointer then
+    return nil
+  end
+  if phase == "drag" then
+    if x and y and (x ~= pointer.x or y ~= pointer.y) then
+      pointer.moved = true
+    end
+    return pointer
+  end
+  if phase == "timeout" and pointer.moved then
+    return pointer
+  end
+  if phase == "up" and pointer.moved then
+    if x and y then
+      return nil, "move", pointer.x, pointer.y, x, y
+    end
+    return nil
+  end
+  if phase == "up" or phase == "timeout" then
+    return nil, boardAction(pointer.button, selected, false), pointer.x, pointer.y
+  end
+  return pointer
+end
 local args = { ... }
 if args[1] == "--test-api" then
-  return { app = App, engine = E, renderer = Renderer, boardAction = boardAction }
+  return { app = App, engine = E, renderer = Renderer, boardAction = boardAction, pointerTransition = pointerTransition }
 end
 local dev = false
 local debugInput = false
@@ -67,20 +97,34 @@ local function selectMonitor(preferred)
 end
 local function start()
   local monitor, name = selectMonitor(preferredMonitor)
-  local mode
-  local native = nil
-  if not monitor then
-    native = term.current()
+  local native = not monitor and term.current() or nil
+  local physicalDisplay = monitor or native
+  -- Match CivCraft: select 0.5 scale BEFORE creating the display wrapper or
+  -- measuring pixel dimensions. Native terminals have no scale method on
+  -- standard CC:Tweaked; only apply this when the emulator exposes one.
+  local previous
+  if physicalDisplay and physicalDisplay.setTextScale then
+    if physicalDisplay.getTextScale then
+      local ok, value = pcall(physicalDisplay.getTextScale)
+      if ok then
+        previous = value
+      end
+    end
+    pcall(physicalDisplay.setTextScale, 0.5)
   end
+  -- CivCraft uses mouse-style events in CraftOS monitor windows, allowing
+  -- exact pointer input and drag on the iPad instead of cell-quantized taps.
+  local previousMonitorMouse
+  if name and config and config.get and config.set then
+    local ok, value = pcall(config.get, "monitorsUseMouseEvents")
+    if ok then
+      previousMonitorMouse = value
+      pcall(config.set, "monitorsUseMouseEvents", true)
+    end
+  end
+  local mode
   monitor, mode = Display.select(monitor, native, require("games.cogworks.terminal_view"), 70, 40)
   local computerMode = Display.isComputer(mode)
-
-  local previous = monitor.getTextScale and monitor.getTextScale() or 1
-  if monitor.setTextScale then
-    -- Half text scale gives Advanced Monitors their maximum usable resolution.
-    -- Restore the original setting when Cogworks exits.
-    pcall(monitor.setTextScale, 0.5)
-  end
   local inputLog = debugInput and fs.open("/games/cogworks/input-debug.log", "w") or nil
   local function trace(message)
     if inputLog then
@@ -110,6 +154,17 @@ local function start()
     redraw()
     local drag = nil
     local timer = os.startTimer(0.2)
+    local function applyPointer(phase, x, y)
+      local action, px, py, tx, ty
+      drag, action, px, py, tx, ty = pointerTransition(drag, phase, nil, x, y, app.selected)
+      if not action then
+        return true
+      end
+      if action == "move" then
+        app.moveX, app.moveY = tx, ty
+      end
+      return act(action, px, py)
+    end
     while true do
       local event, a, b, c, d = os.pullEventRaw()
       if
@@ -189,11 +244,17 @@ local function start()
           end
         end
       elseif computerMode and event == "mouse_click" then
+        -- A tap must work on iPad even if mouse_up is never delivered.
+        -- A short grace period still permits dragging an existing piece.
+        if drag and not applyPointer("timeout") then
+          break
+        end
         local x, y = Display.click(monitor, mode, b, c)
         if x then
           local action, cx, cy = renderer:hit(x, y)
           if action == "cell" then
-            drag = { button = a, x = cx, y = cy, moved = false }
+            drag = pointerTransition(nil, "down", a, cx, cy, app.selected)
+            drag.timer = os.startTimer(0.12)
           elseif not act(action, cx, cy) then
             break
           end
@@ -202,26 +263,21 @@ local function start()
         local x, y = Display.click(monitor, mode, b, c)
         if x then
           local action, cx, cy = renderer:hit(x, y)
-          if action == "cell" and (cx ~= drag.x or cy ~= drag.y) then
-            drag.moved = true
+          if action == "cell" then
+            drag = pointerTransition(drag, "drag", a, cx, cy, app.selected)
           end
         end
       elseif computerMode and event == "mouse_up" and drag then
-        local start = drag
-        drag = nil
         local x, y = Display.click(monitor, mode, b, c)
         local action, cx, cy
         if x then
           action, cx, cy = renderer:hit(x, y)
         end
-        if start.moved then
-          if action == "cell" then
-            app.moveX, app.moveY = cx, cy
-            if not act("move", start.x, start.y) then
-              break
-            end
-          end
-        elseif not act(boardAction(start.button, app.selected, false), start.x, start.y) then
+        if not applyPointer("up", action == "cell" and cx or nil, action == "cell" and cy or nil) then
+          break
+        end
+      elseif computerMode and event == "timer" and drag and a == drag.timer then
+        if not applyPointer("timeout") then
           break
         end
       elseif mode == "virtual-text" and event == "mouse_scroll" then
@@ -307,8 +363,11 @@ local function start()
     inputLog.close()
   end
   Display.close(monitor, mode)
-  if monitor.setTextScale then
-    pcall(monitor.setTextScale, previous)
+  if physicalDisplay and physicalDisplay.setTextScale and previous ~= nil then
+    pcall(physicalDisplay.setTextScale, previous)
+  end
+  if previousMonitorMouse ~= nil and config and config.set then
+    pcall(config.set, "monitorsUseMouseEvents", previousMonitorMouse)
   end
   if not ok then
     error(reason, 0)
