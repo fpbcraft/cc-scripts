@@ -190,6 +190,66 @@ function E.fromDefinition(data, solved)
   end
   return g
 end
+-- Pick the best shaft direction when a part is placed without an explicit
+-- rotation. A real axial connection is preferred over a sideways gear/chain
+-- mesh; ties preserve the familiar default 0 orientation.
+-- Manual rotations and moved parts are never silently reoriented.
+function E.bestRotation(g, x, y, kind)
+  if not E.inside(x, y, g) or not ports[kind] then
+    return 0
+  end
+  -- Four-sided gearboxes have the same ports in every orientation.
+  if kind == "Q" or kind == "S" or kind == "M" then
+    return 0
+  end
+  local best, highest = 0, -1
+  for rotation = 0, 1 do
+    local candidate = { kind = kind, x = x, y = y, r = rotation }
+    local score = 0
+    for dir, vector in ipairs(vectors) do
+      local other = E.get(g, x + vector[1], y + vector[2])
+      if other then
+        local side = dir - 1
+        if E.hasPort(candidate, side) and E.hasPort(other, (side + 2) % 4) then
+          score = score + 100
+        end
+        local sideways = not E.hasPort(candidate, side)
+        if sideways and other.r % 2 == rotation then
+          if (kind == "G" or kind == "O") and (other.kind == "G" or other.kind == "O") then
+            score = score + 30
+          elseif kind == "D" and other.kind == "D" then
+            score = score + 30
+          end
+        end
+      end
+    end
+    if kind == "V" then
+      local horizontal = rotation == 1
+      for _, sign in ipairs({ -1, 1 }) do
+        for distance = 1, 5 do
+          local nx = x + (horizontal and 0 or sign * distance)
+          local ny = y + (horizontal and sign * distance or 0)
+          if not E.inside(nx, ny, g) then
+            break
+          end
+          local other = E.get(g, nx, ny)
+          if other then
+            if other.kind == "V" and other.r % 2 == rotation then
+              score = score + 20
+            end
+            if other.kind ~= "I" then
+              break
+            end
+          end
+        end
+      end
+    end
+    if score > highest then
+      best, highest = rotation, score
+    end
+  end
+  return best
+end
 function E.place(g, x, y, kind, rotation)
   if
     not E.inside(x, y, g)
@@ -217,7 +277,7 @@ function E.place(g, x, y, kind, rotation)
     kind = kind,
     x = x,
     y = y,
-    r = (rotation or 0) % 4,
+    r = (rotation ~= nil and rotation or E.bestRotation(g, x, y, kind)) % 4,
     speed = kind == "M" and (g.goalRate or 1) or nil,
     sign = kind == "M" and (g.goalSign or 1) or nil,
   }, special)
