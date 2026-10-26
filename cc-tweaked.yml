@@ -2,6 +2,7 @@
 # 'any' on APIs permits peripheral/mod-specific methods without misleading signatures.
 base: lua53
 lua_versions:
+  - lua52
   - lua53
 globals:
   _G:
@@ -47,6 +48,8 @@ globals:
   parallel:
     any: true
   peripheral:
+    any: true
+  periphemu:
     any: true
   pocket:
     any: true
