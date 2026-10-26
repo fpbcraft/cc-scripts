@@ -140,7 +140,15 @@ function UI.run(manager)
         or tab == "APPS" and app.category == "Apps"
         or tab == "INSTALLED" and status.installed
         or tab == "UPDATES" and status.installed and status.updateAvailable
-      local haystack = (app.name .. " " .. (app.subtitle or "") .. " " .. (app.genre or "") .. " " .. (app.description or "")):lower()
+      local haystack = (
+        app.name
+        .. " "
+        .. (app.subtitle or "")
+        .. " "
+        .. (app.genre or "")
+        .. " "
+        .. (app.description or "")
+      ):lower()
       if matched and haystack:find(query:lower(), 1, true) then
         list[#list + 1] = app
       end
@@ -178,14 +186,28 @@ function UI.run(manager)
     local x = 2
     for _, name in ipairs({ "GAMES", "APPS", "INSTALLED", "UPDATES" }) do
       if x + #name + 2 < w then
-        put(x, 2, " " .. name .. " ", tab == name and colors.black or colors.white, tab == name and colors.orange or colors.blue, #name + 2)
+        put(
+          x,
+          2,
+          " " .. name .. " ",
+          tab == name and colors.black or colors.white,
+          tab == name and colors.orange or colors.blue,
+          #name + 2
+        )
         hit(x, 2, #name + 2, "tab", name)
         x = x + #name + 3
       end
     end
     if page == "browse" then
       local search = typing and "/ SEARCH> " or "/ SEARCH  "
-      put(2, 3, search .. brief(query == "" and "(all titles)" or query, math.max(3, w - 29)), typing and colors.yellow or colors.lightGray, nil, w - 13)
+      put(
+        2,
+        3,
+        search .. brief(query == "" and "(all titles)" or query, math.max(3, w - 29)),
+        typing and colors.yellow or colors.lightGray,
+        nil,
+        w - 13
+      )
       hit(2, 3, w - 16, "search")
       right(3, #currentList() .. " ITEMS", colors.cyan)
     else
@@ -210,7 +232,13 @@ function UI.run(manager)
     local list = currentList()
     local wide = w >= 72
     local listWidth = wide and math.floor(w * 0.48) or w - 2
-    header(4, tab == "GAMES" and "GAME LIBRARY" or tab == "APPS" and "APPLICATIONS" or tab == "INSTALLED" and "YOUR LIBRARY" or "AVAILABLE UPDATES")
+    header(
+      4,
+      tab == "GAMES" and "GAME LIBRARY"
+        or tab == "APPS" and "APPLICATIONS"
+        or tab == "INSTALLED" and "YOUR LIBRARY"
+        or "AVAILABLE UPDATES"
+    )
     local startY = 5
     local step = h >= 17 and 2 or 1
     local capacity = math.max(1, math.floor((h - startY - 3) / step))
@@ -233,7 +261,14 @@ function UI.run(manager)
         if active then
           put(2, y, "", colors.white, colors.blue, listWidth)
         end
-        put(3, y, (active and ">" or " ") .. (app.category == "Games" and "G" or "A") .. " " .. brief(app.name, nameWidth), active and colors.white or colors.yellow, active and colors.blue or colors.black, nameWidth + 3)
+        put(
+          3,
+          y,
+          (active and ">" or " ") .. (app.category == "Games" and "G" or "A") .. " " .. brief(app.name, nameWidth),
+          active and colors.white or colors.yellow,
+          active and colors.blue or colors.black,
+          nameWidth + 3
+        )
         put(listWidth - #tag + 1, y, tag, active and colors.white or fg, active and colors.blue or colors.black, #tag)
         if step == 2 then
           put(6, y + 1, brief(app.subtitle or app.genre or "", listWidth - 7), colors.lightGray)
@@ -263,7 +298,15 @@ function UI.run(manager)
     end
     local x = 2
     x = button(x, h - 3, "DETAILS", "detail", nil, false, #list > 0)
-    x = button(x, h - 3, list[selected] and manager.installed(list[selected]) and "LAUNCH" or "INSTALL", "primary", nil, false, #list > 0)
+    x = button(
+      x,
+      h - 3,
+      list[selected] and manager.installed(list[selected]) and "LAUNCH" or "INSTALL",
+      "primary",
+      nil,
+      false,
+      #list > 0
+    )
     button(x, h - 3, "SETUP", "settings")
     bottom("UP/DOWN Select  ENTER Details  / Find  S Setup")
   end
@@ -290,7 +333,13 @@ function UI.run(manager)
     put(2, 6, ("-"):rep(w - 3), colors.gray)
     printDescription(app, 2, 7, w - 4, 3)
     put(2, 10, "STATUS", colors.lightGray)
-    put(15, 10, s.installed and (s.updateAvailable and "UPDATE AVAILABLE" or "INSTALLED") or (s.managed and "DISK MISSING" or "NOT INSTALLED"), s.installed and colors.lime or colors.orange)
+    put(
+      15,
+      10,
+      s.installed and (s.updateAvailable and "UPDATE AVAILABLE" or "INSTALLED")
+        or (s.managed and "DISK MISSING" or "NOT INSTALLED"),
+      s.installed and colors.lime or colors.orange
+    )
     put(2, 11, "SOURCE", colors.lightGray)
     put(15, 11, brief(source and source.label or (s.source and s.source.label) or "main", w - 16), colors.lightBlue)
     put(2, 12, "LOCATION", colors.lightGray)
@@ -653,7 +702,9 @@ function UI.run(manager)
     elseif action == "source" and app then
       sourceReturn = page == "install" and "install" or "detail"
       page = "source"
-      local currentSource = source or (manager.installedSource and manager.installedSource(app)) or { kind = "main", value = "main" }
+      local currentSource = source
+        or (manager.installedSource and manager.installedSource(app))
+        or { kind = "main", value = "main" }
       sourceMode = currentSource.kind
       sourceInput = sourceMode == "main" and "" or currentSource.value
     elseif action == "source-mode" then
@@ -707,9 +758,11 @@ function UI.run(manager)
       page = "remove"
     elseif action == "confirm-remove" and confirmApp then
       local removed = confirmApp
-      if operation(function()
-        manager.remove(removed, false)
-      end, "Removed " .. removed.name .. "; saves preserved") then
+      if
+        operation(function()
+          manager.remove(removed, false)
+        end, "Removed " .. removed.name .. "; saves preserved")
+      then
         page, confirmApp = "browse", nil
       end
     elseif action == "refresh" then
@@ -777,7 +830,10 @@ function UI.run(manager)
         end
       end
     elseif event == "mouse_click" or event == "monitor_touch" then
-      if event == "mouse_click" and host == native or event == "monitor_touch" and host ~= native and monitors[1] and a == monitors[1].name then
+      if
+        event == "mouse_click" and host == native
+        or event == "monitor_touch" and host ~= native and monitors[1] and a == monitors[1].name
+      then
         local x, y = b, c
         for _, item in ipairs(hits) do
           if y == item.y and x >= item.x and x < item.x + item.width then

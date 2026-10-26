@@ -149,7 +149,11 @@ function I.install(id, ref, args)
         if peripheral.getType(side) == "drive" then
           local ok, mount = pcall(peripheral.call, side, "getMountPath")
           local root = type(mount) == "string" and "/" .. mount:gsub("^/", "") or nil
-          if ok and root and selectedRoot == root .. "/" .. (spec.source:match("^games/") and "games" or "apps") .. "/" .. id then
+          if
+            ok
+            and root
+            and selectedRoot == root .. "/" .. (spec.source:match("^games/") and "games" or "apps") .. "/" .. id
+          then
             valid = fs.exists(root) and (not fs.isReadOnly or not fs.isReadOnly(root))
             break
           end
