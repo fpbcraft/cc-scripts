@@ -57,7 +57,7 @@ end
 
 local PREF_PATH = "/apps/fpbstore/preferences.dat"
 function M.preferences()
-  local prefs = { display = "auto", opusStore = true, opusApps = true, launchTargets = {} }
+  local prefs = { display = "auto", opusStore = true, opusApps = true, launchTargets = {}, opusShortcuts = {} }
   local h = fs.open(PREF_PATH, "r")
   if h then
     local ok, data = pcall(textutils.unserialize, h.readAll())
@@ -71,6 +71,13 @@ function M.preferences()
       end
       if type(data.opusApps) == "boolean" then
         prefs.opusApps = data.opusApps
+      end
+      if type(data.opusShortcuts) == "table" then
+        for id, enabled in pairs(data.opusShortcuts) do
+          if type(id) == "string" and type(enabled) == "boolean" then
+            prefs.opusShortcuts[id] = enabled
+          end
+        end
       end
       if type(data.launchTargets) == "table" then
         for id, target in pairs(data.launchTargets) do
