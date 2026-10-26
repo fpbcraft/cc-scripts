@@ -264,8 +264,13 @@ local function strike(g, w)
   elseif spec.kind == "bat" or spec.kind == "punch" then
     local reach = spec.kind == "bat" and 5 or 4
     for _, enemy in ipairs(g.worms) do
-      if enemy.hp > 0 and enemy ~= w and (enemy.x - w.x) * w.facing > 0
-        and math.abs(enemy.x - w.x) <= reach and math.abs(enemy.y - w.y) <= 3 then
+      if
+        enemy.hp > 0
+        and enemy ~= w
+        and (enemy.x - w.x) * w.facing > 0
+        and math.abs(enemy.x - w.x) <= reach
+        and math.abs(enemy.y - w.y) <= 3
+      then
         hurt(enemy, spec.damage)
         if enemy.hp > 0 then
           enemy.rope, enemy.airborne, enemy.jumpStartY = nil, true, enemy.y
@@ -306,18 +311,38 @@ end
 function S.new(teams, seed)
   assert(type(teams) == "number" and teams >= 2 and teams <= 4, "Expected 2-4 teams")
   local g = {
-    version = 3, teams = teams, seed = math.floor(tonumber(seed) or 1), terrain = {},
-    worms = {}, selected = {}, played = {}, inventory = {}, items = {}, mines = {}, fires = {},
-    phase = "playing", state = "aim", turn = 1, round = 1, turnLeft = S.TURN_SECONDS,
-    charge = 0, charging = false, trail = {}, wind = 0, message = "FIND A WEAPON CRATE",
+    version = 3,
+    teams = teams,
+    seed = math.floor(tonumber(seed) or 1),
+    terrain = {},
+    worms = {},
+    selected = {},
+    played = {},
+    inventory = {},
+    items = {},
+    mines = {},
+    fires = {},
+    phase = "playing",
+    state = "aim",
+    turn = 1,
+    round = 1,
+    turnLeft = S.TURN_SECONDS,
+    charge = 0,
+    charging = false,
+    trail = {},
+    wind = 0,
+    message = "FIND A WEAPON CRATE",
   }
   g.rng = g.seed % 2147483646 + 1
   g.theme = rand(g, 1, 4)
   local height = rand(g, 38, 48)
   local phase = rand(g) * 6.28
   for x = 1, S.W do
-    local y = clamp(math.floor(height + math.sin(x * 0.068 + phase) * 7
-      + math.cos(x * 0.19 + phase) * 3 + rand(g, -1, 1)), 30, 54)
+    local y = clamp(
+      math.floor(height + math.sin(x * 0.068 + phase) * 7 + math.cos(x * 0.19 + phase) * 3 + rand(g, -1, 1)),
+      30,
+      54
+    )
     g.terrain[x] = ("."):rep(y - 1) .. ("#"):rep(S.H - y + 1)
   end
   -- Suspended destructible platforms, apart from guaranteed ground spawn.
@@ -337,9 +362,14 @@ function S.new(teams, seed)
       local pos = (n - 1) * teams + team
       local x = clamp(math.floor(pos * (S.W - 12) / (teams * 3 + 1)) + 6, 3, S.W - 2)
       g.worms[#g.worms + 1] = {
-        team = team, x = x, y = groundAt(g, x) - 1, hp = 100,
-        aim = team % 2 == 1 and 45 or 135, facing = team % 2 == 1 and 1 or -1,
-        weapon = 1, airborne = false,
+        team = team,
+        x = x,
+        y = groundAt(g, x) - 1,
+        hp = 100,
+        aim = team % 2 == 1 and 45 or 135,
+        facing = team % 2 == 1 and 1 or -1,
+        weapon = 1,
+        airborne = false,
       }
       if n == 1 then
         g.selected[team] = #g.worms
@@ -427,7 +457,14 @@ function S.apply(g, team, action)
       local a = math.rad(w.aim)
       x, y = w.x + math.cos(a) * 40, w.y - math.sin(a) * 40
     end
-    if type(x) ~= "number" or type(y) ~= "number" or x ~= x or y ~= y or math.abs(x) == math.huge or math.abs(y) == math.huge then
+    if
+      type(x) ~= "number"
+      or type(y) ~= "number"
+      or x ~= x
+      or y ~= y
+      or math.abs(x) == math.huge
+      or math.abs(y) == math.huge
+    then
       return false, "Invalid rope target"
     end
     return attach(g, w, x, y)
@@ -514,7 +551,8 @@ function S.apply(g, team, action)
     if spec.kind == "rocket" or spec.kind == "grenade" or spec.kind == "petrol" then
       startFlight(g, w)
     elseif spec.kind == "dynamite" then
-      g.projectile = { x = w.x + w.facing * 2, y = w.y - 1, vx = w.facing * 2, vy = 0, ttl = 3, weapon = w.weapon, bounce = true }
+      g.projectile =
+        { x = w.x + w.facing * 2, y = w.y - 1, vx = w.facing * 2, vy = 0, ttl = 3, weapon = w.weapon, bounce = true }
       g.state, g.charging = "flight", false
     elseif spec.kind == "mine" then
       g.mines[#g.mines + 1] = { x = w.x + w.facing * 2, y = floorAt(g, w.x + w.facing * 2) - 1, team = team, arm = 0.6 }
