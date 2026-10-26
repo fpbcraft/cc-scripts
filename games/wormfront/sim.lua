@@ -65,12 +65,12 @@ local function drop(g)
   if #g.items >= 4 then
     return
   end
-  for _ = 1, 16 do
+  for _ = 1, 40 do
     local x = random(g, 4, S.W - 3)
     local y = ground(g, x) - 1
     local clear = y > 4 and y < S.H - 2
     for _, w in ipairs(g.worms) do
-      if w.hp > 0 and math.abs(w.x - x) < 4 then
+      if w.hp > 0 and math.abs(w.x - x) < 2 then
         clear = false
       end
     end
