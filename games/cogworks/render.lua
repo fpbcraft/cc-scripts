@@ -858,7 +858,7 @@ function R:drawGame(m)
     self:button(176, 102, 19, 7, "TEST", "editorTest")
   else
     -- Persistent bonus objectives are visible while building.
-    self:font(117, 87, g.sandbox and "UNLIMITED PARTS" or "BONUS GOALS", 6)
+    self:font(117, 87, g.sandbox and "UNLIMITED PARTS" or (#E.levels[g.number].bonuses == 0 and "NO BONUS GOALS" or "BONUS GOALS"), 6)
     local bonuses = E.challenges(g, result)
     local awarded = (m.progress.awards and m.progress.awards[g.number]) or {}
     for i, bonus in ipairs(bonuses) do
@@ -947,7 +947,7 @@ function R:drawGame(m)
   end
   self:fontFit(3, 115, status, result.win and 9 or 5, result.win and 160 or 195)
   if result.win then
-    self:button(166, 114, 32, 6, "NEXT", "next")
+    self:button(166, 114, 32, 6, "MAP", "map")
   end
 end
 -- All briefings use the authored mission targets and inventory, never
@@ -1179,68 +1179,86 @@ function R:drawSettings(m)
   self:font(42, 92, "TEXT SCALE: 0.5", 4)
   self:button(68, 108, 64, 10, "BACK", "back")
 end
--- Campaign hub: eight mechanic chapters, each gated by earned objectives.
-function R:drawLevels(m)
-  self:page("FACTORY MAP", "COMPLETED OBJECTIVES " .. m.objectives .. " / 192")
-  for i, chapter in ipairs(m.chapters) do
-    local col, row = (i - 1) % 2, math.floor((i - 1) / 2)
-    local x, y = 8 + col * 94, 23 + row * 21
-    local active = m.devSession or Campaign.unlocked(m.progress, i)
-    local status = Campaign.stats(m.progress, i)
-    self:rect(x, y, 89, 19, active and 12 or 3)
-    self:rect(x + 1, y + 1, 87, 17, active and 1 or 0)
-    self:fontFit(x + 4, y + 2, string.format("%d  %s", i, chapter.name), active and 15 or 4, 80)
-    local hint
-    if active then
-      hint = status.points .. "/24 POINTS  " .. status.main .. "/6 MAIN"
-    else
-      local prev = Campaign.stats(m.progress, i - 1)
-      hint = "NEED " .. math.max(0, 6 - prev.points) .. " PTS  " .. math.max(0, 4 - prev.main) .. " CLEARS"
-    end
-    self:fontFit(x + 4, y + 10, hint, active and 11 or 8, 82)
-    if active then
-      self:add(x, y, 89, 19, "chapter", i)
-    end
+-- Compact navigable world / district maps inspired by spatial overworlds.
+-- Dashed tracks are the actual adjacency graph, not decorative ordering.
+local districtCoords = {
+  {8, 34}, {56, 38}, {104, 32}, {152, 38},
+  {152, 79}, {104, 81}, {56, 77}, {8, 81},
+}
+local districtNames = {"APPRENTICE", "ROUTES", "MOTION", "BELTS", "BRANCHES", "CONTROL", "REPAIRS", "MASTER"}
+local function dottedTrack(renderer, x1, y1, x2, y2, shade)
+  local dx, dy = x2 - x1, y2 - y1
+  local distance = math.sqrt(dx * dx + dy * dy)
+  for t = 0, distance, 6 do
+    local f = distance == 0 and 0 or t / distance
+    renderer:rect(math.floor(x1 + dx * f), math.floor(y1 + dy * f), 2, 2, shade)
   end
-  self:button(70, 110, 60, 10, "BACK", "back")
+end
+function R:drawLevels(m)
+  local cleared = 0
+  for _, chapter in ipairs(m.chapters) do
+    cleared = cleared + Campaign.stats(m.progress, chapter.number).main
+  end
+  self:page("FACTORY OVERWORLD", "EXPLORE THE TRACKS / " .. cleared .. " OF 64 MACHINES RESTORED")
+  -- Draw rails first so touch targets stay above them.
+  for i = 1, 7 do
+    local a, b = districtCoords[i], districtCoords[i + 1]
+    local open = m.devSession or Campaign.unlocked(m.progress, i + 1)
+    dottedTrack(self, a[1] + 20, a[2] + 8, b[1] + 20, b[2] + 8, open and 11 or 3)
+  end
+  for i, chapter in ipairs(m.chapters) do
+    local x, y = districtCoords[i][1], districtCoords[i][2]
+    local active = m.devSession or Campaign.unlocked(m.progress, i)
+    local stats = Campaign.stats(m.progress, i)
+    local color = active and (stats.main >= 3 and 9 or 6) or 3
+    self:rect(x, y, 42, 19, color)
+    self:rect(x + 1, y + 1, 40, 17, active and 1 or 0)
+    self:fontFit(x + 3, y + 2, string.format("%d %s", i, districtNames[i]), active and 15 or 4, 36)
+    local status = active and (stats.main .. "/8 CLEARED") or "SEALED"
+    self:fontFit(x + 3, y + 10, status, active and 11 or 8, 36)
+    if active then self:add(x, y, 42, 19, "chapter", i) end
+  end
+  self:fontFit(6, 105, "THREE CLEARS OPEN THE NEXT DISTRICT / REVISIT ANY TIME", 11, 188)
+  self:button(78, 111, 44, 9, "BACK", "back")
 end
 function R:drawChapter(m)
   local chapter = m.chapters[m.levelChapter]
   local status = Campaign.stats(m.progress, m.levelChapter)
-  local summary = string.format("%s  %d/6 PTS  %d/4 CLEARS", chapter.name, status.points, status.main)
-  self:page("CH " .. m.levelChapter .. " / " .. chapter.name, summary)
-  for step = 1, 8 do
-    local i = chapter.first + step - 1
-    local stage = E.levels[i]
-    local col, row = (step - 1) % 2, math.floor((step - 1) / 2)
-    local x, y = 7 + col * 95, 23 + row * 21
-    local cleared = (m.progress.best or {})[i] ~= nil
-    local awarded = m.progress.awards[i] or {}
-    local active = Campaign.levelUnlocked(m.progress, i, m.devSession)
-    self:rect(x, y, 90, 19, active and (cleared and 9 or 12) or 3)
-    self:rect(x + 1, y + 1, 88, 17, active and 1 or 0)
-    self:fontFit(x + 3, y + 2, string.format("%02d %s", i, stage.name), active and 15 or 4, 83)
-    local first, second = stage.bonuses[1], stage.bonuses[2]
-    local a = awarded[first.id] and "+" or "-"
-    local b = awarded[second.id] and "+" or "-"
-    local extra = step == 7 and " REMIX" or (step == 8 and " TEST" or "")
-    local subtitle = (cleared and "[X]" or "[ ]")
-      .. " CLEAR  "
-      .. a
-      .. first.name:sub(1, 6)
-      .. " "
-      .. b
-      .. second.name:sub(1, 6)
-      .. extra
-    if not active then
-      subtitle = "LOCKED  " .. stage.role:upper()
-    end
-    self:fontFit(x + 3, y + 10, subtitle, active and (cleared and 9 or 11) or 8, 85)
-    if active then
-      self:add(x, y, 90, 19, "level", i)
-    end
+  self:page("DISTRICT " .. m.levelChapter .. ": " .. chapter.name,
+    status.main .. "/8 CLEARED / " .. status.bonuses .. " BONUS / PATHS OPEN FROM CLEARED NODES")
+  for _, edge in ipairs(Campaign.paths) do
+    local a, b = Campaign.mapNodes[edge[1]], Campaign.mapNodes[edge[2]]
+    local aLevel, bLevel = chapter.first + edge[1] - 1, chapter.first + edge[2] - 1
+    local available = m.devSession or Campaign.levelUnlocked(m.progress, aLevel)
+      and Campaign.levelUnlocked(m.progress, bLevel)
+    dottedTrack(self, a[1] + 11, a[2] + 7, b[1] + 11, b[2] + 7,
+      available and 11 or 3)
   end
-  self:button(70, 110, 60, 10, "CHAPTERS", "back")
+  for i, pos in ipairs(Campaign.mapNodes) do
+    local number = chapter.first + i - 1
+    local stage = E.levels[number]
+    local active = Campaign.levelUnlocked(m.progress, number, m.devSession)
+    local finished = (m.progress.best or {})[number] ~= nil
+    local awardCount = 0
+    for _, yes in pairs(m.progress.awards[number] or {}) do
+      if yes then awardCount = awardCount + 1 end
+    end
+    local totalBonuses = #stage.bonuses
+    local color = finished and 9 or (active and 6 or 3)
+    local x, y = pos[1], pos[2]
+    self:rect(x, y, 23, 15, color)
+    self:rect(x + 1, y + 1, 21, 13, active and 1 or 0)
+    local label = i == 7 and "EX" or (i == 8 and "FIN" or string.format("%02d", i))
+    self:fontFit(x + 3, y + 2, label, active and 15 or 4, 17)
+    if finished then self:rect(x + 18, y + 2, 3, 3, 9) end
+    if totalBonuses > 0 and active then
+      self:fontFit(x + 3, y + 9, awardCount .. "/" .. totalBonuses, 11, 17)
+    end
+    self:fontFit(math.max(1, x - 4), y + 16, stage.name, active and 11 or 8, 33)
+    if active then self:add(x, y, 23, 16, "level", number) end
+  end
+  self:fontFit(5, 108, "EX = OPTIONAL EXPERT / FIN = OPTIONAL FINALE", 11, 185)
+  self:button(77, 112, 46, 8, "WORLD MAP", "back")
 end
 local function listMenu(self, title, entries, action, page)
   self:page(title, "TOUCH A ROW TO SELECT / USE PAGE BUTTONS")
@@ -1423,8 +1441,7 @@ function R:drawText(m)
       local bonuses = E.challenges(g, result)
       local awards = m.progress.awards[g.number] or {}
       for i, bonus in ipairs(bonuses) do
-        local name = bonus.id == "sealed" and "NO IDLE PARTS"
-          or (bonus.id == "master" and "USE ALL STOCK" or "PRECISION MOVES")
+        local name = bonus.name
         label(
           2,
           22 + i,
@@ -1521,17 +1538,13 @@ function R:drawText(m)
     end
     btn(4, h - 2, 16, "BACK", "back")
   elseif m.scene == "levels" then
-    label(2, 3, "OBJECTIVES: " .. m.objectives .. " / 192   (OPEN CHAPTERS)", colors.lightBlue)
+    label(2, 3, "FACTORY OVERWORLD - CLEAR 3 IN EACH AREA TO ADVANCE", colors.lightBlue)
     for i, chapter in ipairs(m.chapters) do
-      local open = m.devSession or i == 1 or m.progress.unlocked >= chapter.first
-      btn(
-        3,
-        4 + i * 3,
-        math.min(w - 6, 45),
-        i .. " " .. chapter.name .. (open and " OPEN" or (" NEED " .. chapter.threshold)),
-        open and "chapter" or nil,
-        i
-      )
+      local open = m.devSession or Campaign.unlocked(m.progress, i)
+      local stats = Campaign.stats(m.progress, i)
+      btn(3, 4 + i * 3, math.min(w - 6, 45),
+        i .. " " .. chapter.name .. (open and (" " .. stats.main .. "/8") or " LOCKED"),
+        open and "chapter" or nil, i)
     end
     btn(3, h - 2, 16, "BACK", "back")
   elseif m.scene == "chapter" then
@@ -1546,14 +1559,11 @@ function R:drawText(m)
           count = count + 1
         end
       end
-      btn(
-        3,
-        4 + step * 3,
-        math.min(w - 6, 50),
-        string.format("%02d %s CLEAR:%s BONUS:%d", i, E.levels[i].name, clear and "Y" or "N", count),
-        "level",
-        i
-      )
+      local active = Campaign.levelUnlocked(m.progress, i, m.devSession)
+      btn(3, 4 + step * 3, math.min(w - 6, 50),
+        string.format("%02d %s %s B:%d/%d", i, E.levels[i].name,
+          clear and "CLEAR" or (active and "OPEN" or "LOCK"), count, #E.levels[i].bonuses),
+        active and "level" or nil, i)
     end
     btn(3, h - 2, 16, "CHAPTERS", "back")
   else
