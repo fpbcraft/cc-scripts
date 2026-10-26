@@ -231,7 +231,11 @@ local function simulationStep()
   local dt = math.max(0, current - lastTime)
   lastTime = current
   if role ~= "join" and game then
+    local previousTurn = game.turn
     Sim.tick(game, dt)
+    if previousTurn ~= game.turn then
+      held = {}
+    end
   end
   if role == "join" and not slot and current - lastJoin >= 3 then
     send(hostId, "join")
