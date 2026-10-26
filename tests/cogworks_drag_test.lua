@@ -82,6 +82,13 @@ px, py = screen(renderer, 1, 3)
 assert(not P.begin(app.game, renderer, 2, "cell", 1, 3, px, py, "I"), "Fixed machinery cannot be lifted")
 px, py = screen(renderer, 4, 5)
 assert(not P.begin(app.game, renderer, 1, "cell", 4, 5, px, py, "I"), "Left button is reserved for removal")
+local finger = assert(P.begin(app.game, renderer, 1, "cell", 4, 5, px, py, "I", true))
+assert(
+  finger.touch and finger.button == 1 and finger.origin == "board",
+  "Finger press can drag while retaining its button ID"
+)
+P.update(finger, app.game, renderer, sx, sy)
+assert(finger.moved, "Native touch motion updates a drag preview")
 app.game.remaining.O = 0
 px, py = palette("O")
 drag = P.begin(app.game, renderer, 1, "tool", "O", nil, px, py, "O")
