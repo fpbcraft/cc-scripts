@@ -89,13 +89,52 @@ function App:act(action, x, y)
   end
 end
 package.loaded["games.cogworks.app"] = App
+local Renderer = require("games.cogworks.render")
+local renderer, originalNew = nil, Renderer.new
+Renderer.new = function(device)
+  renderer = originalNew(device)
+  return renderer
+end
+local function target(action, x, y)
+  for _, box in ipairs(renderer.targets) do
+    if box.action == action and (x == nil or box.arg == x) and (y == nil or box.arg2 == y) then
+      return (box.x + box.w / 2) * renderer.scale, (box.y + box.h / 2) * renderer.scale
+    end
+  end
+  error("Missing monitor control: " .. action)
+end
+local function touch(action, x, y)
+  local px, py = target(action, x, y)
+  return "monitor_touch",
+    "top",
+    math.floor(px / monitor.pw * monitor.w) + 1,
+    math.floor(py / monitor.ph * monitor.h) + 1
+end
 local events = {
-  { "monitor_touch", "top", 36, 21 }, -- title: Free Sandbox, now below editor/pack menu entries
-  { "monitor_touch", "top", 14, 15 }, -- centered dense canvas: empty cell to place shaft
-  { "monitor_touch", "top", 14, 15 }, -- occupied cell: expose corner controls
-  { "resize" }, -- simulates a monitor_resize after changed pixel dimensions
-  { "mouse_click", 2, 108, 89 }, -- monitor-window mouse input fallback, pixel coords
-  { "terminate" },
+  function()
+    return touch("sandbox")
+  end,
+  function()
+    return touch("cell", 2, 3)
+  end,
+  function()
+    return touch("cell", 2, 3)
+  end,
+  function()
+    monitor.pw, monitor.ph = 440, 240
+    return "monitor_resize", "top"
+  end,
+  function()
+    local x, y = target("cell", 3, 3)
+    return "mouse_click", 2, x, y
+  end,
+  function()
+    local x, y = target("cell", 3, 3)
+    return "mouse_up", 2, x, y
+  end,
+  function()
+    return "terminate"
+  end,
 }
 local sequence, oldPull, oldTimer = 0, os.pullEventRaw, os.startTimer
 os.startTimer = function()
@@ -103,17 +142,12 @@ os.startTimer = function()
 end
 os.pullEventRaw = function()
   sequence = sequence + 1
-  local event = assert(events[sequence], "Ran out of input events")
-  if event[1] == "resize" then
-    monitor.pw, monitor.ph = 440, 240
-    return "monitor_resize", "top"
-  end
-  return table.unpack(event)
+  return assert(events[sequence], "Ran out of input events")()
 end
 local ok, err = pcall(function()
   assert(loadfile("games/cogworks/main.lua"))()
 end)
-os.pullEventRaw, os.startTimer = oldPull, oldTimer
+os.pullEventRaw, os.startTimer, Renderer.new = oldPull, oldTimer, originalNew
 package.loaded["games.cogworks.app"] = nil
 assert(ok, tostring(err))
 assert(monitor.mode == 0 and monitor.scale == 1, "Monitor graphics and text scale restored after exit")

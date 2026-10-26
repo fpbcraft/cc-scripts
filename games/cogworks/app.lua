@@ -5,6 +5,7 @@ local T = require("games.cogworks.tutorials")
 local B = require("games.cogworks.briefing")
 local Campaign = require("games.cogworks.chapters")
 local Packs = require("games.cogworks.packs")
+local Pointer = require("games.cogworks.pointer")
 local A = {}
 A.__index = A
 local function countAward(awards)
@@ -255,6 +256,7 @@ function A:model()
     returnScene = self.returnScene,
     pending = self.pending,
     inspected = self.inspected,
+    drag = self.drag,
     tutorial = self.tutorial,
     briefing = self.briefing,
     hasLeftInput = self.hasLeftInput or false,
@@ -272,6 +274,32 @@ function A:model()
     packFiles = self.scene == "packList" and Packs.listPacks() or nil,
     catalogPage = self.catalogPage,
   }
+end
+function A:dropDrag(x, y)
+  local drag = self.drag
+  self.drag, self.inspected = nil, nil
+  if not drag or not drag.moved or not Pointer.valid(self.game, drag, x, y) then
+    self.message = "DROP CANCELLED"
+    return false
+  end
+  local changed
+  if drag.origin == "board" then
+    if x == drag.fromX and y == drag.fromY then
+      return false
+    end
+    changed = E.move(self.game, drag.fromX, drag.fromY, x, y)
+  else
+    changed = E.place(self.game, x, y, drag.kind, drag.r)
+  end
+  if changed then
+    self.message = ""
+    if self.game.editor then
+      self.result = E.evaluate(self.game)
+    else
+      self:updateGame()
+    end
+  end
+  return changed
 end
 -- Return 'exit' only in direct response to player choosing Exit.
 function A:act(action, x, y)

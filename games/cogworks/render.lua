@@ -92,18 +92,15 @@ function R.new(m)
   self:enable()
   return self
 end
--- Follow CivCraft's 3x4 logical pixels per text cell. Large devices get a
--- full responsive canvas; small monitors retain the authored 200x120 layout.
--- A single transform is shared by rendering and hit detection.
+-- Keep one isotropic pixel scale, but derive both canvas dimensions from
+-- the actual raster. Window shape never introduces a letterbox or pillarbox.
 function R:fitGraphics()
-  self.logicalWidth = math.max(200, self.tw * 3)
-  self.logicalHeight = math.max(120, self.th * 4)
-  self.wide = self.logicalWidth >= 260 and self.logicalHeight >= 160
-  self.canvasW = self.wide and self.logicalWidth or 200
-  self.canvasH = self.wide and self.logicalHeight or 120
-  self.scale = math.min(self.pw / self.logicalWidth, self.ph / self.logicalHeight)
-  self.ox = math.floor((self.pw - self.canvasW * self.scale) / 2)
-  self.oy = math.floor((self.ph - self.canvasH * self.scale) / 2)
+  self.scale = math.min(self.pw / math.max(200, self.tw * 3), self.ph / 120)
+  self.canvasW = math.ceil(self.pw / self.scale)
+  self.canvasH = math.ceil(self.ph / self.scale)
+  self.logicalWidth, self.logicalHeight = self.canvasW, self.canvasH
+  self.wide = self.canvasW >= 200 and self.canvasH >= 160
+  self.ox, self.oy = 0, 0
 end
 function R:enable()
   local m = self.m
@@ -173,6 +170,11 @@ function R:rect(x, y, w, h, color)
   -- sent to the attached monitor.
   local x1, y1 = math.max(0, math.floor(x)), math.max(0, math.floor(y))
   local x2, y2 = math.min(self.canvasW, math.ceil(x + w)), math.min(self.canvasH, math.ceil(y + h))
+  if self.spriteClip then
+    local clip = self.spriteClip
+    x1, y1 = math.max(x1, clip.x), math.max(y1, clip.y)
+    x2, y2 = math.min(x2, clip.x + clip.size), math.min(y2, clip.y + clip.size)
+  end
   for py = y1, y2 - 1 do
     local row = self.buffer[py + 1]
     if not row then
@@ -734,6 +736,72 @@ function R:bonusMark(g, x, y)
       return index, bonus.type == "clear_zone" and 6 or 11
     end
   end
+end
+function R:toCanvas(x, y)
+  if self.mode == "graphics" then
+    return (x - self.ox) / self.scale, (y - self.oy) / self.scale
+  end
+  return x, y
+end
+function R:boardCell(x, y)
+  local px, py = self:toCanvas(x, y)
+  local board = self.textBoard
+  if self.mode == "graphics" then
+    board = self.currentGameLayout and self.currentGameLayout.grid
+    if not board then
+      return nil
+    end
+    local cx, cy = math.floor((px - board.x) / self.cell) + 1, math.floor((py - board.y) / self.cell) + 1
+    if px >= board.x and py >= board.y and px < board.x + board.w and py < board.y + board.h then
+      return cx, cy
+    end
+  elseif board and px >= board.x and py >= board.y and px < board.x + board.w and py < board.y + board.h then
+    return math.floor((px - board.x) / board.cellW) + 1, math.floor((py - board.y) / board.cellH) + 1
+  end
+end
+function R:fixedFrame(x, y, size, tile, editor)
+  if not tile.fixed or editor then
+    return
+  end
+  self:rect(x, y, size, 1, 6)
+  self:rect(x, y + size - 1, size, 1, 6)
+  self:rect(x, y, 1, size, 6)
+  self:rect(x + size - 1, y, 1, size, 6)
+  self:rect(x, y, 2, 2, 15)
+  if size >= 12 then
+    self:rect(x + size - 5, y + 1, 3, 4, 1)
+    self:rect(x + size - 4, y + 1, 1, 2, 15)
+    self:rect(x + size - 5, y + 3, 3, 2, 6)
+  end
+end
+function R:drawDrag(m)
+  local drag = m.drag
+  if self.mode ~= "graphics" or not drag or not drag.moved or (m.scene ~= "game" and m.scene ~= "editor") then
+    return
+  end
+  local size = self.cell
+  if drag.targetX and drag.targetY then
+    local tx, ty = self.boardX + (drag.targetX - 1) * size, self.boardY + (drag.targetY - 1) * size
+    local ink = drag.valid and 9 or 8
+    self:rect(tx, ty, size, 2, ink)
+    self:rect(tx, ty + size - 2, size, 2, ink)
+    self:rect(tx, ty, 2, size, ink)
+    self:rect(tx + size - 2, ty, 2, size, ink)
+  end
+  local px, py = drag.cursorX - drag.offsetX, drag.cursorY - drag.offsetY
+  self:rect(px + 2, py + 2, size, size, 1)
+  local tile = { kind = drag.kind, r = drag.r, id = -1, x = drag.targetX or 0, y = drag.targetY or 0 }
+  local light = { powered = false }
+  if drag.origin == "board" then
+    local source = E.get(m.game, drag.fromX, drag.fromY)
+    light = source and m.result.lights[source.id] or light
+  end
+  if tile.kind == "R" or tile.kind == "B" then
+    self:redstonePiece(m.game, tile, { redstone = {} }, px, py, size)
+  else
+    self:piece(px, py, size, tile, light)
+  end
+  self:rect(px, py, size, 1, drag.valid and 11 or 8)
 end
 function R:drawBonusMarks(g)
   for y = 1, g.height do
@@ -1453,6 +1521,8 @@ function R:drawText(m)
     local x0, y0 = 2, 3
     local columnWidth = math.min(6, math.max(4, math.floor((w - 2) / g.width)))
     local rowHeight = math.max(2, math.min(3, math.floor((h - 15) / g.height)))
+    self.textBoard =
+      { x = x0, y = y0, w = columnWidth * g.width, h = rowHeight * g.height, cellW = columnWidth, cellH = rowHeight }
     for y = 1, g.height do
       for x = 1, g.width do
         local p = E.get(g, x, y)
@@ -1698,7 +1768,8 @@ function R:draw(m)
   -- Time-derived angles do not depend on how frequently UI events redraw.
   -- A deterministic override is exposed for sprite regression tests.
   self.motionNow = self.motionOverride or (m.settings and m.settings.animations ~= false and os.clock() or 0)
-  if self.wide and self:drawResponsive(m) then
+  if (self.wide or m.scene == "game" or m.scene == "editor") and self:drawResponsive(m) then
+    self:drawDrag(m)
     self:flush()
     self.frame = self.frame + 1
     return
@@ -1734,6 +1805,7 @@ function R:draw(m)
   else
     self:drawHelp(m)
   end
+  self:drawDrag(m)
   self:flush()
   self.frame = self.frame + 1
 end

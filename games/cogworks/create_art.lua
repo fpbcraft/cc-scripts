@@ -53,16 +53,15 @@ return function(R)
     self:rect(x, y, 1, 1, 15)
   end
   local function casing(self, x, y, size, brass)
-    local frame = brass and 7 or 4
-    local trim = brass and 6 or 13
-    self:rect(x + 1, y + 1, size - 2, size - 2, frame)
-    self:rect(x + 2, y + 2, size - 4, size - 4, trim)
-    self:rect(x + 3, y + 3, size - 6, size - 6, 2)
-    self:rect(x + 4, y + 4, size - 8, size - 8, 1)
-    bolt(self, x + 2, y + 2)
-    bolt(self, x + size - 4, y + 2)
-    bolt(self, x + 2, y + size - 4)
-    bolt(self, x + size - 4, y + size - 4)
+    local frame, trim = brass and 7 or 4, brass and 6 or 13
+    self:rect(x, y, size, size, frame)
+    self:rect(x + 1, y + 1, size - 2, size - 2, trim)
+    self:rect(x + 2, y + 2, size - 4, size - 4, 2)
+    self:rect(x + 3, y + 3, size - 6, size - 6, 1)
+    bolt(self, x + 1, y + 1)
+    bolt(self, x + size - 3, y + 1)
+    bolt(self, x + 1, y + size - 3)
+    bolt(self, x + size - 3, y + size - 3)
   end
   local function hub(self, cx, cy, size)
     local d = limit(math.floor(size / 6), 3, 6)
@@ -80,9 +79,16 @@ return function(R)
     -- highlights, with darker wood shadows and an andesite shaft hub.
     local count = large and 12 or 8
     local tooth = radius >= 8 and 3 or 2
+    if not large then
+      local body = math.max(1, radius - 2)
+      for row = math.ceil(-body), math.floor(body) do
+        local half = math.sqrt(math.max(0, body * body - row * row))
+        self:rect(nearest(cx - half), nearest(cy + row), math.max(1, nearest(half * 2)), 1, 6)
+      end
+    end
     local interior = large and math.max(3, radius - 4) or math.max(2, radius - 3)
     ring(self, cx + 1, cy + 1, radius - 1, 7, angle, radius * 8)
-    ring(self, cx, cy, radius - 1, 6, angle, radius * 8)
+    ring(self, cx, cy, radius - 1, 6, angle, math.max(8, math.floor(radius * 8)))
     ring(self, cx, cy, radius - 2, 7, angle, radius * 8)
     if large then
       -- Negative-space spokes let the background show through the gear,
@@ -127,12 +133,12 @@ return function(R)
     end
   end
   local function shaft(self, x, y, size, tile, spin)
-    local cx, cy = x + math.floor(size / 2), y + math.floor(size / 2)
+    local cx, cy = x + (size - 1) / 2, y + (size - 1) / 2
     local horizontal = tile.r % 2 == 1
-    local length = math.max(4, size - 4)
-    local width = limit(math.floor(size / 5), 3, 6)
-    local majorX = horizontal and x + 2 or cx - math.floor(width / 2)
-    local majorY = horizontal and cy - math.floor(width / 2) or y + 2
+    local length = size
+    local width = limit(math.floor(size / 4), 3, 9)
+    local majorX = horizontal and x or cx - math.floor(width / 2)
+    local majorY = horizontal and cy - math.floor(width / 2) or y
     self:rect(majorX, majorY, horizontal and length or width, horizontal and width or length, 7)
     self:rect(
       majorX + (horizontal and 0 or 1),
@@ -169,7 +175,7 @@ return function(R)
     hub(self, cx, cy, radius * 2)
   end
   local function redstone(self, g, tile, result, x, y, size)
-    local cx, cy = x + math.floor(size / 2), y + math.floor(size / 2)
+    local cx, cy = x + (size - 1) / 2, y + (size - 1) / 2
     local lit = result.redstone and result.redstone[tile.id]
     if tile.kind == "B" then
       casing(self, x, y, size, false)
@@ -196,16 +202,16 @@ return function(R)
     self:rect(cx, cy, 1, 1, lit and 15 or 8)
   end
   function R:redstonePiece(g, tile, result, x, y, size)
-    if not self.wide or size < 16 then
+    if size < 10 then
       return original.redstonePiece(self, g, tile, result, x, y, size)
     end
     return redstone(self, g, tile, result, x, y, size)
   end
   function R:piece(x, y, size, tile, light)
-    if not self.wide or size < 16 then
+    if size < 10 then
       return original.piece(self, x, y, size, tile, light)
     end
-    local cx, cy = x + math.floor(size / 2), y + math.floor(size / 2)
+    local cx, cy = x + (size - 1) / 2, y + (size - 1) / 2
     local spin = motion(tile, light)
     local kind = tile.kind
     if kind == "X" then
@@ -217,17 +223,14 @@ return function(R)
     elseif kind == "I" then
       shaft(self, x, y, size, tile, spin)
     elseif kind == "G" or kind == "O" then
-      local radius = math.floor(size / 2) - 3
-      if kind == "G" then
-        radius = math.max(5, math.floor(size * 0.32))
-      end
+      local radius = (size - 1) / 2 - (size >= 20 and 1 or 0.5)
       cog(self, cx, cy, radius, kind == "O", spin)
     elseif kind == "S" then
       casing(self, x, y, size, true)
       self:rect(x + 5, y + 5, size - 10, size - 10, 10)
       self:rect(cx - 4, cy - 4, 9, 9, 7)
-      hub(self, cx, cy, size)
-      self:fontFit(x + 4, y + size - 10, "MTR", 15, size - 8)
+      pulley(self, cx, cy, math.max(2, math.floor(size / 3)), spin, false)
+      self:fontFit(x + 1, y + size - 6, "MTR", 15, size - 2)
     elseif kind == "M" then
       casing(self, x, y, size, false)
       local correct = light and light.correct
@@ -236,7 +239,7 @@ return function(R)
       local travel = correct and nearest((sin((self.motionNow or 0) * 6) + 1) * 2) or 0
       self:rect(cx - stroke, cy - 3 + travel, stroke * 2 + 1, 5, 13)
       self:rect(cx - 2, cy + 3 + travel, 5, 2, 6)
-      self:fontFit(x + 4, y + size - 8, (tile.sign == 1 and ">" or "<") .. tostring(tile.speed) .. "X", 15, size - 7)
+      self:fontFit(x + 1, y + size - 6, (tile.sign == 1 and ">" or "<") .. tostring(tile.speed), 15, size - 2)
     elseif kind == "Q" then
       casing(self, x, y, size, false)
       cog(self, cx, cy, math.max(5, math.floor(size / 4)), false, spin)
@@ -255,16 +258,26 @@ return function(R)
       end
       pulley(self, cx, cy, math.floor(size / 3), spin, true)
     elseif kind == "V" then
-      self:rect(x + 2, y + 2, size - 4, size - 4, 7)
-      self:rect(x + 4, y + 4, size - 8, size - 8, 1)
-      pulley(self, cx, cy, math.floor(size / 2) - 5, spin, false)
+      self:rect(x, y, size, size, 7)
+      self:rect(x + 1, y + 1, size - 2, size - 2, 1)
+      pulley(self, cx, cy, math.max(2, math.floor(size / 2) - 2), spin, false)
     elseif kind == "C" or kind == "Z" then
       casing(self, x, y, size, false)
       local redstone = light and light.redstone
-      local engaged = kind == "C" and not redstone or redstone
+      local engaged = not redstone
+      if kind == "Z" then
+        engaged = redstone
+      end
       local highlight = redstone and 8 or 6
-      shaft(self, x + 2, y + 2, size - 4, tile, spin)
-      local gap = engaged and 0 or 2
+      shaft(self, x, y, size, tile, spin)
+      local gap = engaged and 0 or math.max(2, math.floor(size / 8))
+      if kind == "C" and not engaged then
+        if tile.r % 2 == 1 then
+          self:rect(cx - gap, cy - 4, gap * 2 + 1, 9, 1)
+        else
+          self:rect(cx - 4, cy - gap, 9, gap * 2 + 1, 1)
+        end
+      end
       self:rect(cx - 4 - gap, cy - 4, 3, 9, 13)
       self:rect(cx + 2 + gap, cy - 4, 3, 9, 13)
       self:rect(cx - 1, cy - 5, 3, 11, highlight)
@@ -279,7 +292,7 @@ return function(R)
     end
   end
   function R:drawSpan(x1, y1, x2, y2, kind, powered, light)
-    if not self.wide or self.cell < 16 then
+    if self.cell < 10 then
       return original.drawSpan(self, x1, y1, x2, y2, kind, powered, light)
     end
     local dx, dy = x2 - x1, y2 - y1
@@ -328,7 +341,7 @@ return function(R)
   -- toothed links. Belt connections already call R:drawSpan above.
   function R:drawSpans(g, result)
     original.drawSpans(self, g, result)
-    if not self.wide or self.cell < 16 then
+    if self.cell < 10 then
       return
     end
     for _, tile in ipairs(g.tiles) do
@@ -359,6 +372,21 @@ return function(R)
         end
       end
     end
+  end
+  -- Teeth, moving couplings and glyphs must never paint into adjacent cells,
+  -- including at the smallest zoom level or while a ghost crosses a panel.
+  local drawPiece, drawRedstone = R.piece, R.redstonePiece
+  function R:piece(x, y, size, tile, light)
+    local previous = self.spriteClip
+    self.spriteClip = { x = math.floor(x), y = math.floor(y), size = size }
+    drawPiece(self, x, y, size, tile, light)
+    self.spriteClip = previous
+  end
+  function R:redstonePiece(g, tile, result, x, y, size)
+    local previous = self.spriteClip
+    self.spriteClip = { x = math.floor(x), y = math.floor(y), size = size }
+    drawRedstone(self, g, tile, result, x, y, size)
+    self.spriteClip = previous
   end
   function R:toolIcon(x, y, kind)
     if not self.wide then

@@ -31,7 +31,7 @@ function monitor.drawPixels(x, y, data, w, h)
 end
 local r = R.new(monitor)
 assert(r.mode == "graphics" and r.wide)
-assert(r.canvasW == 345 and r.canvasH == 260, "Canvas follows terminal resolution")
+assert(r.canvasW == 345 and r.canvasH == 244, "Canvas follows actual pixel aspect ratio")
 assert(r.ox >= 0 and r.scale > 1, "Responsive canvas fits the physical display")
 
 local model = {
@@ -82,7 +82,7 @@ assertTap("help")
 assertTap("cell")
 assert(r.boardX >= 4 and r.boardY >= 22, "The board reaches close to the new header")
 local layout = r.currentGameLayout
-assert(layout.board.w <= layout.board.h and layout.sidebar.w >= 100, "Board is square and extra width goes to sidebar")
+assert(layout.cell >= 6 and layout.sidebar.w >= 100, "Board and component palette share the available canvas")
 assert(layout.grid.x >= layout.board.x and layout.grid.y >= layout.board.y, "Grid remains inside its board area")
 assert(layout.sidebar.x - (layout.grid.x + layout.grid.w) < 26, "Grid no longer has a large empty right margin")
 assert(layout.grid.y + layout.grid.h <= layout.board.y + layout.board.h, "Grid fits the playable height")
@@ -149,7 +149,7 @@ r:resize()
 model.scene, model.game = "game", E.new(4)
 model.result, model.tutorial = E.evaluate(model.game), nil
 r:draw(model)
-assert(r.canvasW == 390 and r.canvasH == 280)
+assert(r.canvasW == 390 and r.canvasH == 263)
 assertTap("cell")
 assertTap("tool", "I")
 assert(monitor.clears >= 2, "A resize clears the entire display")

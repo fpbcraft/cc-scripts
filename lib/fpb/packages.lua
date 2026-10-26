@@ -13,6 +13,7 @@ P.packages.cogworks = {
     "briefing.lua",
     "display.lua",
     "engine.lua",
+    "pointer.lua",
     "chapters.lua",
     "levels.lua",
     "campaign/district_1.lua",

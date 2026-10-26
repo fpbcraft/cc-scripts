@@ -11,48 +11,19 @@ local App = require("games.cogworks.app")
 local Renderer = require("games.cogworks.render")
 local E = require("games.cogworks.engine")
 local Display = require("games.cogworks.display")
+local Pointer = require("games.cogworks.pointer")
 -- Translate a pointer press on the board, not on toolbar/menu controls.
--- CC mouse buttons are 1=left, 2=right. A normal left press must build.
+-- CC mouse buttons are 1=left (remove), 2=right (build / drag).
 -- Touch input has no mouse button and also supports the erase tool.
 local function boardAction(button, selected, touch)
-  if button == 2 or selected == "erase" then
+  if button == 1 or selected == "erase" then
     return "remove"
   end
   return touch and "inspect" or "cell"
 end
--- CraftOS-PC on iPad can deliver mouse_click without a corresponding
--- mouse_up. Hold taps briefly to distinguish them from drag gestures, then
--- commit even if the platform never sends a release event.
-local function pointerTransition(pointer, phase, button, x, y, selected)
-  if phase == "down" then
-    return { button = button, x = x, y = y, moved = false }
-  end
-  if not pointer then
-    return nil
-  end
-  if phase == "drag" then
-    if x and y and (x ~= pointer.x or y ~= pointer.y) then
-      pointer.moved = true
-    end
-    return pointer
-  end
-  if phase == "timeout" and pointer.moved then
-    return pointer
-  end
-  if phase == "up" and pointer.moved then
-    if x and y then
-      return nil, "move", pointer.x, pointer.y, x, y
-    end
-    return nil
-  end
-  if phase == "up" or phase == "timeout" then
-    return nil, boardAction(pointer.button, selected, false), pointer.x, pointer.y
-  end
-  return pointer
-end
 local args = { ... }
 if args[1] == "--test-api" then
-  return { app = App, engine = E, renderer = Renderer, boardAction = boardAction, pointerTransition = pointerTransition }
+  return { app = App, engine = E, renderer = Renderer, boardAction = boardAction, pointer = Pointer }
 end
 local dev = false
 local debugInput = false
@@ -146,6 +117,7 @@ local function start()
       trace("PIXEL MODE UNAVAILABLE: USING VIRTUAL TEXT VIEWPORT")
     end
     app = App.new({ dev = dev })
+    local drag = nil
     local function redraw()
       renderer:draw(app:model())
       Display.present(monitor, mode)
@@ -158,26 +130,80 @@ local function start()
       if response == "exit" then
         return false
       end
+      if app.scene ~= "game" and app.scene ~= "editor" then
+        drag, app.drag = nil, nil
+      end
       redraw()
       return true
     end
     redraw()
-    local drag = nil
-    -- Smooth native CraftOS animation (~12fps); peripheral monitors are
+    -- Smooth native CraftOS animation (~20fps); peripheral monitors are
     -- capped lower to avoid flooding remote monitor update packets.
-    local frameInterval = renderer.mode == "graphics" and (computerMode and 0.08 or 0.13) or 0.2
+    local frameInterval = renderer.mode == "graphics" and (computerMode and 0.05 or 0.13) or 0.2
     local timer = os.startTimer(frameInterval)
-    local function applyPointer(phase, x, y)
-      local action, px, py, tx, ty
-      drag, action, px, py, tx, ty = pointerTransition(drag, phase, nil, x, y, app.selected)
-      if not action then
+    local function cancelDrag()
+      drag, app.drag = nil, nil
+    end
+    local function finishPointer(mx, my)
+      local pointer = drag
+      if not pointer then
         return true
       end
-      trace("BOARD " .. phase .. " action=" .. tostring(action) .. " at=" .. tostring(px) .. "," .. tostring(py))
-      if action == "move" then
-        app.moveX, app.moveY = tx, ty
+      Pointer.update(pointer, app.game, renderer, mx, my)
+      if pointer.moved then
+        app.drag = pointer
+        app:dropDrag(pointer.targetX, pointer.targetY)
+        drag = nil
+        redraw()
+        return true
       end
-      return act(action, px, py)
+      cancelDrag()
+      if pointer.origin ~= "inventory" then
+        return act(boardAction(pointer.button, app.selected, not computerMode), pointer.fromX, pointer.fromY)
+      end
+      redraw()
+      return true
+    end
+    local function pressPointer(button, mx, my)
+      if drag and drag.origin == "paint" and not drag.moved then
+        if not act("cell", drag.fromX, drag.fromY) then
+          return false
+        end
+      end
+      cancelDrag()
+      local action, x, y = renderer:hit(mx, my)
+      local gameScene = app.scene == "game" or app.scene == "editor"
+      if gameScene and action == "cell" and (button == 1 or app.selected == "erase") then
+        return act("remove", x, y)
+      end
+      if gameScene and (action == "cell" or action == "tool") then
+        if action == "tool" and not act(action, x, y) then
+          return false
+        end
+        drag = Pointer.begin(app.game, renderer, button, action, x, y, mx, my, app.selected)
+        if drag then
+          app.drag = drag
+          if drag.origin ~= "inventory" then
+            drag.timer = os.startTimer(0.12)
+          end
+          return true
+        end
+        if action == "tool" then
+          return true
+        end
+      end
+      if action == "cell" then
+        action = boardAction(button, app.selected, not computerMode)
+      end
+      return act(action, x, y)
+    end
+    local function mousePosition(event, a, b, c, d)
+      local button, mx, my = a, b, c
+      if event:sub(1, 8) == "monitor_" then
+        button, mx, my = d ~= nil and b or 2, d ~= nil and c or b, d ~= nil and d or c
+      end
+      mx, my = Display.click(monitor, mode, mx, my)
+      return button, mx, my
     end
     while true do
       local event, a, b, c, d = os.pullEventRaw()
@@ -222,100 +248,69 @@ local function start()
         if not act(action, x, y) then
           break
         end
-      elseif not computerMode and (event == "mouse_click" or event == "monitor_mouse_click") then
-        -- CraftOS monitor windows can expose a mouse_click event instead of
-        -- vanilla monitor_touch. Pixel graphics input uses pixel coordinates.
-        if event == "mouse_click" or a == name then
-          local mx, my
-          if event == "mouse_click" or d == nil then
-            mx, my = b, c
-          else
-            mx, my = c, d
-          end
-          local action, x, y = renderer:hit(mx, my)
-          if not action then
-            action, x, y = renderer:hitTouch(mx, my)
-          end
-          if action == "cell" then
-            local button = event == "mouse_click" and a or (d ~= nil and b or 1)
-            action = boardAction(button, app.selected, true)
-          end
-          if not act(action, x, y) then
-            break
-          end
-        end
       elseif event == "monitor_left_click" and a == name then
-        -- FPB Monitor Input companion sends normalized 0..1 screen positions.
-        -- After it is detected, vanilla right-clicks remove directly.
         local action, x, y = renderer:hitNormalized(b, c)
-        if action then
-          app.hasLeftInput = true
-          if action == "cell" then
-            action = boardAction(1, app.selected, true)
+        app.hasLeftInput = true
+        if action == "cell" then
+          action = boardAction(1, app.selected, true)
+        end
+        cancelDrag()
+        if not act(action, x, y) then
+          break
+        end
+      elseif event == "mouse_click" or (event == "monitor_mouse_click" and a == name) then
+        local button, mx, my = mousePosition(event, a, b, c, d)
+        if mx and not pressPointer(button, mx, my) then
+          break
+        end
+      elseif (event == "mouse_drag" or (event == "monitor_mouse_drag" and a == name)) and drag then
+        local button, mx, my = mousePosition(event, a, b, c, d)
+        if mx and button == drag.button then
+          Pointer.update(drag, app.game, renderer, mx, my)
+          if drag.moved then
+            app.inspected = nil
           end
-          if not act(action, x, y) then
+          redraw()
+        end
+      elseif event == "mouse_move" and drag then
+        local mx, my = Display.click(monitor, mode, a, b)
+        if mx then
+          Pointer.update(drag, app.game, renderer, mx, my)
+          redraw()
+        end
+      elseif (event == "mouse_up" or (event == "monitor_mouse_up" and a == name)) and drag then
+        local button, mx, my = mousePosition(event, a, b, c, d)
+        if mx and button == drag.button and not finishPointer(mx, my) then
+          break
+        end
+      elseif event == "timer" and drag and a == drag.timer and not drag.moved then
+        if drag.origin == "paint" then
+          local x, y = drag.fromX, drag.fromY
+          cancelDrag()
+          if not act("cell", x, y) then
             break
           end
-        end
-      elseif computerMode and event == "mouse_click" then
-        -- A tap must work on iPad even if mouse_up is never delivered.
-        -- A short grace period still permits dragging an existing piece.
-        if drag and not applyPointer("timeout") then
-          break
-        end
-        local x, y = Display.click(monitor, mode, b, c)
-        if x then
-          local action, cx, cy = renderer:hit(x, y)
-          trace(
-            "COMPUTER HIT="
-              .. tostring(action)
-              .. " at="
-              .. tostring(cx)
-              .. ","
-              .. tostring(cy)
-              .. " selected="
-              .. tostring(app.selected)
-          )
-          if action == "cell" then
-            drag = pointerTransition(nil, "down", a, cx, cy, app.selected)
-            drag.timer = os.startTimer(0.12)
-          elseif not act(action, cx, cy) then
+        elseif drag.origin == "board" then
+          -- Click-only touch selects without mutating the piece. Retaining
+          -- the gesture also permits a long hold before a desktop drag.
+          if not act("inspect", drag.fromX, drag.fromY) then
             break
           end
-        end
-      elseif computerMode and event == "mouse_drag" and drag then
-        local x, y = Display.click(monitor, mode, b, c)
-        if x then
-          local action, cx, cy = renderer:hit(x, y)
-          if action == "cell" then
-            drag = pointerTransition(drag, "drag", a, cx, cy, app.selected)
-          end
-        end
-      elseif computerMode and event == "mouse_up" and drag then
-        local x, y = Display.click(monitor, mode, b, c)
-        local action, cx, cy
-        if x then
-          action, cx, cy = renderer:hit(x, y)
-        end
-        if not applyPointer("up", action == "cell" and cx or nil, action == "cell" and cy or nil) then
-          break
-        end
-      elseif computerMode and event == "timer" and drag and a == drag.timer then
-        if not applyPointer("timeout") then
-          break
         end
       elseif mode == "virtual-text" and event == "mouse_scroll" then
         monitor.pan(0, a * 3)
       elseif computerMode and event == "term_resize" then
+        cancelDrag()
         renderer:resize()
         redraw()
       elseif event == "monitor_resize" and a == name then
+        cancelDrag()
         renderer:resize()
         redraw()
       elseif event == "timer" and a == timer then
         if
           renderer.mode == "graphics"
-          and app.settings.animations
+          and (app.settings.animations or (drag and drag.moved))
           and (app.scene == "game" or app.scene == "editor" or app.scene == "briefing" or app.scene == "tutorial")
         then
           redraw()
@@ -323,6 +318,7 @@ local function start()
         -- Peripheral monitor graphics need fewer pushes than native CraftOS-PC.
         timer = os.startTimer(app.scene == "briefing" and 0.12 or frameInterval)
       elseif event == "char" then
+        cancelDrag()
         local char = tostring(a):lower()
         local n = tonumber(char)
         if n and n >= 1 and n <= 9 then
@@ -355,7 +351,10 @@ local function start()
           act("back")
         end
       elseif event == "key" and keys then
-        if mode == "virtual-text" and (a == keys.up or a == keys.down or a == keys.left or a == keys.right) then
+        if drag and a == keys.escape then
+          cancelDrag()
+          redraw()
+        elseif mode == "virtual-text" and (a == keys.up or a == keys.down or a == keys.left or a == keys.right) then
           local dx = a == keys.left and -8 or (a == keys.right and 8 or 0)
           local dy = a == keys.up and -5 or (a == keys.down and 5 or 0)
           monitor.pan(dx, dy)
