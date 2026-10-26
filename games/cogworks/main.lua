@@ -153,7 +153,10 @@ local function start()
     end
     redraw()
     local drag = nil
-    local timer = os.startTimer(0.2)
+    -- Smooth native CraftOS animation (~12fps); peripheral monitors are
+    -- capped lower to avoid flooding remote monitor update packets.
+    local frameInterval = renderer.mode == "graphics" and (computerMode and 0.08 or 0.13) or 0.2
+    local timer = os.startTimer(frameInterval)
     local function applyPointer(phase, x, y)
       local action, px, py, tx, ty
       drag, action, px, py, tx, ty = pointerTransition(drag, phase, nil, x, y, app.selected)
@@ -308,7 +311,7 @@ local function start()
           redraw()
         end
         -- Peripheral monitor graphics need fewer pushes than native CraftOS-PC.
-        timer = os.startTimer(app.scene == "briefing" and 0.15 or 0.2)
+        timer = os.startTimer(app.scene == "briefing" and 0.12 or frameInterval)
       elseif event == "char" then
         local char = tostring(a):lower()
         local n = tonumber(char)
