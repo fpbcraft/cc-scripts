@@ -154,11 +154,8 @@ local function api(path)
   local separator = path:find("?", 1, true) and "&" or "?"
   local nonce = os.epoch and os.epoch("utc") or math.floor(os.clock() * 1000)
   local url = "https://api.github.com/repos/fpbcraft/cc-scripts/" .. path .. separator .. "fpbstore_cb=" .. nonce
-  local h, err = http.get(
-    url,
-    { ["Accept"] = "application/vnd.github+json", ["User-Agent"] = "FPBStore-CraftOS" },
-    true
-  )
+  local h, err =
+    http.get(url, { ["Accept"] = "application/vnd.github+json", ["User-Agent"] = "FPBStore-CraftOS" }, true)
   assert(h, "GitHub API request failed: " .. tostring(err))
   local status = h.getResponseCode and h.getResponseCode() or 200
   local body = h.readAll()
