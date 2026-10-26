@@ -44,8 +44,10 @@ local function screen(b, x, y)
 end
 local function visible(b, x, y, pad)
   pad = pad or 2
-  return x >= b.scrollX - pad and x < b.scrollX + b.w / b.scale + pad
-    and y >= b.scrollY - pad and y < b.scrollY + b.h / b.scale + pad
+  return x >= b.scrollX - pad
+    and x < b.scrollX + b.w / b.scale + pad
+    and y >= b.scrollY - pad
+    and y < b.scrollY + b.h / b.scale + pad
 end
 local function camera(r, g)
   local areaW, areaH = r.w - 6, math.max(30, r.h - 68)
@@ -57,7 +59,11 @@ local function camera(r, g)
     return math.max(a, math.min(z, n))
   end
   return {
-    x = 3, y = 20, w = areaW, h = areaH, scale = scale,
+    x = 3,
+    y = 20,
+    w = areaW,
+    h = areaH,
+    scale = scale,
     scrollX = clamp(focus.x - vw / 2, 0, math.max(0, Sim.W - vw)),
     scrollY = clamp(focus.y - vh * 0.62, 0, math.max(0, Sim.H - vh)),
   }
@@ -250,7 +256,14 @@ function UI:draw(g, opts)
   local mine = active and (opts.role == "local" or (opts.slot ~= nil and opts.slot == g.turn))
   self.canControl = mine
   local remaining = math.max(0, g.turnLeft or 0)
-  r:text(math.max(68, r.w - 104), 3, "TEAM " .. g.turn .. "  TIME " .. math.ceil(remaining), remaining < 10 and 31 or 7, 1, 100)
+  r:text(
+    math.max(68, r.w - 104),
+    3,
+    "TEAM " .. g.turn .. "  TIME " .. math.ceil(remaining),
+    remaining < 10 and 31 or 7,
+    1,
+    100
+  )
   fill(r, 3, 11, r.w - 6, 3, 3)
   fill(r, 3, 11, (r.w - 6) * remaining / Sim.TURN_SECONDS, 3, remaining < 10 and 31 or 11)
   r:text(3, 15, "WIND " .. (g.wind > 0 and "+" or "") .. g.wind .. "  " .. g.message, 7, 1, r.w - 6)
@@ -287,23 +300,34 @@ function UI:draw(g, opts)
     end
   end
   buttonRow(r, {
-    { "LEFT", act("move", -1) }, { "RIGHT", act("move", 1) },
-    { "AIM -", act("aim", -1) }, { "AIM +", act("aim", 1) },
-    { "JUMP", act("jump") }, { "ARMS", function()
-      self.picker = not self.picker
-    end },
+    { "LEFT", act("move", -1) },
+    { "RIGHT", act("move", 1) },
+    { "AIM -", act("aim", -1) },
+    { "AIM +", act("aim", 1) },
+    { "JUMP", act("jump") },
+    {
+      "ARMS",
+      function()
+        self.picker = not self.picker
+      end,
+    },
   }, y, mine)
   buttonRow(r, {
-    { "ROPE", function()
-      if w and w.rope then
-        self.dispatch({ kind = "rope" })
-      else
-        self.aimMode = "rope"
-      end
-    end },
-    { "REEL -", act("reel", -1) }, { "REEL +", act("reel", 1) },
+    {
+      "ROPE",
+      function()
+        if w and w.rope then
+          self.dispatch({ kind = "rope" })
+        else
+          self.aimMode = "rope"
+        end
+      end,
+    },
+    { "REEL -", act("reel", -1) },
+    { "REEL +", act("reel", 1) },
     { g.charging and "RELEASE" or "CHARGE", act("fire"), true },
-    { "PASS", act("pass") }, { "EXIT", act("exit"), false, true },
+    { "PASS", act("pass") },
+    { "EXIT", act("exit"), false, true },
   }, y + 15, mine)
   if self.picker then
     local x0 = math.max(2, math.floor(r.w * 0.09))
