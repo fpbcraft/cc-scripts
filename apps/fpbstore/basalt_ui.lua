@@ -704,6 +704,85 @@ function U.run(manager, basalt)
       launchChoice()
     elseif page == "keyboard" then
       keyboard()
+    elseif page == "menu" then
+      title("STORE MENU")
+      button(2, 6, 14, "SETTINGS", function()
+        page = "settings"
+        showPage()
+      end)
+      button(2, 7, 14, "REFRESH", function()
+        runAction("refresh")
+      end)
+      button(2, 8, 14, "UPDATE STORE", function()
+        runAction("store-update")
+      end)
+      button(2, 9, 12, "EXIT", function()
+        returnCode = "exit"
+        basalt.stop()
+      end)
+      button(15, 9, 10, "BACK", back)
+      keyFocus()
+    elseif page == "manage" then
+      title("MANAGE " .. (current() and current().name or ""))
+      local app = current()
+      local target = prefs.launchTargets[app.id] or "ask"
+      label(2, 5, "Launch target:", colors.lightGray)
+      local x = 2
+      for _, mode in ipairs({ "term", "monitor", "ask" }) do
+        local width = mode == "monitor" and 9 or 7
+        button(x, 6, width, mode == "monitor" and "MON" or mode:upper(), function()
+          prefs.launchTargets[app.id] = mode
+          save()
+          showPage()
+        end, target == mode and colors.orange or colors.blue)
+        x = x + width + 1
+      end
+      button(2, 8, 11, "REINSTALL", function()
+        runAction("install")
+      end)
+      if manager.installed(app) then
+        button(14, 8, 10, "REMOVE", function()
+          page = "remove"
+          showPage()
+        end, colors.red)
+      end
+      button(2, 9, 9, "BACK", back)
+      keyFocus()
+    elseif page == "options" then
+      title("INSTALL OPTIONS")
+      label(2, 5, "Run on: " .. installTarget, colors.lightGray)
+      local x = 2
+      for _, mode in ipairs({ "term", "monitor", "ask" }) do
+        local width = mode == "monitor" and 9 or 7
+        button(x, 6, width, mode == "monitor" and "MON" or mode:upper(), function()
+          installTarget = mode
+          showPage()
+        end, installTarget == mode and colors.orange or colors.blue)
+        x = x + width + 1
+      end
+      button(2, 8, 16, installOpus and "OPUS SHORTCUT +" or "OPUS SHORTCUT -", function()
+        installOpus = not installOpus
+        showPage()
+      end)
+      button(2, 9, 9, "BACK", back)
+      keyFocus()
+    elseif page == "opus_settings" then
+      title("OPUS INTEGRATION")
+      button(2, 6, 18, prefs.opusStore and "STORE ON" or "STORE OFF", function()
+        prefs.opusStore = not prefs.opusStore
+        save()
+        showPage()
+      end)
+      button(2, 7, 18, prefs.opusApps and "APPS ON" or "APPS OFF", function()
+        prefs.opusApps = not prefs.opusApps
+        save()
+        showPage()
+      end)
+      button(2, 9, 9, "BACK", function()
+        page = "settings"
+        showPage()
+      end)
+      keyFocus()
     elseif page == "remove" then
       title("REMOVE " .. (current() and current().name or "") .. "?")
       label(2, 7, "Save files are preserved.", colors.lime)
@@ -766,6 +845,14 @@ function U.run(manager, basalt)
         local ok, why = manager.refreshVersions()
         assert(ok, why or "Catalog unavailable")
       end, "Catalog updated")
+    elseif action == "store-update" then
+      if execute(function()
+        manager.updateStore()
+      end, "Store updated") then
+        returnCode = "reload"
+        basalt.stop()
+        return
+      end
     elseif action == "launch" then
       local target = prefs.launchTargets[app.id] or "ask"
       if target == "ask" then
