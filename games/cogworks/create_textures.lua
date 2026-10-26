@@ -109,7 +109,7 @@ return function(R)
     end
     if kind == "G" then
       -- The small cog's wood teeth advance behind a stationary steel axle.
-      local step = floor((self.motionOverride or self.motionNow or 0) * 8 * (spin.rate or 1) * (spin.sign or 1))
+      local step = floor((self.motionOverride or self.motionNow or 0) * 8 * (spin.rate or 1)) * (spin.sign or 1)
       return (step % 3) + 1, 0
     end
     if kind == "O" then
