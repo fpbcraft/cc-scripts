@@ -92,8 +92,11 @@ return function(R)
         local dx, dy = cos(theta), sin(theta)
         self:line(cx, cy, nearest(cx + dx * (radius - 3)), nearest(cy + dy * (radius - 3)), 7)
         self:line(
-          nearest(cx + dx * 2), nearest(cy + dy * 2),
-          nearest(cx + dx * (radius - 4)), nearest(cy + dy * (radius - 4)), 6
+          nearest(cx + dx * 2),
+          nearest(cy + dy * 2),
+          nearest(cx + dx * (radius - 4)),
+          nearest(cy + dy * (radius - 4)),
+          6
         )
       end
     else
@@ -113,7 +116,13 @@ return function(R)
     hub(self, cx, cy, radius * 2)
     if spin then
       local theta = angle + pi / 4
-      self:rect(nearest(cx + cos(theta) * (radius - 3)), nearest(cy + sin(theta) * (radius - 3)), 2, 2, spin.sign > 0 and 11 or 14)
+      self:rect(
+        nearest(cx + cos(theta) * (radius - 3)),
+        nearest(cy + sin(theta) * (radius - 3)),
+        2,
+        2,
+        spin.sign > 0 and 11 or 14
+      )
     end
   end
   local function shaft(self, x, y, size, tile, spin)
@@ -125,8 +134,11 @@ return function(R)
     local majorY = horizontal and cy - math.floor(width / 2) or y + 2
     self:rect(majorX, majorY, horizontal and length or width, horizontal and width or length, 7)
     self:rect(
-      majorX + (horizontal and 0 or 1), majorY + (horizontal and 1 or 0),
-      horizontal and length or width - 2, horizontal and width - 2 or length, 13
+      majorX + (horizontal and 0 or 1),
+      majorY + (horizontal and 1 or 0),
+      horizontal and length or width - 2,
+      horizontal and width - 2 or length,
+      13
     )
     local shine = spin and (nearest((sin(phase(self, spin)) + 1) * (width - 1) / 2)) or 1
     if horizontal then
@@ -280,8 +292,11 @@ return function(R)
     local edge = kind == "V" and 7 or 4
     for side = -1, 1, 2 do
       self:line(
-        nearest(x1 + nx * side * span), nearest(y1 + ny * side * span),
-        nearest(x2 + nx * side * span), nearest(y2 + ny * side * span), edge
+        nearest(x1 + nx * side * span),
+        nearest(y1 + ny * side * span),
+        nearest(x2 + nx * side * span),
+        nearest(y2 + ny * side * span),
+        edge
       )
     end
     local cycle = kind == "V" and 7 or 5
@@ -292,8 +307,11 @@ return function(R)
       if kind == "D" then
         if tick % 2 == 0 then
           self:line(
-            nearest(middleX + nx * 3), nearest(middleY + ny * 3),
-            nearest(middleX - nx * 3), nearest(middleY - ny * 3), 13
+            nearest(middleX + nx * 3),
+            nearest(middleY + ny * 3),
+            nearest(middleX - nx * 3),
+            nearest(middleY - ny * 3),
+            13
           )
         end
       elseif (pos + shift) % cycle < 2 then
