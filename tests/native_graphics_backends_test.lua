@@ -107,7 +107,10 @@ local x = r.ox + (b.x + b.w / 2) * r.scale
 local y = r.oy + (b.y + b.h / 2) * r.scale
 assert(r:hit(x, y) == "slots", "Native pixel click activates correct title button")
 r:resize()
-assert(r.scale == math.min(612 / 200, 342 / 120), "Resize retains correct virtual resolution")
+assert(
+  r.scale == math.min(612 / math.max(200, 102 * 3), 342 / math.max(120, 38 * 4)),
+  "Resize retains CivCraft-style native pixel density"
+)
 r:close()
 assert(screen.mode == 0, "Native graphics mode restored on exit")
 -- SHATTERED: graphics must retain geometric proportions and centered
