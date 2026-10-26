@@ -240,5 +240,33 @@ local _, _, smallPrefs = scenario(26, 12, {
   "MON",
 })
 assert(smallPrefs.opusStore == false and smallPrefs.launchTargets.alpha == "monitor")
+local _, _, searchPrefs = scenario(26, 12, {
+  "KEYS",
+  "NEXT",
+  "A",
+  "DONE",
+  "DETAILS",
+  "MANAGE",
+  "MON",
+})
+assert(searchPrefs.launchTargets.alpha == "monitor", "Onscreen keyboard accepts touch-only search")
+
+-- Keyboard focus starts in the native Basalt List and Tab moves to a button.
+local keyboardResult, keyboardCalls = scenario(51, 19, {
+  function(find, calls)
+    assert(calls.focus == find("List"), "Keyboard starts on app list")
+    assert(calls.focus.callbacks.key, "List handles keyboard shortcuts")
+    calls.focus.callbacks.key[1](calls.focus, K.tab)
+    assert(calls.focus.kind == "Button", "Tab focuses an actionable Basalt button")
+    for _, handler in ipairs(calls.focus.callbacks.key) do
+      handler(calls.focus, K.enter)
+    end
+    assert(find("List"), "Enter activates the focused tab and redraws the list")
+    calls.focus.callbacks.key[1](calls.focus, K.escape)
+  end,
+})
+assert(keyboardResult == "exit", "Escape exits the Store on keyboard only")
+assert(keyboardCalls.stopped, "Basalt event loop stopped cleanly")
+
 term, colors, keys, periphemu, sleep = old.term, old.colors, old.keys, old.periphemu, old.sleep
 print("Store Basalt: touch flows, PRs, disk, Opus, compact menus and virtual monitors passed")
