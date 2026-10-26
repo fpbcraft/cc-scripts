@@ -658,6 +658,7 @@ function UI.run(manager)
       sourceInput = sourceMode == "main" and "" or currentSource.value
     elseif action == "source-mode" then
       sourceMode, sourceInput = value, ""
+      typing = value ~= "main" and "source" or false
     elseif action == "source-input" then
       typing = "source"
     elseif action == "source-save" then
@@ -670,11 +671,13 @@ function UI.run(manager)
         source = result
       end
       page = sourceReturn
+      typing = false
       message = "Build selected. Confirm install to apply."
       if page == "detail" then
         beginInstall(app)
       end
     elseif action == "source-cancel" then
+      typing = false
       page = sourceReturn
     elseif action == "confirm-install" and app then
       local chosenRoot = installRoot
@@ -759,6 +762,8 @@ function UI.run(manager)
           query = (query .. a):sub(1, 100)
           selected, offset = 1, 0
         end
+      elseif event == "key" and a == keys.tab and typing == "source" then
+        action, value = "source-mode", sourceMode == "main" and "pr" or sourceMode == "pr" and "branch" or "main"
       elseif event == "key" and a == keys.backspace then
         if typing == "source" then
           sourceInput = sourceInput:sub(1, -2)
