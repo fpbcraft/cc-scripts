@@ -1,4 +1,5 @@
 -- Three independent local campaigns; legacy save is copied on first use.
+local Writer = dofile("/games/civcraft/state_writer.lua")
 local S = { count = 3, root = "/games/civcraft/data" }
 local function path(slot)
 	slot = tonumber(slot)
@@ -54,16 +55,21 @@ function S.list()
 	end
 	return out
 end
-function S.save(slot, state)
-	local dest = path(slot)
-	if not fs.exists(S.root) then
-		fs.makeDir(S.root)
+function S.writeFile(dest, state)
+	local folder = dest:match("^(.*)/[^/]+$") or "/"
+	if not fs.exists(folder) then
+		fs.makeDir(folder)
 	end
 	local tmp = dest .. ".tmp"
 	local out = assert(fs.open(tmp, "w"), "Cannot write campaign")
-	local encoded = textutils.serialize(state)
-	out.write(encoded)
+	local encoded, problem = pcall(Writer.write, out, state, S.checkpoint)
 	out.close()
+	if not encoded then
+		if fs.exists(tmp) then
+			fs.delete(tmp)
+		end
+		error("Campaign encoding failed: " .. tostring(problem), 0)
+	end
 	-- Copy previous contents before replacing, so partial writes don't destroy a save.
 	local backup = dest .. ".bak"
 	if fs.exists(dest) then
@@ -79,6 +85,10 @@ function S.save(slot, state)
 		end
 		error("Save not committed: " .. tostring(why))
 	end
+	return true
+end
+function S.save(slot, state)
+	S.writeFile(path(slot), state)
 	if not fs.exists(migrationMarker) then
 		local marker = fs.open(migrationMarker, "w")
 		if marker then

@@ -494,3 +494,37 @@ Native CraftOS-PC passes the history rules and a full mouse-driven host-loop
 session with `--history`, including a read-only refresh, fog, routes, diplomacy,
 Surprise War responses, hotseat, research/settings/campaign options and save reload.
 Live rednet and physical monitor validation remain outstanding.
+
+### CraftOS watchdog crashes during reveal and campaign saves
+
+A copied existing campaign reproduced `Too long without yielding` inside the
+installed CraftOS `textutils.serialize` implementation. Its table encoder
+repeatedly concatenates an ever-growing string and has no cooperative checkpoint.
+The largest copied slot loaded/migrated/revealed in 22 ms, then hit the watchdog
+while encoding. Visibility memory also lacked checkpoints inside its tile loop,
+and the session only registered its checkpoint after its initial loaded-world
+reveal.
+
+Campaign saves now use a linear Lua-table writer with writes bounded to 8 KiB
+and periodic checkpoint callbacks. Existing Lua-table saves remain readable;
+old and new fields round-trip without a schema reset. Local and host saves share
+the temporary-file/backup commit path. Encoding/write failures close and remove
+the temporary output without replacing either committed file, and failed rename
+restores the previous campaign. Aliases, sparse/zero/negative keys, booleans,
+Unicode/control characters, fractional movement and non-finite numbers are
+covered; recursive/unsupported values fail before committing.
+
+The renderer's existing bounded input-preserving yield mechanism is shared with
+boot/simulation/save work. The host registers elapsed-time checkpoints before
+loading/revealing a campaign, refreshes against the current renderer after display
+changes, and samples inside visibility tile loops. Bootstrap input survives
+renderer creation; early network events are replayed to the server listener.
+There is no watchdog timeout increase or movement/turn-budget change.
+
+On isolated copies of three existing campaigns, twelve full
+load/migrate/reveal/save/reload comparisons passed. The largest cycle completed
+in 34-35 ms and encoded to 281,252 bytes; the workload yielded nine times. The
+actual game also selected, continued, rendered, saved and reloaded that copied
+campaign in native CraftOS-PC. Native core/normal-session checks and the 76-file
+regression suite pass. This fixes the reproduced paths; it does not establish
+that every possible renderer, modem or emulator stall is eliminated.

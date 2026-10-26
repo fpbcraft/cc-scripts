@@ -369,7 +369,12 @@ function W.reveal(state, hex, systems, pendingNotices)
 		p.visible = visible
 		Contacts.observe(state, p, pendingNotices)
 		local memory = mapMemory(p, world)
+		local observedCount = 0
 		for tileKey in pairs(lastLook) do
+			observedCount = observedCount + 1
+			if observedCount % 32 == 0 and W.checkpoint then
+				W.checkpoint()
+			end
 			local x, y = tileKey:match("^(%d+):(%d+)$")
 			x, y = tonumber(x), tonumber(y)
 			local claim = W.territoryCity(state, hex, x, y)

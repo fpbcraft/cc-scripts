@@ -1,5 +1,6 @@
 -- Executes real CIVCRAFT rules in one-computer hotseat mode.
 local files, dirs, versions = {}, { ["/"] = true }, {}
+local last
 fs = {}
 function fs.exists(p)
 	return files[p] ~= nil or dirs[p] == true
@@ -44,10 +45,13 @@ function fs.open(p, mode)
 		end,
 		close = function()
 			files[p] = result
+			if p:match("/slot%-%d+%.dat%.tmp$") then
+				local parse = assert(load("return " .. result, "saved campaign", "t", {}))
+				last = parse()
+			end
 		end,
 	}
 end
-local last
 textutils = {
 	serialize = function(data)
 		local id = "saved-" .. (#versions + 1)
@@ -67,7 +71,11 @@ textutils = {
 	end,
 	unserialize = function(id)
 		local i = tonumber(id:match("^saved%-(%d+)$"))
-		return i and versions[i] or nil
+		if i then
+			return versions[i]
+		end
+		local parse = load("return " .. id, "campaign", "t", {})
+		return parse and parse() or nil
 	end,
 }
 peripheral = {

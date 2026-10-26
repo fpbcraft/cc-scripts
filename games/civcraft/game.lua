@@ -84,6 +84,7 @@ local Systems = dofile("/games/civcraft/systems.lua")
 local World = dofile("/games/civcraft/world.lua")
 local mapSizes = World.sizeOrder
 local Saves = dofile("/games/civcraft/saves.lua")
+local Cooperative = dofile("/games/civcraft/cooperative.lua")
 local Reports = dofile("/games/civcraft/reports.lua")
 local Audio = dofile("/games/civcraft/audio.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
@@ -95,6 +96,12 @@ local CommandQueue = dofile("/games/civcraft/command_queue.lua")
 local Events = dofile("/games/civcraft/events.lua")
 local Presentation = dofile("/games/civcraft/presentation.lua")
 local Snapshots = dofile("/games/civcraft/snapshots.lua")
+local view
+local bootstrapWork = { trace = trace }
+local function checkpoint()
+	Cooperative.checkpoint(view and view.r or bootstrapWork, false, true)
+end
+Systems.checkpoint, World.checkpoint, Saves.checkpoint = checkpoint, checkpoint, checkpoint
 local audio = Audio.new()
 local stateRevision = 0
 local commandQueue = CommandQueue.new(function()
@@ -179,17 +186,7 @@ local function save()
 		trace("save.end")
 		return
 	end
-	local dir = fs.getDir(SAVE)
-	if not fs.exists(dir) then
-		fs.makeDir(dir)
-	end
-	local h = assert(fs.open(SAVE .. ".tmp", "w"))
-	h.write(textutils.serialize(state))
-	h.close()
-	if fs.exists(SAVE) then
-		fs.delete(SAVE)
-	end
-	fs.move(SAVE .. ".tmp", SAVE)
+	Saves.writeFile(SAVE, state)
 	trace("save.end")
 end
 local function initMap()
@@ -560,7 +557,7 @@ local appScreen = "title"
 local deleteConfirm = nil
 local gamePaused = false
 local UI = dofile("/games/civcraft/ui.lua")
-local view
+
 local function activeID()
 	if localMode then
 		local index = math.max(1, math.min(#state.players, state.activeIndex or 1))
@@ -915,12 +912,21 @@ if view.r then
 		audio:effect("click")
 	end
 end
-Systems.checkpoint = function()
-	if view.r and view.r.cooperate then
-		view.r:cooperate()
+-- Keep the same checkpoint before and after renderer creation/settings changes.
+Systems.checkpoint, World.checkpoint, Saves.checkpoint = checkpoint, checkpoint, checkpoint
+if bootstrapWork.pendingEvents then
+	view.r.pendingEvents = view.r.pendingEvents or {}
+	for _, event in ipairs(bootstrapWork.pendingEvents) do
+		if event[1] == "rednet_message" and os.queueEvent then
+			-- The server listener starts after bootstrap; let it receive early network traffic.
+			os.queueEvent(table.unpack(event, 1, event.n))
+		else
+			view.r.pendingEvents[#view.r.pendingEvents + 1] = event
+		end
 	end
+	bootstrapWork.pendingEvents = nil
 end
-World.checkpoint = Systems.checkpoint
+
 local sendSnapshot = Snapshots.sender(tostring(myId) .. ":" .. newCampaignID())
 local receiveSnapshot = Snapshots.receiver()
 local acknowledged = {}

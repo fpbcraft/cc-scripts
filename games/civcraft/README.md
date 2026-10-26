@@ -17,6 +17,10 @@ rendering stages and cooperative waits in `/games/civcraft/data/debug.log`.
 The log is closed after each entry so it can be inspected after a forced restart.
 The previous log segment is retained as `debug.log.previous` when the log rotates.
 For network games, use `host --debug` or `join <host-computer-ID> --debug`.
+For `Too long without yielding` during world loading or saving, update the full
+program installation: the roadmap branch now includes a cooperative streaming
+save writer and visibility checkpoints. Existing saves remain readable.
+
 Logs are disabled during normal play. A last `*.begin` without its matching
 `*.end` helps identify the stalled operation; it does not by itself prove its cause.
 
