@@ -93,6 +93,7 @@ local function publish()
   end
 end
 
+local ui
 local function redraw()
   ui:draw(game, {
     role = role,
@@ -144,7 +145,7 @@ local function dispatch(action)
 end
 
 -- UI callbacks are invoked only after the complete UI has been initialized.
-local ui = UI.new(monitor, dispatch)
+ui = UI.new(monitor, dispatch)
 
 local function network(sender, data, channel)
   if channel ~= protocol or type(data) ~= "table" or data.tag ~= protocol then
