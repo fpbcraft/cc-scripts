@@ -9,7 +9,7 @@ local args = { ... }
 local Sim = require("sim")
 local UI = require("ui")
 local Display = require("lib.fpb.display")
-local protocol = "fpb.wormfront.v2"
+local protocol = "fpb.wormfront.v3"
 local role = args[1] or "local"
 if role == "--test-api" then
   return { UI = UI, Sim = Sim }
@@ -115,7 +115,6 @@ local function redraw()
   Display.present(monitor, mode)
 end
 
-local lastNetwork = 0
 local function dispatch(action)
   if action.kind == "exit" then
     quit = true
@@ -252,11 +251,11 @@ local function simulationStep()
       end
     end
   end
-  if role == "host" and game and current - lastBroadcast >= 0.15 then
+  if role == "host" and game and current - lastBroadcast >= 0.28 then
     publish()
     lastBroadcast = current
   end
-  if current - lastDraw >= 0.11 then
+  if current - lastDraw >= 0.16 then
     redraw()
     lastDraw = current
   end
@@ -276,12 +275,10 @@ local function run()
       timer = os.startTimer(0.1)
     elseif event == "monitor_touch" and (not monitorName or a == monitorName) then
       ui:touch(b, c)
-      redraw()
     elseif event == "mouse_click" and computerMode then
       local x, y = Display.click(monitor, mode, b, c)
       if x then
         ui:touch(x, y)
-        redraw()
       end
     elseif event == "mouse_scroll" and mode == "virtual-text" then
       monitor.pan(0, a * 4)
@@ -300,34 +297,33 @@ local function run()
         end
       elseif key == keys.j then
         dispatch({ kind = "jump" })
-      elseif key == keys.tab then
-        dispatch({ kind = "select" })
+      elseif key == keys.r or key == keys.t then
+        dispatch({ kind = "rope" })
+      elseif key == keys.pageUp then
+        dispatch({ kind = "reel", dir = -1 })
+      elseif key == keys.pageDown then
+        dispatch({ kind = "reel", dir = 1 })
       elseif key == keys.enter then
         dispatch({ kind = "pass" })
       end
-      redraw()
     elseif event == "key_up" and keys then
       if a == keys.space and held[a] then
         dispatch({ kind = "release" })
       end
       held[a] = nil
-      redraw()
     elseif event == "char" then
-      local kind = (a == "w" and "weapon")
-        or (a == "j" and "jump")
-        or (a == "f" and "fire")
-        or (a == "q" and "exit")
-        or nil
+      local kind = (a == "w" and "weapon") or (a == "f" and "fire") or (a == "q" and "exit") or nil
       if kind then
         dispatch({ kind = kind })
-        redraw()
+      elseif a:match("^[0-9]$") then
+        local id = tonumber(a)
+        dispatch({ kind = "weapon", id = id == 0 and 10 or id })
       end
     elseif event == "rednet_message" then
       network(a, b, c)
-      redraw()
     elseif event == "monitor_resize" or event == "term_resize" then
       ui:resize()
-      redraw()
+      lastDraw = 0
     end
   end
 end
