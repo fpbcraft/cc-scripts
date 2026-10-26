@@ -218,8 +218,14 @@ function UI:touch(x, y)
     return true
   end
   local b = self.board
-  if b and self.canControl and vx >= b.x and vx < b.x + Sim.W * b.scale
-    and vy >= b.y and vy < b.y + Sim.H * b.scale then
+  if
+    b
+    and self.canControl
+    and vx >= b.x
+    and vx < b.x + Sim.W * b.scale
+    and vy >= b.y
+    and vy < b.y + Sim.H * b.scale
+  then
     local w = Sim.worm(self.game)
     local dx = vx - (b.x + (w.x - 1) * b.scale)
     local dy = (b.y + (w.y - 1) * b.scale) - vy
@@ -279,8 +285,9 @@ function UI:draw(g, opts)
     local y = r.h - 33
     r:fill(0, y - 13, r.w, 12, 1)
     local angle = worm and worm.aim or 0
-    local status = worm and ("HP " .. worm.hp .. "  ANGLE " .. angle .. "  "
-      .. (worm.weapon == 2 and ("MEGA " .. worm.mega) or "ROCKET")) or ""
+    local status = worm
+        and ("HP " .. worm.hp .. "  ANGLE " .. angle .. "  " .. (worm.weapon == 2 and ("MEGA " .. worm.mega) or "ROCKET"))
+      or ""
     r:text(3, y - 11, status, 6, 1, r.w - 6)
     local charge = g.charging and math.min(1, (g.charge or 0) / 1.8) or 0
     local pw = math.min(74, math.max(20, math.floor(r.w * 0.33)))
