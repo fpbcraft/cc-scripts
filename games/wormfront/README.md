@@ -81,10 +81,18 @@ Attached Advanced Monitors automatically switch to **0.5 text scale** before
 pixel graphics initialization, restoring the previous scale on exit. The game
 also uses CraftOS-PC graphics mode if supported.
 
-The renderer follows the camera rather than drawing all 144×60 tiles, batches
-terrain columns, and caps frame updates at about 6 fps. Input and network
-events do **not** issue immediate full-screen redraws; this addresses flicker
-while typing or holding down movement/aim keys.
+The renderer follows the camera rather than drawing all 144×60 tiles.
+It now uses the reusable `lib/fpb/pixelbuffer.lua` framebuffer on compatible
+CraftOS-PC / CC: Graphics displays. Shapes and glyphs are rasterized to Lua
+scanlines and flushed with batched `drawPixels` bitmap calls, with no native
+pixel calls for unchanged frames. This also avoids clearing the physical display
+on every frame. The accelerated target cadence is 10 frames/sec; regular text
+mode uses a slower fallback. Input and network events **never** force a redraw,
+which prevents the keyboard-triggered screen flashing.
+
+Remote clients receive the terrain once and only receive it again when its
+revision changes after an explosion. Normal authoritative updates exclude
+unchanged terrain, reducing the load on rednet and the host.
 
 ## Tests
 
