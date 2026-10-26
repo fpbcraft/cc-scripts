@@ -203,8 +203,12 @@ local function start()
       -- Inspect mode draws small rotate/remove overlays over selected cells.
       -- They are touch controls, not right-click actions: right-clicking
       -- either overlay must still operate on the underlying board cell.
-      if gameScene and button == 2 and (action == "rotate" or action == "remove") then
+      if gameScene and button == 2 and (action == "rotate" or action == "remove" or action == "moveStart") then
         action = "cell"
+      end
+      -- Armed Move consumes a destination click, not a new drag or delete.
+      if gameScene and app.moving and action == "cell" then
+        return act("moveTo", x, y)
       end
       if gameScene and action == "cell" and button == 1 then
         return act("remove", x, y)
