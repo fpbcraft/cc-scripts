@@ -1669,6 +1669,9 @@ function R:draw(m)
     return
   end
   self.buffer = {}
+  -- Time-derived angles do not depend on how frequently UI events redraw.
+  -- A deterministic override is exposed for sprite regression tests.
+  self.motionNow = self.motionOverride or (m.settings and m.settings.animations ~= false and os.clock() or 0)
   if self.wide and self:drawResponsive(m) then
     self:flush()
     self.frame = self.frame + 1
@@ -1756,4 +1759,5 @@ function R:hit(x, y)
   return nil
 end
 require("games.cogworks.responsive")(R)
+require("games.cogworks.create_art")(R)
 return R
