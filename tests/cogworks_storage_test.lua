@@ -70,7 +70,7 @@ local old = {
 files[S.LEGACY] = textutils.serialize(old)
 local imported = S.load(1)
 assert(
-  imported.level == 1 and imported.unlocked == 1 and next(imported.sessions) == nil and next(imported.awards) == nil,
+  imported.level == 1 and imported.unlocked == 8 and next(imported.sessions) == nil and next(imported.awards) == nil,
   "Incompatible 30-stage saves reset to the new campaign"
 )
 assert(files[S.LEGACY], "Preserve legacy file for backup")
