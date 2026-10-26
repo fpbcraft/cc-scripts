@@ -108,13 +108,13 @@ function E.new(number, solved)
     add(g, wire, false)
   end
   if solved then
+    for _, v in ipairs(data.removeRedstone or {}) do
+      assert(E.remove(g, v[1], v[2]), "Invalid reference starting-part removal")
+    end
     for _, v in ipairs(data.build) do
       assert(g.remaining[v.kind] > 0, "Invalid reference inventory")
       g.remaining[v.kind] = g.remaining[v.kind] - 1
       add(g, v, false)
-    end
-    for _, v in ipairs(data.removeRedstone or {}) do
-      assert(E.remove(g, v[1], v[2]), "Invalid reference redstone removal")
     end
   end
   return g
@@ -474,7 +474,7 @@ function E.restore(g, list)
   g.moves = 0
   return true
 end
-function E.evaluate(g)
+function E.evaluate(g, excludedLink)
   local redstone, switches = E.redstone(g)
   local states, queue, first = {}, {}, 1
   local jam = false
@@ -515,7 +515,14 @@ function E.evaluate(g)
         end
       end
       for _, link in ipairs(E.meshes(g, tile)) do
-        assign(link.tile, link.tile.r, info.rate * link.ratio, info.sign * link.sign)
+        local excluded = excludedLink
+          and (
+            (excludedLink.from == tile.id and excludedLink.to == link.tile.id)
+            or (excludedLink.to == tile.id and excludedLink.from == link.tile.id)
+          )
+        if not excluded then
+          assign(link.tile, link.tile.r, info.rate * link.ratio, info.sign * link.sign)
+        end
       end
     end
     local neighbor = E.connection(g, tile, port)
@@ -578,11 +585,30 @@ function E.evaluate(g)
     win = (not g.sandbox or g.editor) and not jam and goals > 0 and goals == correct,
   }
 end
+-- Counterfactual evaluation of one missing component. This shallow view keeps
+-- the live game, inventory, move count and cached tile state untouched.
+function E.without(g, id)
+  local view = {}
+  for key, value in pairs(g) do
+    view[key] = value
+  end
+  view.tiles, view.map = {}, {}
+  for _, tile in ipairs(g.tiles) do
+    if tile.id ~= id then
+      view.tiles[#view.tiles + 1] = tile
+      view.map[tile.id] = tile
+    end
+  end
+  return E.evaluate(view)
+end
 -- Authored two-slot bonus predicates; each predicate is evaluated against the
 -- *actual* powered graph, not the author's saved reference.
 function E.challenges(g, result)
   if g.sandbox or g.custom or g.editor then
     return {}
+  end
+  if result.challenges and result.challengeMoves == g.moves then
+    return result.challenges
   end
   local stage = levels[g.number]
   local bonuses = stage.bonuses or {}
@@ -614,6 +640,9 @@ function E.challenges(g, result)
     end
   end
   local function poweredLink(typeName, minimum)
+    if not result.win then
+      return false
+    end
     for _, tile in ipairs(g.tiles) do
       local light = result.lights[tile.id]
       if light and light.powered then
@@ -621,7 +650,10 @@ function E.challenges(g, result)
           local other = result.lights[link.tile.id]
           if link[typeName] and other and other.powered then
             local span = math.abs(tile.x - link.tile.x) + math.abs(tile.y - link.tile.y)
-            if span >= (minimum or 1) then
+            if
+              span >= (minimum or 1)
+              and E.evaluate(g, { from = tile.id, to = link.tile.id }).correct < result.goals
+            then
               return true
             end
           end
@@ -631,6 +663,9 @@ function E.challenges(g, result)
     return false
   end
   local function diagonal()
+    if not result.win then
+      return false
+    end
     for _, tile in ipairs(g.tiles) do
       if (tile.kind == "G" or tile.kind == "O") and result.lights[tile.id].powered then
         for _, link in ipairs(E.meshes(g, tile)) do
@@ -639,6 +674,7 @@ function E.challenges(g, result)
             and math.abs(tile.x - link.tile.x) == 1
             and math.abs(tile.y - link.tile.y) == 1
             and result.lights[link.tile.id].powered
+            and E.evaluate(g, { from = tile.id, to = link.tile.id }).correct < result.goals
           then
             return true
           end
@@ -717,16 +753,36 @@ function E.challenges(g, result)
         return tile.kind == "D"
       end)
     elseif typeName == "clear_zone" then
-      achieved = not occupiesZone(function(tile)
-        return tile.x >= spec.x1 and tile.x <= spec.x2 and tile.y >= spec.y1 and tile.y <= spec.y2
-      end)
+      local count = 0
+      for _, tile in ipairs(g.tiles) do
+        if not tile.fixed and tile.x >= spec.x1 and tile.x <= spec.x2 and tile.y >= spec.y1 and tile.y <= spec.y2 then
+          count = count + 1
+        end
+      end
+      achieved, progress = count == 0, tostring(count) .. "/0"
     elseif typeName == "use_cell" then
       local tile = E.get(g, spec.x, spec.y)
       achieved = tile ~= nil and not tile.fixed and result.lights[tile.id].powered
     elseif typeName == "no_kind" then
-      achieved = not occupiesZone(function(tile)
-        return tile.kind == spec.kind
-      end)
+      local count = 0
+      for _, tile in ipairs(g.tiles) do
+        if not tile.fixed and tile.kind == spec.kind then
+          count = count + 1
+        end
+      end
+      achieved, progress = count == 0, tostring(count) .. "/0"
+    elseif typeName == "kind_limit" then
+      local count = 0
+      for _, tile in ipairs(g.tiles) do
+        if not tile.fixed and tile.kind == spec.kind then
+          count = count + 1
+        end
+      end
+      achieved, progress = count <= goal, tostring(count) .. "/" .. goal
+    elseif typeName == "required_cell" then
+      local tile = E.get(g, spec.x, spec.y)
+      local lost = result.win and tile and (result.correct - E.without(g, tile.id).correct) or 0
+      achieved, progress = lost >= (spec.value or 1), tostring(math.max(0, lost)) .. "/" .. (spec.value or 1)
     elseif typeName == "mechanical_override" then
       local tile = E.get(g, spec.x, spec.y)
       achieved = tile and (tile.kind == "Z" or tile.kind == "C") and not result.switches[tile.id] or false
@@ -747,6 +803,7 @@ function E.challenges(g, result)
       progress = progress,
     }
   end
+  result.challenges, result.challengeMoves = list, g.moves
   return list
 end
 return E

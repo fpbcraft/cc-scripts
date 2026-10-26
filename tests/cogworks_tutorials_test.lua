@@ -14,7 +14,7 @@ end
 local saved = {}
 local S = {}
 function S.newProgress()
-  return { campaignVersion = 6, unlocked = 8, level = 1, best = {}, sessions = {}, awards = {}, tutorials = {} }
+  return { campaignVersion = 7, unlocked = 8, level = 1, best = {}, sessions = {}, awards = {}, tutorials = {} }
 end
 function S.loadSettings()
   return { animations = true, showPorts = true, lastSlot = 1 }
@@ -35,12 +35,16 @@ end
 package.loaded["games.cogworks.storage"] = S
 local A = require("games.cogworks.app")
 assert(#T.forLevel(1) == 1 and T.forLevel(1)[1].key == "I")
-assert(T.forLevel(2)[1].key == "Q" and T.forLevel(3)[1].key == "G")
-assert(T.forLevel(7)[1].key == "O" and T.forLevel(17)[1].key == "O")
-assert(T.forLevel(25)[1].key == "D" and T.forLevel(26)[1].key == "V")
-assert(T.forLevel(41)[1].key == "Z" and T.forLevel(41)[2].key == "B")
-assert(T.forLevel(42)[1].key == "R" and T.forLevel(43)[1].key == "C")
-assert(#T.forLevel(64) == 0)
+for number, stage in ipairs(E.levels) do
+  local available = {}
+  for _, lesson in ipairs(T.forLevel(number)) do
+    available[lesson.key] = true
+  end
+  for kind, count in pairs(stage.stock) do
+    assert(count == 0 or available[kind], "Every available part can be taught on skipped routes")
+  end
+end
+assert(#T.unseen(3, { I = true, G = true }) == 1 and T.unseen(3, { I = true, G = true })[1].key == "Q")
 local app = A.new()
 app:enter(1, false)
 assert(app.scene == "briefing" and app.briefing.number == 1)
@@ -58,14 +62,15 @@ end
 app.progress.unlocked = 48
 app:openLevel(41)
 app:act("beginLevel")
-assert(app.scene == "tutorial" and app.tutorial.steps[1].key == "Z")
+assert(app.scene == "tutorial", "Skipped discoveries are taught on entry")
 app:act("tutorialSkip")
 assert(saved[1].tutorials.Z and saved[1].tutorials.B, "Redstone lessons seen")
 app:act("help")
 app:act("replayTutorial")
 assert(app.scene == "tutorial")
-app:act("tutorialNext")
-app:act("tutorialNext")
+while app.scene == "tutorial" do
+  app:act("tutorialNext")
+end
 assert(app.scene == "game", "Ponder replay returns to game")
 local fresh = A.new({ dev = true })
 fresh:act("devLevels")

@@ -1,4 +1,5 @@
 -- Mechanic lessons introduce the Create equivalents used by each puzzle.
+local levels = require("games.cogworks.levels")
 local T = {}
 T.lessons = {
   I = {
@@ -72,21 +73,29 @@ T.lessons = {
     },
   },
 }
--- Lessons are attached to the first *accessible* stage where a component
--- matters, not an arbitrary chapter boundary. Skipped optional previews
--- are retaught at the next mandatory encounter.
-T.introductions = {
-  [1] = { "I" },
-  [2] = { "Q" },
-  [3] = { "G" },
-  [7] = { "O" },
-  [17] = { "O" },
-  [25] = { "D" },
-  [26] = { "V" },
-  [41] = { "Z", "B" },
-  [42] = { "R" },
-  [43] = { "C" },
-}
+-- Every accessible puzzle can teach all of its available mechanisms. The
+-- per-slot seen flags suppress repeats, even when players skip discovery nodes
+-- or use an alternative construction requiring a different part family.
+T.introductions = {}
+local teachingOrder = { "I", "Q", "G", "O", "D", "V", "B", "R", "Z", "C" }
+for number, stage in ipairs(levels) do
+  local available = {}
+  for kind, count in pairs(stage.stock) do
+    available[kind] = count > 0
+  end
+  for _, list in ipairs({ stage.fixtures, stage.redstone }) do
+    for _, piece in ipairs(list or {}) do
+      available[piece.kind] = true
+    end
+  end
+  local lessons = {}
+  for _, kind in ipairs(teachingOrder) do
+    if available[kind] then
+      lessons[#lessons + 1] = kind
+    end
+  end
+  T.introductions[number] = lessons
+end
 T.descriptions = {
   I = "STRAIGHT AXIAL SHAFT; SAME RPM AND SPIN",
   G = "AXIAL SHAFTS; SIDE MESH REVERSES SPIN",

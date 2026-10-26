@@ -135,6 +135,16 @@ local function start()
   local renderer, app
   local ok, reason = xpcall(function()
     renderer = Renderer.new(monitor)
+    if mode == "native-pixels" and renderer.mode == "text" then
+      -- Some CraftOS backends expose pixel methods but cannot enter mode 2.
+      -- Retain the computer viewport rather than drawing a full board into
+      -- a small native text terminal with overlapping controls.
+      renderer:close()
+      monitor = require("games.cogworks.terminal_view").new(native, 70, 40)
+      mode = "virtual-text"
+      renderer = Renderer.new(monitor)
+      trace("PIXEL MODE UNAVAILABLE: USING VIRTUAL TEXT VIEWPORT")
+    end
     app = App.new({ dev = dev })
     local function redraw()
       renderer:draw(app:model())

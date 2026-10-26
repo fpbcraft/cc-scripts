@@ -254,6 +254,7 @@ return function(R)
         self:add(px, py, span, span, "cell", x, y)
       end
     end
+    self:drawBonusMarks(g)
     self:widePanel(sx, by, sw, bh, "PARTS")
     self:fontFit(
       sx + sw - 42,
@@ -314,11 +315,24 @@ return function(R)
       local y = detailY
       self:fontFit(sx + 4, y, #bonuses > 0 and "OPTIONAL CHALLENGES" or "NO OPTIONAL CHALLENGES", 6, sw - 8)
       y = y + 9
-      for _, bonus in ipairs(bonuses) do
+      for index, bonus in ipairs(bonuses) do
         if y + 9 <= by + bh - 2 then
           self:rect(sx + 4, y + 1, 6, 6, awards[bonus.id] and 9 or (bonus.earned and 6 or 4))
-          self:fontFit(sx + 14, y + 2, bonus.name, awards[bonus.id] and 9 or 15, sw - 19)
+          local progressWidth = bonus.progress and (#bonus.progress * 4 + 4) or 0
+          self:fontFit(sx + 14, y + 2, bonus.name, awards[bonus.id] and 9 or 15, sw - 19 - progressWidth)
+          if bonus.progress then
+            self:font(sx + sw - progressWidth, y + 2, bonus.progress, 11)
+          end
+          self:add(sx + 3, y, sw - 6, 10, "inspectBonus", bonus.id)
           y = y + 12
+          local lines = wrapWords(bonus.description, math.max(10, math.floor((sw - 20) / 4)))
+          if y + #lines * 7 + (#bonuses - index) * 12 <= by + bh - 2 then
+            for _, line in ipairs(lines) do
+              self:fontFit(sx + 14, y, line, 11, sw - 19)
+              y = y + 7
+            end
+            y = y + 3
+          end
         end
       end
     end

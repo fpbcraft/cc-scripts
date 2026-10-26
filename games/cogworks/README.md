@@ -1,17 +1,15 @@
 # COGWORKS: Kinetic Lab
 
-> **Campaign redesign:** [Discovery-Driven 64-Level Campaign Design](CAMPAIGN_DESIGN.md)
-> specifies the intended puzzle insights and variations. This branch now contains
-> a **playable first implementation**: 64 distinct solver-verified layouts,
-> including 34 bespoke circuits and 30 authored variations of proven kinetic
-> constructions. Further manual playtesting and refining the remixes against
-> their design briefs remains necessary.
+The **version-7 campaign** contains 64 authored starting boards across eight
+branching factory districts. Puzzles offer credible inventory choices, 62
+certified alternative clears and 66 independent optional redesign challenges.
+See the [designer guide](CAMPAIGN_DESIGN.md) for the level insights, reproducible
+solutions and human-playtesting boundaries (contains spoilers).
 
 A touchscreen-first construction puzzle for CC:Tweaked, based on the rotational
 transmission mechanics in the Minecraft [Create mod](https://github.com/Creators-of-Create/Create/wiki).
 
-The previous 30-stage campaign and its fictitious elbow, splitter, inline-speed
-drive and inline-reversing gear have been **removed entirely**. The **64-stage, eight-chapter campaign** introduces the actual principles of shaft axes, side-meshing
+The **64-stage, eight-chapter campaign** explores shaft axes, side-meshing
 cogs, bevel gearboxes, encased chain drives, mechanical belts and redstone
 devices. COGWORKS is a standalone game; it does **not** control Minecraft machines.
 
@@ -28,14 +26,15 @@ To try this branch before merging, run the branch's installer and pass the branc
 name as the positional ref:
 
 ```lua
-wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/feat/cogworks-64-campaign-editor/installers/cogworks.lua feat/cogworks-64-campaign-editor
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/codex/cogworks-puzzle-redesign/installers/cogworks.lua codex/cogworks-puzzle-redesign
 /games/cogworks/main.lua --dev
 ```
 
-The installer preserves saves and settings. The handcrafted campaign uses **version-6** save data and starts a new
-campaign when loading incompatible generated-layout saves. A permanent
-`slot-N.dat.campaign-v5` backup is retained before an older slot is
-overwritten. Display settings are preserved.
+The installer preserves saves and settings. Campaign version **7** starts older
+campaigns fresh, permanently archiving each old slot before replacement. For
+example, version-6 data is retained as `slot-N.dat.campaign-v6`. A failed archive
+prevents overwriting the slot. Display settings and user-authored packs remain
+unchanged.
 
 ## High-resolution CraftOS and iPad interface
 
@@ -129,27 +128,32 @@ replays if desired, and can require different constructions.
 Each level starts with a mission briefing and may introduce mechanics
 through a one-time Ponder tutorial. Main objectives are always to power
 the required presses at their target spin and relative speed without a jam.
-Some pilot puzzles intentionally offer more than the exact parts in the
-author's reference solution, encouraging alternate engineering approaches.
+Every puzzle has explicit stock with alternatives beyond the normal reference
+construction. Extra parts are available for different engineering approaches.
 
 Progress and awards are stored in three independent save slots. Each stage
-retains its own construction snapshot, including placed and removed redstone parts. Existing campaign unlocks are
-retained; incompatible old board arrangements reset when the level is opened.
+retains its own construction snapshot, including placed and removed redstone parts. Incompatible campaigns restart from the first district after their previous
+slot bytes are archived.
 
-### Campaign reference and validation
+### Optional objectives and validation
 
-Each authored stage has a playable starting state, a separate reference
-construction, an explicit stock inventory, optional immovable fixtures,
-and zero to two typed optional bonuses. `tests/cogworks_campaign_design_test.lua`
-verifies all 64 main reference solutions with the actual kinetic simulator,
-variable bonus counts, immovable fixtures, board diversity, and alternate
-map routes that bypass optional levels. Main references are **not** expected
-to automatically earn bonuses.
+Bonuses require different constructions: tighter part-family budgets, an
+alternative route around a marked cell, useful installed mounts, or a belt,
+chain or diagonal transmission that a press actually depends on. Decorative
+powered branches do not count. Move budgets and full-stock requirements are
+not part of this campaign. Bonuses can be earned independently across replays.
 
-The 30 levels derived from earlier proven kinetic layouts are **intentional
-first-pass variations, not yet final playtested puzzles**. Their discovery
-quality and authored twists should be checked during in-game playtesting
-and revised where a familiar solution still works trivially.
+Graphics outlines and text-mode A/B marks identify objective cells. The sidebar
+shows live counters; tap an objective to read its full rule in the status line.
+The larger graphics layout also displays rules below their labels.
+
+Each level has a normal reference, an independent alternate (after the two
+opening lessons), and a legal failed-approach example. Every bonus has its own
+winning witness. Tests verify that normal reference builds do not automatically
+earn bonuses, including while they are being constructed. The campaign ships
+135 winning witness builds and 64 failed attempts checked by the simulator.
+Human discovery quality, blind-playtest difficulty and real Minecraft monitor
+behavior require separate validation.
 
 ### Development mode
 
