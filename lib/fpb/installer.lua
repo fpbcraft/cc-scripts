@@ -201,7 +201,11 @@ function I.install(id, ref, args)
       end
       print(" + " .. path)
     end
-    if spec.basalt and not fs.exists(spec.root .. "/basalt.lua") and not (id == "fpbstore" and not (shell and shell.run)) then
+    if
+      spec.basalt
+      and not fs.exists(spec.root .. "/basalt.lua")
+      and not (id == "fpbstore" and not (shell and shell.run))
+    then
       assert(shell and shell.run, "Basalt installation requires the CraftOS shell")
       mkdir(stage)
       assert(
