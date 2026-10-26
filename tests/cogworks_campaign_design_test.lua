@@ -2,7 +2,7 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 local E = require("games.cogworks.engine")
 local C = require("games.cogworks.chapters")
 assert(#E.levels == 64 and #C.chapters == 8)
-local names, distinct, bonusTypes, counts = {}, {}, {}, {[0] = 0, [1] = 0, [2] = 0}
+local names, distinct, bonusTypes, counts = {}, {}, {}, { [0] = 0, [1] = 0, [2] = 0 }
 local fixedStages, targetCount, totalBonus = 0, 0, 0
 for i, stage in ipairs(E.levels) do
   assert(not names[stage.name], "Duplicate title: " .. stage.name)
@@ -20,8 +20,17 @@ for i, stage in ipairs(E.levels) do
   assert(not E.evaluate(current).win, "Starts solved: " .. i)
   local reference = E.new(i, true)
   local evaluation = E.evaluate(reference)
-  assert(evaluation.win, "Reference unsolved: " .. i
-    .. " (" .. evaluation.correct .. "/" .. evaluation.goals .. ") jam=" .. tostring(evaluation.jam))
+  assert(
+    evaluation.win,
+    "Reference unsolved: "
+      .. i
+      .. " ("
+      .. evaluation.correct
+      .. "/"
+      .. evaluation.goals
+      .. ") jam="
+      .. tostring(evaluation.jam)
+  )
   assert(evaluation.unpowered == 0, "Idle reference machinery: " .. i)
   assert(#E.challenges(reference, evaluation) == n, "Bonus evaluator honors variable counts")
   -- A main reference is *not* required to collect optional bonuses.
@@ -44,15 +53,16 @@ for i, stage in ipairs(E.levels) do
 end
 local function size(t)
   local n = 0
-  for _ in pairs(t) do n = n + 1 end
+  for _ in pairs(t) do
+    n = n + 1
+  end
   return n
 end
-assert(counts[0] > 0 and counts[1] > 0 and counts[2] > 0,
-  "Some levels have no bonus, some one, some two")
+assert(counts[0] > 0 and counts[1] > 0 and counts[2] > 0, "Some levels have no bonus, some one, some two")
 assert(size(bonusTypes) >= 12, "Bonus catalogue diversity")
 assert(size(distinct) >= 55 and fixedStages >= 32, "Board / fixture diversity")
 assert(totalBonus < 128 and totalBonus > 64, "Optional bonuses do not dominate the main campaign")
-local progress = {best = {}, awards = {}}
+local progress = { best = {}, awards = {} }
 assert(C.levelUnlocked(progress, 1))
 assert(not C.levelUnlocked(progress, 2) and not C.levelUnlocked(progress, 9))
 progress.best[1] = 1
@@ -73,7 +83,7 @@ assert(C.objectives(progress, 8) == 4)
 assert(C.levelUnlocked(progress, 64, true))
 -- No individual node in a district is mandatory to open the next district:
 -- a valid 1 -> 3 -> 5 route suffices, repeated in every district.
-local alternate = {best = {}, awards = {}}
+local alternate = { best = {}, awards = {} }
 for chapter = 1, 8 do
   local first = (chapter - 1) * 8 + 1
   assert(C.levelUnlocked(alternate, first))
@@ -85,6 +95,14 @@ for chapter = 1, 8 do
   assert(C.unlocked(alternate, chapter))
 end
 assert(C.openLevels(alternate) == 64)
-print("COGWORKS: 64 solver-checked references, spatial map skips, "
-  .. counts[0] .. "/" .. counts[1] .. "/" .. counts[2]
-  .. " stages with 0/1/2 bonuses, " .. size(bonusTypes) .. " bonus rules verified.")
+print(
+  "COGWORKS: 64 solver-checked references, spatial map skips, "
+    .. counts[0]
+    .. "/"
+    .. counts[1]
+    .. "/"
+    .. counts[2]
+    .. " stages with 0/1/2 bonuses, "
+    .. size(bonusTypes)
+    .. " bonus rules verified."
+)
