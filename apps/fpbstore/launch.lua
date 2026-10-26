@@ -27,7 +27,7 @@ return function(id)
         return nil
       end
     end
-    return monitors[1]
+    return monitors[1].screen
   end
   local display = choose()
   if display == false then
