@@ -284,8 +284,10 @@ local function apply(state, id, req, Systems)
 			return false, "Select an owned scout"
 		end
 		if req.value == false then
-			u.autoExplore = false
-			u.skippedTurn = nil
+			for _, member in ipairs({ u, Stacks.partner(state, u) }) do
+				member.autoExplore, member.standby, member.healing, member.skippedTurn =
+					false, false, false, nil
+			end
 			Events.notice(state, "order", u, req.action, id)
 			return true
 		end
@@ -300,6 +302,10 @@ local function apply(state, id, req, Systems)
 			return false, "Select an owned unit"
 		end
 		Queue.cancel(state, u)
+		for _, member in ipairs({ u, Stacks.partner(state, u) }) do
+			member.autoExplore, member.standby, member.healing, member.skippedTurn =
+				false, false, false, nil
+		end
 		Events.notice(state, "order", u, "Movement route cancelled", id)
 		return true
 	elseif req.action == "queueMove" then
@@ -416,10 +422,10 @@ local function apply(state, id, req, Systems)
 		if not u or u.owner ~= id then
 			return false, "Select an owned unit"
 		end
-		u.skippedTurn = nil
+		for _, member in ipairs({ u, Stacks.partner(state, u) }) do
+			member.skippedTurn, member.standby, member.autoExplore = nil, true, false
+		end
 		u.healing = true
-		u.standby = true
-		u.autoExplore = false
 		u.movesLeft = 0
 		u.moved = true
 	elseif req.action == "cityStrike" then

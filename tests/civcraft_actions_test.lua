@@ -121,6 +121,23 @@ state.players[1].ready = true
 assert(not order(state, "found", 8, 4))
 state.players[1].ready = false
 assert(not A.apply(state, 2, { action = "found", x = 8, y = 4 }, S))
+-- Mode changes wake a resting unit even when no movement is left.
+state, u = fixture()
+u.kind, u.movesLeft, u.moved = "scout", 0, true
+assert(order(state, "heal", u.x, u.y))
+assert(u.standby and u.healing)
+assert(order(state, "autoExplore", u.x, u.y))
+assert(u.autoExplore and not u.standby and not u.healing and u.movesLeft == 0)
+assert(order(state, "heal", u.x, u.y))
+assert(order(state, "autoExplore", u.x, u.y, { value = false }))
+assert(not u.autoExplore and not u.standby and not u.healing and u.movesLeft == 0)
+assert(order(state, "heal", u.x, u.y))
+assert(order(state, "cancelRoute", u.x, u.y))
+assert(not u.standby and not u.healing and u.movesLeft == 0)
+u.kind = "warrior"
+assert(order(state, "heal", u.x, u.y))
+assert(not order(state, "autoExplore", u.x, u.y))
+assert(u.standby and u.healing, "Rejected mode changes preserve rest state")
 -- Authoritative movement must not offer or execute attacks on concealed units.
 state, u = fixture()
 u.kind = "warrior"

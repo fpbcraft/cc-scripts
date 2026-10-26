@@ -641,7 +641,9 @@ function M.autoExplore(state, unit, hex)
 		return false, "Withdrawal orders take priority over exploration"
 	end
 	unit.autoExplore = true
-	unit.standby = false
+	for _, member in ipairs({ unit, Stacks.partner(state, unit) }) do
+		member.standby, member.healing, member.skippedTurn = false, false, nil
+	end
 	while (unit.movesLeft or 0) > 0 and not unit.moved do
 		local companion = Stacks.partner(state, unit)
 		if companion and (companion.moved or (companion.movesLeft or 0) <= 0) then

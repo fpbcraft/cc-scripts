@@ -373,3 +373,38 @@ for _, event in ipairs(E.forPlayer(state, 1).entries) do
 	end
 end
 print("CIVCRAFT: escort fog previews and actual discovered control stops passed.")
+
+state, guard, settler = fixture("scout")
+attach(state, guard, settler)
+for _, member in ipairs({ guard, settler }) do
+	member.movesLeft, member.moved, member.standby, member.healing = 0, true, true, true
+	member.skippedTurn = Tasks.stamp(state, 1)
+end
+assert(command(state, guard, "autoExplore"))
+for _, member in ipairs({ guard, settler }) do
+	assert(
+		not member.standby
+			and not member.healing
+			and not member.skippedTurn
+			and member.movesLeft == 0
+	)
+	member.standby, member.healing = true, true
+end
+assert(command(state, settler, "autoExplore", { value = false }))
+assert(not guard.autoExplore and not guard.standby and not settler.standby)
+for _, member in ipairs({ guard, settler }) do
+	member.standby, member.healing = true, true
+end
+assert(command(state, settler, "cancelRoute"))
+assert(not guard.standby and not settler.standby and not guard.healing and not settler.healing)
+assert(guard.movesLeft == 0 and settler.movesLeft == 0)
+print("CIVCRAFT: accepted escort mode changes wake both members without restoring spent actions.")
+
+guard.movesLeft, settler.movesLeft, guard.moved, settler.moved = 2, 2, false, false
+guard.autoExplore, guard.standby, settler.standby = true, false, false
+assert(command(state, settler, "heal"))
+assert(guard.standby and settler.standby and not guard.autoExplore and settler.healing)
+assert(
+	guard.movesLeft == 2 and settler.movesLeft == 0,
+	"Rest pauses the escort's automatic movement without spending its partner's allowance"
+)

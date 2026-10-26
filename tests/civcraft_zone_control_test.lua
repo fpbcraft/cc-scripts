@@ -43,6 +43,24 @@ local function choice(state, unit, x, y)
 		end
 	end
 end
+-- An in-place attack is not a fresh entry into control.
+local still, attacker, defender = fixture("warrior", 4, 2)
+assert(not Z.locked(still, attacker, S))
+assert(A.apply(still, 1, { action = "move", sx = 4, sy = 4, x = 5, y = 4 }, S))
+assert(attacker.x == 4 and defender.hp > 0 and attacker.movesLeft == 1)
+assert(not Z.locked(still, attacker, S) and choice(still, attacker, 3, 4))
+assert(A.apply(still, 1, { action = "move", sx = 4, sy = 4, x = 3, y = 4 }, S))
+assert(attacker.movesLeft == 0)
+local advancing, captor, victim = fixture("warrior", 4, 2)
+victim.hp = 1
+advancing.units[#advancing.units + 1] =
+	{ id = 3, owner = 2, kind = "warrior", x = 6, y = 4, hp = 100, movesLeft = 2 }
+W.reveal(advancing, H, S)
+assert(A.apply(advancing, 1, { action = "move", sx = 4, sy = 4, x = 5, y = 4 }, S))
+assert(
+	captor.x == 5 and captor.movesLeft == 1 and Z.locked(advancing, captor, S),
+	"A real combat advance into another enemy's control still locks movement"
+)
 local state, unit, enemy = fixture()
 assert(choice(state, unit, 4, 4).zoneStop)
 assert(

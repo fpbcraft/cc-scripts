@@ -504,6 +504,7 @@ end
 local hasModem = not localMode and modem() or false
 local myId = os.getComputerID and os.getComputerID() or 0
 local hostId, localHost = nil, (MODE == "host" or localMode)
+local joinRequest
 if localHost then
 	if localMode then
 		local loaded = args[2] ~= "--new" and Saves.load(slot)
@@ -560,11 +561,8 @@ else
 		hostId = rednet.lookup(PROTOCOL)
 	end
 	assert(hostId, "No game found; use join <host computer ID>")
-	rednet.send(
-		hostId,
-		{ action = "join", name = os.getComputerLabel() or ("Computer " .. myId) },
-		PROTOCOL
-	)
+	joinRequest = { action = "join", name = os.getComputerLabel() or ("Computer " .. myId) }
+	rednet.send(hostId, joinRequest, PROTOCOL)
 end
 Systems.migrate(state)
 Diplomacy.migrate(state)
@@ -1035,8 +1033,10 @@ end
 local function clientListener()
 	local ackCampaign, ackSeq
 	while true do
-		local id, packet = rednet.receive(PROTOCOL)
-		if id == hostId and type(packet) == "table" then
+		local id, packet = rednet.receive(PROTOCOL, not snapshot and 1 or nil)
+		if id == nil and not snapshot then
+			rednet.send(hostId, joinRequest, PROTOCOL)
+		elseif id == hostId and type(packet) == "table" then
 			local changed = false
 			if packet.type == "state" then
 				local accepted, cursor = receiveSnapshot:accept(packet, myId)

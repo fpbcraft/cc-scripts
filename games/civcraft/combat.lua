@@ -261,6 +261,7 @@ function C.predictOrder(state, unit, order, systems)
 end
 
 function C.attack(state, unit, target, systems)
+	local startX, startY = unit.x, unit.y
 	local companion, approachSpent = Stacks.partner(state, unit), 0
 	local result, why
 	if target.path then
@@ -397,7 +398,7 @@ function C.attack(state, unit, target, systems)
 		Events.emit(state, notice)
 	end
 	World.reveal(state, Hex, systems)
-	if not result.ranged and unit.hp > 0 then
+	if not result.ranged and unit.hp > 0 and (unit.x ~= startX or unit.y ~= startY) then
 		Zone.enter(state, unit, systems, Hex)
 	end
 	return true,
