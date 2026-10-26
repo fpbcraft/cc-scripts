@@ -686,3 +686,30 @@ maximum. Collections in that run take at most 2 ms. Full local/host sessions and
 Vast-map generation, AI and save reload also pass. This addresses the reproduced
 collector stall; recurrence during normal play still needs observation. Physical
 monitor and live modem validation remain part of the final integration work.
+
+## Campaign navigation and toolbar cleanup
+
+The title menu now presents five actions: New Campaign, Load Campaign, Remote
+Multiplayer, Settings and Exit. Creation and loading use separate slot menus;
+replacement requires explicit confirmation before resetting an occupied campaign.
+The load menu retains confirmed deletion on compact and wide displays. Back
+controls return from slot selection, replacement, multiplayer and campaign setup.
+Multiplayer can host or discover/join a game directly from the menu, returning to
+the local title when leaving a network session.
+
+Research reuses the yield flask. Factions, Codex, history, Council and pause use
+people, question-mark, clock, globe and hamburger icons, respectively. World
+Overview sits beneath Zoom Out, including the two-column toolbar layout. Very
+short terminals retain the focused Map Tools menu.
+
+Loading establishes a fixed event cutoff for every saved observer. Existing
+history remains readable without automatic replay; subsequent events still play,
+including after hotseat handoff. Hosts publish only the recipient's cutoff to
+remote clients. Changing save slots clears stale playback instances.
+
+All 83 regression scripts pass, including six title-menu text/graphics layouts,
+per-observer replay baselines and access to every submenu action. A fresh native
+CraftOS full session passes. A separate native check loads an existing campaign,
+rejects unconfirmed replacement, resumes without replay, explicitly creates a new
+campaign and verifies that the saved file stays intact until a later save.
+Compact and wide rendered menu previews were visually inspected.

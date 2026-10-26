@@ -550,85 +550,107 @@ function UI:draw(state, playerID, opts)
 	end
 	if opts.screen == "title" then
 		r:fill(0, 0, w, h, 0)
-		if h < 180 or w < 220 then
-			r:button(w - 15, 1, 12, 10, nil, function()
+		local menu = self.titleMenu or "main"
+		local compact = h < 180 or w < 220
+		r:center(compact and 3 or math.floor(h * 0.12), "CIVCRAFT", 8, compact and 1 or 3)
+		local rows = {}
+		local function button(label, run, selected)
+			rows[#rows + 1] =
+				{ buttons = { { label = label, run = run, style = { primary = selected } } } }
+		end
+		local function open(name)
+			self.titleMenu, self.titleOffset = name, 0
+		end
+		if menu == "main" then
+			button("NEW CAMPAIGN", function()
+				open("new")
+			end)
+			button("LOAD CAMPAIGN", function()
+				open("load")
+			end)
+			button("REMOTE MULTIPLAYER", function()
+				open("remote")
+			end)
+			button("SETTINGS", function()
 				self:command("settings")
 			end)
-			r:icon("gear", w - 14, 1, 1)
-			r.buttons[#r.buttons].label = "SETTINGS"
-			r:center(3, "CIVCRAFT", 8, 1)
-			r:center(11, "SELECT A SAVE SLOT", 6)
-			if opts.slots then
-				local size = math.floor((w - 8) / 3)
-				for i, record in ipairs(opts.slots) do
-					local label = "SLOT "
-						.. i
-						.. (record.occupied and " R" .. (record.round or 1) or " FREE")
-					r:button(3 + (i - 1) * size, 16, size - 2, 10, label, function()
-						self:command("selectSlot", { slot = i })
-					end, { primary = opts.slot == i })
-				end
-			end
-			local by = math.max(26, h - 31)
-			local bx, bw = math.max(4, math.floor(w * 0.12)), math.max(33, math.floor(w * 0.76))
-			r:button(bx, by, bw, 10, "NEW CAMPAIGN", function()
-				self:command("newGame")
-			end, { primary = true })
-			r:button(bx, by + 10, bw, 10, "CONTINUE", function()
-				self:command("continue")
-			end)
-			r:button(bx, by + 20, bw, 10, "EXIT", function()
+			button("EXIT", function()
 				self:command("exit")
 			end)
-			r:finish()
-			return
-		end
-		r:button(w - 57, 4, 52, 12, "SETTINGS", function()
-			self:command("settings")
-		end)
-		r:center(math.floor(h * 0.10), "CIVCRAFT", 8, w >= 155 and 3 or 2)
-		r:center(math.floor(h * 0.23), "HEX EMPIRES / EXPLORE / CONQUER", 7)
-		local bw = math.min(w - 20, math.max(100, math.floor(w * 0.72)))
-		local bx = math.floor((w - bw) / 2)
-		if opts.slots then
-			local sy = math.floor(h * 0.32)
-			for i, record in ipairs(opts.slots) do
-				local active = i == opts.slot
-				local title = record.occupied
-						and ("SLOT " .. i .. "  " .. (record.name or "CAMPAIGN") .. "  R" .. (record.round or 1))
-					or ("SLOT " .. i .. "  EMPTY")
-				r:button(bx, sy + (i - 1) * 21, bw - 35, 17, title, function()
+		elseif menu == "remote" then
+			button("HOST GAME", function()
+				self:command("remoteHost")
+			end)
+			button("JOIN GAME", function()
+				self:command("remoteJoin")
+			end)
+			if self.notice ~= "" then
+				rows[#rows + 1] = { text = self.notice, color = 8 }
+			end
+		elseif menu == "overwrite" then
+			rows[#rows + 1] =
+				{ text = "REPLACE CAMPAIGN IN SLOT " .. tostring(opts.slot) .. "?", color = 8 }
+			button("CONFIRM REPLACE", function()
+				self:command("newGame", { confirmed = true })
+			end)
+		else
+			rows[#rows + 1] = {
+				text = menu == "new" and "CHOOSE A SLOT FOR NEW CAMPAIGN" or "CHOOSE A CAMPAIGN",
+				color = 8,
+			}
+			for i, record in ipairs(opts.slots or {}) do
+				local label = "SLOT "
+					.. i
+					.. (
+						record.occupied
+							and ((compact and "" or " " .. (record.name or "CAMPAIGN")) .. " R" .. (record.round or 1))
+						or " EMPTY"
+					)
+				button(label, function()
 					self:command("selectSlot", { slot = i })
-				end, { primary = active })
+				end, opts.slot == i)
 			end
-			r:button(
-				bx + bw - 31,
-				sy,
-				31,
-				17,
-				opts.deleteConfirm == opts.slot and "SURE?" or "DELETE",
-				function()
-					self:command("deleteSlot")
-				end
-			)
+			button(menu == "new" and "CREATE CAMPAIGN" or "LOAD CAMPAIGN", function()
+				self:command(menu == "new" and "newGame" or "continue")
+			end)
+			if menu == "load" then
+				button(
+					opts.deleteConfirm == opts.slot and "CONFIRM DELETE" or "DELETE SELECTED",
+					function()
+						self:command("deleteSlot")
+					end
+				)
+			end
 		end
-		local by = math.min(h - 53, math.max(math.floor(h * 0.55), math.floor(h * 0.32) + 65))
-		r:button(bx, by, bw, 16, "NEW CAMPAIGN", function()
-			self:command("newGame")
-		end, { primary = true })
-		r:button(
-			bx,
-			by + 19,
-			bw,
-			16,
-			opts.hasSave and "CONTINUE CAMPAIGN" or "NO SAVED CAMPAIGN",
-			function()
-				self:command("continue")
+		local bw = math.min(w - 12, math.max(100, math.floor(w * 0.72)))
+		local by = compact and 12 or math.floor(h * 0.30)
+		if menu == "main" then
+			by = compact and 12 or by
+			local step = math.min(24, math.floor((h - by - 4) / #rows))
+			for i, row in ipairs(rows) do
+				local action = row.buttons[1]
+				r:button(
+					math.floor((w - bw) / 2),
+					by + (i - 1) * step,
+					bw,
+					math.max(8, step - 1),
+					action.label,
+					action.run
+				)
 			end
-		)
-		r:button(bx, by + 38, bw, 14, "EXIT", function()
-			self:command("exit")
-		end)
+		else
+			Panels.rows(r, {
+				x = math.floor((w - bw) / 2),
+				y = by,
+				w = bw,
+				h = h - by - 16,
+			}, rows, self, "titleOffset")
+		end
+		if menu ~= "main" then
+			r:button(math.floor((w - bw) / 2), h - 13, bw, 11, "BACK", function()
+				open(menu == "overwrite" and "new" or "main")
+			end)
+		end
 		r:finish()
 		return
 	end
@@ -684,6 +706,9 @@ function UI:draw(state, playerID, opts)
 		if w < 220 or h < 140 then
 			r:fill(0, 0, w, h, 0)
 			r:text(4, 3, opts.localMode and "LOCAL LOBBY" or "NETWORK LOBBY", 8)
+			r:button(w - 35, 1, 32, 11, "BACK", function()
+				self:command("title")
+			end)
 			local rows = {}
 			rows[#rows + 1] = {
 				buttons = {
@@ -815,6 +840,9 @@ function UI:draw(state, playerID, opts)
 			r:finish()
 			return
 		end
+		r:button(w - 36, 2, 32, 11, "BACK", function()
+			self:command("title")
+		end)
 		r:fill(8, header + 5, w - 16, h - header - 15, 1)
 		r:center(
 			header + 9,

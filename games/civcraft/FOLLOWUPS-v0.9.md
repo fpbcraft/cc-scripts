@@ -94,3 +94,18 @@ combat previews; these still need the final integrated interaction checks.
   into focused views, and unit actions from secondary details. Keep relevant
   actions accessible without paging through unrelated information. Move status
   feedback (for example Order Accepted) into the empty strip below the map.
+
+## Toolbar and campaign-menu cleanup
+
+- [x] Place World Overview/fullscreen directly below Zoom Out on the map toolbar.
+- [x] Use the science-yield flask for research, people for factions, a question
+  mark for the Codex, a clock for event history, a globe for Council and three
+  horizontal lines for the pause menu. Keep report and history icons distinct.
+- [x] Loading a campaign establishes per-observer replay baselines. Saved events
+  stay readable, but only subsequent events play automatically. Remote snapshots
+  carry only the recipient's saved-history cutoff.
+- [x] Main menu contains New Campaign, Load Campaign, Remote Multiplayer,
+  Settings and Exit. Campaign creation/loading and multiplayer have focused
+  submenus with Back controls. Occupied slots require explicit replacement
+  confirmation; deletion remains separately confirmed. Compact and wide layouts
+  expose the same actions, using paging where needed.

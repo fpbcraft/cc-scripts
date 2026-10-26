@@ -99,7 +99,7 @@ function G.draw(ui, state, player)
 	for i, action in ipairs({
 		{
 			"TECH TREE",
-			"tree",
+			"science",
 			function()
 				ui.panel = "tech"
 				ui.source = nil
@@ -110,7 +110,7 @@ function G.draw(ui, state, player)
 		},
 		{
 			"FACTIONS",
-			"station",
+			"people",
 			function()
 				ui.panel = "factions"
 				ui.factionOffset = 0
@@ -126,7 +126,7 @@ function G.draw(ui, state, player)
 		},
 		{
 			"CODEX",
-			"book",
+			"help",
 			function()
 				ui.panel = "encyclopedia"
 				ui.lastDrag = nil
@@ -142,21 +142,21 @@ function G.draw(ui, state, player)
 		},
 		{
 			"EVENT LOG",
-			"contract",
+			"history",
 			function()
 				ui:openHistory()
 			end,
 		},
 		{
 			"COUNCIL",
-			"village",
+			"planet",
 			function()
 				ui.panel = "council"
 			end,
 		},
 		{
 			"PAUSE",
-			"pause",
+			"menu",
 			function()
 				ui:command("pause")
 			end,
@@ -243,9 +243,16 @@ function G.draw(ui, state, player)
 				end
 			)
 		end
-		iconButton(2, bottom - 13, 12, "WORLD OVERVIEW", "fullscreen", function()
-			ui.panel = "minimap"
-		end)
+		iconButton(
+			2 + ((#modes + 1) % sidebarColumns) * 14,
+			header + 3 + (math.floor((#modes + 1) / sidebarColumns) + 1) * 14,
+			12,
+			"WORLD OVERVIEW",
+			"fullscreen",
+			function()
+				ui.panel = "minimap"
+			end
+		)
 	end
 	Inspector.draw(
 		ui,
@@ -262,7 +269,7 @@ function G.draw(ui, state, player)
 			ui:command("skipPlayback")
 		end)
 	else
-		iconButton(2, bottom + 1, 12, "OBSERVED EVENTS", "contract", function()
+		iconButton(2, bottom + 1, 12, "OBSERVED EVENTS", "history", function()
 			ui.panel = "events"
 			ui.eventOffset = 0
 		end)

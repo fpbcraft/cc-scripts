@@ -49,9 +49,24 @@ function Playback.update(ui, state, observer, opts)
 			and stream.observer == playback.observer
 			and playback.cursor
 		or 0
+	local loaded = opts.replayBaseline
+	local cutoff = stream
+			and loaded
+			and loaded.campaign == stream.campaign
+			and loaded.observers[observer]
+		or 0
+	baseline = math.max(baseline, cutoff or 0)
 	playback:ingest(state and state.eventStream, function()
 		return true
 	end, visible)
+	if cutoff and cutoff > 0 then
+		for i = #playback.pending, 1, -1 do
+			if playback.pending[i].seq <= cutoff then
+				table.remove(playback.pending, i)
+			end
+		end
+		playback.lastTurnSeq = math.max(playback.lastTurnSeq or 0, cutoff)
+	end
 	if not visible then
 		if state and state.phase == "game" and playback.deferredSeq == nil then
 			playback.deferredSeq = baseline

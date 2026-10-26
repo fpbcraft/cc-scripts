@@ -541,7 +541,12 @@ dofile = function(path)
 			end
 			local label
 			if stage == 0 and options.screen == "title" then
-				label = "NEW CAMPAIGN"
+				if self.titleMenu == "new" then
+					label = "CREATE CAMPAIGN"
+				else
+					tap(self, "NEW CAMPAIGN")
+					return
+				end
 			elseif stage == 1 and state.phase == "lobby" then
 				label = "START GAME"
 			elseif stage == 2 and state.phase == "game" and not options.handoff then

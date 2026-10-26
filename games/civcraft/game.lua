@@ -573,7 +573,23 @@ local message = "Tap a tile, then choose an action"
 local handoff = false
 local exitRequested = false
 local appScreen = "title"
+for _, argument in ipairs(args) do
+	if argument == "--menu" then
+		appScreen = "game"
+	end
+end
 local deleteConfirm = nil
+local launchMode, launchHost
+local replayBaseline
+local function baselineLoadedEvents()
+	replayBaseline = { campaign = state.campaignID, observers = {} }
+	for _, player in ipairs(state.players or {}) do
+		replayBaseline.observers[player.id] = Events.forPlayer(state, player.id).lastSeq
+	end
+end
+if hasHumanSave then
+	baselineLoadedEvents()
+end
 local gamePaused = false
 local UI = dofile("/games/civcraft/ui.lua")
 
@@ -622,6 +638,7 @@ local function draw()
 		slot = slot,
 		slots = localMode and appScreen == "title" and Saves.list() or nil,
 		deleteConfirm = deleteConfirm,
+		replayBaseline = replayBaseline or (s and s.replayBaseline),
 		audio = audio.enabled,
 		music = audio.music,
 		volume = audio.volume,
@@ -647,6 +664,22 @@ local function dispatch(action, params)
 		exitRequested = true
 		return
 	end
+	if action == "remoteHost" or action == "remoteJoin" then
+		if not modem() then
+			message = "CONNECT A MODEM FIRST"
+			return
+		end
+		if action == "remoteJoin" then
+			launchHost = rednet.lookup(PROTOCOL)
+			if not launchHost then
+				message = "NO HOST FOUND"
+				return
+			end
+		end
+		launchMode = action == "remoteHost" and "host" or "join"
+		exitRequested = true
+		return
+	end
 	if action == "selectSlot" and localMode then
 		local choice = tonumber(params and params.slot)
 		if choice and choice >= 1 and choice <= Saves.count then
@@ -665,6 +698,8 @@ local function dispatch(action, params)
 				state = newGame()
 				Systems.migrate(state)
 			end
+			baselineLoadedEvents()
+			view.observerPlayback, view.animationFrame = {}, nil
 			World.reveal(state, Hex, Systems)
 			message = "SLOT " .. slot .. " SELECTED"
 		end
@@ -714,6 +749,11 @@ local function dispatch(action, params)
 		return
 	end
 	if action == "newGame" then
+		if hasHumanSave and not (params and params.confirmed) then
+			view.titleMenu, view.titleOffset = "overwrite", 0
+			return
+		end
+		replayBaseline = nil
 		if localHost then
 			state = newGame()
 			Systems.migrate(state)
@@ -778,7 +818,15 @@ local function dispatch(action, params)
 		return
 	end
 	if action == "title" then
+		if not localMode then
+			if localHost then
+				save()
+			end
+			launchMode, exitRequested = "local", true
+			return
+		end
 		appScreen = "title"
+		view.titleMenu, view.titleOffset = "main", 0
 		gamePaused = false
 		save()
 		audio:update(appScreen)
@@ -957,6 +1005,12 @@ local function sendState(id)
 	end
 	local projected = World.forPlayer(state, id, cursor and cursor.seq)
 	if projected then
+		if replayBaseline and replayBaseline.campaign == state.campaignID then
+			projected.replayBaseline = {
+				campaign = state.campaignID,
+				observers = { [id] = replayBaseline.observers[id] or 0 },
+			}
+		end
 		rednet.send(id, sendSnapshot(id, projected), PROTOCOL)
 	end
 end
@@ -1168,3 +1222,11 @@ if not completed then
 	error(failure, 0)
 end
 trace("session.end")
+
+if launchMode then
+	if launchHost then
+		shell.run("/games/civcraft/game.lua", launchMode, tostring(launchHost), "--menu")
+	else
+		shell.run("/games/civcraft/game.lua", launchMode, launchMode ~= "local" and "--menu" or "")
+	end
+end

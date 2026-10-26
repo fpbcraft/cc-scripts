@@ -74,7 +74,18 @@ ui:draw(state, 11, {
 		{ occupied = true, name = "EMPIRE BETA", round = 9 },
 	},
 })
-touchLabel("SLOT 3  EMPIRE BETA  R9")
+ui.titleMenu = "load"
+ui:draw(state, 11, {
+	localMode = true,
+	screen = "title",
+	slot = 2,
+	slots = {
+		{ occupied = true, name = "EMPIRE ALPHA", round = 4 },
+		{ occupied = false },
+		{ occupied = true, name = "EMPIRE BETA", round = 9 },
+	},
+})
+touchLabel("SLOT 3 EMPIRE BETA R9")
 assert(
 	calls[#calls].action == "selectSlot" and calls[#calls].data.slot == 3,
 	"Touchscreen title must switch between saved campaigns"
@@ -89,8 +100,12 @@ ui:draw(state, 11, {
 		{ occupied = false, name = "C" },
 	},
 })
+touchLabel("BACK")
+ui:draw(state, 11, { screen = "title" })
 touchLabel("NEW CAMPAIGN")
-assert(calls[#calls].action == "newGame", "Main menu starts a new game")
+ui:draw(state, 11, { screen = "title" })
+touchLabel("CREATE CAMPAIGN")
+assert(calls[#calls].action == "newGame", "Campaign submenu starts a new game")
 state.mapSize = "standard"
 state.mapSeed = 137
 ui:draw(state, 11, { localMode = true, screen = "game" })
