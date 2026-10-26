@@ -118,7 +118,7 @@ function shell.run(file, ...)
 end
 local M = require("apps.fpbstore.manager")
 assert(#M.catalog.apps >= 3, "Catalog must contain the original three games")
-assert(M.storeStatus().installedVersion == "2.0.0", "Store's installed version should be displayed")
+assert(M.storeStatus().installedVersion == "2.1.0", "Store's installed version should be displayed")
 local old = { "cogworks", "railbreak", "shattered" }
 for i, id in ipairs(old) do
 	local app = assert(M.get(id))
@@ -159,8 +159,8 @@ assert(not ok, "Arbitrary catalog entries rejected")
 -- Remote versions can identify both game and store updates without
 -- overwriting any local installation metadata.
 local initialStore = M.storeStatus()
-assert(initialStore.installedVersion == "2.0.0")
-local remoteCatalog = [[return {storeVersion="2.1.0",apps={
+assert(initialStore.installedVersion == "2.1.0")
+local remoteCatalog = [[return {storeVersion="2.2.0",apps={
  {id="cogworks",version="1.2.0"},{id="railbreak",version="2.0.6"},
  {id="shattered",version="5.1"}}}]]
 local priorHttp = http.get

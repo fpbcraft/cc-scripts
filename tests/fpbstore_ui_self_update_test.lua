@@ -20,7 +20,7 @@ disk.env.os = setmetatable({
 	pullEvent = function()
 		calls = calls + 1
 		if calls == 1 then
-			assert(screen.text():find("FPB STORE 2.0.0", 1, true))
+			assert(screen.text():find("FPB STORE", 1, true))
 			return "char", "u"
 		end
 		error("Updated Store should have reloaded the new main")

@@ -30,7 +30,9 @@ function B.forLevel(number)
 		targets = targets,
 		stock = stock,
 		stockTotal = total,
-		bonus = { sealed = number >= 2, fullFactory = number >= 3, precision = number >= 5 },
+		bonus = stage.bonuses,
+		role = stage.role,
+		chapter = stage.chapter,
 	}
 end
 return B

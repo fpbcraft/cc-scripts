@@ -1,192 +1,150 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 local E = require("games.cogworks.engine")
-local function eq(actual, expected, msg)
+local function eq(actual, expected, context)
 	assert(
 		actual == expected,
-		(msg or "Mismatch") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual)
+		(context or "Mismatch")
+			.. ": expected "
+			.. tostring(expected)
+			.. ", got "
+			.. tostring(actual)
 	)
 end
-eq(#E.levels, 30, "Puzzle campaign size")
-local totalGoals = 0
+eq(#E.levels, 64, "Eight chapters of eight playable campaign levels")
+eq(#E.order, 10, "Eight Create mechanisms plus redstone dust and block")
+for _, kind in ipairs(E.order) do
+	assert(E.parts[kind], "Selectable component missing: " .. kind)
+end
+for _, removed in ipairs({ "L", "T" }) do
+	assert(not E.parts[removed], "Fictitious mechanism still available: " .. removed)
+end
+local goals = 0
 for index, data in ipairs(E.levels) do
 	local game = E.new(index)
-	local initial = E.evaluate(game)
-	assert(not initial.win, "Puzzle " .. index .. " must start unsolved")
-	eq(game.moves, 0, "Empty board move count")
-	assert(not E.rotate(game, 1, 1), "Cannot rotate an empty cell")
-	assert(not E.remove(game, data.source.x, data.source.y), "Cannot remove source")
-	assert(not E.place(game, data.source.x, data.source.y, "I"), "Cannot replace source")
-	assert(not E.place(game, 0, 1, "I"), "Cannot build out of bounds")
-	assert(not E.place(game, 8, 2, "I"), "Cannot build out of bounds")
-	assert(not E.place(game, 2, 2, "banana"), "Unknown part rejected")
-	for _, wall in ipairs(data.blocks) do
-		local t = E.get(game, wall[1], wall[2])
-		assert(t and t.kind == "X" and t.fixed, "Permanent wall present")
-		assert(not E.place(game, wall[1], wall[2], "I"), "Cannot build in stone")
+	assert(not E.evaluate(game).win, "New level cannot start completed: " .. index)
+	eq(game.moves, 0, "Fresh move counter")
+	assert(
+		not E.place(game, data.source.x, data.source.y, "I"),
+		"Fixed generator cannot be replaced"
+	)
+	assert(not E.remove(game, data.source.x, data.source.y), "Generator cannot be removed")
+	assert(not E.rotate(game, data.source.x, data.source.y), "Generator cannot be rotated")
+	assert(
+		not E.place(game, 0, 1, "I") and not E.place(game, game.width + 1, 1, "I"),
+		"Bounds enforced"
+	)
+	assert(game.width == data.width and game.height == data.height, "Per-stage grid size applied")
+	assert(
+		data.chapter == math.ceil(index / 8) and data.stage == (index - 1) % 8 + 1,
+		"Eight-stage chapters"
+	)
+	if index % 8 == 0 then
+		assert(data.finale, "Every eighth puzzle is a chapter test")
+	end
+	assert(not E.place(game, 2, 2, "L"), "Elbow no longer offered")
+	for _, obstacle in ipairs(data.blocks) do
+		assert(E.get(game, obstacle[1], obstacle[2]).kind == "X", "Stone obstacle retained")
 	end
 	local solved = E.new(index, true)
 	local result = E.evaluate(solved)
 	assert(
 		result.win,
-		"Reference solution invalid for level "
+		"Bad Create-based reference solution at "
 			.. index
-			.. " (goals "
+			.. ": "
 			.. result.correct
 			.. "/"
 			.. result.goals
 			.. ", jam="
 			.. tostring(result.jam)
-			.. ")"
 	)
-	totalGoals = totalGoals + result.goals
-	local options = E.challenges(solved, result)
-	if index >= 2 then
-		assert(#options > 0, "Most levels need bonus contracts")
-	end
-	for _, challenge in ipairs(options) do
-		assert(
-			challenge.earned,
-			"Canonical solution earns " .. challenge.id .. " at stage " .. index
-		)
-	end
-	if index <= 3 then
-		assert(not data.fullNetwork, "Tutorial stages should stay relaxed")
-	end
-	if index >= 4 then
-		assert(data.fullNetwork, "Advanced stages should track full network metrics for bonuses")
-		eq(result.openPorts, 0, "Solved level has no dangling ports: " .. index)
-		eq(result.unpowered, 0, "Solved level has no unpowered parts: " .. index)
-		eq(result.remaining, 0, "Solved level has no unused stock: " .. index)
-		if index >= 11 then
-			assert(result.goals >= 3, "Intermediate levels have three outputs")
-		end
-		if index >= 19 then
-			assert(result.goals >= 4, "Advanced levels have four outputs")
-		end
-		if index >= 27 then
-			assert(result.goals >= 5, "Final levels have five outputs")
-		end
-		if index >= 12 or (index >= 8 and index <= 10) then
+	for _, tile in ipairs(solved.tiles) do
+		if not tile.fixed and tile.kind ~= "R" and tile.kind ~= "B" then
 			assert(
-				(data.stock.G or 0) > 0 or (data.stock.B or 0) > 0,
-				"Level " .. index .. " has power transformation"
+				result.lights[tile.id].powered,
+				"Reference contains idle player machinery at " .. index
 			)
 		end
 	end
-	local total = 0
-	for kind, stock in pairs(data.stock) do
-		eq(stock, solved.stock[kind], "Reference stock for " .. kind)
-		total = total + stock
+	goals = goals + result.goals
+	for _, bonus in ipairs(E.challenges(solved, result)) do
+		if bonus.id == "sealed" then
+			assert(bonus.earned, "Reference should never contain unused parts at " .. index)
+		end
 	end
-	eq(#E.snapshot(solved), #data.build, "Reference uses all parts")
-	assert(total >= #data.build, "No shortage in level inventory")
 	local manual = E.new(index)
-	for _, t in ipairs(data.build) do
+	for _, position in ipairs(data.removeRedstone or {}) do
+		assert(E.remove(manual, position[1], position[2]), "Reference starting-part removal failed")
+	end
+	for _, part in ipairs(data.build) do
 		assert(
-			E.place(manual, t.x, t.y, t.kind, t.r),
-			"Cannot place solution tile " .. t.kind .. " in " .. index
+			E.place(manual, part.x, part.y, part.kind, part.r),
+			"Reference part placement failed on stage " .. index
 		)
 	end
-	assert(E.evaluate(manual).win, "Manual construction failed in " .. index)
-	eq(#E.snapshot(manual), #data.build, "Snapshot includes all placements")
-	assert(
-		not E.place(manual, data.build[1].x, data.build[1].y, "I"),
-		"Cannot stack a second part on a tile"
-	)
+	assert(E.evaluate(manual).win, "Building the reference manually failed at " .. index)
 	local saved = E.snapshot(manual)
 	local restored = E.new(index)
-	assert(E.restore(restored, saved), "Valid session restored")
-	assert(E.evaluate(restored).win, "Restored solution should stay solved")
-	local before = E.snapshot(restored)
+	assert(E.restore(restored, saved), "Snapshot restore failed at " .. index)
+	assert(E.evaluate(restored).win, "Restored solution failed at " .. index)
+	local before = #E.snapshot(restored)
 	assert(
-		not E.restore(restored, { { x = 0, y = 1, kind = "I", r = 0 } }),
-		"Reject invalid stored part"
+		not E.restore(restored, { { x = -1, y = 1, kind = "I", r = 0 } }),
+		"Reject malformed saved coordinates"
 	)
-	eq(#E.snapshot(restored), #before, "Invalid session cannot change board")
-	local first = data.build[1]
-	assert(E.remove(manual, first.x, first.y), "Placed part can be removed")
-	assert(E.place(manual, first.x, first.y, first.kind, first.r), "Refunded stock reused")
-	assert(E.evaluate(manual).win, "Salvage/replace retains solution")
-	local bad = E.new(index)
-	if #data.build > 0 then
-		local firstPiece = data.build[1]
-		assert(
-			E.place(bad, firstPiece.x, firstPiece.y, firstPiece.kind, 0),
-			"Place part for rotation"
-		)
-		assert(E.rotate(bad, firstPiece.x, firstPiece.y), "Rotate a movable part")
-		assert(E.remove(bad, firstPiece.x, firstPiece.y), "Reclaim part")
+	eq(#E.snapshot(restored), before, "Invalid restore must be atomic")
+	for _, part in ipairs(data.build) do
+		local active = E.get(manual, part.x, part.y).engaged
+		if E.remove(manual, part.x, part.y) then
+			assert(
+				E.place(manual, part.x, part.y, part.kind, part.r),
+				"Refunded part cannot be reused"
+			)
+			assert(
+				not active,
+				"Redstone switches use neighboring blocks instead of per-part toggles"
+			)
+			break
+		end
 	end
+	assert(E.evaluate(manual).win, "Replacing a part must preserve the solution")
 end
--- Check inventory includes the ten distinct construction tools.
-eq(#E.order, 9, "Construction inventory excludes nonessential clutch")
-local actual = {}
+assert(goals >= #E.levels, "Campaign must have meaningful objectives")
+local unlimited = E.sandbox()
+assert(unlimited.sandbox and #E.challenges(unlimited, E.evaluate(unlimited)) == 0)
+assert(
+	not E.evaluate(unlimited).win and E.evaluate(unlimited).goals == 0,
+	"Sandbox never has a victory condition"
+)
 for _, kind in ipairs(E.order) do
-	actual[kind] = true
-	assert(E.parts[kind])
+	assert(unlimited.remaining[kind] == math.huge)
 end
-for _, kind in ipairs({ "Q", "O", "V", "D" }) do
-	assert(actual[kind], "New mechanism is selectable: " .. kind)
-end
-local g = E.new(1)
--- A placed component rotates clockwise and cannot be rotated when locked.
-assert(E.place(g, 2, 3, "I", 0), "Place a new shaft")
-assert(E.rotate(g, 2, 3), "Rotate constructed part")
-eq(E.get(g, 2, 3).r, 1, "Rotation 90 degrees")
-assert(not E.rotate(g, 1, 3), "Generator orientation locked")
--- Main progress is independent of optional full-network contracts.
-local advanced = E.new(20, true)
-local complete = E.evaluate(advanced)
-assert(complete.win and complete.complete, "Reference advanced board complete")
-advanced.remaining.I = (advanced.remaining.I or 0) + 1
-local incomplete = E.evaluate(advanced)
-eq(incomplete.correct, incomplete.goals, "Power still reaches every machine")
-assert(
-	incomplete.win and not incomplete.complete,
-	"Main objective wins even when optional stock has not been used"
-)
-eq(incomplete.remaining, 1, "Leftover piece identified")
-local bonus = {}
-for _, challenge in ipairs(E.challenges(advanced, incomplete)) do
-	bonus[challenge.id] = challenge.earned
-end
-assert(bonus.sealed and not bonus.master, "Leaving spare stock only blocks master bonus")
-advanced.remaining.I = advanced.remaining.I - 1
-advanced.moves = 1000
-advanced.moves = 1000
-local precision = {}
-for _, challenge in ipairs(E.challenges(advanced, E.evaluate(advanced))) do
-	precision[challenge.id] = challenge.earned
-end
-assert(
-	precision.master and not precision.precision,
-	"Unoptimized wins should not earn precision bonus"
-)
-assert(E.evaluate(advanced).win, "Mastery contracts must never prevent level completion")
--- Verify requirements derive from reversing gears and speed controllers.
-local hadReverse, hadBoost = false, false
-for i = 8, #E.levels do
-	local solved = E.new(i, true)
-	local lights = E.evaluate(solved).lights
-	for _, p in ipairs(solved.tiles) do
-		if p.kind == "M" then
-			local actual = lights[p.id].ports[p.r]
-			if p.sign == -1 then
-				eq(actual.sign, -1, "Gear direction at target")
-				hadReverse = true
-			end
-			if p.speed > 1 then
-				eq(actual.rate, p.speed, "Controller RPM at target")
-				hadBoost = true
-			end
+for x = 1, unlimited.width do
+	for y = 1, unlimited.height do
+		if x ~= 1 or y ~= 3 then
+			assert(
+				E.place(unlimited, x, y, E.order[(x + y) % #E.order + 1]),
+				"Sandbox must place components without stock limits"
+			)
 		end
 	end
 end
-assert(hadReverse and hadBoost, "Advanced campaign exercises gears and RPM")
+assert(not E.place(unlimited, 1, 3, "I"), "Sandbox generator remains fixed")
+local count = #E.snapshot(unlimited)
+assert(
+	count == unlimited.width * unlimited.height - 1,
+	"Unlimited sandbox uses the full 10x10 board"
+)
+assert(E.restore(E.sandbox(), E.snapshot(unlimited)), "Sandbox layout restorable")
+assert(
+	E.sandbox(5, 5).width == 5 and E.sandbox(10, 10).height == 10,
+	"Sandbox board size is configurable"
+)
+assert(not E.inside(6, 5, E.sandbox(5, 5)), "Board bounds track the current sandbox size")
 print(
-	"COGWORKS: "
+	"COGWORKS: all "
 		.. #E.levels
-		.. " levels and "
-		.. totalGoals
-		.. " goals validated for inventory, full networks, construction and kinetics."
+		.. " Create-style references and "
+		.. goals
+		.. " goals, construction, redstone and sandbox validated."
 )

@@ -1,93 +1,113 @@
--- Short, illustrated, one-time lessons. Keys are mechanism identifiers rather than
--- level numbers so a resumed save does not repeat a lesson.
+-- Mechanic lessons introduce the Create equivalents used by each puzzle.
+local levels = require("games.cogworks.levels")
 local T = {}
 T.lessons = {
 	I = {
-		title = "SHAFTS AND PORTS",
+		title = "AXIAL SHAFTS",
 		lines = {
-			"SHAFTS CONNECT OPPOSITE PORTS.",
-			"SPIN AND RPM PASS THROUGH UNCHANGED.",
-		},
-	},
-	L = {
-		title = "TURNING POWER",
-		lines = {
-			"ELBOWS BEND A ROUTE BY 90 DEGREES.",
-			"TAP A PLACED PART TO ROTATE IT.",
-		},
-	},
-	T = {
-		title = "SPLITTING POWER",
-		lines = {
-			"SPLITTERS CONNECT THREE DIRECTIONS.",
-			"EACH BRANCH RECEIVES THE SAME DRIVE.",
-		},
-	},
-	V = {
-		title = "BELT TRANSMISSION",
-		lines = {
-			"PAIR TWO FACING BELT ENDPOINTS.",
-			"SPAN UP TO TWO CELLS, EVEN STONE.",
-		},
-	},
-	G = {
-		title = "REVERSING ROTATION",
-		lines = {
-			"GEARS CHANGE CW INTO CCW AND BACK.",
-			"THE SPEED STAYS THE SAME.",
-		},
-	},
-	B = {
-		title = "SPEED CONTROLLERS",
-		lines = {
-			"GREEN MARK SHOWS THE INPUT SIDE.",
-			"FORWARD DOUBLES; REVERSE HALVES RPM.",
+			"SHAFTS TRANSMIT ALONG THEIR AXIS.",
+			"TURN A SHAFT TO CHANGE ITS AXIS.",
 		},
 	},
 	Q = {
-		title = "FOUR WAY GEARBOX",
+		title = "BEVEL GEARBOX",
 		lines = {
-			"POWER CAN LEAVE IN FOUR DIRECTIONS.",
-			"UNUSED GEARBOX PORTS ARE SEALED.",
+			"A GEARBOX CONNECTS ALL FOUR SIDES.",
+			"EACH OUTPUT REVERSES INPUT SPIN.",
 		},
 	},
-	O = {
-		title = "LARGE COG",
+	G = {
+		title = "SMALL COGWHEELS",
 		lines = {
-			"REVERSES SPIN AND DOUBLES RPM.",
-			"REVERSE FLOW HALVES THE SPEED.",
+			"SHAFTS CONNECT AT EACH AXIAL END.",
+			"COGS MESH SIDEWAYS AND REVERSE SPIN.",
 		},
 	},
 	D = {
-		title = "CHAIN TRANSMISSION",
+		title = "ENCASED CHAIN DRIVE",
 		lines = {
-			"PAIR TWO FACING CHAIN ENDPOINTS.",
-			"SPAN UP TO THREE CELLS, EVEN STONE.",
+			"PARALLEL DRIVES CONNECT SIDEWAYS.",
+			"CHAIN LINKS PRESERVE SPIN AND SPEED.",
+		},
+	},
+	Z = {
+		title = "GEARSHIFT",
+		lines = {
+			"REDSTONE BLOCKS OR DUST APPLY POWER.",
+			"POWERED GEARSHIFTS REVERSE SPIN.",
+		},
+	},
+	C = {
+		title = "CLUTCH",
+		lines = {
+			"REDSTONE BLOCKS OR DUST APPLY POWER.",
+			"POWERED CLUTCHES DISCONNECT SHAFTS.",
+		},
+	},
+	O = {
+		title = "LARGE COGWHEELS",
+		lines = {
+			"LARGE AND SMALL COGS MESH DIAGONALLY.",
+			"LARGE TO SMALL DOUBLES SPEED.",
+		},
+	},
+	V = {
+		title = "MECHANICAL BELTS",
+		lines = {
+			"ADJACENT PULLEYS OR CLEAR-SPAN BELTS.",
+			"SHAFTS CAN CROSS BELT RUNS.",
+		},
+	},
+	R = {
+		title = "REDSTONE DUST",
+		lines = {
+			"DUST LINKS BLOCKS TO CLUTCHES.",
+			"DUST CONNECTS AND TURNS AT CORNERS.",
+		},
+	},
+	B = {
+		title = "REDSTONE BLOCK",
+		lines = {
+			"BLOCKS POWER ADJACENT REDSTONE.",
+			"PLACE BESIDE SHIFT OR WIRE.",
 		},
 	},
 }
--- Introduce a part at the first campaign stage where players can use it.
-T.introductions = {
-	[1] = { "I" },
-	[2] = { "L" },
-	[4] = { "T" },
-	[6] = { "V" },
-	[8] = { "G" },
-	[9] = { "B", "Q" },
-	[16] = { "O" },
-	[23] = { "D" },
-}
+-- Every accessible puzzle can teach all of its available mechanisms. The
+-- per-slot seen flags suppress repeats, even when players skip discovery nodes
+-- or use an alternative construction requiring a different part family.
+T.introductions = {}
+local teachingOrder = { "I", "Q", "G", "O", "D", "V", "B", "R", "Z", "C" }
+for number, stage in ipairs(levels) do
+	local available = {}
+	for kind, count in pairs(stage.stock) do
+		available[kind] = count > 0
+	end
+	for _, list in ipairs({ stage.fixtures, stage.redstone }) do
+		for _, piece in ipairs(list or {}) do
+			available[piece.kind] = true
+		end
+	end
+	local lessons = {}
+	for _, kind in ipairs(teachingOrder) do
+		if available[kind] then
+			lessons[#lessons + 1] = kind
+		end
+	end
+	T.introductions[number] = lessons
+end
 T.descriptions = {
-	I = "STRAIGHT CONNECTION; SAME SPIN AND RPM",
-	L = "90 DEGREE TURN; SAME SPIN AND RPM",
-	T = "THREE WAY POWER JUNCTION",
-	G = "REVERSES CW AND CCW AT SAME RPM",
-	B = "DOUBLES RPM FROM MARKED INPUT",
-	Q = "FOUR WAY JUNCTION WITH CAPPED PORTS",
-	O = "REVERSES ROTATION AND DOUBLES RPM",
-	V = "PAIRED BELTS SPAN UP TO TWO CELLS",
-	D = "PAIRED CHAINS SPAN UP TO THREE CELLS",
+	I = "STRAIGHT AXIAL SHAFT; SAME RPM AND SPIN",
+	G = "AXIAL SHAFTS; SIDE MESH REVERSES SPIN",
+	O = "LARGE/SMALL COGS MESH DIAGONALLY AT 2X",
+	Q = "FOUR-WAY BEVEL GEARBOX; REVERSES",
+	D = "SIDE-BY-SIDE CHAIN LINKS, SAME SPIN",
+	V = "PULLEYS CONNECT ADJACENT OR ACROSS SHAFTS",
+	Z = "POWERED GEARSHIFT REVERSES ROTATION",
+	C = "POWERED CLUTCH DISCONNECTS SHAFT",
 	erase = "REMOVE A PLACED PART AND REFUND IT",
+	R = "CENTERED CONNECTING REDSTONE POWDER",
+	B = "REDSTONE POWER BLOCK FOR SHIFT AND CLUTCH",
 }
 function T.forLevel(level)
 	local result = {}

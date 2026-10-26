@@ -151,12 +151,44 @@ function I.install(id, ref, args)
 		assert(load(fetch(ref, "lib/fpb/packages.lua"), "@packages", "t", { ipairs = ipairs }))()
 	local spec = assert(manifests.packages[id], "Unknown package: " .. tostring(id))
 	local enabled = spec.startup
+	local selectedRoot
 	for _, a in ipairs(args or {}) do
 		if a == "--startup" then
 			enabled = true
 		elseif a == "--no-startup" then
 			enabled = false
+		elseif type(a) == "string" and a:sub(1, 7) == "--root=" then
+			selectedRoot = a:sub(8)
 		end
+	end
+	-- Only permit the package's normal path or a real, writable disk mount.
+	-- Never accept arbitrary absolute paths from an installer argument.
+	if selectedRoot and selectedRoot ~= spec.root then
+		local valid = false
+		if peripheral and peripheral.getNames and peripheral.getType and peripheral.call then
+			for _, side in ipairs(peripheral.getNames()) do
+				if peripheral.getType(side) == "drive" then
+					local ok, mount = pcall(peripheral.call, side, "getMountPath")
+					local root = type(mount) == "string" and "/" .. mount:gsub("^/", "") or nil
+					if
+						ok
+						and root
+						and selectedRoot
+							== root .. "/" .. (spec.source:match("^games/") and "games" or "apps") .. "/" .. id
+					then
+						valid = fs.exists(root) and (not fs.isReadOnly or not fs.isReadOnly(root))
+						break
+					end
+				end
+			end
+		end
+		assert(valid, "Install destination is not a mounted, writable external disk")
+		local copy = {}
+		for k, value in pairs(spec) do
+			copy[k] = value
+		end
+		copy.root = selectedRoot
+		spec = copy
 	end
 	local startup = startupPlan(spec, enabled)
 	local pending = migration(spec) -- Preflight before downloading or replacing code.
@@ -191,7 +223,11 @@ function I.install(id, ref, args)
 			end
 			print(" + " .. path)
 		end
-		if spec.basalt and not fs.exists(spec.root .. "/basalt.lua") then
+		if
+			spec.basalt
+			and not fs.exists(spec.root .. "/basalt.lua")
+			and not (id == "fpbstore" and not (shell and shell.run))
+		then
 			assert(shell and shell.run, "Basalt installation requires the CraftOS shell")
 			mkdir(stage)
 			assert(
@@ -241,7 +277,7 @@ function I.install(id, ref, args)
 				new[#new + 1] = path
 			end
 		end
-		if id == "railbreak" or id == "ironspire" then
+		if id == "railbreak" or id == "ironspire" or id == "wormfront" then
 			local loader = assert(loadfile(spec.root .. "/_lib/fpb/loader.lua"))()
 			local api = loader.run(spec.root, spec.entry, _ENV, "--test-api")
 			assert(type(api) == "table" and api.UI, "Installed API health check failed")

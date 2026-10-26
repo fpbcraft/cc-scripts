@@ -5,7 +5,7 @@ S.ROOT = "/games/cogworks"
 S.DIR = S.ROOT .. "/saves"
 S.SETTINGS = S.ROOT .. "/settings.dat"
 S.LEGACY = S.ROOT .. "/save.dat"
-S.VERSION = 3
+S.VERSION = 7
 local function ensure(path)
 	if not fs.exists(path) then
 		fs.makeDir(path)
@@ -81,7 +81,7 @@ end
 function S.newProgress()
 	return {
 		campaignVersion = S.VERSION,
-		unlocked = 1,
+		unlocked = 8,
 		level = 1,
 		best = {},
 		sessions = {},
@@ -94,23 +94,25 @@ function S.normalize(data)
 	if type(data) ~= "table" then
 		return p
 	end
-	p.unlocked = clamp(data.unlocked, 1, 30, 1)
-	p.level = clamp(data.level, 1, p.unlocked, 1)
+	-- The 64-level chapter campaign has different layouts; incompatible saves
+	-- start at chapter one rather than applying solutions to the wrong stages.
+	if data.campaignVersion ~= S.VERSION then
+		return p
+	end
+	local chapters = require("games.cogworks.chapters")
 	p.best = type(data.best) == "table" and data.best or {}
-	p.sessions = type(data.sessions) == "table" and data.sessions or {}
 	p.awards = type(data.awards) == "table" and data.awards or {}
+	p.unlocked = chapters.openLevels(p)
+	p.level = clamp(data.level, 1, p.unlocked, 1)
+	if not chapters.levelUnlocked(p, p.level) then
+		p.level = 1
+	end
+	p.sessions = type(data.sessions) == "table" and data.sessions or {}
 	if type(data.tutorials) == "table" then
 		for key, value in pairs(data.tutorials) do
 			if type(key) == "string" and value == true then
 				p.tutorials[key] = true
 			end
-		end
-	end
-	-- Pre-construction saves may contain incompatible level-4+ layouts.
-	if data.campaignVersion ~= 2 and data.campaignVersion ~= S.VERSION then
-		for i = 4, 12 do
-			p.sessions[i] = nil
-			p.best[i] = nil
 		end
 	end
 	return p
@@ -142,6 +144,43 @@ function S.has(slot)
 	return S.load(slot) ~= nil
 end
 function S.save(slot, data)
-	return write(S.path(slot), S.normalize(data))
+	local path = S.path(slot)
+	local original = decode(path)
+	-- Never replace an incompatible campaign until its original bytes have
+	-- been archived and read back successfully. A partial archive is not a backup.
+	if fs.exists(path) and (not original or original.campaignVersion ~= S.VERSION) then
+		local version = original and tonumber(original.campaignVersion)
+		local label = version
+				and version >= 0
+				and version <= 1000000
+				and version % 1 == 0
+				and tostring(version)
+			or "unknown"
+		local backup = path .. ".campaign-v" .. label
+		local ok, reason = pcall(function()
+			local oldFile = assert(fs.open(path, "r"), "CANNOT READ PREVIOUS CAMPAIGN")
+			local bytes = oldFile.readAll()
+			oldFile.close()
+			if not fs.exists(backup) then
+				local temporary = backup .. ".next"
+				local archive = assert(fs.open(temporary, "w"), "CANNOT ARCHIVE PREVIOUS CAMPAIGN")
+				archive.write(bytes)
+				archive.close()
+				local check = assert(fs.open(temporary, "r"), "CANNOT VERIFY CAMPAIGN ARCHIVE")
+				local archived = check.readAll()
+				check.close()
+				assert(archived == bytes, "CAMPAIGN ARCHIVE INCOMPLETE")
+				fs.move(temporary, backup)
+			end
+			local check = assert(fs.open(backup, "r"), "CANNOT READ CAMPAIGN ARCHIVE")
+			local archived = check.readAll()
+			check.close()
+			assert(archived == bytes, "CAMPAIGN ARCHIVE DOES NOT MATCH SLOT")
+		end)
+		if not ok then
+			return false, tostring(reason)
+		end
+	end
+	return write(path, S.normalize(data))
 end
 return S
