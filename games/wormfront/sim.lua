@@ -163,6 +163,7 @@ local function settle(g)
   end
 end
 local function crater(g, cx, cy, radius)
+  g.terrainRevision = (g.terrainRevision or 0) + 1
   for x = math.max(1, math.floor(cx - radius)), math.min(S.W, math.ceil(cx + radius)) do
     local column, chars = g.terrain[x], {}
     for y = 1, S.H do
@@ -312,6 +313,7 @@ function S.new(teams, seed)
   assert(type(teams) == "number" and teams >= 2 and teams <= 4, "Expected 2-4 teams")
   local g = {
     version = 3,
+    terrainRevision = 0,
     teams = teams,
     seed = math.floor(tonumber(seed) or 1),
     terrain = {},
