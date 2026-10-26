@@ -155,14 +155,44 @@ return function(R)
     -- Tapping the mission card still starts the level, as in compact mode.
     self:add(9, 33, w - 18, 65, "beginLevel")
   end
+  -- The playfield is sized to the puzzle, not to a fixed percentage of the
+  -- window. Taller displays give it more space; wider ones give the surplus
+  -- to the component palette. Board and sidebar are adjacent with a 5px gap.
+  function R:gameLayout(g)
+    local w, h = self.canvasW, self.canvasH
+    local left, top, gap, right = 4, 22, 5, 4
+    local height = h - top - 14
+    local width = math.min(height, math.floor((w - 13) * 0.62), w - left - gap - right - 100)
+    width = math.max(50, width)
+    local sideX = left + width + gap
+    local sideWidth = w - sideX - right
+    local cell = math.max(6, math.floor(math.min((width - 4) / g.width, (height - 4) / g.height)))
+    local gridWidth, gridHeight = cell * g.width, cell * g.height
+    local gridX = left + math.floor((width - gridWidth) / 2)
+    local gridY = top + math.floor((height - gridHeight) / 2)
+    return {
+      board = { x = left, y = top, w = width, h = height },
+      grid = { x = gridX, y = gridY, w = gridWidth, h = gridHeight },
+      sidebar = { x = sideX, y = top, w = sideWidth, h = height },
+      cell = cell,
+    }
+  end
   function R:wideGame(m)
     local g, result, w, h = m.game, m.result, self.canvasW, self.canvasH
     local title = g.editor and "COGWORKS / EDITOR"
       or g.custom and "COGWORKS / USER PACK"
       or g.sandbox and "COGWORKS / SANDBOX"
       or ("COGWORKS / LEVEL " .. string.format("%02d", g.number))
-    self:wideFrame(title, (g.name or "MECHANICAL WORKSHOP") .. "   /   MOVES " .. g.moves)
-    local buttonY, buttonH = 3, 18
+    -- The 26px page banner and 23px footer are not needed during building.
+    -- Keep just the controls and one contextual line; no persistent legend.
+    self:rect(0, 0, w, h, 0)
+    self:rect(0, 0, w, 20, 1)
+    self:rect(0, 19, w, 1, 6)
+    self:fontFit(7, 3, title, 6, w - 148)
+    self:fontFit(7, 12, (g.name or "MECHANICAL WORKSHOP") .. "  /  MOVES " .. g.moves, 11, w - 148)
+    self:rect(0, h - 12, w, 12, 1)
+    self:rect(0, h - 12, w, 1, 12)
+    local buttonY, buttonH = 2, 16
     self:button(w - 27, buttonY, 19, buttonH, "?", "help")
     self:button(w - 67, buttonY, 37, buttonH, g.editor and "MENU" or "PAUSE", g.editor and "editorMenu" or "pause")
     self:button(
@@ -174,15 +204,16 @@ return function(R)
       g.editor and "editorSave" or (g.sandbox and "clearSandbox" or "save")
     )
     self:button(w - 135, buttonY, 30, buttonH, m.settings.animations and "RUN" or "OFF", "toggleAnimations")
-    local bx, by = 8, 31
-    local bh = h - 60
-    local bw = math.floor((w - 24) * 0.63)
-    local sx, sw = bx + bw + 8, w - (bx + bw + 8) - 8
-    self:widePanel(bx, by, bw, bh, "KINETIC BOARD     " .. result.correct .. "/" .. result.goals .. " OUTPUTS")
-    local cell = math.max(6, math.min(math.floor((bw - 16) / g.width), math.floor((bh - 24) / g.height)))
-    self.cell = cell
-    self.boardX = bx + math.floor((bw - cell * g.width) / 2)
-    self.boardY = by + 15 + math.floor((bh - 19 - cell * g.height) / 2)
+    self.currentGameLayout = self:gameLayout(g)
+    local layout = self.currentGameLayout
+    local bx, by, bw, bh = layout.board.x, layout.board.y, layout.board.w, layout.board.h
+    local sx, sw = layout.sidebar.x, layout.sidebar.w
+    local cell = layout.cell
+    self.cell, self.boardX, self.boardY = cell, layout.grid.x, layout.grid.y
+    -- Frame only the occupied cells, rather than a large empty board panel.
+    -- No detached board title, oversized outline or horizontal dead space.
+    self:rect(self.boardX - 2, self.boardY - 2, layout.grid.w + 3, layout.grid.h + 3, 3)
+    self:rect(self.boardX - 1, self.boardY - 1, layout.grid.w + 1, layout.grid.h + 1, 1)
     for y = 1, g.height do
       for x = 1, g.width do
         local px = self.boardX + (x - 1) * cell
@@ -223,7 +254,14 @@ return function(R)
         self:add(px, py, span, span, "cell", x, y)
       end
     end
-    self:widePanel(sx, by, sw, bh, "INVENTORY / " .. (g.sandbox and "FREE" or "LIMITED"))
+    self:widePanel(sx, by, sw, bh, "PARTS")
+    self:fontFit(
+      sx + sw - 42,
+      by + 4,
+      g.sandbox and "FREE" or (result.correct .. "/" .. result.goals .. " OUT"),
+      result.win and 9 or 11,
+      38
+    )
     local columnW = math.floor((sw - 11) / 2)
     local buttonH = clamp(math.floor((bh - 72) / 5), 11, 16)
     for i, kind in ipairs(E.order) do
@@ -311,10 +349,9 @@ return function(R)
     local hint = selected
         and ((selected.name or labels[m.selected]) .. " / " .. (T.descriptions[m.selected] or "TAP A FREE CELL"))
       or "SELECT A PART TO BUILD"
-    self:fontFit(8, h - 17, m.message ~= "" and m.message or hint, result.win and 9 or 5, w - 95)
-    self:fontFit(8, h - 9, "CYAN CW  /  ORANGE CCW  /  1X, 2X, 0.5X = SPEED", 11, w - 92)
+    self:fontFit(7, h - 9, m.message ~= "" and m.message or hint, result.win and 9 or 5, result.win and w - 78 or w - 14)
     if result.win then
-      self:button(w - 84, h - 20, 76, 17, "FACTORY MAP", "map", nil, 9)
+      self:button(w - 70, h - 11, 66, 10, "FACTORY MAP", "map", nil, 9)
     end
   end
   local function dots(self, x1, y1, x2, y2, color)
