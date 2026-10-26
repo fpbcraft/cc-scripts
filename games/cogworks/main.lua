@@ -56,6 +56,16 @@ local function selectMonitor(preferred)
     assert(m and peripheral.getType(preferred) == "monitor", "Unknown monitor: " .. tostring(preferred), 0)
     return m, preferred
   end
+  -- A program started via `monitor <side> fpbstore` inherits a redirected
+  -- terminal. Prefer that monitor instead of silently choosing a different
+  -- attached display, which may have different input/graphics capabilities.
+  if peripheral.getName and term.current then
+    local current = term.current()
+    local ok, redirected = pcall(peripheral.getName, current)
+    if ok and redirected and peripheral.getType(redirected) == "monitor" then
+      return peripheral.wrap(redirected), redirected
+    end
+  end
   local chosen, name, largest = nil, nil, -1
   for _, side in ipairs(peripheral.getNames()) do
     if peripheral.getType(side) == "monitor" then
@@ -174,7 +184,9 @@ local function start()
       end
       cancelDrag()
       if pointer.origin ~= "inventory" then
-        return act(boardAction(pointer.button, app.selected, not computerMode), pointer.fromX, pointer.fromY)
+        -- Every mouse_click/mouse_up is button-aware, even on a monitor.
+        -- Only the monitor_touch event uses touch-style inspection.
+        return act(boardAction(pointer.button, app.selected, false), pointer.fromX, pointer.fromY)
       end
       redraw()
       return true
@@ -214,7 +226,7 @@ local function start()
         end
       end
       if action == "cell" then
-        action = boardAction(button, app.selected, not computerMode)
+        action = boardAction(button, app.selected, false)
       end
       return act(action, x, y)
     end
