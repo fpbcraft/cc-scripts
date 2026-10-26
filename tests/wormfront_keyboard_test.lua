@@ -10,8 +10,8 @@ local network = assert(script:match('elseif event == "rednet_message" then(.-)el
 for _, section in ipairs({ keyboard, release, character, network }) do
   assert(not section:find("redraw(", 1, true), "Input or rednet events must not trigger immediate frames")
 end
-assert(script:find('if current - lastDraw >= 0.16 then', 1, true))
-assert(script:find('local timer = os.startTimer(0.1)', 1, true))
-assert(script:find('keys.r or key == keys.t', 1, true))
+assert(script:find("if current - lastDraw >= 0.16 then", 1, true))
+assert(script:find("local timer = os.startTimer(0.1)", 1, true))
+assert(script:find("keys.r or key == keys.t", 1, true))
 assert(not keyboard:find('kind = "select"', 1, true), "Keyboard must not switch active worms")
 print("WORMFRONT: redraw batching, keyboard ownership and rope bindings passed")
