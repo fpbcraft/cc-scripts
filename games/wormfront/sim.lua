@@ -248,7 +248,8 @@ function S.new(teams, seed)
   local variation = random(g, 3, 6)
   local phase = random(g) * 6.28
   for x = 1, S.W do
-    local h = elevation + math.sin(x * (0.10 + g.theme * 0.015) + phase) * variation
+    local h = elevation
+      + math.sin(x * (0.10 + g.theme * 0.015) + phase) * variation
       + math.cos(x * 0.27 + phase) * (variation / 2)
       + random(g, -1, 1)
     local surface = clamp(math.floor(h), 17, 31)
