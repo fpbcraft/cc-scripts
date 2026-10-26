@@ -120,6 +120,11 @@ function M.monitors()
   end)
   return result
 end
+function M.ensureMonitor()
+  local module = type(require) == "function" and require("apps.fpbstore.monitor") or dofile("/apps/fpbstore/monitor.lua")
+  local entry, created, reason = module.ensure()
+  return entry, created, reason
+end
 function M.disks(app)
   local result = { { name = "Computer", root = app.root, mount = "/" } }
   if peripheral and peripheral.getNames and peripheral.getType and peripheral.call then
