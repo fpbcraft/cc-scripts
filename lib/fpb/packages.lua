@@ -19,6 +19,7 @@ P.packages.cogworks = {
     "main.lua",
     "render.lua",
     "responsive.lua",
+    "create_art.lua",
     "storage.lua",
     "terminal_view.lua",
     "tutorials.lua",
