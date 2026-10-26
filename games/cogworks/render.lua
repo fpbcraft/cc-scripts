@@ -1825,7 +1825,12 @@ function R:draw(m)
   if (self.wide or m.scene == "game" or m.scene == "editor") and self:drawResponsive(m) then
     self.baseBuffer = self.buffer
     self.dragSourceHidden = m.drag and m.drag.moved and m.drag.origin == "board" or false
-    self:drawDrag(m)
+    if m.drag and m.drag.moved then
+      self.buffer = setmetatable({}, { __index = self.baseBuffer })
+      self.overlayBase = self.baseBuffer
+      self:drawDrag(m)
+      self.overlayBase = nil
+    end
     self.previewBounds = self:dragBounds(m.drag)
     self:flush()
     self.frame = self.frame + 1
@@ -1864,7 +1869,12 @@ function R:draw(m)
   end
   self.baseBuffer = self.buffer
   self.dragSourceHidden = m.drag and m.drag.moved and m.drag.origin == "board" or false
-  self:drawDrag(m)
+  if m.drag and m.drag.moved then
+    self.buffer = setmetatable({}, { __index = self.baseBuffer })
+    self.overlayBase = self.baseBuffer
+    self:drawDrag(m)
+    self.overlayBase = nil
+  end
   self.previewBounds = self:dragBounds(m.drag)
   self:flush()
   self.frame = self.frame + 1
