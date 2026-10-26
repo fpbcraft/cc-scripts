@@ -35,9 +35,23 @@ local function scenario(w, h, events, check)
       error(("application failure "):rep(30))
     end
   end
-  function manager.install(app)
+  function manager.installedSource()
+    return { kind = "main", value = "main", label = "main" }
+  end
+  function manager.parseSource(value, mode)
+    if mode == "pr" then
+      assert(value:match("^%d+$"), "Invalid PR")
+      return { kind = "pr", value = value, label = "PR #" .. value }
+    elseif mode == "branch" then
+      assert(value ~= "")
+      return { kind = "branch", value = value, label = value }
+    end
+    return { kind = "main", value = "main", label = "main" }
+  end
+  function manager.install(app, source)
     calls.install = calls.install + 1
     calls.lastInstall = app.id
+    calls.lastSource = source
   end
   function manager.remove(app, purge)
     assert(not purge)
@@ -140,6 +154,28 @@ end)
 -- Too-small terminals never execute an invisible action.
 scenario(20, 8, { { "key", K.enter }, { "char", "i" }, { "char", "q" } }, function(c)
   assert(c.install == 0)
+end)
+-- Build picker supports entering PR numbers and pasting branch names.
+scenario(51, 19, {
+  { "char", "b" },
+  { "key", K.tab },
+  { "char", "5" },
+  { "char", "2" },
+  { "key", K.enter },
+  { "char", "q" },
+}, function(c)
+  assert(c.install == 1 and c.lastInstall == "1")
+  assert(c.lastSource and c.lastSource.kind == "pr" and c.lastSource.value == "52")
+end)
+scenario(51, 19, {
+  { "char", "b" },
+  { "key", K.tab },
+  { "key", K.tab },
+  { "paste", "feature/my-build" },
+  { "key", K.enter },
+  { "char", "q" },
+}, function(c)
+  assert(c.install == 1 and c.lastSource.kind == "branch" and c.lastSource.value == "feature/my-build")
 end)
 -- Screenshot artifact is generated from the real terminal draw calls.
 local output = io.open("/tmp/cc-store-screen.txt", "w")
