@@ -288,9 +288,12 @@ function UI:draw(g, opts)
     local status = worm
         and ("HP " .. worm.hp .. "  ANGLE " .. angle .. "  " .. (worm.weapon == 2 and ("MEGA " .. worm.mega) or "ROCKET"))
       or ""
-    r:text(3, y - 11, status, 6, 1, r.w - 6)
     local charge = g.charging and math.min(1, (g.charge or 0) / 1.8) or 0
     local pw = math.min(74, math.max(20, math.floor(r.w * 0.33)))
+    if r.w < 180 and worm then
+      status = "HP " .. worm.hp .. "  ANG " .. angle
+    end
+    r:text(3, y - 11, status, 6, 1, r.w - pw - 9)
     r:fill(r.w - pw - 3, y - 12, pw, 7, 3)
     r:fill(r.w - pw - 3, y - 12, pw * charge, 7, charge > 0.85 and 31 or 18)
     r:outline(r.w - pw - 3, y - 12, pw, 7, 6)
