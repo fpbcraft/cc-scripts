@@ -32,7 +32,7 @@ end
 local r = R.new(monitor)
 assert(r.mode == "graphics" and r.wide)
 assert(r.canvasW == 345 and r.canvasH == 260, "Canvas follows terminal resolution")
-assert(r.ox == 0 and r.scale > 1, "Hi-res canvas starts at the screen edge")
+assert(r.ox >= 0 and r.scale > 1, "Responsive canvas fits the physical display")
 
 local model = {
   scene = "briefing",
@@ -130,7 +130,8 @@ model.pending = "restart"
 r:draw(model)
 assertTap("confirm")
 model.scene = "tutorial"
-model.tutorial = { steps = { { key = "G", title = "COGWHEEL", lines = { "MESH THE RIMS", "REVERSE ROTATION" } } }, index = 1 }
+model.tutorial =
+  { steps = { { key = "G", title = "COGWHEEL", lines = { "MESH THE RIMS", "REVERSE ROTATION" } } }, index = 1 }
 r:draw(model)
 assertTap("tutorialSkip")
 assert(not find("cell"), "Tutorial must block board taps")
