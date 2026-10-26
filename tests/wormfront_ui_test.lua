@@ -57,10 +57,43 @@ for _, dimension in ipairs({ { 42, 34 }, { 70, 46 }, { 90, 64 } }) do
   assert(actions[#actions].kind == "fire", "Touch must activate charge/release")
   -- Tapping the playfield changes barrel angle through an authenticated action.
   local b = ui.board
-  local targetX = b.x + (Sim.W - 2) * b.scale
-  local targetY = b.y + 2 * b.scale
+  local targetX = b.x + b.w * 0.75
+  local targetY = b.y + b.h * 0.15
   ui:touch(ui.r.ox + targetX * ui.r.sx, ui.r.oy + targetY * ui.r.sy)
   assert(actions[#actions].kind == "setAim", "Board tap should aim the barrel")
+  -- Touch rope button then terrain to launch it, independent of text input.
+  ui:draw(g, { role = "local" })
+  local ropeButton
+  for _, button in ipairs(ui.r.buttons) do
+    if button.label == "ROPE" then
+      ropeButton = button
+    end
+  end
+  assert(ropeButton and ui.board.w < Sim.W * ui.board.scale, "Level must scroll and expose rope")
+  ui:touch(ui.r.ox + (ropeButton.x + ropeButton.w / 2) * ui.r.sx, ui.r.oy + (ropeButton.y + 6) * ui.r.sy)
+  assert(ui.aimMode == "rope")
+  ui:touch(ui.r.ox + targetX * ui.r.sx, ui.r.oy + targetY * ui.r.sy)
+  assert(actions[#actions].kind == "rope", "Rope target must use world coordinates")
+  -- Item picker should show locked items as noninteractive choices.
+  ui:draw(g, { role = "local" })
+  local arms
+  for _, button in ipairs(ui.r.buttons) do
+    if button.label == "ARMS" then
+      arms = button
+    end
+  end
+  assert(arms)
+  ui:touch(ui.r.ox + (arms.x + arms.w / 2) * ui.r.sx, ui.r.oy + (arms.y + 6) * ui.r.sy)
+  ui:draw(g, { role = "local" })
+  local weaponCount = 0
+  for _, button in ipairs(ui.r.buttons) do
+    if button.label and button.label:find("BAZOOKA") then
+      weaponCount = weaponCount + 1
+    end
+    assert(not button.label or not button.label:find("DYNAMITE"), "Locked weapons must not be clickable")
+  end
+  assert(weaponCount == 1, "Bazooka must appear in the picker")
+  ui.picker = false
   ui:draw(g, { role = "join", slot = 2 })
   for _, b in ipairs(ui.r.buttons) do
     assert(b.label == "EXIT", "Off-turn controls must be inactive")
