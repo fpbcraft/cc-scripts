@@ -788,3 +788,25 @@ sessions pass with a saved dropdown selection. The native three-computer modem
 session also rejects a guest's attempt to change the host civilization while
 accepting its own selection, then completes the existing race/war/reconnect flow.
 Compact, medium and wide research canvases were rendered and visually inspected.
+
+## Installed-runtime and upgrade acceptance
+
+The full native session passes after downloading runtime files through the real
+GitHub installer at pinned revision `fee211b7d3334089123b4f184e13cc5a98658122`.
+No source-tree runtime is mounted or copied into that profile. Installed
+conversations, Council, research, civilization selection and save/reload execute;
+a generated migrated slot and its legacy original remain byte-for-byte intact,
+and startup remains absent. The session launcher now exposes `--installed-ref`
+and reports installer failures without leaving a native shell running.
+
+The installed-loader regression covers 24 combinations of save versions 3–6,
+legacy/Create rulesets and Quick/Standard/Epic speeds. Existing world dimensions,
+seed, terrain, deposits and rails, campaign identity, research/production progress
+and explicit mid-turn budgets survive migration and serialization. It also checks
+that the manifest installs the new UI dependencies. The README now distinguishes
+this unreleased development branch from published main, removes the obsolete
+expansion-branch install command and documents current navigation/research.
+
+[RELEASE-CHECKLIST-v0.9.md](RELEASE-CHECKLIST-v0.9.md) separates the completed
+feature checks from the remaining combined persistence, overlapping-network-war,
+late-game performance, target-server and release-metadata acceptance work.

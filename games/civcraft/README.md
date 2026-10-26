@@ -1,4 +1,4 @@
-# CIVCRAFT v0.8.0 — Territorial Hex Civilization
+# CIVCRAFT — v0.9 development branch
 
 Implementation of the next gameplay iteration is tracked in [IMPLEMENTATION-v0.9.md](IMPLEMENTATION-v0.9.md), based on [design draft v0.9.1](ROADMAP-v0.9.md).
 
@@ -25,6 +25,15 @@ Logs are disabled during normal play. A last `*.begin` without its matching
 `*.end` helps identify the stalled operation; it does not by itself prove its cause.
 
 ## Install on every participating computer
+
+This branch contains the unreleased v0.9 roadmap implementation. To test the
+same development code on every participating computer, use:
+
+```sh
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/codex/civcraft-roadmap/installers/civcraft.lua codex/civcraft-roadmap
+```
+
+The published `main` version can be installed with:
 
 ```sh
 wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/installers/civcraft.lua
@@ -127,17 +136,17 @@ the existing map rather than additional dimension maps.
 
 Saves migrate to version 6 without rerolling terrain, replacing cities, deleting
 units, clearing research/production progress, or changing campaign slots. Stable
-content identifiers resolve to their new Minecraft names. Existing campaigns
+content identifiers resolve to their new Minecraft names. Campaigns without the Create ruleset
 retain the eight-city / round-90 victory rules and default to mobs off; they do
 not receive newly generated landmarks, spawners or villages. New prerequisites
 and balance apply to the updated content, so an unfinished project may need
 additional research or a local prerequisite building before it resumes.
 
-Network players must all update to v0.8; the new protocol separates incompatible
-older clients. The installer preserves `/games/civcraft/data`. To test this branch:
+Network players should all run the same version to share the same rules,
+research controls and observer-safe event playback. The installer preserves `/games/civcraft/data`. To test this branch:
 
 ```sh
-wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/codex/expand-civcraft-content/installers/civcraft.lua codex/expand-civcraft-content
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/codex/civcraft-roadmap/installers/civcraft.lua codex/civcraft-roadmap
 ```
 
 Create a new campaign in an empty slot to get the full expansion. Do not use
@@ -406,3 +415,23 @@ The authoritative implementation objectives, touch layout, world generation, tur
 - **Campaign safety:** named three-slot saves, deterministic world seeds and separate civilization discovery histories remain supported, including on single-terminal CraftOS environments. Older campaign saves migrate without deleting existing slot data.
 
 The game is designed for touch input but also supports keyboards and text terminals. Automated test coverage includes deferred construction and research, strategic eligibility, worked-tile yields, deterministic geography, hot-seat privacy and graphics navigation.
+
+
+## Current campaign navigation and research
+
+The title menu offers New Campaign, Load Campaign, Remote Multiplayer, Settings
+and Exit. New and Load use separate slot menus with Back controls. Replacing an
+occupied campaign requires confirmation; updating the program preserves saves.
+Loading keeps previous events readable in the Event Log without replaying them.
+
+Choose a civilization from its lobby dropdown; the lobby shows its bonuses and
+fixed AI personality. Hosts can configure other participants, while remote human
+players can change only their own civilization before starting.
+
+The research screen keeps the connected tree and a technology sidebar visible
+at every screen size. Select a node, then use the pinned Research button to make
+it active. The sidebar lists its progress, prerequisites, purpose and unlocks,
+with links to their Codex entries. Prerequisites are left of their dependents;
+arrows show direction, amber links enter the selected technology and blue links
+lead onward. Click a prerequisite/dependent in the sidebar to focus it. Pan/zoom
+controls remain available on touch-only screens; the sidebar pages separately.

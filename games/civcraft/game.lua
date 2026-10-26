@@ -4,7 +4,7 @@ if bootstrap and _G.__fpbRoot ~= "/games/civcraft" then
 	-- selene: allow(undefined_variable) -- Selene misidentifies chunk-level varargs.
 	return bootstrap().run("/games/civcraft", "game.lua", _ENV, ...)
 end
--- CIVCRAFT v0.8.0: Railbreak-style 4X with local hotseat or rednet networking
+-- CIVCRAFT: Railbreak-style 4X with local hotseat or rednet networking
 -- Host: /games/civcraft/game.lua host [--new]  Join: /games/civcraft/game.lua join [host ID]
 dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local args = { ... }

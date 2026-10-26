@@ -271,3 +271,25 @@ now use the persistent sidebar's Codex links and pinned Research action, without
 an intermediate Details screen. Wide-inline and compact inspector controls remain
 part of the same mouse/monitor-touch driver. The network test exercises guest
 civilization selection and rejects changing the host's choice.
+
+## Installed-runtime validation
+
+```sh
+python3 tests/run_civcraft_native_session.py --installed-ref <published-commit-sha>
+```
+
+This variant downloads the actual pinned GitHub installer/runtime instead of
+copying source files. It seeds only generated legacy slot-2 data in a new temporary
+profile, runs the complete campaign session in slot 1 and checks that both the
+migrated slot and its original legacy copy remain byte-for-byte intact. It also
+checks that no startup script was created. The full session passes at published
+revision `fee211b7d3334089123b4f184e13cc5a98658122`, exercising the installed Basalt
+conversation, Council, research sidebar, dropdown and save/reload dependencies.
+An invalid revision is reported as failure and the temporary native process exits.
+
+`civcraft_installer_test.lua` additionally loads the installed modules through
+their private loader with source-tree `require`, `package` and shell fallbacks
+unavailable. Twenty-four version/ruleset/speed migration combinations preserve
+terrain/deposits/rails, campaign identity, research/production progress and spent
+movement allowances. These complement the shared installer download/move-failure,
+repeat-update, legacy conflict and startup ownership checks.
