@@ -17,33 +17,52 @@ Build a satisfying **Create-inspired mechanical puzzle game** that rewards seein
 7. **No timing/reflex puzzles in this campaign.** This is a stable-state mechanical solver. Redstone means block/dust states driving clutch/gearshift behavior, not simulated tick sequencing.
 8. **Small is good.** Compact 5×5 and 6×6 boards may appear late when insight matters more than space.
 
-## Chapter anatomy and paths
+## Traversable overworld and district paths (implemented)
 
-Each eight-level chapter is a **small branching collection**, rather than a linear ladder of progressively larger puzzles:
+The factory map is an actual navigation graph, inspired by *Baba Is You*.
+There are eight connected districts (eight levels in each), with separate
+dotted routes between local stages. Completing any puzzle opens its adjacent
+nodes; a player can pick either branch, skip troublesome puzzles, or return
+later. Each district's layout connects these local nodes:
 
-| Stage in chapter | Purpose | Node availability |
-| --- | --- | --- |
-| 1 | Initial discovery; unusually clear insight | Open on chapter entry |
-| 2 | Apply the insight under a mild constraint | After stage 1 |
-| 3 | Different interpretation / alternative approach | After stage 1 |
-| 4 | A twist on the assumption | After stage 2 **or** 3 |
-| 5 | New combination or contrasting solution | After stage 2 **or** 3 |
-| 6 | Synthesis of earlier chapter ideas | After **any two** of stages 2–5 |
-| 7 | Optional difficult remix of a recognizable earlier level | After stage 4 and at least one other chapter clear |
-| 8 | Optional chapter examination, without step-by-step hints | After **four** clears among stages 1–6 |
+```text
+             02 --- 04 ---- 06
+           /       /  \    /   \
+         01       /    07 ------ 08 (optional finale)
+           \     /    /    /
+             03 ---- 05 --/
+```
 
-These node conditions are the **design intent**, not current behavior. They prevent a single puzzle from blocking the chapter, preserve deliberate pacing and keep exams available to interested players. Chapters should be a compact blueprint/factory-node map with shaft-shaped connections, not a flat 64-button grid.
+The diagram is schematic; `chapters.lua` is the source of truth for edges and
+on-monitor map coordinates. Stage 07 is a challenging optional side route.
+Stage 08 can be reached without solving 07, and 07 can be skipped without
+blocking any new district.
 
-### Progress and unlocks
+**District gate:** Clear any **three distinct puzzles** among its eight
+nodes to reveal the next district. The gate ignores bonuses and does not
+require particular numbered stages. Completed puzzles can be revisited.
+Existing clears and bonuses remain stored permanently.
 
-- Each level offers **1 main clear + 2 independent, authored bonuses** (maximum 3 objective points).
-- Bonus points are awarded and saved **only after the main goal has been cleared**. Once earned, badges remain earned when the player experiments with other solutions.
-- Open the **next chapter** at **at least six points from the current chapter AND at least four distinct main clears from its first six stages**. Either clear all six ordinary puzzles without bonuses, or clear four and earn two bonuses. Stages 7 and 8 are never required. Their points may help meet the six-point requirement, but not substitute for the four basic clears.
-- A completed chapter examination earns an additional **non-gating mastery emblem** (not another objective point), so completionists have a separate reason to tackle it.
-- The map shows each level's clear badge and two individual bonus markers; the current chapter shows `points / 6` and `main clears / 4`. Locked chapters state **both remaining requirements**, not merely "LOCKED".
-- Players may freely replay cleared/open levels; unlocks never regress. A player reaching a later chapter without completing every prior puzzle receives concise mechanic reminders as needed.
+The *main goal* of each puzzle earns one clear. Individual puzzles can have
+**zero, one, or two** authored optional bonus objectives; these are not a
+mandatory source of progression points. Bonus objectives can be awarded on
+separate solutions and **need not be mutually achievable on a single build**.
+This lets one level contain two competing engineering challenges without
+requiring a perfect three-for-three solution.
 
-**Scoring clarification:** Total earnable objective points across 64 levels = **192**. This is a *proposed local-chapter gating scheme*; the previous cumulative thresholds in `chapters.lua` are placeholders to be replaced when this specification is implemented.
+### Vertical-slice redesign (in progress)
+
+The first implementation targets levels **04, 09, 20, 28, 44, 49, and 64**.
+Briefings for these puzzles now describe the problem rather than the
+discovery, and their inventory intentionally contains plausible alternatives
+rather than exactly mirroring the reference construction. Several simpler
+discovery stages no longer award automatic bonuses.
+
+This is the **foundation**, not proof that the pilot puzzles are finished:
+rework their fixed networks, wrong-but-plausible first attempts, and verified
+independent bonus solutions after hands-on playtests. No stage should be
+marked complete solely because the default reference passes the simulator.
+30 seed-derived layouts remain candidates for replacement.
 
 ### Mechanical vocabulary, deliberately revisited
 
@@ -57,7 +76,7 @@ These node conditions are the **design intent**, not current behavior. They prev
 
 ## The 64 level briefs
 
-Every entry specifies an intended *aha moment*, distinctive board/fixture setup, and two deliberately varied bonus candidates. “Fixed” always means player cannot remove, rotate or move the preinstalled piece; fixtures must make the puzzle better, not merely force a detour.
+Every entry proposes an intended *aha moment*, distinctive board/fixture setup, and up to two optional bonus candidates (not a required quota). “Fixed” always means player cannot remove, rotate or move the preinstalled piece; fixtures must make the puzzle better, not merely force a detour.
 
 ## Chapter 1 — The Apprentice (levels 01–08)
 
@@ -196,7 +215,7 @@ Every entry specifies an intended *aha moment*, distinctive board/fixture setup,
 **Authoring note:** Stage 63 is an explicitly optional remix; stage 64 is the chapter examination. Neither should require clearing the other.
 ## Bonus objective system — varied, authored, measurable
 
-Each of the 64 levels has **exactly two authored bonus slots**, not a global generic trio. The table above gives the intended type for each slot. Final numeric limits (`N`), marked cells and affected parts belong to each level's file.
+Each of the 64 levels may have **zero, one or two authored bonuses**; rewarding two automatic goals is worse than offering none. The table above gives the intended type for each slot. Final numeric limits (`N`), marked cells and affected parts belong to each level's file.
 
 | Family | Example objective types | Authoritative check required |
 | --- | --- | --- |
@@ -211,7 +230,7 @@ Each of the 64 levels has **exactly two authored bonus slots**, not a global gen
 **Rules for high-quality bonuses**
 
 1. Two bonuses on the same level should test **different solution strategies**; avoid pairs like `≤ 5 parts` + `≤ 6 parts`.
-2. Bonuses should sometimes pull toward *contrasting* designs (e.g., compact route vs long belt), but a **joint three-point solution must be possible** wherever the level claims a perfect 3/3.
+2. Bonuses should sometimes pull toward *contrasting* designs (e.g., compact route vs long belt); there is **no requirement** for both to be achievable on the same attempt.
 3. `Par Performance` and `Full Utilization` remain in the catalogue but should **not dominate**. Target no more than one par objective per chapter and no more than two full-inventory objectives in the whole 64-level campaign.
 4. A player's exploratory actions should not be punished unnecessarily. Avoid "never jammed even once" and hidden input sequences.
 5. Every objective needs a short label, a clear human-readable rule and, where applicable, a live measurement (`3 / 4 cells`, `2 / 3 powered links`, `5 / 6 placed`).
@@ -229,9 +248,9 @@ Each proposed `.coglevel` entry should carry:
 
 - Stable `id`, short `name`, `chapter`, `stage`, `role` (`discovery|application|alternative|twist|synthesis|extra|examination`), optional `remixOf`, `tags`, and brief *designer-only* `intendedInsight`.
 - Board `width`, `height`, exact source and goal ports/rates/signs, stone, editable starting pieces, **fixed fixtures with purpose**, starting redstone and available stock.
-- Two `bonus` definitions: stable evaluator ID, typed parameters (e.g. region, target fixture IDs, `maxParts`, `minSpan`), short name, full hint and live-progress formatter.
+- Zero to two `bonus` definitions: stable evaluator ID, typed parameters (e.g. region, target fixture IDs, `maxParts`, `minSpan`), short name, full hint and live-progress formatter.
 - `hintLadder`: observational hint → conceptual hint → optional solution-oriented hint. Do not spoil surprise in the initial briefing.
-- `referenceSolutions`: core win, bonus A, bonus B, and **both** where the 3/3 badge is offered, all including starting fixture states.
+- `referenceSolutions`: core win and an independent verified solution for **each bonus that exists**, with fixture states and replay details.
 - `designNotes`: what tempting approach fails, what assumption changes from the remix source, and which valid alternate solutions were found during playtesting.
 
 Levels should be stored as validated **data**, not dynamically executed Lua. User-authored packs may reorder stages but need explicit local progression metadata instead of silently inheriting the built-in 64-stage numbering.
@@ -251,7 +270,7 @@ Levels should be stored as validated **data**, not dynamically executed Lua. Use
 - [ ] All required concepts have been discovered earlier on at least one accessible path, or are taught by this level's Ponder hint.
 - [ ] The authored starting board is valid, isn't already solved and is not secretly jammed unless the puzzle explicitly concerns diagnosing a jam.
 - [ ] At least one normal solution reaches **all** required presses with correct RPM, spin and no jam.
-- [ ] Two distinct bonus requirements are understandable and individually achievable; the 3/3 joint solution is verified if offered.
+- [ ] Every authored bonus (if any) is understandable and has a verified nontrivial alternative solution; bonuses are not required for district gates.
 - [ ] Fixed fixtures are neither removable nor rotatable in play; each has a justified purpose.
 - [ ] A remix has a recognizably shared layout but decisively **changes the winning insight**, so a trivial repeated solution does not pass.
 - [ ] Multiple solutions are accepted unless uniqueness is essential and explicitly tested; reference route is never hardcoded as the only allowed win.
@@ -270,9 +289,9 @@ Levels should be stored as validated **data**, not dynamically executed Lua. Use
 
 ### Implementation status and remaining review
 
-- **Implemented:** 64 playable level records; references solved by the Lua engine; separate authored bonus slots with at least twelve rule families; branching chapter gates; objective status in the chapter menu; fixed fixtures; 5×5–10×10 boards; replayable optional remixes/examinations; save version 6 with old-save backup.
+- **Implemented:** 64 playable records; main reference solutions; zero/one/two variable bonus slots; 8-district overworld and per-district track graph; three-distinct-clears unlock thresholds; fixed fixtures; 5×5–10×10 boards; replayable remixes/examinations; save version 6.
 - **Bespoke networks:** First chapter (8 layouts) and 26 additional substantial circuits, including the real powered-shaft/belt crossover, two separately controlled gearshifts, clockmaker branches, four closely spaced presses, and the four-target final factory.
 - **First-pass variations:** Other 30 stages currently reuse proven mechanical motifs with individual fixtures, board arrangements, restrictions and objective pairs. They are solver-correct but should receive **manual puzzle-design review** to ensure each fulfils the unique insight recorded in this document.
-- **Not proven by automatic tests:** That a puzzle has only interesting alternative solutions, that a bonus is actually challenging rather than merely achievable, or that blind playtesters will recognize the intended revelation. Those are separate design acceptance gates.
+- **Not proven by automatic tests:** That there are interesting alternative solutions, that bonuses are sufficiently challenging, or that blind playtesters discover the intended revelation. Pilot-level layouts and most inherited bonuses still need manual authoring and validation. Those are separate design acceptance gates.
 
 All development is contained in PR #52; no merge has been made as part of this campaign implementation.
