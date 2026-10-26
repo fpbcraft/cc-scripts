@@ -211,13 +211,16 @@ local function finishTurn(g)
     g.message = victor and "TEAM " .. victor .. " WINS!" or "DRAW!"
     return
   end
+  g.played[g.turn] = true
   repeat
     g.turn = g.turn % g.teams + 1
     if g.turn == 1 then
       g.round = g.round + 1
     end
   until alive(g, g.turn)
-  nextWorm(g, g.turn)
+  if g.played[g.turn] or not S.worm(g) then
+    nextWorm(g, g.turn)
+  end
   g.turnLeft, g.state, g.charging, g.charge = S.TURN_SECONDS, "aim", false, 0
   g.projectile, g.explosion, g.trail, g.target = nil, nil, {}, nil
   g.wind = rand(g, -3, 3)
@@ -304,7 +307,7 @@ function S.new(teams, seed)
   assert(type(teams) == "number" and teams >= 2 and teams <= 4, "Expected 2-4 teams")
   local g = {
     version = 3, teams = teams, seed = math.floor(tonumber(seed) or 1), terrain = {},
-    worms = {}, selected = {}, inventory = {}, items = {}, mines = {}, fires = {},
+    worms = {}, selected = {}, played = {}, inventory = {}, items = {}, mines = {}, fires = {},
     phase = "playing", state = "aim", turn = 1, round = 1, turnLeft = S.TURN_SECONDS,
     charge = 0, charging = false, trail = {}, wind = 0, message = "FIND A WEAPON CRATE",
   }
