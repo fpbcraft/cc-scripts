@@ -36,7 +36,7 @@ Validation before PR preparation:
 
 - 56 CivCraft Lua regression scripts passed, including P1, frozen lifecycle,
   installed-loader dependencies, legacy migration, actions, UI and save tests.
-- 20 existing Python lab/proposal/composition tests passed. Three additional
+- 20 existing Python lab/proposal/composition tests passed. Four additional
   P1 tests pass through action/round boundaries, including checkpoint replay
   and rejection of projects in original-economy campaigns.
 - Native P1 semantic and real `Saves.writeFile`/`Saves.load` checks pass,
@@ -55,3 +55,8 @@ Human early/mid/late pacing review and broader paired candidate evaluation
 remain necessary before treating these prototype numbers as selected balance
 values. Known hostile-captured-Settler failures remain errors, and no trained
 AI or P2–P4 mechanics are deployed by this prototype.
+
+Final targeted follow-up: Trade Contract income forecasting is read-only,
+including when a rejected recruitment order encounters stale worker assignments.
+The 24-test Python suite, P1/action/systems regressions, frozen lifecycle
+comparison and full round-115 native parity pass after this correction.

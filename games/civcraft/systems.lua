@@ -89,26 +89,30 @@ function M.tileJob(tile)
 	end
 	return "food"
 end
-function M.ensureWorkers(state, city)
-	if not state.world or not city then
-		return
-	end
+local function workerSelection(state, city, readOnly)
 	local tiles = M.workable(state, city)
 	local had = city.worked ~= nil
-	city.worked = city.worked or {}
+	local worked = city.worked or {}
+	if readOnly then
+		local copy = {}
+		for key, value in pairs(worked) do
+			copy[key] = value
+		end
+		worked = copy
+	end
 	local available = {}
 	for _, t in ipairs(tiles) do
 		available[t.key] = t
 	end
 	local keys = {}
-	for k in pairs(city.worked) do
+	for k in pairs(worked) do
 		keys[#keys + 1] = k
 	end
 	table.sort(keys)
 	local count = 0
 	for _, k in ipairs(keys) do
 		if not available[k] or count >= (city.population or 2) then
-			city.worked[k] = nil
+			worked[k] = nil
 		else
 			count = count + 1
 		end
@@ -118,17 +122,24 @@ function M.ensureWorkers(state, city)
 			if count >= (city.population or 2) then
 				break
 			end
-			city.worked[tile.key] = true
+			worked[tile.key] = true
 			count = count + 1
 		end
 	end
-	city.jobs = { food = 0, wood = 0, science = 0 }
+	local jobs = { food = 0, wood = 0, science = 0 }
 	for _, tile in ipairs(tiles) do
-		if city.worked[tile.key] then
+		if worked[tile.key] then
 			local job = M.tileJob(tile)
-			city.jobs[job] = city.jobs[job] + 1
+			jobs[job] = jobs[job] + 1
 		end
 	end
+	return worked, jobs
+end
+function M.ensureWorkers(state, city)
+	if not state.world or not city then
+		return
+	end
+	city.worked, city.jobs = workerSelection(state, city, false)
 end
 function M.workTile(state, city, x, y)
 	if not city or not state.world or type(x) ~= "number" or type(y) ~= "number" then
@@ -558,7 +569,7 @@ function M.centerYields(p, c, state)
 	end
 	return { food = food, industry = industry, science = science }
 end
-function M.yields(p, c, state, hex, owned)
+function M.yields(p, c, state, hex, owned, readOnly)
 	local center = M.centerYields(p, c, state)
 	local jobs = c.jobs
 	local food = center.food - 1 + jobs.food * 2
@@ -566,11 +577,17 @@ function M.yields(p, c, state, hex, owned)
 	local science = center.science - 1 + jobs.science * 2
 	if state and state.world then
 		-- Replace abstract F/W/S worker counters with owned worked hexes.
-		M.ensureWorkers(state, c)
+		local worked
+		if readOnly then
+			worked = workerSelection(state, c, true)
+		else
+			M.ensureWorkers(state, c)
+			worked = c.worked
+		end
 		local center = M.centerYields(p, c, state)
 		food, industry, science = center.food, center.industry, center.science
 		for _, tile in ipairs(M.workable(state, c)) do
-			if c.worked and c.worked[tile.key] then
+			if worked and worked[tile.key] then
 				food = food + tile.yield.food
 				industry = industry + tile.yield.industry
 				science = science + tile.yield.science
@@ -631,11 +648,11 @@ local function spawn(state, p, c, id, hex)
 	return true
 end
 function M.projectOutput(p, c, state, yield)
-	yield = yield or M.yields(p, c, state, Hex)
+	yield = yield or M.yields(p, c, state, Hex, nil, true)
 	return Projects.preview(p, c, yield.industry, M)
 end
 function M.projectPreview(p, c, id, state, yield)
-	yield = yield or M.yields(p, c, state, Hex)
+	yield = yield or M.yields(p, c, state, Hex, nil, true)
 	return Projects.preview(p, c, yield.industry, M, id)
 end
 function M.growth(p, c, state)

@@ -20,6 +20,22 @@ def advance(runtime):
 
 
 class P1Tests(unittest.TestCase):
+    def test_trade_forecast_does_not_mutate_workers_on_rejected_recruitment(self):
+        runtime=fixture()
+        p,c=runtime.state.players[1],runtime.state.cities[1]
+        p.gold=0
+        p.techs.mechanicalcrafting=True
+        p.stockpile.brass=0
+        runtime.state.world.resources=runtime.lua.table()
+        c.buildings.market=True
+        self.assertTrue(runtime.apply(0,{'action':'queue','kind':'project','id':'trade','cityX':c.x,'cityY':c.y})[0])
+        # A claim can invalidate worked tiles before the next economy boundary.
+        # A rejected order must not normalize those assignments as a side effect.
+        c.worked['999:999']=True
+        before=runtime.state_hash()
+        self.assertFalse(runtime.apply(0,{'action':'queue','kind':'unit','id':'heavysiege','cityX':c.x,'cityY':c.y})[0])
+        self.assertEqual(runtime.state_hash(),before)
+
     def test_profile_is_observed_and_baseline_remains_original(self):
         for version,science,settler in [('baseline',3,12),('p1',3,40)]:
             runtime=fixture(version)
