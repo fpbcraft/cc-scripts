@@ -26,7 +26,9 @@ local Projects = {
 }
 function Projects.available(player, city, id)
 	local record = Projects.definitions[id]
-	return Rules.isP1(player) and record ~= nil and (city.buildings or {})[record.building] == true
+	return Rules.usesP1Economy(player)
+		and record ~= nil
+		and (city.buildings or {})[record.building] == true
 end
 function Projects.preview(player, city, industry, systems, id)
 	local result = { food = 0, science = 0, gold = 0, active = false }

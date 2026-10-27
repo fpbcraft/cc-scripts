@@ -170,7 +170,7 @@ end
 function M.civ(id, context)
 	for _, v in ipairs(M.civs) do
 		if v.id == id then
-			if id == "scholar" and ContentRules.isP1(context) then
+			if id == "scholar" and ContentRules.usesP1Economy(context) then
 				return { id = v.id, name = v.name, bonus = "Capital +1 science" }
 			end
 			return v
@@ -224,7 +224,12 @@ function M.migrate(state)
 	ContentRules.validate(state.contentRules)
 	state.ruleset = state.ruleset or "legacy"
 	state.gameSpeed = state.gameSpeed or "standard"
-	state.roundLimit = state.roundLimit or (state.ruleset == "create" and 180 or 90)
+	state.roundLimit = state.roundLimit
+		or (
+			state.ruleset == "create"
+				and (ContentRules.isRedesign(state) and CampaignRules.rounds(state) or 180)
+			or 90
+		)
 	state.hostileMode = state.hostileMode or (state.ruleset == "create" and "standard" or "off")
 	if state.world then
 		state.world.landmarks = state.world.landmarks or {}
@@ -340,7 +345,7 @@ function M.treasury(p, state, includeProjects)
 			income = income + 2 + (city.population or 2) + effects.gold
 			if
 				includeProjects ~= false
-				and ContentRules.isP1(p)
+				and ContentRules.usesP1Economy(p)
 				and city.project
 				and city.project.kind == "project"
 			then
@@ -374,10 +379,13 @@ function M.economy(p, state)
 	return result
 end
 function M.canBuild(p, c, id, state)
+	if ContentRules.isRedesign(state or p) and id == "councilhall" then
+		return false
+	end
 	local b = M.buildings[id]
 	if
 		not b
-		or b.tech and not p.techs[b.tech] and not (id == "farm" and ContentRules.isP1(p))
+		or b.tech and not p.techs[b.tech] and not (id == "farm" and ContentRules.usesP1Economy(p))
 		or c.buildings[id]
 		or b.coastal and not M.coastal(state, c)
 	then
@@ -546,7 +554,7 @@ function M.centerYields(p, c, state)
 	local civ = p.civ
 	local buildings = c.buildings or {}
 	local food, industry, science = 2 + e.food, 1 + e.industry, 1 + e.science
-	if ContentRules.isP1(p) then
+	if ContentRules.usesP1Economy(p) then
 		science = science + 1
 		if buildings.farm and not (p.techs or {}).agriculture then
 			food = food - 1
@@ -559,7 +567,8 @@ function M.centerYields(p, c, state)
 		industry = industry + 1
 	end
 	if civ == "scholar" then
-		science = science + (ContentRules.isP1(p) and (c.capitalOf == p.id and 1 or 0) or 2)
+		science = science
+			+ (ContentRules.usesP1Economy(p) and (c.capitalOf == p.id and 1 or 0) or 2)
 	end
 	if civ == "forge" and buildings.workshop then
 		industry = industry + 2

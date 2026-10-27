@@ -1,3 +1,4 @@
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Icons = dofile("/games/civcraft/icons.lua")
@@ -121,15 +122,27 @@ function H.ledger(ui, rect, player)
 	end
 	rows[#rows + 1] = { text = "AGE: " .. Systems.ages[Systems.age(player)].name }
 	local victory = dofile("/games/civcraft/victory.lua").status(ui.state, player)
-	rows[#rows + 1] = {
-		text = "INDUSTRIAL: "
-			.. victory.industryTurns
-			.. "/"
-			.. victory.industryTarget
-			.. " ROUNDS; "
-			.. victory.connected
-			.. " LINKED CITIES",
-	}
+	if ContentRules.isRedesign(ui.state) and CampaignRules.enabled(ui.state, "conquest") then
+		local capitals = 0
+		for _, city in ipairs(ui.state.cities) do
+			if city.owner == player.id and city.capitalOf ~= nil then
+				capitals = capitals + 1
+			end
+		end
+		rows[#rows + 1] =
+			{ text = "CONQUEST: " .. capitals .. "/" .. #ui.state.players .. " CAPITALS" }
+	end
+	if not ContentRules.isRedesign(ui.state) then
+		rows[#rows + 1] = {
+			text = "INDUSTRIAL: "
+				.. victory.industryTurns
+				.. "/"
+				.. victory.industryTarget
+				.. " ROUNDS; "
+				.. victory.connected
+				.. " LINKED CITIES",
+		}
+	end
 	rows[#rows + 1] = { text = "END EXPEDITION: " .. (player.endStage or 0) .. "/3 PROJECTS" }
 	rows[#rows + 1] =
 		{ text = "SCORE " .. victory.score .. " / DEADLINE ROUND " .. (ui.state.roundLimit or 90) }
@@ -139,10 +152,7 @@ function H.ledger(ui, rect, player)
 				text = rival.name
 					.. ": AGE "
 					.. (rival.age or Systems.age(rival))
-					.. ", INDUSTRY "
-					.. (rival.industryTurns or 0)
-					.. "/"
-					.. victory.industryTarget
+					.. (not ContentRules.isRedesign(ui.state) and (", INDUSTRY " .. (rival.industryTurns or 0) .. "/" .. victory.industryTarget) or "")
 					.. ", END "
 					.. (rival.endStage or 0)
 					.. "/3",

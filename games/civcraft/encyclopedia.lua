@@ -1,3 +1,5 @@
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 -- Content-derived entries stay in sync with the simulation's costs and unlocks.
 local Systems = dofile("/games/civcraft/systems.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
@@ -202,7 +204,31 @@ function E.describe(category, entry, player, state)
 		player = context
 	end
 	if entry.text then
-		if entry.id == "production" and player and player.contentRules == "p1" then
+		if ContentRules.isRedesign(state or player) then
+			if entry.id == "turns" then
+				return {
+					"Redesign V1: Conquest captures every rival capital. End Expedition completes the existing Eyes, Equipment and Dragon projects until its later redesign. Score always resolves the deadline at round "
+						.. ((state or {}).roundLimit or CampaignRules.rounds(player))
+						.. ". Industrial and Diplomatic victories are retired. Simultaneous qualifiers share victory.",
+				}
+			elseif entry.id == "health" or entry.id == "combat" then
+				local retained = entry.id == "health" and entry.text:match("^(.-) FORTIFY / HEAL")
+					or entry.text:match("^(.-) Resting or fortifying")
+				return {
+					retained or "Units have 100 HP.",
+					"Rest without moving, attacking or spending an action: recover 20 HP on owned land, 15 with active Open Borders, 10 on neutral or other peaceful land, and 5 on enemy land. One adjacent owned healer adds 10 HP; additional healers do not stack and a healer does not support itself. Acting prevents all recovery, even after FORTIFY / HEAL. Health is capped at 100. A valid new order wakes a sleeping unit.",
+				}
+			elseif entry.id == "council" then
+				return {
+					"Council leadership and resolutions remain available for trade, embargoes, peace and censure. Elections never award victory in Redesign V1 and do not require a Council Hall. Ballots, pledges, trust and village delegates retain their normal rules.",
+				}
+			elseif entry.id == "rails" then
+				return {
+					"Rails retain their movement and connected-city production benefits. An engineer pays two iron and remaining movement to build rail. Linked stations grant industry and gold; connected industry supports your economy and does not award a separate victory.",
+				}
+			end
+		end
+		if entry.id == "production" and player and ContentRules.usesP1Economy(player) then
 			return {
 				entry.text
 					:gsub("UNITS or BUILDS", "UNITS, BUILDS, WONDER or PROJECTS")
@@ -265,7 +291,7 @@ function E.describe(category, entry, player, state)
 				.. " / range "
 				.. record.range,
 			record.naval and "Domain: water" or "Domain: land",
-			record.ability or "",
+			ContentRules.ability(record, state or player) or "",
 		}
 	elseif category == "buildings" then
 		lines = {
@@ -273,7 +299,11 @@ function E.describe(category, entry, player, state)
 			record.description or "",
 			"One of this building per city.",
 		}
-		if entry.id == "farm" and player and player.contentRules == "p1" then
+		if entry.id == "councilhall" and ContentRules.isRedesign(state or player) then
+			lines[2] =
+				"Retired in Redesign V1. Council leadership and resolutions do not require this building. Original and P1 campaigns retain its diplomatic-victory role."
+		end
+		if entry.id == "farm" and player and ContentRules.usesP1Economy(player) then
 			lines[2] = (player.techs or {}).agriculture and "+2 food"
 				or "+1 food until Wheat Farming"
 			lines[#lines + 1] = "Available immediately: +1 food. Wheat Farming adds a second food."
@@ -281,7 +311,7 @@ function E.describe(category, entry, player, state)
 	else
 		lines = {
 			"Science cost: " .. Systems.techCost(entry.id, player),
-			(entry.id == "agriculture" and player and player.contentRules == "p1")
+			(entry.id == "agriculture" and player and ContentRules.usesP1Economy(player))
 					and "Improves: Wheat Farm +1 food"
 				or ("Unlock: " .. title(record.unlock or "none")),
 		}
@@ -311,7 +341,7 @@ function E.describe(category, entry, player, state)
 			category == "buildings"
 			and entry.id == "farm"
 			and player
-			and player.contentRules == "p1"
+			and ContentRules.usesP1Economy(player)
 		)
 	then
 		lines[#lines + 1] = "Research: " .. Systems.techs[record.tech].name
@@ -358,7 +388,7 @@ function E.draw(ui, rect)
 			model.offset = 0
 		end, { selected = model.category == category })
 	end
-	local projectRow = ui.state.contentRules == "p1" and 11 or 0
+	local projectRow = ContentRules.usesP1Economy(ui.state) and 11 or 0
 	if projectRow > 0 then
 		r:button(x + 2, y + 24, w - 4, 10, "PROJECTS", function()
 			model.category = "projects"

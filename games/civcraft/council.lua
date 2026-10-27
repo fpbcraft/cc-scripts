@@ -85,7 +85,7 @@ local function members(state, council)
 			result[#result + 1] = {
 				id = player.id,
 				delegates = bonus and 3 or 2,
-				eligible = Rules.eligible(state, player.id),
+				eligible = state.contentRules ~= "balance1" and Rules.eligible(state, player.id),
 			}
 		end
 	end

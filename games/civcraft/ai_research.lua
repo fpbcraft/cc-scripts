@@ -1,10 +1,14 @@
 local Hex = dofile("/games/civcraft/hex.lua")
 local Values = dofile("/games/civcraft/ai_economy_values.lua")
+local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Research = {}
 
 function Research.ranked(view, player, systems)
 	local goal = (player.aiPlan or {}).primary
 		or (player.civ == "scholar" and "expedition" or "industrial")
+	if view.contentRules == "balance1" and not CampaignRules.enabled(view, goal) then
+		goal = CampaignRules.enabled(view, "expedition") and "expedition" or "conquest"
+	end
 	local dependencies = {}
 	local terminal = goal == "expedition" and "enlightenment"
 		or goal == "conquest" and "netherite"

@@ -1,6 +1,7 @@
 local Rails = dofile("/games/civcraft/railways.lua")
 local Rules = dofile("/games/civcraft/campaign_rules.lua")
 local CouncilRules = dofile("/games/civcraft/council_rules.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local V = {}
 function V.score(state, p)
 	local score = 0
@@ -98,7 +99,11 @@ function V.check(state, advance)
 			reasons[#reasons + 1] = reason
 		end
 	end
-	if #qualifiers == 0 and state.round >= (state.roundLimit or 180) then
+	if
+		#qualifiers == 0
+		and state.round
+			>= (state.roundLimit or (ContentRules.isRedesign(state) and Rules.rounds(state) or 180))
+	then
 		if not Rules.enabled(state, "score") then
 			state.phase, state.winner, state.victoryReason, state.winnerIDs =
 				"over", "DRAW", "ROUND LIMIT", {}

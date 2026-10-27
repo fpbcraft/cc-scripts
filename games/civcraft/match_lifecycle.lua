@@ -12,6 +12,7 @@ local Combat = dofile("/games/civcraft/combat.lua")
 local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
 local DiplomaticPerception = dofile("/games/civcraft/diplomatic_perception.lua")
 local Reports = dofile("/games/civcraft/reports.lua")
+local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Lifecycle = {}
 
 local function player(state, id)
@@ -28,7 +29,7 @@ function Lifecycle.newLobby(campaignID, contentRules)
 		version = 6,
 		ruleset = "create",
 		contentRules = contentRules ~= "baseline" and contentRules or nil,
-		roundLimit = 180,
+		roundLimit = CampaignRules.rounds({ contentRules = contentRules }),
 		gameSpeed = "standard",
 		victoryRulesVersion = 2,
 		diplomacy = Diplomacy.new(),
