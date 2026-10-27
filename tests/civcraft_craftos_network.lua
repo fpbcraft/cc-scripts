@@ -784,5 +784,11 @@ else
 	if not ok then
 		sendControl(0, "clientFailed", { reason = tostring(why) })
 	end
+	-- Keep modem Lua states alive until the host has exited and written its result.
+	-- CraftOS-PC may still deliver the host's final disconnect packets; shutting
+	-- these computers down first can crash its native modem receive handler.
+	while true do
+		os.pullEventRaw()
+	end
 end
 os.shutdown()

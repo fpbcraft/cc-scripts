@@ -6,7 +6,7 @@ end
 dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local Options = dofile("/games/civcraft/campaign_options.lua")
 local Lifecycle = dofile("/games/civcraft/match_lifecycle.lua")
-for _, version in ipairs({ "baseline", "p1", "balance1" }) do
+for _, version in ipairs({ "baseline", "p1", "balance1", "balance2", "balance3" }) do
 	local state = Lifecycle.newLobby("m1-ui", version)
 	state.players = { { id = 0, name = "PLAYER" } }
 	local labels, text = {}, {}
@@ -31,8 +31,11 @@ for _, version in ipairs({ "baseline", "p1", "balance1" }) do
 		r.buttons = {}
 		Options.draw(ui, state)
 	end
-	if version == "balance1" then
-		assert(labels["ECONOMY REDESIGN V1"] and labels["SCORE DEADLINE"])
+	if dofile("/games/civcraft/content_rules.lua").isRedesign(state) then
+		assert(
+			labels["ECONOMY " .. dofile("/games/civcraft/content_rules.lua").label(state)]
+				and labels["SCORE DEADLINE"]
+		)
 		assert(labels["CONQUEST ON"] and labels["END EXPEDITION ON"])
 		assert(
 			not labels["INDUSTRIAL OFF"]
