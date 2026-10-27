@@ -110,7 +110,8 @@ local shardValue = os.getenv("CIVCRAFT_CONTROLS_SHARD")
 local shardCountValue = os.getenv("CIVCRAFT_CONTROLS_SHARDS")
 local shard = tonumber(shardValue)
 local shardCount = tonumber(shardCountValue)
-local validShard = shard and shardCount
+local validShard = shard
+	and shardCount
 	and shard >= 0
 	and shard < shardCount
 	and shard % 1 == 0
