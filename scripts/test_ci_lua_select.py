@@ -91,7 +91,7 @@ class SelectiveLuaTests(unittest.TestCase):
         self.assertEqual(names, set())
         self.assertIsNone(reason)
         result = plan(self.root, names, {}, reason, 9)
-        self.assertEqual(result["matrix"], {"include": []})
+        self.assertEqual(result["matrix"], {"include": [{"shard": 0, "shards": 1}]})
         self.assertFalse(result["run_tests"])
 
     def test_changed_test_only_plus_smoke(self):
