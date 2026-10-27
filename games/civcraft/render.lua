@@ -252,6 +252,17 @@ function R:fitGraphics()
 	self.sx, self.sy = scale, scale
 	self.ox = math.floor((self.pw - self.w * scale) / 2)
 	self.oy = math.floor((self.ph - self.h * scale) / 2)
+	-- Cache the coordinate mapping until the monitor is resized.
+	self.sourceY = {}
+	for y = 0, self.ph - 1 do
+		self.sourceY[y + 1] = math.ceil((y + 1 - self.oy) / scale)
+	end
+	self.columnRepeats = {}
+	for x = 1, self.w do
+		self.columnRepeats[x] = math.floor(self.ox + x * scale)
+			- math.floor(self.ox + (x - 1) * scale)
+	end
+	self.rowScaleLut = nil
 end
 function R:resize()
 	self.scaledRows = nil
@@ -340,6 +351,21 @@ function R:fill(x, y, w, h, color)
 		return
 	end
 	if self.mode == "graphics" then
+		-- begin() already clears the reusable buffer to palette color 0.
+		-- The UI often repeats that same full-screen fill as its first draw.
+		if
+			self.buffer
+			and self.frameClear
+			and not self.clip
+			and x0 == 0
+			and y0 == 0
+			and x1 == self.w
+			and y1 == self.h
+			and (color == nil or color == 0)
+		then
+			return
+		end
+		self.frameClear = false
 		if self.buffer then
 			-- Mutate reusable pixels; rebuilding strings per stroke causes heavy GC on CraftOS.
 			local pixel = pixelColors[color or 0]
@@ -391,6 +417,7 @@ function R:blit(rows, x, y)
 	if not self.buffer then
 		return false
 	end
+	self.frameClear = false
 	x, y = math.floor(x), math.floor(y)
 	local clip = self.clip or { x = 0, y = 0, w = self.w, h = self.h }
 	local left = math.max(0, clip.x)
@@ -1116,6 +1143,7 @@ function R:begin()
 	if self.mode == "graphics" then
 		self.frameRows = self.frameRows or {}
 		self.buffer = self.frameRows
+		self.frameClear = true
 		for y = 1, self.h do
 			local row = self.buffer[y] or {}
 			self.buffer[y] = row
@@ -1143,15 +1171,17 @@ function R:finish()
 		local previous = self.scaledRows or {}
 		local expanded, sourceRows = {}, {}
 		local integer = self.sx == math.floor(self.sx)
-		local lut = {}
-		if integer then
+		local lut = self.rowScaleLut
+		if integer and not lut then
+			lut = {}
 			for c in pairs(R.palette) do
 				lut[string.char(c)] = string.rep(string.char(c), self.sx)
 			end
+			self.rowScaleLut = lut
 		end
 		for y = 0, self.ph - 1 do
 			self:cooperate()
-			local source = math.ceil((y + 1 - self.oy) / self.sy)
+			local source = self.sourceY[y + 1]
 			if y < self.oy or source < 1 or source > self.h then
 				rows[y + 1] = blank
 			else
@@ -1169,9 +1199,7 @@ function R:finish()
 					else
 						local parts = {}
 						for x = 1, self.w do
-							local count = math.floor(self.ox + x * self.sx)
-								- math.floor(self.ox + (x - 1) * self.sx)
-							parts[x] = row:sub(x, x):rep(count)
+							parts[x] = row:sub(x, x):rep(self.columnRepeats[x])
 						end
 						value = table.concat(parts)
 					end
