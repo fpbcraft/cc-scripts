@@ -13,7 +13,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--workers', type=int, default=1)
     parser.add_argument('--backend', choices=('lua53', 'luajit21'),
-                        help='Override runtimeBackend in every configuration; default keeps Lua 5.3')
+                        help='Override runtimeBackend in every configuration; unspecified backends default to LuaJIT')
     args = parser.parse_args()
     if not 1 <= args.workers <= 6:
         parser.error('Use 1–6 workers initially; benchmark memory/thermals before increasing')

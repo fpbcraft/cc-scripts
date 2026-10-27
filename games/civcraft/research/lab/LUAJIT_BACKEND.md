@@ -3,9 +3,15 @@
 The research runner supports `runtimeBackend: "luajit21"` and
 `tools/civcraft_lab/run.py --backend luajit21`. Both execute the same Lua rules,
 AI, lifecycle, action dispatch and observer code as the Lua 5.3 reference.
-Lua 5.3 remains the default for old configurations and historical reproduction.
-New performance-sensitive studies should explicitly select LuaJIT and record
-its version and extension fingerprint. This does not change the Minecraft
+New batches submitted through `write_run` (including the CLI, evolution and
+cross-play runners) default to LuaJIT. An explicit `runtimeBackend` is preserved;
+use `--backend lua53` for reference batches or historical reproduction of
+configurations that previously omitted the backend. Each result records the
+resolved configuration, version and extension fingerprint. The low-level
+`Runtime` and `play` APIs retain Lua 5.3 as their reference default; custom
+studies using them or `run_bounded` directly should explicitly select LuaJIT.
+An unavailable LuaJIT extension produces an error rather than silently changing
+the backend. This does not change the Minecraft
 runtime or deploy a new AI policy.
 
 ## Install in a temporary virtual environment
