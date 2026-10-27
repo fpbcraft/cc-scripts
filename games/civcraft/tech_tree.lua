@@ -89,7 +89,7 @@ local function inspector(r, systems, player, rect, model, openCodex)
 	for _, paragraph in ipairs(Details.paragraphs(systems, model.selected, player)) do
 		text(paragraph)
 	end
-	for _, entry in ipairs(Details.unlocks(systems, model.selected)) do
+	for _, entry in ipairs(Details.unlocks(systems, model.selected, player)) do
 		rows[#rows + 1] = {
 			buttons = {
 				{

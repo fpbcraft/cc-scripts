@@ -1,3 +1,4 @@
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 -- The director accepts an observer projection, never unrestricted host state.
 local Hex = dofile("/games/civcraft/hex.lua")
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
@@ -66,7 +67,7 @@ local function scores(view, player, personality, cities, seed)
 	if not (view.council and view.council.victoryEnabled) then
 		result.diplomatic = -math.huge
 	end
-	if view.victories or view.contentRules == "balance1" then
+	if view.victories or ContentRules.isRedesign(view) then
 		for _, goal in ipairs(goals) do
 			if not CampaignRules.enabled(view, goal) then
 				result[goal] = -math.huge
