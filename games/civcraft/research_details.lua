@@ -48,12 +48,16 @@ local purposes = {
 	navalwarfare = "Field steam flagships for late-game naval operations.",
 }
 
-function Details.unlocks(systems, id)
+function Details.unlocks(systems, id, context)
 	local entries = {}
 	for _, category in ipairs({ "buildings", "units", "wonders" }) do
 		local keys = {}
 		for key, record in pairs(systems[category] or {}) do
-			if record.tech == id and not record.hostile then
+			if
+				record.tech == id
+				and not record.hostile
+				and ContentRules.available(record, context)
+			then
 				keys[#keys + 1] = key
 			end
 		end
@@ -80,7 +84,7 @@ function Details.paragraphs(systems, id, player)
 	else
 		paragraphs[#paragraphs + 1] = "UNLOCKS: " .. tech.unlock .. "."
 	end
-	for _, entry in ipairs(Details.unlocks(systems, id)) do
+	for _, entry in ipairs(Details.unlocks(systems, id, player)) do
 		local record = entry.record
 		if not (ContentRules.isRedesign(player) and entry.id == "councilhall") then
 			local benefit = record.description or record.ability or ""

@@ -1,3 +1,4 @@
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 -- Host-authoritative elections; ballots remain private until the closing boundary.
 local Rules = dofile("/games/civcraft/council_rules.lua")
 local Campaign = dofile("/games/civcraft/campaign_rules.lua")
@@ -85,7 +86,7 @@ local function members(state, council)
 			result[#result + 1] = {
 				id = player.id,
 				delegates = bonus and 3 or 2,
-				eligible = state.contentRules ~= "balance1" and Rules.eligible(state, player.id),
+				eligible = not ContentRules.isRedesign(state) and Rules.eligible(state, player.id),
 			}
 		end
 	end

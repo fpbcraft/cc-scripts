@@ -1,6 +1,6 @@
 # CivCraft balance implementation roadmap
 
-Date: 2026-10-27. Mode: implementation. Current position: **M1 delivered; M2 next**. This document plans the accepted [38 ADRs](adr/README.md); it
+Date: 2026-10-27. Mode: implementation. Current position: **M1 delivered; M2 in progress**. This document plans the accepted [38 ADRs](adr/README.md); it
 does not mark the redesign implemented. All 16 follow-up answers were A.
 
 ## Product and delivery target
@@ -148,9 +148,9 @@ calibration remains deferred while mechanics implementation continues.
 
 Goal: population, production and Builder work create distinct opening investments.
 
-- [ ] Define Settlement Capacity sources and a visible growth slowdown curve;
+- [x] Define Settlement Capacity sources and a visible growth slowdown curve;
   retain food consumption and avoid an independent amenities meter.
-- [ ] Implement population-consuming Settlers with minimum-population validation;
+- [x] Implement population-consuming Settlers with minimum-population validation;
   prevent invalid completions and specify growth/production ordering.
 - [ ] Add Builder charges and a small initial improvement catalog. Audit existing
   Farm/Quarry city bonuses to prevent duplicate yields from the new tile model.
@@ -162,6 +162,10 @@ Goal: population, production and Builder work create distinct opening investment
 Done when: a human can choose a competitive development or expansion opening;
 AI uses Builders, and population/charge/yield invariants survive save/load.
 P1 Settler costs are a comparison baseline, not a mandated final result.
+
+M2a implementation: [capacity and Settler transaction record](M2-LAND-DEVELOPMENT.md).
+Development V2 is selectable; Redesign V1 remains the default until the Builder
+slice is ready. The remaining M2 checkboxes are not delivered.
 
 ## M3 — Make cities specialize
 

@@ -175,7 +175,7 @@ mechanics[#mechanics + 1] = {
 local function title(id)
 	return id:gsub("_", " "):upper()
 end
-function E.entries(category)
+function E.entries(category, context)
 	if category == "mechanics" then
 		return mechanics
 	end
@@ -187,7 +187,9 @@ function E.entries(category)
 		or Systems.techs
 	local result = {}
 	for id, record in pairs(source) do
-		result[#result + 1] = { id = id, name = record.name or title(id), record = record }
+		if ContentRules.available(record, context) then
+			result[#result + 1] = { id = id, name = record.name or title(id), record = record }
+		end
 	end
 	table.sort(result, function(a, b)
 		return a.name < b.name
@@ -204,6 +206,17 @@ function E.describe(category, entry, player, state)
 		player = context
 	end
 	if entry.text then
+		if ContentRules.hasDevelopment(state or player) then
+			if entry.id == "population" then
+				return {
+					"Settlement Capacity starts at 4, gains 1 beside water, 2 from Homesteads, 2 from Water Services and 1 from a Trading Hall. Positive growth food is 100% at least two citizens below capacity, 50% one below, 25% at capacity or one above, and 12.5% two or more above. Minimum growth time increases by the same factor. Food consumption and starvation remain unchanged. Completing a Settler consumes one citizen after growth resolves; a city needs at least two citizens.",
+				}
+			elseif entry.id == "production" then
+				return {
+					"Scouts cost 15 industry; Guards cost 20. Settlers start at 28 industry, adding 8 for each previously completed Settler. Completion consumes one citizen and requires at least two population. Growth and starvation resolve before recruitment. A queued Settler waits without new progress below two population; blocked placement spends no citizen. Switching retains construction progress. Civilian projects convert industry to research, food or gold each round. Homesteads and Water Services increase Settlement Capacity without creating food or citizens.",
+				}
+			end
+		end
 		if ContentRules.isRedesign(state or player) then
 			if entry.id == "turns" then
 				return {
@@ -326,8 +339,16 @@ function E.describe(category, entry, player, state)
 			.. (#needs > 0 and table.concat(needs, ", ") or "none")
 	end
 	if category == "units" and entry.id == "settler" then
-		lines[#lines + 1] =
-			"Starts at 12 industry; +5 for each settler trained by your empire. Counts completed settlers, including those later lost or settled."
+		local base, step = ContentRules.unitCost("settler", record, player)
+		lines[#lines + 1] = "Starts at "
+			.. base
+			.. " industry; +"
+			.. step
+			.. " for each Settler trained by your empire, including those later lost or settled. Game speed scales these costs."
+		if ContentRules.hasDevelopment(state or player) then
+			lines[#lines + 1] =
+				"Requires at least two population. Completion consumes one citizen after growth resolves; blocked placement consumes none."
+		end
 	end
 	if record.age then
 		lines[#lines + 1] = "Age: " .. Systems.ages[record.age].name
@@ -419,7 +440,7 @@ function E.draw(ui, rect)
 			end
 		end
 	else
-		for _, entry in ipairs(E.entries(model.category)) do
+		for _, entry in ipairs(E.entries(model.category, ui.state)) do
 			rows[#rows + 1] = {
 				buttons = {
 					{
