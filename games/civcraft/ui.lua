@@ -38,7 +38,7 @@ local function where(list, x, y)
 		end
 	end
 end
-function UI.new(m, dispatch)
+function UI.new(m, dispatch, options)
 	local self = setmetatable({
 		dispatch = dispatch,
 		mapMode = "terrain",
@@ -55,7 +55,10 @@ function UI.new(m, dispatch)
 		workCity = nil,
 	}, UI)
 	Playback.attach(self)
-	self.r = Renderer.new(m, { forceText = self.animationPreferences.display == "text" })
+	self.r = Renderer.new(m, {
+		forceText = self.animationPreferences.display == "text",
+		layoutOnly = options and options.layoutOnly,
+	})
 	return self
 end
 function UI:message(s)
