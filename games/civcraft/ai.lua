@@ -1,261 +1,378 @@
--- Content-aware priorities, shared with the same queues and material rules as humans.
-local Hex = dofile("/games/civcraft/hex.lua")
-local World = dofile("/games/civcraft/world.lua")
-local Rails = dofile("/games/civcraft/railways.lua")
+-- Plan from detached observer knowledge; execute through the shared action rules.
+local Actions = dofile("/games/civcraft/actions.lua")
+local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
+local DiplomaticAI = dofile("/games/civcraft/diplomatic_ai.lua")
+local DiplomaticOffers = dofile("/games/civcraft/diplomatic_offers.lua")
+local Campaigns = dofile("/games/civcraft/ai_campaigns.lua")
+local CityRoles = dofile("/games/civcraft/ai_city_roles.lua")
+local Infrastructure = dofile("/games/civcraft/ai_infrastructure.lua")
+local Materials = dofile("/games/civcraft/ai_materials.lua")
+local Production = dofile("/games/civcraft/ai_production.lua")
+local Research = dofile("/games/civcraft/ai_research.lua")
+local Settlement = dofile("/games/civcraft/ai_settlement.lua")
+local Strategy = dofile("/games/civcraft/ai_strategy.lua")
+local Tactics = dofile("/games/civcraft/ai_tactics.lua")
+local Workers = dofile("/games/civcraft/ai_workers.lua")
+local Presentation = dofile("/games/civcraft/presentation.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
-local Landmarks = dofile("/games/civcraft/landmarks.lua")
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
+local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
 local A = {}
-function A.research(p, systems)
-  local goals = {
-    "agriculture",
-    "mining",
-    "writing",
-    "crafting",
-    "husbandry",
-    "bronze",
-    "currency",
-    "masonry",
-    "deepmining",
-    "diamondworking",
-    "philosophy",
-    "engineering",
-    "waterpower",
-    "pressing",
-    "belts",
-    "nether",
-    "heatedmixing",
-    "brassworking",
-    "deployers",
-    "precision",
-    "education",
-    "steampower",
-  }
-  local finish = p.id % 2 == 0 and { "brewing", "netherite", "astronomy", "enlightenment" }
-    or { "mechanicalcrafting", "commerce", "railways", "logistics", "economics" }
-  for _, id in ipairs(finish) do
-    goals[#goals + 1] = id
-  end
-  local function nextTech(id)
-    if p.techs[id] then
-      return nil
-    end
-    for _, need in ipairs(systems.techs[id].requires) do
-      if not p.techs[need] then
-        return nextTech(need)
-      end
-    end
-    return id
-  end
-  for _, id in ipairs(goals) do
-    local nextId = nextTech(id)
-    if nextId then
-      return nextId
-    end
-  end
-  for _, id in ipairs(systems.techOrder) do
-    if systems.canResearch(p, id) then
-      return id
-    end
-  end
+
+local function attachAssignedEscort(state, player, unit, systems)
+	local role = unit.aiRole or {}
+	local other = role.name == "settlerEscort" and Stacks.byID(state, role.escortID)
+	if other and Stacks.canLink(state, unit, other, systems) then
+		return Actions.apply(state, player.id, {
+			action = "attachEscort",
+			unitID = unit.id,
+			partnerID = other.id,
+			x = unit.x,
+			y = unit.y,
+		}, systems)
+	end
+	return false
 end
-function A.choose(state, p, city, systems)
-  local cities, settlers, soldiers, engineers = 0, 0, 0, 0
-  for _, c in ipairs(state.cities) do
-    if c.owner == p.id then
-      cities = cities + 1
-    end
-  end
-  for _, u in ipairs(state.units) do
-    if u.owner == p.id then
-      local stats = systems.units[u.kind]
-      if u.kind == "settler" then
-        settlers = settlers + 1
-      elseif stats.engineer then
-        engineers = engineers + 1
-      else
-        soldiers = soldiers + 1
-      end
-    end
-  end
-  if cities + settlers < 3 and systems.canRecruit(p, "settler", state, Hex, city) then
-    return systems.queue(p, city, "unit", "settler", state, Hex)
-  end
-  if p.techs.railways and engineers == 0 then
-    return systems.queue(p, city, "unit", "engineer", state, Hex)
-  end
-  if soldiers < math.min(4, cities + 1) then
-    for _, id in ipairs({ "diamondguard", "swordsman", "spearman", "archer", "warrior" }) do
-      if
-        systems.canRecruit(p, id, state, Hex, city)
-        and (not systems.units[id].resource or (p.stockpile[systems.units[id].resource] or 0) >= 2)
-      then
-        return systems.queue(p, city, "unit", id, state, Hex)
-      end
-    end
-  end
-  local order = {
-    "farm",
-    "mine",
-    "library",
-    "pens",
-    "craftinghall",
-    "market",
-    "furnace",
-    "walls",
-    "academy",
-    "deepmine",
-    "redstoneworkshop",
-    "workshop",
-    "waterwheel",
-    "press",
-    "beltlogistics",
-    "portal",
-    "burner",
-    "mixer",
-    "deployer",
-    "assembly",
-    "university",
-    "brewery",
-    "station",
-    "steamplant",
-    "crafter",
-    "bazaar",
-    "freight",
-    "bank",
-    "observatory",
-    "eyes",
-    "equipment",
-    "dragon",
-    "windmill",
-    "crusher",
-    "fortress",
-    "grandacademy",
-  }
-  if p.id % 2 == 0 then
-    -- Expedition empires prioritize their final projects once they unlock them.
-    for _, id in ipairs({ "observatory", "eyes", "equipment", "dragon" }) do
-      if systems.canBuild(p, city, id, state) then
-        return systems.queue(p, city, "building", id, state, Hex)
-      end
-    end
-  end
-  for _, id in ipairs(order) do
-    if systems.canBuild(p, city, id, state) then
-      return systems.queue(p, city, "building", id, state, Hex)
-    end
-  end
-  -- Optional wonders are worthwhile after the essential economy is developed.
-  local ids = {}
-  for id in pairs(systems.wonders) do
-    ids[#ids + 1] = id
-  end
-  table.sort(ids)
-  for _, id in ipairs(ids) do
-    for _, tile in ipairs(systems.workable(state, city)) do
-      if Landmarks.canPlace(state, city, id, tile.x, tile.y, systems) then
-        return systems.queue(p, city, "wonder", id, state, Hex, tile.x, tile.y)
-      end
-    end
-  end
+
+function A.knowledge(state, player)
+	return Presentation.capture(state, player.id)
 end
-function A.engineer(state, p, u, systems)
-  if not p.techs.railways then
-    u.standby = true
-    return true
-  end
-  u.standby = false
-  -- BFS between each pair of cities through owned land; no omniscient shortcuts.
-  local cities = {}
-  for _, c in ipairs(state.cities) do
-    if c.owner == p.id then
-      cities[#cities + 1] = c
-    end
-  end
-  local owned = World.territory(state, Hex)
-  local rails = state.world.rails or {}
-  for i = 2, #cities do
-    local first, last = cities[1], cities[i]
-    local queue = { { x = first.x, y = first.y } }
-    local index = 1
-    local seen = { [World.key(first.x, first.y)] = true }
-    local previous = {}
-    local found
-    while index <= #queue do
-      local c = queue[index]
-      index = index + 1
-      if c.x == last.x and c.y == last.y then
-        found = c
-        break
-      end
-      for _, n in ipairs(Hex.neighbours(c.x, c.y, state)) do
-        local k = World.key(n.x, n.y)
-        if
-          not seen[k]
-          and owned[k] == p.id
-          and not (state.world.landmarks or {})[k]
-          and Hex.passable(n.x, n.y, state, u, systems)
-        then
-          seen[k] = true
-          previous[k] = c
-          queue[#queue + 1] = n
-        end
-      end
-    end
-    local path = {}
-    while found do
-      path[#path + 1] = found
-      found = previous[World.key(found.x, found.y)]
-    end
-    local target
-    for j = #path, 1, -1 do
-      if not rails[World.key(path[j].x, path[j].y)] then
-        target = path[j]
-        break
-      end
-    end
-    if target then
-      if Rails.canBuild(state, p, u, target.x, target.y, systems) then
-        Rails.build(state, p, u, target.x, target.y, systems)
-        return true
-      end
-      local choices = Hex.reachable(state, u, p.id, systems)
-      local best, distance
-      for _, c in ipairs(choices) do
-        if not c.attack then
-          local d = Hex.distance(c.x, c.y, target.x, target.y)
-          if not distance or d < distance then
-            best = c
-            distance = d
-          end
-        end
-      end
-      if best then
-        u.x = best.x
-        u.y = best.y
-      end
-      u.movesLeft = 0
-      u.moved = true
-      return true
-    end
-  end
-  u.movesLeft = 0
-  u.moved = true
-  return true
+function A.beginTurn(state, player, systems)
+	local view = A.knowledge(state, player)
+	local plan = Strategy.review(view, player, state.world and state.world.seed)
+	if systems and plan.specializationRound ~= plan.lastReviewRound then
+		plan.citySpecializations = CityRoles.choose(view, player, systems)
+		plan.specializationRound = plan.lastReviewRound
+	end
+	local treasury = systems and systems.treasury(player, view)
+	if treasury and treasury.net < 0 and (player.gold or 0) < -treasury.net * 3 then
+		plan.emergency, plan.mood = "avoidBankruptcy", "recovering"
+		plan.priorities = { "avoidBankruptcy", plan.primary }
+	end
+	if systems then
+		local roles = Campaigns.update(view, player, systems)
+		for _, unit in ipairs(state.units) do
+			if unit.owner == player.id and roles[unit.id] then
+				unit.aiRole = roles[unit.id]
+				unit.aiRole.groupID = plan.campaign and plan.campaign.groupID
+			end
+		end
+	end
+	return plan, view
+end
+function A.military(state, player, unit, systems)
+	local failed, acted = {}, false
+	for _ = 1, 8 do
+		if Stacks.partner(state, unit) then
+			-- The settler chooses the destination; its guard follows through shared rules.
+			break
+		end
+		if attachAssignedEscort(state, player, unit, systems) then
+			return true
+		end
+		if (unit.movesLeft or 0) <= 0 then
+			break
+		end
+		local view = A.knowledge(state, player)
+		local present = false
+		for _, known in ipairs(view.units) do
+			if known.id == unit.id then
+				present = true
+			end
+		end
+		if not present then
+			break
+		end
+		local selected, key
+		for _, choice in
+			ipairs(
+				Difficulty.choices(
+					Tactics.ranked(view, player, unit, systems),
+					player,
+					view.round,
+					unit.id
+				)
+			)
+		do
+			local request = choice.request
+			key = request.action .. ":" .. request.x .. ":" .. request.y
+			if not failed[key] and DiplomaticAI.allows(view, player, unit, request) then
+				selected = choice
+				break
+			end
+		end
+		if not selected then
+			break
+		end
+		local ok = Actions.apply(state, player.id, selected.request, systems)
+		if ok then
+			acted = true
+			if selected.request.action ~= "move" then
+				break
+			end
+		else
+			failed[key] = true
+			local count = 0
+			for _ in pairs(failed) do
+				count = count + 1
+			end
+			if count >= 3 then
+				break
+			end
+		end
+	end
+	return acted
+end
+function A.strike(state, player, city, systems)
+	local view = A.knowledge(state, player)
+	local known
+	for _, current in ipairs(view.cities) do
+		if current.id == city.id then
+			known = current
+		end
+	end
+	local request = known and Tactics.cityStrike(view, player, known, systems)
+	return request and Actions.apply(state, player.id, request, systems) or false
+end
+function A.research(player, systems, view)
+	view = view or { observerID = player.id, players = { player }, cities = {}, units = {} }
+	local choices =
+		Difficulty.choices(Research.ranked(view, player, systems), player, view.round, 0)
+	return choices[1] and choices[1].id
+end
+local function cityIn(view, id)
+	for _, city in ipairs(view.cities) do
+		if city.id == id then
+			return city
+		end
+	end
+end
+function A.staff(state, player, city, systems)
+	local view = A.knowledge(state, player)
+	local known = cityIn(view, city.id)
+	for _, request in ipairs(Workers.orders(view, player, known, systems)) do
+		if not Actions.apply(state, player.id, request, systems) then
+			break
+		end
+	end
+end
+function A.materials(state, player, systems)
+	local requests, targets = Materials.orders(A.knowledge(state, player), player, systems)
+	if player.aiPlan then
+		player.aiPlan.materialTargets = targets
+	end
+	for _, request in ipairs(requests) do
+		if not Actions.apply(state, player.id, request, systems) then
+			break
+		end
+	end
+end
+function A.choose(state, player, city, systems)
+	local view = A.knowledge(state, player)
+	local known = cityIn(view, city.id)
+	local canExpand = Settlement.available(view, player, known, systems)
+	local choices, context = Production.ranked(view, player, known, systems, canExpand)
+	choices = Difficulty.choices(choices, player, view.round, city.id)
+	local currentEligible = false
+	for _, choice in ipairs(choices) do
+		if
+			known.project
+			and known.project.kind == choice.kind
+			and known.project.id == choice.id
+		then
+			currentEligible = true
+		end
+	end
+	if currentEligible and context.surplus >= 0 and not context.emergency then
+		return true -- Complete ordinary investments before considering a replacement.
+	end
+	for index = 1, math.min(4, #choices) do
+		local choice = choices[index]
+		if
+			not known.project
+			or known.project.kind ~= choice.kind
+			or known.project.id ~= choice.id
+		then
+			local ok = Actions.apply(state, player.id, {
+				action = "queue",
+				cityX = city.x,
+				cityY = city.y,
+				kind = choice.kind,
+				id = choice.id,
+				tileX = choice.tileX,
+				tileY = choice.tileY,
+			}, systems)
+			if ok then
+				return true
+			end
+			if choice.kind == "wonder" and player.aiPlan then
+				-- A failed order is observable; unseen rival construction is not.
+				player.aiPlan.productionRetryAfter = player.aiPlan.productionRetryAfter or {}
+				player.aiPlan.productionRetryAfter["wonder:" .. choice.id] = (state.round or 1) + 10
+			end
+		else
+			return true
+		end
+	end
+	if not currentEligible and not known.productionIdle then
+		return Actions.apply(
+			state,
+			player.id,
+			{ action = "queue", cityX = city.x, cityY = city.y, kind = "none" },
+			systems
+		)
+	end
+	return false
+end
+function A.settle(state, player, unit, systems)
+	if not Stacks.partner(state, unit) then
+		for _, guard in ipairs(state.units) do
+			if guard.owner == player.id and (guard.aiRole or {}).escortID == unit.id then
+				attachAssignedEscort(state, player, guard, systems)
+			end
+		end
+	end
+	for _ = 1, 16 do
+		if (unit.movesLeft or 0) <= 0 then
+			break
+		end
+		local view = A.knowledge(state, player)
+		local request, target = Settlement.order(view, player, unit, systems)
+		unit.aiSettlement = target
+		if not request then
+			break
+		end
+		if not DiplomaticAI.allows(view, player, unit, request) then
+			break
+		end
+		local ok = Actions.apply(state, player.id, request, systems)
+		if not ok then
+			break
+		end
+		if request.action == "found" then
+			return true
+		end
+	end
+	return false
+end
+function A.engineer(state, player, unit, systems)
+	if unit.standby and player.techs.railways then
+		Actions.apply(
+			state,
+			player.id,
+			{ action = "standby", unitID = unit.id, x = unit.x, y = unit.y, value = false },
+			systems
+		)
+	end
+	local acted = false
+	for _ = 1, 16 do
+		if (unit.movesLeft or 0) <= 0 then
+			return acted
+		end
+		local view = A.knowledge(state, player)
+		local request, plan = Infrastructure.order(view, player, unit, systems)
+		unit.aiRail = plan
+		if not request then
+			break
+		end
+		if not DiplomaticAI.allows(view, player, unit, request) then
+			break
+		end
+		if not Actions.apply(state, player.id, request, systems) then
+			break
+		end
+		acted = true
+		if request.action == "buildRail" then
+			return true
+		end
+	end
+	if not unit.standby then
+		Actions.apply(
+			state,
+			player.id,
+			{ action = "standby", unitID = unit.id, x = unit.x, y = unit.y, value = true },
+			systems
+		)
+	end
+	return acted
 end
 function A.diplomacy(state, p, systems)
-  if (p.gold or 0) > 100 then
-    for _, city in ipairs(state.cities) do
-      if Villages.independent(city) and Villages.discovered(p, city) then
-        Villages.envoy(state, p, city)
-      end
-    end
-  end
-  if p.techs.brassworking then
-    for _, id in ipairs({ "copper", "zinc" }) do
-      if (p.stockpile[id] or 0) < 2 and p.gold > 40 then
-        systems.exchange(state, p, id)
-      end
-    end
-  end
+	local view = A.knowledge(state, p)
+	if state.diplomacy and (p.aiPlan or {}).primary == "conquest" then
+		local army = 0
+		for _, unit in ipairs(view.units) do
+			if unit.owner == p.id and ((systems.units[unit.kind] or {}).strength or 0) > 0 then
+				army = army + 1
+			end
+		end
+		if
+			army >= Difficulty.profile(p).warArmy
+			and (view.round or 1) % Difficulty.profile(p).warInterval == 0
+		then
+			for _, city in ipairs(view.cities) do
+				if
+					city.owner ~= p.id
+					and not city.village
+					and not Diplomacy.war(view, p.id, city.owner)
+					and (p.visible or {})[city.x .. ":" .. city.y]
+				then
+					Actions.apply(
+						state,
+						p.id,
+						{ action = "declareWar", target = city.owner, kind = "normal" },
+						systems
+					)
+					break
+				end
+			end
+		end
+	end
+	if (p.gold or 0) > 100 then
+		for _, city in ipairs(view.cities) do
+			if Villages.independent(city) and Villages.discovered(p, city) then
+				Actions.apply(state, p.id, { action = "envoy", x = city.x, y = city.y }, systems)
+			end
+		end
+	end
+end
+
+function A.withdraw(state, player, systems)
+	if not DiplomaticOffers.withdrawing(state, player.id) then
+		return
+	end
+	for _, unit in ipairs(state.units) do
+		if unit.owner == player.id then
+			for _ = 1, 3 do
+				local order =
+					DiplomaticAI.pullbackOrder(A.knowledge(state, player), player, unit, systems)
+				if not order or not Actions.apply(state, player.id, order, systems) then
+					break
+				end
+			end
+		end
+	end
+end
+
+function A.respond(state, player, systems)
+	if not state.diplomacy then
+		return
+	end
+	local view = A.knowledge(state, player)
+	for _, offer in ipairs(view.diplomacy.offers or {}) do
+		if
+			offer.to == player.id
+			and offer.status == "pending"
+			and offer.expiresRound > state.round
+		then
+			local response, reason =
+				DiplomaticAI.evaluate(A.knowledge(state, player), player, offer, systems)
+			Actions.apply(state, player.id, {
+				action = "diplomaticReply",
+				offerID = offer.id,
+				response = response,
+				reason = reason,
+			}, systems)
+		end
+	end
 end
 return A

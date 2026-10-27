@@ -1,22 +1,22 @@
 -- WORMFRONT v0.2 rules: deterministic maps, time-based turns and ballistics.
 local Sim = dofile("games/wormfront/sim.lua")
 local function map(g)
-  return table.concat(g.terrain, ",")
+	return table.concat(g.terrain, ",")
 end
 for teams = 2, 4 do
-  local g = Sim.new(teams, 1234)
-  assert(g.phase == "playing" and g.teams == teams)
-  assert(#g.worms == teams * 3 and #g.items >= 1)
-  assert(g.turnLeft == Sim.TURN_SECONDS)
-  for x = 1, Sim.W do
-    assert(#g.terrain[x] == Sim.H)
-  end
-  local same = Sim.new(teams, 1234)
-  assert(map(g) == map(same) and g.theme == same.theme)
-  assert(g.items[1].kind == same.items[1].kind and g.items[1].x == same.items[1].x)
-  for team = 1, teams do
-    assert(g.selected[team] and g.worms[g.selected[team]].team == team)
-  end
+	local g = Sim.new(teams, 1234)
+	assert(g.phase == "playing" and g.teams == teams)
+	assert(#g.worms == teams * 3 and #g.items >= 1)
+	assert(g.turnLeft == Sim.TURN_SECONDS)
+	for x = 1, Sim.W do
+		assert(#g.terrain[x] == Sim.H)
+	end
+	local same = Sim.new(teams, 1234)
+	assert(map(g) == map(same) and g.theme == same.theme)
+	assert(g.items[1].kind == same.items[1].kind and g.items[1].x == same.items[1].x)
+	for team = 1, teams do
+		assert(g.selected[team] and g.worms[g.selected[team]].team == team)
+	end
 end
 assert(map(Sim.new(2, 4)) ~= map(Sim.new(2, 5)), "Maps should vary between seeds")
 
@@ -36,7 +36,7 @@ assert(not Sim.apply(g, 1, { kind = "setAim", angle = -99 }))
 -- Movement no longer has a four-step quota; movement is timer-limited.
 local flat = (".."):rep(11) .. ("#"):rep(Sim.H - 22)
 for x = 1, Sim.W do
-  g.terrain[x] = flat
+	g.terrain[x] = flat
 end
 worm.x, worm.y = 10, 22
 worm.hp = 55
@@ -44,7 +44,7 @@ g.items = { { x = 11, y = 22, kind = "MEDKIT" }, { x = 18, y = 22, kind = "AMMO"
 assert(Sim.apply(g, 1, { kind = "move", dir = 1 }))
 assert(worm.hp == 85 and #g.items == 1)
 for _ = 1, 5 do
-  assert(Sim.apply(g, 1, { kind = "move", dir = 1 }))
+	assert(Sim.apply(g, 1, { kind = "move", dir = 1 }))
 end
 assert(worm.x == 16)
 worm.facing = 1
@@ -52,7 +52,7 @@ assert(Sim.apply(g, 1, { kind = "jump" }))
 assert(worm.airborne)
 assert(not Sim.apply(g, 1, { kind = "jump" }))
 for _ = 1, 28 do
-  Sim.tick(g, 0.05)
+	Sim.tick(g, 0.05)
 end
 assert(not worm.airborne, "Jump should land")
 assert(worm.x > 16, "Jump should move the worm")
@@ -71,8 +71,8 @@ assert(g.projectile and g.projectile.vx)
 assert(not Sim.apply(g, 1, { kind = "aim", dir = 1 }))
 local steps = 0
 while g.phase == "playing" and g.turn == 1 and steps < 300 do
-  Sim.tick(g, 0.05)
-  steps = steps + 1
+	Sim.tick(g, 0.05)
+	steps = steps + 1
 end
 assert(g.turn == 2 or g.phase == "finished", "Animated shot must finish")
 assert(steps > 3, "Projectile must animate over more than a frame")
@@ -97,9 +97,9 @@ assert(noAmmo.turn == 1)
 
 local won = Sim.new(2, 23)
 for _, target in ipairs(won.worms) do
-  if target.team == 2 then
-    target.hp = 0
-  end
+	if target.team == 2 then
+		target.hp = 0
+	end
 end
 assert(Sim.apply(won, 1, { kind = "pass" }))
 assert(won.phase == "finished" and won.winner == 1)

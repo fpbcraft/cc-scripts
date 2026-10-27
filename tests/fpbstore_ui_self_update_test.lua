@@ -6,45 +6,45 @@ disk.env.colors = screen.colors
 disk.env.keys = screen.keys
 local target = screen
 disk.env.term = {
-  current = function()
-    return target
-  end,
-  redirect = function(t)
-    target = t
-  end,
+	current = function()
+		return target
+	end,
+	redirect = function(t)
+		target = t
+	end,
 }
 disk.withoutRuntime()
 local calls = 0
 local installedMain = disk.files["/apps/fpbstore/main.lua"]
 disk.env.os = setmetatable({
-  pullEvent = function()
-    calls = calls + 1
-    if calls == 1 then
-      assert(screen.text():find("FPB STORE", 1, true))
-      return "char", "u"
-    end
-    error("Updated Store should have reloaded the new main")
-  end,
+	pullEvent = function()
+		calls = calls + 1
+		if calls == 1 then
+			assert(screen.text():find("FPB STORE", 1, true))
+			return "char", "u"
+		end
+		error("Updated Store should have reloaded the new main")
+	end,
 }, { __index = os })
 -- Update through the real manager/bootstrap/engine. Only the downloaded main
 -- fixture exits immediately so that the test observes the disk reload.
 local get = disk.env.http.get
 local updated = false
 disk.env.http.get = function(url)
-  if url:find("/apps/fpbstore/main.lua?", 1, true) then
-    updated = true
-    local body = "_G.storeReloaded=true;return true"
-    return {
-      getResponseCode = function()
-        return 200
-      end,
-      readAll = function()
-        return body
-      end,
-      close = function() end,
-    }
-  end
-  return get(url)
+	if url:find("/apps/fpbstore/main.lua?", 1, true) then
+		updated = true
+		local body = "_G.storeReloaded=true;return true"
+		return {
+			getResponseCode = function()
+				return 200
+			end,
+			readAll = function()
+				return body
+			end,
+			close = function() end,
+		}
+	end
+	return get(url)
 end
 disk.run("fpbstore")
 assert(updated and disk.files["/apps/fpbstore/main.lua"] ~= installedMain)

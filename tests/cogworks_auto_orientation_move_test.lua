@@ -29,14 +29,14 @@ assert(E.get(belts, 5, 4).r == 1, "Pulley matches an existing belt across empty 
 -- A Move operation is a two-tap action. It preserves rotation, refuses
 -- occupied destinations and can be cancelled by pressing Move again.
 local app = setmetatable({
-  scene = "game",
-  game = g,
-  result = E.evaluate(g),
-  selected = "G",
-  message = "",
-  settings = { animations = false, showPorts = false },
-  progress = { best = {}, awards = {}, unlocked = 1 },
-  slots = {},
+	scene = "game",
+	game = g,
+	result = E.evaluate(g),
+	selected = "G",
+	message = "",
+	settings = { animations = false, showPorts = false },
+	progress = { best = {}, awards = {}, unlocked = 1 },
+	slots = {},
 }, A)
 local previousRotation = E.get(g, 2, 3).r
 local originalMoves = g.moves
@@ -58,7 +58,7 @@ assert(not app.moving, "Fixed starter shaft cannot be moved")
 -- The compact and wide renderer must both expose the new on-part target.
 local monitor = { pw = 720, ph = 540 }
 function monitor.getSize(mode)
-  return mode == 2 and monitor.pw or 120, mode == 2 and monitor.ph or 60
+	return mode == 2 and monitor.pw or 120, mode == 2 and monitor.ph or 60
 end
 function monitor.setGraphicsMode() end
 function monitor.setPaletteColor() end
@@ -67,23 +67,23 @@ local renderer = R.new(monitor)
 app.scene = "game"
 app.inspected = { x = 4, y = 5 }
 local model = {
-  scene = "game",
-  game = app.game,
-  result = app.result,
-  selected = "I",
-  inspected = app.inspected,
-  moving = nil,
-  message = "",
-  settings = app.settings,
-  progress = app.progress,
-  slots = {},
+	scene = "game",
+	game = app.game,
+	result = app.result,
+	selected = "I",
+	inspected = app.inspected,
+	moving = nil,
+	message = "",
+	settings = app.settings,
+	progress = app.progress,
+	slots = {},
 }
 renderer:draw(model)
 local found = false
 for _, hit in ipairs(renderer.targets) do
-  if hit.action == "moveStart" and hit.arg == 4 and hit.arg2 == 5 then
-    found = true
-  end
+	if hit.action == "moveStart" and hit.arg == 4 and hit.arg2 == 5 then
+		found = true
+	end
 end
 assert(found, "Wide board exposes a Move button alongside Rotate and Delete")
 renderer:close()

@@ -2,34 +2,34 @@
 local oldPeripheral, oldEmulation = peripheral, periphemu
 local created, connect, scale, calls = nil, false, nil, 0
 local monitor = {
-  getSize = function()
-    return 51, 19
-  end,
-  setTextScale = function(value)
-    scale = value
-  end,
+	getSize = function()
+		return 51, 19
+	end,
+	setTextScale = function(value)
+		scale = value
+	end,
 }
 peripheral = {
-  getNames = function()
-    return connect and { "fpbstore_monitor" } or {}
-  end,
-  getType = function()
-    return "monitor"
-  end,
-  wrap = function()
-    return monitor
-  end,
-  isPresent = function()
-    return connect
-  end,
+	getNames = function()
+		return connect and { "fpbstore_monitor" } or {}
+	end,
+	getType = function()
+		return "monitor"
+	end,
+	wrap = function()
+		return monitor
+	end,
+	isPresent = function()
+		return connect
+	end,
 }
 periphemu = {
-  create = function(side, kind)
-    assert(kind == "monitor", "Can only request a monitor")
-    created, connect = side, true
-    calls = calls + 1
-    return true
-  end,
+	create = function(side, kind)
+		assert(kind == "monitor", "Can only request a monitor")
+		created, connect = side, true
+		calls = calls + 1
+		return true
+	end,
 }
 local M = dofile("apps/fpbstore/monitor.lua")
 local entry, new = M.ensure()

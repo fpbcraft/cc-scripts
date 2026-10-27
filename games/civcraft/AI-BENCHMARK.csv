@@ -1,0 +1,61 @@
+seed,civilization,opponent,level,seat,round,score,opponentScore,cities,techs,orders,rejections,unavailableWonders,observationDenials,won,tied,victoryReason,worstActor
+75123,forge,forge,settler,1,100,380,377,3,16,1291,3,3,,True,False,SCORE,65
+75123,forge,forge,settler,2,100,368,385,3,16,1278,3,3,,False,False,SCORE,47
+75123,forge,forge,chieftain,1,100,408,360,3,17,1387,3,3,,True,False,SCORE,78
+75123,forge,forge,chieftain,2,100,383,383,3,16,1341,3,3,,True,True,SCORE / SCORE,71
+75123,forge,forge,prince,1,100,385,360,3,16,1272,2,2,,True,False,SCORE,43
+75123,forge,forge,prince,2,100,360,385,3,15,1272,2,2,,False,False,SCORE,60
+75123,forge,forge,king,1,100,385,360,3,16,1272,2,2,,True,False,SCORE,47
+75123,forge,forge,king,2,100,360,385,3,15,1272,2,2,,False,False,SCORE,49
+75123,forge,forge,deity,1,100,379,360,3,16,1270,2,2,,True,False,SCORE,43
+75123,forge,forge,deity,2,100,358,385,3,15,1266,2,2,,False,False,SCORE,43
+95117,scholar,iron,settler,1,100,590,235,3,36,1390,3,3,,True,False,SCORE,53
+95117,scholar,iron,settler,2,99,576,248,3,36,1342,3,3,,True,False,END EXPEDITION,64
+95117,scholar,iron,chieftain,1,99,613,235,3,36,1422,3,3,,True,False,END EXPEDITION,66
+95117,scholar,iron,chieftain,2,93,577,228,3,35,1279,2,2,,True,False,END EXPEDITION,68
+95117,scholar,iron,prince,1,100,584,235,3,35,1382,3,3,,True,False,END EXPEDITION,52
+95117,scholar,iron,prince,2,98,557,238,3,35,1331,3,3,,True,False,END EXPEDITION,53
+95117,scholar,iron,king,1,100,584,235,3,35,1382,3,3,,True,False,END EXPEDITION,55
+95117,scholar,iron,king,2,98,568,238,3,35,1317,3,3,,True,False,END EXPEDITION,70
+95117,scholar,iron,deity,1,100,589,235,3,35,1385,3,3,,True,False,END EXPEDITION,66
+95117,scholar,iron,deity,2,98,568,238,3,35,1317,3,3,,True,False,END EXPEDITION,57
+18731,iron,scholar,settler,1,99,216,564,3,9,1362,1,1,,False,False,END EXPEDITION,56
+18731,iron,scholar,settler,2,95,213,594,3,7,1309,1,1,,False,False,END EXPEDITION,47
+18731,iron,scholar,chieftain,1,99,241,564,3,10,1404,3,3,,False,False,END EXPEDITION,50
+18731,iron,scholar,chieftain,2,95,205,594,3,7,1349,0,,,False,False,END EXPEDITION,69
+18731,iron,scholar,prince,1,99,224,564,3,9,1398,3,3,,False,False,END EXPEDITION,49
+18731,iron,scholar,prince,2,95,219,594,3,7,1317,1,1,,False,False,END EXPEDITION,55
+18731,iron,scholar,king,1,99,199,564,3,8,1351,1,1,,False,False,END EXPEDITION,50
+18731,iron,scholar,king,2,95,219,594,3,7,1323,1,1,,False,False,END EXPEDITION,57
+18731,iron,scholar,deity,1,99,201,564,3,8,1350,1,1,,False,False,END EXPEDITION,49
+18731,iron,scholar,deity,2,95,219,594,3,7,1320,1,1,,False,False,END EXPEDITION,58
+47771,merchant,sentinel,settler,1,100,453,409,3,20,1303,3,3,,True,False,SCORE,100
+47771,merchant,sentinel,settler,2,100,431,424,3,19,1319,4,4,,True,False,SCORE,104
+47771,merchant,sentinel,chieftain,1,100,453,409,3,20,1387,3,3,,True,False,SCORE,106
+47771,merchant,sentinel,chieftain,2,100,357,424,3,15,1334,2,2,,False,False,SCORE,125
+47771,merchant,sentinel,prince,1,100,447,409,3,19,1315,3,3,,True,False,SCORE,88
+47771,merchant,sentinel,prince,2,100,415,424,3,18,1310,4,4,,False,False,SCORE,70
+47771,merchant,sentinel,king,1,100,430,409,3,18,1314,3,3,,True,False,SCORE,79
+47771,merchant,sentinel,king,2,100,415,424,3,18,1310,4,4,,False,False,SCORE,84
+47771,merchant,sentinel,deity,1,100,430,409,3,18,1314,3,3,,True,False,SCORE,87
+47771,merchant,sentinel,deity,2,100,417,424,3,18,1343,4,4,,False,False,SCORE,77
+99119,nomad,mariner,settler,1,100,520,552,4,19,1605,3,3,,False,False,SCORE,129
+99119,nomad,mariner,settler,2,100,564,523,4,21,1641,3,3,,True,False,SCORE,100
+99119,nomad,mariner,chieftain,1,100,619,562,4,25,1669,4,3,1,True,False,SCORE,194
+99119,nomad,mariner,chieftain,2,100,554,516,4,20,1660,3,3,,True,False,SCORE,108
+99119,nomad,mariner,prince,1,100,547,552,4,20,1588,3,3,,False,False,SCORE,94
+99119,nomad,mariner,prince,2,100,552,523,4,21,1643,3,3,,True,False,SCORE,98
+99119,nomad,mariner,king,1,100,547,552,4,20,1588,3,3,,False,False,SCORE,96
+99119,nomad,mariner,king,2,100,552,523,4,21,1643,3,3,,True,False,SCORE,105
+99119,nomad,mariner,deity,1,100,547,552,4,20,1588,3,3,,False,False,SCORE,93
+99119,nomad,mariner,deity,2,100,552,523,4,21,1643,3,3,,True,False,SCORE,119
+61283,wild,highland,settler,1,100,545,362,4,20,1416,3,3,,True,False,SCORE,93
+61283,wild,highland,settler,2,100,514,387,4,19,1391,2,2,,True,False,SCORE,133
+61283,wild,highland,chieftain,1,100,564,362,4,22,1438,3,3,,True,False,SCORE,108
+61283,wild,highland,chieftain,2,100,487,387,4,18,1391,1,1,,True,False,SCORE,123
+61283,wild,highland,prince,1,100,545,362,4,20,1415,3,3,,True,False,SCORE,128
+61283,wild,highland,prince,2,100,543,370,4,20,1430,3,3,,True,False,SCORE,86
+61283,wild,highland,king,1,100,558,362,4,21,1414,3,3,,True,False,SCORE,102
+61283,wild,highland,king,2,100,539,370,4,20,1425,3,3,,True,False,SCORE,103
+61283,wild,highland,deity,1,100,558,362,4,21,1414,3,3,,True,False,SCORE,93
+61283,wild,highland,deity,2,100,537,370,4,20,1431,3,3,,True,False,SCORE,86

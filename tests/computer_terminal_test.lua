@@ -4,27 +4,30 @@ local V = script()
 colors = { white = 1, black = 32768, gray = 128 }
 local device = { w = 51, h = 19, calls = 0, output = {} }
 function device.getSize()
-  return device.w, device.h
+	return device.w, device.h
 end
 function device.isColor()
-  return true
+	return true
 end
 function device.setTextColor(c)
-  device.fg = c
+	device.fg = c
 end
 function device.setBackgroundColor(c)
-  device.bg = c
+	device.bg = c
 end
 function device.setCursorPos(x, y)
-  assert(x >= 1 and y >= 1 and x <= device.w and y <= device.h, "Attempt to draw outside physical terminal")
-  device.x, device.y = x, y
+	assert(
+		x >= 1 and y >= 1 and x <= device.w and y <= device.h,
+		"Attempt to draw outside physical terminal"
+	)
+	device.x, device.y = x, y
 end
 function device.setCursorBlink() end
 function device.write(s)
-  assert(device.x + #s - 1 <= device.w, "Physical write overflows row")
-  device.calls = device.calls + 1
-  device.output[device.y] = device.output[device.y] or {}
-  device.output[device.y][device.x] = s
+	assert(device.x + #s - 1 <= device.w, "Physical write overflows row")
+	device.calls = device.calls + 1
+	device.output[device.y] = device.output[device.y] or {}
+	device.output[device.y][device.x] = s
 end
 function device.clear() end
 local v = V.new(device, 80, 54)

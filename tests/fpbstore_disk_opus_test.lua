@@ -5,16 +5,16 @@ disk.seed("/disk/.ready", "mounted")
 disk.seed("/sys/apps/Overview.lua", "-- mock Opus")
 local connected = true
 disk.env.peripheral = {
-  getNames = function()
-    return connected and { "drive_0" } or {}
-  end,
-  getType = function(side)
-    return side == "drive_0" and "drive" or nil
-  end,
-  call = function(_, method)
-    assert(method == "getMountPath")
-    return "disk"
-  end,
+	getNames = function()
+		return connected and { "drive_0" } or {}
+	end,
+	getType = function(side)
+		return side == "drive_0" and "drive" or nil
+	end,
+	call = function(_, method)
+		assert(method == "getMountPath")
+		return "disk"
+	end,
 }
 disk.install("fpbstore", "main", "--no-startup")
 disk.withoutRuntime()
@@ -22,8 +22,14 @@ local manager = disk.run("fpbstore", "--test-api")
 local cog = assert(manager.get("cogworks"))
 
 local disks = manager.disks(cog)
-assert(#disks == 2 and disks[2].root == "/disk/games/cogworks", "Mounted disk destination is offered")
-assert(not pcall(manager.install, cog, nil, "/somewhere/else"), "Unknown install destination is rejected")
+assert(
+	#disks == 2 and disks[2].root == "/disk/games/cogworks",
+	"Mounted disk destination is offered"
+)
+assert(
+	not pcall(manager.install, cog, nil, "/somewhere/else"),
+	"Unknown install destination is rejected"
+)
 assert(manager.install(cog, nil, disks[2].root), "Installation to the disk succeeds")
 assert(manager.installed(cog), "Installed entry found at the disk root")
 assert(manager.installRoot(cog) == "/disk/games/cogworks")
@@ -55,5 +61,8 @@ assert(not disk.files["/usr/.registry/fpbstore-cogworks"], "Opus entry removed o
 
 connected = false
 assert(#manager.disks(cog) == 1, "Detached drive is no longer an install choice")
-assert(not pcall(manager.install, cog, nil, "/disk/games/cogworks"), "Unavailable mount is rejected")
+assert(
+	not pcall(manager.install, cog, nil, "/disk/games/cogworks"),
+	"Unavailable mount is rejected"
+)
 print("Store external disk and Opus integration: targets, shortcuts and data safety passed")
