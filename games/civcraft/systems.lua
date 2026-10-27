@@ -11,6 +11,7 @@ local Actions = dofile("/games/civcraft/actions.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
 local Content = dofile("/games/civcraft/content.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local Capacity = dofile("/games/civcraft/settlement_capacity.lua")
 local Projects = dofile("/games/civcraft/civilian_projects.lua")
 local Economy = dofile("/games/civcraft/economy.lua")
 local Events = dofile("/games/civcraft/events.lua")
@@ -383,6 +384,9 @@ function M.canBuild(p, c, id, state)
 		return false
 	end
 	local b = M.buildings[id]
+	if b and not ContentRules.available(b, state or p) then
+		return false
+	end
 	if
 		not b
 		or b.tech and not p.techs[b.tech] and not (id == "farm" and ContentRules.usesP1Economy(p))
@@ -401,6 +405,13 @@ end
 function M.canRecruit(p, id, state, hex, city)
 	local u = M.units[id]
 	if not u or u.hostile or (u.tech and not p.techs[u.tech]) then
+		return false
+	end
+	if
+		id == "settler"
+		and ContentRules.hasDevelopment(state or p)
+		and (not city or (city.population or 2) < 2)
+	then
 		return false
 	end
 	if u.unique and p.civ ~= u.unique then
@@ -449,6 +460,14 @@ function M.queue(p, c, kind, id, state, hex, x, y)
 		end
 	elseif kind == "unit" then
 		if not M.canRecruit(p, id, state, hex, c) then
+			if
+				id == "settler"
+				and ContentRules.hasDevelopment(state or p)
+				and (c.population or 2) < 2
+			then
+				return false,
+					"Settlers require at least two population; completion consumes one citizen"
+			end
 			return false, "Unit locked or missing strategic resource"
 		end
 	elseif kind == "project" then
@@ -619,6 +638,9 @@ local function spawn(state, p, c, id, hex)
 	if not stats then
 		return false
 	end
+	if id == "settler" and ContentRules.hasDevelopment(state) and (c.population or 2) < 2 then
+		return false
+	end
 	local function available(x, y)
 		for _, u in ipairs(state.units) do
 			if u.x == x and u.y == y then
@@ -653,6 +675,22 @@ local function spawn(state, p, c, id, hex)
 	state.nextId = state.nextId + 1
 	if id == "settler" then
 		p.settlersTrained = (p.settlersTrained or 0) + 1
+		if ContentRules.hasDevelopment(state) then
+			c.population = c.population - 1
+			c.growthAge = 0
+			if state.world then
+				M.ensureWorkers(state, c)
+			else
+				local excess = (c.jobs.food or 0)
+					+ (c.jobs.wood or 0)
+					+ (c.jobs.science or 0)
+					- c.population
+				for _, job in ipairs({ "science", "wood", "food" }) do
+					local remove = math.min(math.max(0, excess), c.jobs[job] or 0)
+					c.jobs[job], excess = (c.jobs[job] or 0) - remove, excess - remove
+				end
+			end
+		end
 	end
 	return true
 end
@@ -664,6 +702,9 @@ function M.projectPreview(p, c, id, state, yield)
 	yield = yield or M.yields(p, c, state, Hex, nil, true)
 	return Projects.preview(p, c, yield.industry, M, id)
 end
+function M.settlementCapacity(state, city)
+	return Capacity.details(state, city, M.buildings)
+end
 function M.growth(p, c, state)
 	local yield = M.yields(p, c, state, Hex)
 	local surplus = yield.food - 2 * (c.population or 2) + M.projectOutput(p, c, state, yield).food
@@ -673,13 +714,21 @@ function M.growth(p, c, state)
 		threshold = threshold,
 		minimumTurns = CampaignRules.cost(4, p),
 		stored = c.foodStore or 0,
+		foodGain = surplus,
 	}
+	if ContentRules.hasDevelopment(state or p) then
+		result.capacitySources = M.settlementCapacity(state, c)
+		result.capacity = result.capacitySources.total
+		result.growthFactor = Capacity.factor(c.population or 2, result.capacity)
+		result.foodGain = surplus > 0 and surplus * result.growthFactor or surplus
+		result.minimumTurns = math.ceil(result.minimumTurns / result.growthFactor)
+	end
 	if surplus > 0 then
 		result.status = "GROWING"
 		result.turns = math.max(
 			1,
 			result.minimumTurns - (c.growthAge or 0),
-			math.ceil((threshold - result.stored) / surplus)
+			math.ceil((threshold - result.stored) / result.foodGain)
 		)
 	elseif surplus == 0 then
 		result.status = "STAGNANT"
@@ -826,7 +875,7 @@ function M.production(state, hex)
 				local growth = M.growth(p, c, state)
 				Projects.commit(c, output)
 				c.growthAge = (c.growthAge or 0) + 1
-				c.foodStore = math.max(0, (c.foodStore or 0) + growth.surplus)
+				c.foodStore = math.max(0, (c.foodStore or 0) + growth.foodGain)
 				if growth.surplus < 0 then
 					c.hungryTurns = (c.hungryTurns or 0) + 1
 					if c.foodStore <= 0 and c.hungryTurns >= 3 and c.population > 1 then

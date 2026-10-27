@@ -1,16 +1,27 @@
 -- Campaign-scoped economies. Missing version means the original saved economy.
-local Rules = { baseline = "baseline", current = "p1", redesign = "balance1" }
+local Rules =
+	{ baseline = "baseline", current = "p1", redesign = "balance1", development = "balance2" }
 function Rules.isP1(context)
 	return context and context.contentRules == Rules.current
 end
 function Rules.isRedesign(context)
-	return context and context.contentRules == Rules.redesign
+	return context
+		and (context.contentRules == Rules.redesign or context.contentRules == Rules.development)
+end
+function Rules.hasDevelopment(context)
+	return context and context.contentRules == Rules.development
+end
+function Rules.available(record, context)
+	return not record.development or Rules.hasDevelopment(context)
 end
 function Rules.usesP1Economy(context)
 	return Rules.isP1(context) or Rules.isRedesign(context)
 end
 function Rules.label(context)
-	return Rules.isRedesign(context) and "REDESIGN V1" or Rules.isP1(context) and "P1" or "ORIGINAL"
+	return Rules.hasDevelopment(context) and "DEVELOPMENT V2"
+		or Rules.isRedesign(context) and "REDESIGN V1"
+		or Rules.isP1(context) and "P1"
+		or "ORIGINAL"
 end
 function Rules.ability(record, context)
 	if Rules.isRedesign(context) and record.healer then
@@ -20,7 +31,11 @@ function Rules.ability(record, context)
 end
 function Rules.validate(id)
 	assert(
-		id == nil or id == Rules.baseline or id == Rules.current or id == Rules.redesign,
+		id == nil
+			or id == Rules.baseline
+			or id == Rules.current
+			or id == Rules.redesign
+			or id == Rules.development,
 		"Unsupported content economy"
 	)
 end
@@ -35,7 +50,8 @@ function Rules.unitCost(id, record, player)
 			base = 20
 		end
 		if id == "settler" then
-			base, step = 40, 12
+			base, step =
+				Rules.hasDevelopment(player) and 28 or 40, Rules.hasDevelopment(player) and 8 or 12
 		end
 	end
 	return base, step

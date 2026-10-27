@@ -131,6 +131,14 @@ function Production.ranked(view, player, city, systems, canExpand)
 	for id, building in pairs(systems.buildings) do
 		if systems.canBuild(player, city, id, view) then
 			local value = Values.effects(building.effects, context) * 12 + (dependencies[id] or 0)
+			if
+				(building.capacity or 0) > 0
+				and context.growthFactor
+				and context.growthFactor < 1
+				and context.surplus > 0
+			then
+				value = value + building.capacity * 60 * (1 - context.growthFactor)
+			end
 			if id == "councilhall" then
 				local exists = false
 				for _, owned in ipairs(view.cities) do

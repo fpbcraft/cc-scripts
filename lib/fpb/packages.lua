@@ -217,6 +217,7 @@ P.packages.civcraft = {
 		"actor_lifecycle.lua",
 		"content_rules.lua",
 		"civilian_projects.lua",
+		"settlement_capacity.lua",
 		"campaign_options.lua",
 		"civilization_picker.lua",
 		"faction_view.lua",
