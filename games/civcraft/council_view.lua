@@ -1,3 +1,4 @@
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Council = dofile("/games/civcraft/council.lua")
 local Rules = dofile("/games/civcraft/council_rules.lua")
 local Contacts = dofile("/games/civcraft/contacts.lua")
@@ -183,9 +184,11 @@ function View.draw(ui, state, player, rect)
 		button("RECENT RESULTS", function()
 			mode("RESULTS")
 		end)
-		button("COUNCIL HALL CODEX", function()
-			ui:openCodex("buildings", "councilhall")
-		end)
+		if not ContentRules.isRedesign(state) then
+			button("COUNCIL HALL CODEX", function()
+				ui:openCodex("buildings", "councilhall")
+			end)
+		end
 		if not public.foundedRound then
 			text(
 				"The Council forms once two civilizations have cities and one has researched Currency."
@@ -206,10 +209,14 @@ function View.draw(ui, state, player, rect)
 			"Each civilization receives two delegates. An independent village allied at 60 influence for three rounds grants one bonus delegate, capped at one."
 		)
 		text(
-			"Leadership requires a strict majority. Diplomatic victory requires two-thirds of ALL delegates, another living civilization's support, Stock Logistics and a Council Hall."
+			ContentRules.isRedesign(state)
+					and "Leadership requires a strict majority. Council resolutions affect trade, embargoes and peace; elections do not award victory."
+				or "Leadership requires a strict majority. Diplomatic victory requires two-thirds of ALL delegates, another living civilization's support, Stock Logistics and a Council Hall."
 		)
 		text(
-			public.victoryEnabled and "DIPLOMATIC VICTORY ENABLED" or "DIPLOMATIC VICTORY DISABLED"
+			ContentRules.isRedesign(state) and "COUNCIL: DIPLOMACY ONLY"
+				or public.victoryEnabled and "DIPLOMATIC VICTORY ENABLED"
+				or "DIPLOMATIC VICTORY DISABLED"
 		)
 		for _, effect in ipairs(public.effects or {}) do
 			text(title(state, player.id, effect) .. " / UNTIL ROUND " .. effect.endsRound)

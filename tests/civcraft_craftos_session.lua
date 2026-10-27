@@ -321,8 +321,13 @@ dofile = function(path)
 				return
 			end
 			if includeCampaign and stage == 1 and state.phase == "lobby" and campaignStep < 5 then
-				local labels =
-					{ "CAMPAIGN OPTIONS", "LENGTH STANDARD", "LENGTH EPIC", "SCORE ON", "CLOSE" }
+				local labels = {
+					"CAMPAIGN OPTIONS",
+					"LENGTH STANDARD",
+					"LENGTH EPIC",
+					state.contentRules == "balance1" and "SCORE DEADLINE" or "SCORE ON",
+					"CLOSE",
+				}
 				if tap(self, labels[campaignStep + 1]) then
 					campaignStep = campaignStep + 1
 				else
@@ -681,7 +686,13 @@ if includeWar then
 end
 if includeCampaign then
 	assert(
-		state.gameSpeed == "quick" and state.roundLimit == 120 and state.victories.score == false,
+		state.gameSpeed == "quick"
+			and state.roundLimit == (state.contentRules == "balance1" and 167 or 120)
+			and (
+				state.contentRules == "balance1"
+					and dofile("/games/civcraft/campaign_rules.lua").enabled(state, "score")
+				or state.victories.score == false
+			),
 		"Native lobby options must survive round processing and save reload"
 	)
 	assert(state.players[1].gameSpeed == "quick", "The campaign pace must reach gameplay costs")

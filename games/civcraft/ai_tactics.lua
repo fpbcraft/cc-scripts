@@ -51,6 +51,7 @@ local function support(view, player, unit, x, y, systems)
 		if
 			other.id ~= unit.id
 			and other.owner == player.id
+			and (view.contentRules ~= "balance1" or not other.actedThisRound)
 			and Hex.distance(x, y, other.x, other.y) <= 1
 		then
 			value = value + math.min(10, 100 - (other.hp or 100)) * 2
@@ -146,6 +147,12 @@ function Tactics.ranked(view, player, unit, systems)
 	local owned = World.territory(view, Hex)
 	local held = Threats.at(map, unit.x, unit.y, unit)
 	local resting = owned[World.key(unit.x, unit.y)] == player.id
+	local recovery = view.contentRules == "balance1"
+			and Combat.restRecovery(view, unit, systems).total
+		or nil
+	if recovery then
+		resting = recovery > 0
+	end
 	local result = {
 		{
 			request = {
@@ -156,6 +163,7 @@ function Tactics.ranked(view, player, unit, systems)
 				value = true,
 			},
 			score = (resting and (100 - (unit.hp or 100)) * 0.5 or 0)
+					* (recovery and recovery / 20 or 1)
 				+ support(view, player, unit, unit.x, unit.y, systems)
 				- held.damage,
 		},
