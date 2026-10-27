@@ -1,3 +1,4 @@
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Details = {}
 local purposes = {
 	agriculture = "Secure a food surplus so cities can grow and staff more worked tiles.",
@@ -69,7 +70,11 @@ function Details.paragraphs(systems, id, player)
 	local tech = systems.techs[id]
 	local paragraphs =
 		{ purposes[id] or "Expand the technologies and projects available to your civilization." }
-	if id == "agriculture" and player and player.contentRules == "p1" then
+	if id == "economics" and ContentRules.isRedesign(player) then
+		paragraphs[1] =
+			"Develop Industrial Complexes to support productive cities and your remaining victory races."
+	end
+	if id == "agriculture" and player and ContentRules.usesP1Economy(player) then
 		paragraphs[#paragraphs + 1] =
 			"IMPROVES: Wheat Farms from +1 to +2 food. Farms are already available."
 	else
@@ -77,11 +82,19 @@ function Details.paragraphs(systems, id, player)
 	end
 	for _, entry in ipairs(Details.unlocks(systems, id)) do
 		local record = entry.record
-		local benefit = record.description or record.ability or ""
-		if entry.category == "units" then
-			benefit = benefit .. " Movement " .. record.move .. "; range " .. record.range .. "."
+		if not (ContentRules.isRedesign(player) and entry.id == "councilhall") then
+			local benefit = record.description or record.ability or ""
+			if entry.category == "units" then
+				benefit = record.description or ContentRules.ability(record, player) or ""
+				benefit = benefit
+					.. " Movement "
+					.. record.move
+					.. "; range "
+					.. record.range
+					.. "."
+			end
+			paragraphs[#paragraphs + 1] = record.name .. ": " .. benefit
 		end
-		paragraphs[#paragraphs + 1] = record.name .. ": " .. benefit
 	end
 	return paragraphs
 end

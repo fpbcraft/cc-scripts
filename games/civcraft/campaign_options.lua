@@ -1,6 +1,7 @@
 local Panels = dofile("/games/civcraft/panels.lua")
 local Rules = dofile("/games/civcraft/campaign_rules.lua")
 local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Options = {}
 local names = {
 	diplomatic = "DIPLOMATIC",
@@ -33,7 +34,7 @@ function Options.draw(ui, state)
 		{
 			buttons = {
 				{
-					label = state.contentRules == "p1" and "ECONOMY P1" or "ECONOMY ORIGINAL",
+					label = "ECONOMY " .. ContentRules.label(state),
 					run = function()
 						ui:command("contentRules")
 					end,
@@ -78,13 +79,16 @@ function Options.draw(ui, state)
 			end
 		end
 	end
-	for _, victory in ipairs(Rules.victories) do
+	for _, victory in ipairs(Rules.availableVictories(state)) do
 		rows[#rows + 1] = {
 			buttons = {
 				{
-					label = names[victory]
-						.. " "
-						.. (Rules.enabled(state, victory) and "ON" or "OFF"),
+					label = ContentRules.isRedesign(state)
+							and victory == "score"
+							and "SCORE DEADLINE"
+						or names[victory]
+							.. " "
+							.. (Rules.enabled(state, victory) and "ON" or "OFF"),
 					run = function()
 						ui:command("toggleVictory", { victory = victory })
 					end,
@@ -92,11 +96,18 @@ function Options.draw(ui, state)
 			},
 		}
 	end
+	if ContentRules.isRedesign(state) then
+		rows[#rows + 1] = {
+			text = "Conquest and End Expedition are the active races. Score always resolves the deadline.",
+		}
+	end
 	for _, line in
 		ipairs(
 			Panels.wrap(
 				r,
-				"At the round limit, Score chooses the highest-scoring civilization. If Score is disabled and no enabled victory has been won, the game ends in a draw. Keep at least one victory enabled.",
+				ContentRules.isRedesign(state)
+						and "At the deadline, Score chooses the highest-scoring civilization. Equal scores share victory. Score is always enabled in Redesign V1."
+					or "At the round limit, Score chooses the highest-scoring civilization. If Score is disabled and no enabled victory has been won, the game ends in a draw. Keep at least one victory enabled.",
 				r.w - 20
 			)
 		)

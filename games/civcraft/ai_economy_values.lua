@@ -1,4 +1,5 @@
 local Hex = dofile("/games/civcraft/hex.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Values = {}
 
 function Values.context(view, player, city, systems)
@@ -11,7 +12,7 @@ function Values.context(view, player, city, systems)
 		yields = yields,
 		treasury = treasury,
 		surplus = surplus,
-		goal = plan.primary or "industrial",
+		goal = plan.primary or (ContentRules.isRedesign(view) and "expedition" or "industrial"),
 		specialization = specialization,
 		emergency = plan.emergency,
 		food = surplus < 0 and 9 or surplus < 2 and 3.5 or 0.6,
