@@ -19,6 +19,7 @@ colors = colors
 		brown = 4096,
 	}
 local UI = dofile("/games/civcraft/ui.lua")
+dofile("tests/helpers/civcraft_layout_only.lua")(UI)
 local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
 local World = dofile("/games/civcraft/world.lua")
 for _, graphics in ipairs({ false, true }) do
