@@ -3,7 +3,7 @@
 **Status:** this began as the 2026-10-26 testing plan. The harness, bounded
 evolution/archive studies, several baseline matrices and auxiliary-model
 experiments have since run; use the [current requirements matrix](REQUIREMENTS_MATRIX.md)
-for their actual scope and limits. The CI lab suite now discovers 32 tests,
+for their actual scope and limits. The CI lab suite now discovers 34 tests,
 including observer proposals, siege composition, P1 and runtime adapters;
 six optional LuaJIT cases skip when that extension is absent. Historical counts and
 remaining tasks below describe the initial extraction unless updated by a

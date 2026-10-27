@@ -1,0 +1,1889 @@
+{
+  "counts": {
+    "evaluationGames": 48,
+    "evaluationMapBlocks": 4,
+    "trainingGames": 80,
+    "trainingMapBlocks": 4
+  },
+  "evaluation": {
+    "baseline:default": {
+      "checkpoints": {
+        "10": {
+          "cities": 2.375,
+          "exploredTiles": 62,
+          "industry": 12.625,
+          "observerCandidateSites": 15.25,
+          "population": 4.875,
+          "samples": 16,
+          "science": 2.5,
+          "units": 4
+        },
+        "20": {
+          "cities": 3,
+          "exploredTiles": 66.125,
+          "industry": 22.875,
+          "observerCandidateSites": 13.25,
+          "population": 7.875,
+          "samples": 16,
+          "science": 3.75,
+          "units": 5
+        },
+        "30": {
+          "cities": 3,
+          "exploredTiles": 66.125,
+          "industry": 32.375,
+          "observerCandidateSites": 13.25,
+          "population": 9.625,
+          "samples": 16,
+          "science": 3.75,
+          "units": 5
+        },
+        "60": {
+          "cities": 3,
+          "exploredTiles": 66.125,
+          "industry": 48,
+          "observerCandidateSites": 13.25,
+          "population": 16.125,
+          "samples": 16,
+          "science": 13.125,
+          "units": 5
+        }
+      },
+      "games": 16,
+      "meanWinCredit": 0.625,
+      "milestones": {
+        "firstContact": {
+          "medianRound": null,
+          "players": 16,
+          "reached": 0
+        },
+        "firstFarm": {
+          "medianRound": 35.0,
+          "players": 16,
+          "reached": 16
+        },
+        "firstScout": {
+          "medianRound": 5.0,
+          "players": 16,
+          "reached": 16
+        },
+        "firstTechnology": {
+          "medianRound": 14.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondAge": {
+          "medianRound": 24.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondCity": {
+          "medianRound": 4.0,
+          "players": 16,
+          "reached": 16
+        },
+        "thirdAge": {
+          "medianRound": 54.5,
+          "players": 16,
+          "reached": 16
+        }
+      },
+      "statuses": {
+        "finished": 16
+      },
+      "victoryReasons": {
+        "END EXPEDITION": 13,
+        "END EXPEDITION / END EXPEDITION": 1,
+        "END EXPEDITION / INDUSTRIAL": 1,
+        "INDUSTRIAL": 1
+      },
+      "winCredit": 10.0
+    },
+    "p1:default": {
+      "checkpoints": {
+        "10": {
+          "cities": 1.875,
+          "exploredTiles": 45.25,
+          "industry": 9.875,
+          "observerCandidateSites": 9.375,
+          "population": 3.875,
+          "samples": 16,
+          "science": 3.875,
+          "units": 1.125
+        },
+        "20": {
+          "cities": 2.125,
+          "exploredTiles": 62.375,
+          "industry": 16.25,
+          "observerCandidateSites": 15.5,
+          "population": 5.625,
+          "samples": 16,
+          "science": 4.375,
+          "units": 3.75
+        },
+        "30": {
+          "cities": 3,
+          "exploredTiles": 68.125,
+          "industry": 29.875,
+          "observerCandidateSites": 13.75,
+          "population": 9.5,
+          "samples": 16,
+          "science": 6.625,
+          "units": 4.5
+        },
+        "60": {
+          "cities": 3,
+          "exploredTiles": 69.25,
+          "industry": 44.75,
+          "observerCandidateSites": 14.125,
+          "population": 16.375,
+          "samples": 16,
+          "science": 32.25,
+          "units": 5
+        }
+      },
+      "games": 16,
+      "meanWinCredit": 0.3125,
+      "milestones": {
+        "firstContact": {
+          "medianRound": null,
+          "players": 16,
+          "reached": 0
+        },
+        "firstFarm": {
+          "medianRound": 24.0,
+          "players": 16,
+          "reached": 16
+        },
+        "firstScout": {
+          "medianRound": 19.5,
+          "players": 16,
+          "reached": 16
+        },
+        "firstTechnology": {
+          "medianRound": 11.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondAge": {
+          "medianRound": 19.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondCity": {
+          "medianRound": 9.0,
+          "players": 16,
+          "reached": 16
+        },
+        "thirdAge": {
+          "medianRound": 38.5,
+          "players": 16,
+          "reached": 16
+        }
+      },
+      "statuses": {
+        "finished": 16
+      },
+      "victoryReasons": {
+        "END EXPEDITION": 10,
+        "INDUSTRIAL": 6
+      },
+      "winCredit": 5.0
+    },
+    "p1:farm": {
+      "checkpoints": {
+        "10": {
+          "cities": 1.125,
+          "exploredTiles": 42.75,
+          "industry": 6.25,
+          "observerCandidateSites": 16.625,
+          "population": 2.375,
+          "samples": 16,
+          "science": 2.25,
+          "units": 1
+        },
+        "20": {
+          "cities": 2.125,
+          "exploredTiles": 52.75,
+          "industry": 16,
+          "observerCandidateSites": 12.875,
+          "population": 5.875,
+          "samples": 16,
+          "science": 4.375,
+          "units": 2.625
+        },
+        "30": {
+          "cities": 2.75,
+          "exploredTiles": 67.5,
+          "industry": 30.125,
+          "observerCandidateSites": 13.625,
+          "population": 9.625,
+          "samples": 16,
+          "science": 5.625,
+          "units": 4.375
+        },
+        "60": {
+          "cities": 3,
+          "exploredTiles": 70.25,
+          "industry": 43.75,
+          "observerCandidateSites": 14.375,
+          "population": 16.375,
+          "samples": 16,
+          "science": 31,
+          "units": 5
+        }
+      },
+      "games": 16,
+      "meanWinCredit": 0.3125,
+      "milestones": {
+        "firstContact": {
+          "medianRound": null,
+          "players": 16,
+          "reached": 0
+        },
+        "firstFarm": {
+          "medianRound": 4.0,
+          "players": 16,
+          "reached": 16
+        },
+        "firstScout": {
+          "medianRound": 23.0,
+          "players": 16,
+          "reached": 16
+        },
+        "firstTechnology": {
+          "medianRound": 13.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondAge": {
+          "medianRound": 21.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondCity": {
+          "medianRound": 12.0,
+          "players": 16,
+          "reached": 16
+        },
+        "thirdAge": {
+          "medianRound": 40.0,
+          "players": 16,
+          "reached": 16
+        }
+      },
+      "statuses": {
+        "finished": 16
+      },
+      "victoryReasons": {
+        "END EXPEDITION": 10,
+        "INDUSTRIAL": 6
+      },
+      "winCredit": 5.0
+    }
+  },
+  "heldOutPaired": {
+    "conditions": [
+      {
+        "candidateSites30Delta": -3,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -9,
+        "mapType": "pangaea",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 715049,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 4,
+        "contentRules": "p1",
+        "endingRoundDelta": 2,
+        "exploredTiles30Delta": 12,
+        "mapType": "pangaea",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 715049,
+        "targetSeat": 1,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -3,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -9,
+        "mapType": "pangaea",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 715049,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 4,
+        "contentRules": "p1",
+        "endingRoundDelta": 2,
+        "exploredTiles30Delta": 12,
+        "mapType": "pangaea",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 715049,
+        "targetSeat": 1,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 3,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -3,
+        "mapType": "continents",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 826061,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -3,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -11,
+        "mapType": "continents",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 826061,
+        "targetSeat": 1,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 3,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -3,
+        "mapType": "continents",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 826061,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -3,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -11,
+        "mapType": "continents",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 826061,
+        "targetSeat": 1,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 16,
+        "mapType": "archipelago",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 937069,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 0,
+        "mapType": "archipelago",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 937069,
+        "targetSeat": 1,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 16,
+        "mapType": "archipelago",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 937069,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 0,
+        "mapType": "archipelago",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 937069,
+        "targetSeat": 1,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -2,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -10,
+        "mapType": "highlands",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 148079,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 0,
+        "mapType": "highlands",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 2,
+        "seed": 148079,
+        "targetSeat": 1,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -2,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -10,
+        "mapType": "highlands",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 148079,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "p1",
+        "endingRoundDelta": 1,
+        "exploredTiles30Delta": 0,
+        "mapType": "highlands",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 2,
+        "seed": 148079,
+        "targetSeat": 1,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      }
+    ],
+    "mapBlocks": [
+      {
+        "candidateSites30Delta": 0.5,
+        "conditions": 4,
+        "economy": "p1",
+        "endingRoundDelta": 1,
+        "exploredTiles30Delta": 1.5,
+        "mapType": "pangaea",
+        "opening": "farm",
+        "secondCityDelay": 3,
+        "seed": 715049,
+        "winCreditDelta": 0.0
+      },
+      {
+        "candidateSites30Delta": 0,
+        "conditions": 4,
+        "economy": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -7,
+        "mapType": "continents",
+        "opening": "farm",
+        "secondCityDelay": 3,
+        "seed": 826061,
+        "winCreditDelta": 0
+      },
+      {
+        "candidateSites30Delta": 0,
+        "conditions": 4,
+        "economy": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 8,
+        "mapType": "archipelago",
+        "opening": "farm",
+        "secondCityDelay": 3,
+        "seed": 937069,
+        "winCreditDelta": 0.0
+      },
+      {
+        "candidateSites30Delta": -1,
+        "conditions": 4,
+        "economy": "p1",
+        "endingRoundDelta": 0.25,
+        "exploredTiles30Delta": -5,
+        "mapType": "highlands",
+        "opening": "farm",
+        "secondCityDelay": 2.5,
+        "seed": 148079,
+        "winCreditDelta": 0.0
+      }
+    ]
+  },
+  "limits": [
+    "Selection was restricted to one initial order; later controller decisions are unchanged.",
+    "All Forge/fixed Forge personality; no hostiles; only two known opponent policies.",
+    "Four held-out map blocks with four correlated seat/opponent conditions each; no broad fairness claim.",
+    "Candidate settlement sites use detached observer knowledge and need not be reachable or legally free in hidden state.",
+    "Exploration/site diagnostics were never supplied to the acting policy.",
+    "Missing milestones are unreached, not zero. Shared wins use fractional credit."
+  ],
+  "selected": {
+    "rule": "Per economy maximize mean target fractional win credit over four map blocks, then mean explored tiles at round 30, then earlier second city, then default/scout/farm priority. Fixed before training; no held-out selection.",
+    "selected": {
+      "baseline": "default",
+      "p1": "farm"
+    },
+    "trainingStatistics": {
+      "baseline:default": {
+        "games": 16,
+        "meanExploredTiles30": 66.5,
+        "meanSecondCityRound": 4.5,
+        "meanWinCredit": 0.75
+      },
+      "baseline:scout": {
+        "games": 16,
+        "meanExploredTiles30": 65.875,
+        "meanSecondCityRound": 5.625,
+        "meanWinCredit": 0.65625
+      },
+      "p1:default": {
+        "games": 16,
+        "meanExploredTiles30": 73.375,
+        "meanSecondCityRound": 9.5,
+        "meanWinCredit": 0.375
+      },
+      "p1:farm": {
+        "games": 16,
+        "meanExploredTiles30": 79.75,
+        "meanSecondCityRound": 12.5,
+        "meanWinCredit": 0.375
+      },
+      "p1:scout": {
+        "games": 16,
+        "meanExploredTiles30": 61.625,
+        "meanSecondCityRound": 12.625,
+        "meanWinCredit": 0.1875
+      }
+    }
+  },
+  "training": {
+    "baseline:default": {
+      "checkpoints": {
+        "10": {
+          "cities": 2.25,
+          "exploredTiles": 59.75,
+          "industry": 11.25,
+          "observerCandidateSites": 16.125,
+          "population": 4.625,
+          "samples": 16,
+          "science": 2.25,
+          "units": 3.625
+        },
+        "20": {
+          "cities": 3,
+          "exploredTiles": 66.5,
+          "industry": 26.25,
+          "observerCandidateSites": 14.625,
+          "population": 8.25,
+          "samples": 16,
+          "science": 3,
+          "units": 5
+        },
+        "30": {
+          "cities": 3,
+          "exploredTiles": 66.5,
+          "industry": 34.5,
+          "observerCandidateSites": 14.625,
+          "population": 10.125,
+          "samples": 16,
+          "science": 3,
+          "units": 5
+        },
+        "60": {
+          "cities": 3,
+          "exploredTiles": 66.5,
+          "industry": 53.125,
+          "observerCandidateSites": 14.625,
+          "population": 18.5,
+          "samples": 16,
+          "science": 9,
+          "units": 5
+        }
+      },
+      "games": 16,
+      "meanWinCredit": 0.75,
+      "milestones": {
+        "firstContact": {
+          "medianRound": null,
+          "players": 16,
+          "reached": 0
+        },
+        "firstFarm": {
+          "medianRound": 34.0,
+          "players": 16,
+          "reached": 16
+        },
+        "firstScout": {
+          "medianRound": 5.0,
+          "players": 16,
+          "reached": 16
+        },
+        "firstTechnology": {
+          "medianRound": 14.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondAge": {
+          "medianRound": 25.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondCity": {
+          "medianRound": 4.5,
+          "players": 16,
+          "reached": 16
+        },
+        "thirdAge": {
+          "medianRound": 55.0,
+          "players": 16,
+          "reached": 16
+        }
+      },
+      "statuses": {
+        "finished": 16
+      },
+      "victoryReasons": {
+        "END EXPEDITION": 14,
+        "END EXPEDITION / END EXPEDITION": 2
+      },
+      "winCredit": 12.0
+    },
+    "baseline:scout": {
+      "checkpoints": {
+        "10": {
+          "cities": 2.25,
+          "exploredTiles": 58.25,
+          "industry": 11.25,
+          "observerCandidateSites": 15.25,
+          "population": 4.5,
+          "samples": 16,
+          "science": 2.25,
+          "units": 3.5
+        },
+        "20": {
+          "cities": 3,
+          "exploredTiles": 65.875,
+          "industry": 25.875,
+          "observerCandidateSites": 14,
+          "population": 8.25,
+          "samples": 16,
+          "science": 3,
+          "units": 5
+        },
+        "30": {
+          "cities": 3,
+          "exploredTiles": 65.875,
+          "industry": 35.375,
+          "observerCandidateSites": 14,
+          "population": 10.375,
+          "samples": 16,
+          "science": 3,
+          "units": 5
+        },
+        "60": {
+          "cities": 3,
+          "exploredTiles": 65.875,
+          "industry": 53.5,
+          "observerCandidateSites": 14,
+          "population": 18.625,
+          "samples": 16,
+          "science": 9,
+          "units": 5
+        }
+      },
+      "games": 16,
+      "meanWinCredit": 0.65625,
+      "milestones": {
+        "firstContact": {
+          "medianRound": null,
+          "players": 16,
+          "reached": 0
+        },
+        "firstFarm": {
+          "medianRound": 35.0,
+          "players": 16,
+          "reached": 16
+        },
+        "firstScout": {
+          "medianRound": 2.0,
+          "players": 16,
+          "reached": 16
+        },
+        "firstTechnology": {
+          "medianRound": 15.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondAge": {
+          "medianRound": 26.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondCity": {
+          "medianRound": 6.0,
+          "players": 16,
+          "reached": 16
+        },
+        "thirdAge": {
+          "medianRound": 56.0,
+          "players": 16,
+          "reached": 16
+        }
+      },
+      "statuses": {
+        "finished": 16
+      },
+      "victoryReasons": {
+        "END EXPEDITION": 15,
+        "END EXPEDITION / END EXPEDITION": 1
+      },
+      "winCredit": 10.5
+    },
+    "p1:default": {
+      "checkpoints": {
+        "10": {
+          "cities": 2,
+          "exploredTiles": 46.75,
+          "industry": 9.5,
+          "observerCandidateSites": 9.375,
+          "population": 4,
+          "samples": 16,
+          "science": 4,
+          "units": 1
+        },
+        "20": {
+          "cities": 2,
+          "exploredTiles": 65.625,
+          "industry": 16.25,
+          "observerCandidateSites": 20.75,
+          "population": 5.625,
+          "samples": 16,
+          "science": 4,
+          "units": 3.875
+        },
+        "30": {
+          "cities": 3,
+          "exploredTiles": 73.375,
+          "industry": 31.625,
+          "observerCandidateSites": 18.875,
+          "population": 9.875,
+          "samples": 16,
+          "science": 7,
+          "units": 4.875
+        },
+        "60": {
+          "cities": 3,
+          "exploredTiles": 73.375,
+          "industry": 47.75,
+          "observerCandidateSites": 18.875,
+          "population": 18,
+          "samples": 16,
+          "science": 33,
+          "units": 5
+        }
+      },
+      "games": 16,
+      "meanWinCredit": 0.375,
+      "milestones": {
+        "firstContact": {
+          "medianRound": null,
+          "players": 16,
+          "reached": 0
+        },
+        "firstFarm": {
+          "medianRound": 27.0,
+          "players": 16,
+          "reached": 16
+        },
+        "firstScout": {
+          "medianRound": 19.0,
+          "players": 16,
+          "reached": 16
+        },
+        "firstTechnology": {
+          "medianRound": 11.5,
+          "players": 16,
+          "reached": 16
+        },
+        "secondAge": {
+          "medianRound": 20.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondCity": {
+          "medianRound": 9.5,
+          "players": 16,
+          "reached": 16
+        },
+        "thirdAge": {
+          "medianRound": 38.5,
+          "players": 16,
+          "reached": 16
+        }
+      },
+      "statuses": {
+        "finished": 16
+      },
+      "victoryReasons": {
+        "END EXPEDITION": 11,
+        "INDUSTRIAL": 5
+      },
+      "winCredit": 6.0
+    },
+    "p1:farm": {
+      "checkpoints": {
+        "10": {
+          "cities": 1,
+          "exploredTiles": 41.5,
+          "industry": 5.375,
+          "observerCandidateSites": 16.875,
+          "population": 2,
+          "samples": 16,
+          "science": 2,
+          "units": 1
+        },
+        "20": {
+          "cities": 2,
+          "exploredTiles": 51.25,
+          "industry": 16.375,
+          "observerCandidateSites": 12.875,
+          "population": 5.625,
+          "samples": 16,
+          "science": 4,
+          "units": 2.75
+        },
+        "30": {
+          "cities": 2.625,
+          "exploredTiles": 79.75,
+          "industry": 28.25,
+          "observerCandidateSites": 23.75,
+          "population": 9.25,
+          "samples": 16,
+          "science": 6.25,
+          "units": 4.875
+        },
+        "60": {
+          "cities": 3,
+          "exploredTiles": 81.5,
+          "industry": 47.375,
+          "observerCandidateSites": 23.875,
+          "population": 18,
+          "samples": 16,
+          "science": 33.25,
+          "units": 5
+        }
+      },
+      "games": 16,
+      "meanWinCredit": 0.375,
+      "milestones": {
+        "firstContact": {
+          "medianRound": null,
+          "players": 16,
+          "reached": 0
+        },
+        "firstFarm": {
+          "medianRound": 4.0,
+          "players": 16,
+          "reached": 16
+        },
+        "firstScout": {
+          "medianRound": 22.5,
+          "players": 16,
+          "reached": 16
+        },
+        "firstTechnology": {
+          "medianRound": 13.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondAge": {
+          "medianRound": 21.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondCity": {
+          "medianRound": 12.5,
+          "players": 16,
+          "reached": 16
+        },
+        "thirdAge": {
+          "medianRound": 40.0,
+          "players": 16,
+          "reached": 16
+        }
+      },
+      "statuses": {
+        "finished": 16
+      },
+      "victoryReasons": {
+        "END EXPEDITION": 11,
+        "INDUSTRIAL": 5
+      },
+      "winCredit": 6.0
+    },
+    "p1:scout": {
+      "checkpoints": {
+        "10": {
+          "cities": 1,
+          "exploredTiles": 52.25,
+          "industry": 5.375,
+          "observerCandidateSites": 24.875,
+          "population": 2,
+          "samples": 16,
+          "science": 2,
+          "units": 2
+        },
+        "20": {
+          "cities": 2,
+          "exploredTiles": 55.25,
+          "industry": 15.875,
+          "observerCandidateSites": 15.75,
+          "population": 5.25,
+          "samples": 16,
+          "science": 4,
+          "units": 3.75
+        },
+        "30": {
+          "cities": 3,
+          "exploredTiles": 61.625,
+          "industry": 29.5,
+          "observerCandidateSites": 11.25,
+          "population": 9.5,
+          "samples": 16,
+          "science": 6.5,
+          "units": 4.75
+        },
+        "60": {
+          "cities": 3,
+          "exploredTiles": 61.625,
+          "industry": 45.375,
+          "observerCandidateSites": 11.25,
+          "population": 17.875,
+          "samples": 16,
+          "science": 32.5,
+          "units": 5
+        }
+      },
+      "games": 16,
+      "meanWinCredit": 0.1875,
+      "milestones": {
+        "firstContact": {
+          "medianRound": null,
+          "players": 16,
+          "reached": 0
+        },
+        "firstFarm": {
+          "medianRound": 25.0,
+          "players": 16,
+          "reached": 16
+        },
+        "firstScout": {
+          "medianRound": 4.0,
+          "players": 16,
+          "reached": 16
+        },
+        "firstTechnology": {
+          "medianRound": 13.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondAge": {
+          "medianRound": 21.0,
+          "players": 16,
+          "reached": 16
+        },
+        "secondCity": {
+          "medianRound": 13.0,
+          "players": 16,
+          "reached": 16
+        },
+        "thirdAge": {
+          "medianRound": 40.0,
+          "players": 16,
+          "reached": 16
+        }
+      },
+      "statuses": {
+        "finished": 16
+      },
+      "victoryReasons": {
+        "END EXPEDITION": 9,
+        "INDUSTRIAL": 7
+      },
+      "winCredit": 3.0
+    }
+  },
+  "trainingPaired": {
+    "conditions": [
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "baseline",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 0,
+        "mapType": "pangaea",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 1,
+        "seed": 271003,
+        "targetSeat": 0,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "baseline",
+        "endingRoundDelta": 1,
+        "exploredTiles30Delta": 0,
+        "mapType": "pangaea",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 1,
+        "seed": 271003,
+        "targetSeat": 1,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "baseline",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 0,
+        "mapType": "pangaea",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 1,
+        "seed": 271003,
+        "targetSeat": 0,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "baseline",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 0,
+        "mapType": "pangaea",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 1,
+        "seed": 271003,
+        "targetSeat": 1,
+        "winCreditDelta": -0.5,
+        "winnerChanged": true
+      },
+      {
+        "candidateSites30Delta": -9,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -11,
+        "mapType": "pangaea",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 271003,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 0,
+        "mapType": "pangaea",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 271003,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -1,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -1,
+        "mapType": "pangaea",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 271003,
+        "targetSeat": 1,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 14,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 20,
+        "mapType": "pangaea",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 271003,
+        "targetSeat": 1,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -9,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -11,
+        "mapType": "pangaea",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 271003,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 0,
+        "mapType": "pangaea",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 271003,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -1,
+        "contentRules": "p1",
+        "endingRoundDelta": 3,
+        "exploredTiles30Delta": -1,
+        "mapType": "pangaea",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 271003,
+        "targetSeat": 1,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 14,
+        "contentRules": "p1",
+        "endingRoundDelta": 2,
+        "exploredTiles30Delta": 20,
+        "mapType": "pangaea",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 271003,
+        "targetSeat": 1,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "baseline",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -1,
+        "mapType": "continents",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 1,
+        "seed": 382021,
+        "targetSeat": 0,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -2,
+        "contentRules": "baseline",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -2,
+        "mapType": "continents",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 1,
+        "seed": 382021,
+        "targetSeat": 1,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "baseline",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -1,
+        "mapType": "continents",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 1,
+        "seed": 382021,
+        "targetSeat": 0,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -2,
+        "contentRules": "baseline",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -2,
+        "mapType": "continents",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 1,
+        "seed": 382021,
+        "targetSeat": 1,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -6,
+        "contentRules": "p1",
+        "endingRoundDelta": 2,
+        "exploredTiles30Delta": -13,
+        "mapType": "continents",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 382021,
+        "targetSeat": 0,
+        "winCreditDelta": -1.0,
+        "winnerChanged": true
+      },
+      {
+        "candidateSites30Delta": 5,
+        "contentRules": "p1",
+        "endingRoundDelta": 1,
+        "exploredTiles30Delta": 5,
+        "mapType": "continents",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 382021,
+        "targetSeat": 0,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 0,
+        "mapType": "continents",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 382021,
+        "targetSeat": 1,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 15,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 15,
+        "mapType": "continents",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 382021,
+        "targetSeat": 1,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -6,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -13,
+        "mapType": "continents",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 382021,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 5,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 5,
+        "mapType": "continents",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 382021,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 0,
+        "mapType": "continents",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 382021,
+        "targetSeat": 1,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 15,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 15,
+        "mapType": "continents",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 382021,
+        "targetSeat": 1,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -3,
+        "contentRules": "baseline",
+        "endingRoundDelta": 5,
+        "exploredTiles30Delta": -11,
+        "mapType": "archipelago",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 1,
+        "seed": 493031,
+        "targetSeat": 0,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "baseline",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 9,
+        "mapType": "archipelago",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 2,
+        "seed": 493031,
+        "targetSeat": 1,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -3,
+        "contentRules": "baseline",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -11,
+        "mapType": "archipelago",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 1,
+        "seed": 493031,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "baseline",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 9,
+        "mapType": "archipelago",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 2,
+        "seed": 493031,
+        "targetSeat": 1,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 4,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -13,
+        "mapType": "archipelago",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 493031,
+        "targetSeat": 0,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 7,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 12,
+        "mapType": "archipelago",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 493031,
+        "targetSeat": 0,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -7,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -1,
+        "mapType": "archipelago",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 4,
+        "seed": 493031,
+        "targetSeat": 1,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -4,
+        "mapType": "archipelago",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 493031,
+        "targetSeat": 1,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 4,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -13,
+        "mapType": "archipelago",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 493031,
+        "targetSeat": 0,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 7,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 12,
+        "mapType": "archipelago",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 493031,
+        "targetSeat": 0,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -7,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -1,
+        "mapType": "archipelago",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 4,
+        "seed": 493031,
+        "targetSeat": 1,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -4,
+        "mapType": "archipelago",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 493031,
+        "targetSeat": 1,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "baseline",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 0,
+        "mapType": "highlands",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 1,
+        "seed": 604043,
+        "targetSeat": 0,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "baseline",
+        "endingRoundDelta": 4,
+        "exploredTiles30Delta": 0,
+        "mapType": "highlands",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 1,
+        "seed": 604043,
+        "targetSeat": 1,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "baseline",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 0,
+        "mapType": "highlands",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 1,
+        "seed": 604043,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "baseline",
+        "endingRoundDelta": 4,
+        "exploredTiles30Delta": 0,
+        "mapType": "highlands",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 1,
+        "seed": 604043,
+        "targetSeat": 1,
+        "winCreditDelta": -1.0,
+        "winnerChanged": true
+      },
+      {
+        "candidateSites30Delta": -11,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -15,
+        "mapType": "highlands",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 604043,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -2,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 3,
+        "mapType": "highlands",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 604043,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -31,
+        "contentRules": "p1",
+        "endingRoundDelta": 7,
+        "exploredTiles30Delta": -40,
+        "mapType": "highlands",
+        "opening": "scout",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 604043,
+        "targetSeat": 1,
+        "winCreditDelta": -1.0,
+        "winnerChanged": true
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 0,
+        "mapType": "highlands",
+        "opening": "farm",
+        "opponentId": "industrial",
+        "secondCityDelay": 3,
+        "seed": 604043,
+        "targetSeat": 1,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -11,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -15,
+        "mapType": "highlands",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 604043,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -2,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 3,
+        "mapType": "highlands",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 604043,
+        "targetSeat": 0,
+        "winCreditDelta": 0,
+        "winnerChanged": false
+      },
+      {
+        "candidateSites30Delta": -31,
+        "contentRules": "p1",
+        "endingRoundDelta": 7,
+        "exploredTiles30Delta": -40,
+        "mapType": "highlands",
+        "opening": "scout",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 604043,
+        "targetSeat": 1,
+        "winCreditDelta": -1.0,
+        "winnerChanged": true
+      },
+      {
+        "candidateSites30Delta": 0,
+        "contentRules": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 0,
+        "mapType": "highlands",
+        "opening": "farm",
+        "opponentId": "archived-expedition",
+        "secondCityDelay": 3,
+        "seed": 604043,
+        "targetSeat": 1,
+        "winCreditDelta": 0.0,
+        "winnerChanged": false
+      }
+    ],
+    "mapBlocks": [
+      {
+        "candidateSites30Delta": 0,
+        "conditions": 4,
+        "economy": "baseline",
+        "endingRoundDelta": 0.25,
+        "exploredTiles30Delta": 0,
+        "mapType": "pangaea",
+        "opening": "scout",
+        "secondCityDelay": 1,
+        "seed": 271003,
+        "winCreditDelta": -0.125
+      },
+      {
+        "candidateSites30Delta": -5,
+        "conditions": 4,
+        "economy": "p1",
+        "endingRoundDelta": 0.75,
+        "exploredTiles30Delta": -6,
+        "mapType": "pangaea",
+        "opening": "scout",
+        "secondCityDelay": 3,
+        "seed": 271003,
+        "winCreditDelta": 0.0
+      },
+      {
+        "candidateSites30Delta": 7,
+        "conditions": 4,
+        "economy": "p1",
+        "endingRoundDelta": 0.5,
+        "exploredTiles30Delta": 10,
+        "mapType": "pangaea",
+        "opening": "farm",
+        "secondCityDelay": 3,
+        "seed": 271003,
+        "winCreditDelta": 0.0
+      },
+      {
+        "candidateSites30Delta": -1,
+        "conditions": 4,
+        "economy": "baseline",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -1.5,
+        "mapType": "continents",
+        "opening": "scout",
+        "secondCityDelay": 1,
+        "seed": 382021,
+        "winCreditDelta": 0.0
+      },
+      {
+        "candidateSites30Delta": -3,
+        "conditions": 4,
+        "economy": "p1",
+        "endingRoundDelta": 0.5,
+        "exploredTiles30Delta": -6.5,
+        "mapType": "continents",
+        "opening": "scout",
+        "secondCityDelay": 3,
+        "seed": 382021,
+        "winCreditDelta": -0.25
+      },
+      {
+        "candidateSites30Delta": 10,
+        "conditions": 4,
+        "economy": "p1",
+        "endingRoundDelta": 0.25,
+        "exploredTiles30Delta": 10,
+        "mapType": "continents",
+        "opening": "farm",
+        "secondCityDelay": 3,
+        "seed": 382021,
+        "winCreditDelta": 0.0
+      },
+      {
+        "candidateSites30Delta": -1.5,
+        "conditions": 4,
+        "economy": "baseline",
+        "endingRoundDelta": 1.25,
+        "exploredTiles30Delta": -1,
+        "mapType": "archipelago",
+        "opening": "scout",
+        "secondCityDelay": 1.5,
+        "seed": 493031,
+        "winCreditDelta": 0.0
+      },
+      {
+        "candidateSites30Delta": -1.5,
+        "conditions": 4,
+        "economy": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": -7,
+        "mapType": "archipelago",
+        "opening": "scout",
+        "secondCityDelay": 3.5,
+        "seed": 493031,
+        "winCreditDelta": 0.0
+      },
+      {
+        "candidateSites30Delta": 3.5,
+        "conditions": 4,
+        "economy": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 4,
+        "mapType": "archipelago",
+        "opening": "farm",
+        "secondCityDelay": 3,
+        "seed": 493031,
+        "winCreditDelta": 0.0
+      },
+      {
+        "candidateSites30Delta": 0,
+        "conditions": 4,
+        "economy": "baseline",
+        "endingRoundDelta": 2,
+        "exploredTiles30Delta": 0,
+        "mapType": "highlands",
+        "opening": "scout",
+        "secondCityDelay": 1,
+        "seed": 604043,
+        "winCreditDelta": -0.25
+      },
+      {
+        "candidateSites30Delta": -21,
+        "conditions": 4,
+        "economy": "p1",
+        "endingRoundDelta": 3.5,
+        "exploredTiles30Delta": -27.5,
+        "mapType": "highlands",
+        "opening": "scout",
+        "secondCityDelay": 3,
+        "seed": 604043,
+        "winCreditDelta": -0.5
+      },
+      {
+        "candidateSites30Delta": -1,
+        "conditions": 4,
+        "economy": "p1",
+        "endingRoundDelta": 0,
+        "exploredTiles30Delta": 1.5,
+        "mapType": "highlands",
+        "opening": "farm",
+        "secondCityDelay": 3,
+        "seed": 604043,
+        "winCreditDelta": 0.0
+      }
+    ]
+  }
+}

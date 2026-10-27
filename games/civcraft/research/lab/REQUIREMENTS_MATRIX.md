@@ -23,7 +23,8 @@ is recorded in [P1_IMPLEMENTATION.md](P1_IMPLEMENTATION.md). P2–P4 remain pend
 | F: auxiliary ML | 96 actual games; separate 12/6/6 train/calibration/test map blocks; privileged calibrated critic improves held-out Brier 0.2969 to 0.1753 | Six final-test clusters and fixed controllers do not give universal or causal recovery probabilities |
 | G: recovery/pacing | Four research-diversion pairs; sixteen guard-first pairs; milestone telemetry; lead-persistence analysis | Other mistake types, trained recovery and broad human-play pacing need evaluation |
 | G: faction/route fairness | All ten factions in a fixed-strategy four-map-family slice, seat/personality/start controls, multiplayer role denominators | This is not an all-context faction tier list or equality guarantee |
-| H/I: design and deliverables | All ten named documents, detailed roadmap, issue register, concrete first package and 39-building role map | Review P1 before its implementation; keep later mechanics as separate controlled packages |
+| H/I: design and deliverables | All ten named documents, detailed roadmap, issue register, concrete first package and 39-building role map; P1 implemented after explicit approval | Keep later mechanics as separate reviewed packages |
+| P1: restricted opening adaptation | 80 training and 48 held-out games across disjoint four-map blocks; two selected native continuations match complete LuaJIT states and dispatch counts; passive Scout replay preserves exact final hash | Farm-first does not improve held-out wins; one-order adaptation cannot replace competent exploration or full policy adaptation. See [report](P1_OPENING_ADAPTATION_REPORT.md) |
 | H1: requested healer rule | Action/tactics/campaign regressions; 12 lab tests; 128 native/Lupa healing boundary cases | No long-match balance or deployed-Minecraft claim follows from focused correctness tests |
 
 ## Important findings to carry into implementation

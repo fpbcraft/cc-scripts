@@ -30,6 +30,11 @@ The [48-match P1 pacing pilot](P1_PACING_REPORT.md) measures the approved
 prototype against original rules: later expansion, fewer idle city-rounds,
 but delayed scouting, converging midgame unit counts and increased Industrial
 endings under fixed expedition policies.
+The [128-game opening adaptation study](P1_OPENING_ADAPTATION_REPORT.md)
+selects on four training maps and evaluates on four fresh maps. Farm-first
+does not improve held-out outcomes; a passive exact replay confirms one
+early Scout stands still for all 118 observed turns. Controller competence
+must therefore remain separate from Scout-price evaluation.
 
 Latest focused checks: [expanded observer proposals](PROPOSAL_INTERFACE_REPORT.md),
 [requested healing boundary](HEALING_CHANGE_VALIDATION.md), and
