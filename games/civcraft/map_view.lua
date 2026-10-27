@@ -8,6 +8,7 @@ local Icons = dofile("/games/civcraft/icons.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local Terrain = dofile("/games/civcraft/terrain_view.lua")
 local World = dofile("/games/civcraft/world.lua")
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local V = {}
 local function at(list, x, y)
 	for _, item in ipairs(list or {}) do
@@ -72,10 +73,10 @@ function V.draw(ui, state, player, rect)
 	end
 	for _, unit in ipairs(state.units or {}) do
 		local key = World.key(unit.x, unit.y)
-		if not unitIndex[key] or unitIndex[key].kind == "settler" then
+		if not unitIndex[key] or Stacks.isCivilian(unitIndex[key]) then
 			unitIndex[key] = unit
 		end
-		if unit.kind == "settler" then
+		if Stacks.isCivilian(unit) then
 			civilianIndex[key] = unit
 		end
 	end
@@ -134,7 +135,7 @@ function V.draw(ui, state, player, rect)
 					local claim = claims[World.key(x, y)]
 					local owner = World.observedOwner(state, player, x, y)
 					local deposit = not hidden and World.deposit(world, x, y)
-					local yields = not hidden and World.yields(world, x, y)
+					local yields = not hidden and World.yields(world, x, y, state)
 					local city = cityIndex[World.key(x, y)]
 					if city and (city.owner == ui.playerID or visibility == "visible") then
 						for _, owner in ipairs(state.players or {}) do
@@ -248,6 +249,14 @@ function V.draw(ui, state, player, rect)
 			end
 			local k = World.key(x, y)
 			if t.visibility ~= "hidden" then
+				local improvement = (world.improvements or {})[k]
+				if improvement then
+					local color = improvement.damaged and 31
+						or improvement.kind == "farm" and 5
+						or improvement.kind == "lumber" and 13
+						or 7
+					r:fill(px + math.floor(size / 2) - 2, py + size - 5, 5, 2, color)
+				end
 				local landmark, rail = World.observedFeatures(state, player, x, y)
 				if rail then
 					r:line(
@@ -357,7 +366,7 @@ function V.draw(ui, state, player, rect)
 				if size >= 16 then
 					Icons.faction(
 						r,
-						"settler",
+						settler.kind,
 						px + size * 0.65,
 						py + size * 0.6,
 						math.min(7, size / 2),

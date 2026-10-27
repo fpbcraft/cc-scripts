@@ -17,6 +17,7 @@ local Presentation = dofile("/games/civcraft/presentation.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
+local Builders = dofile("/games/civcraft/ai_builders.lua")
 local A = {}
 
 local function attachAssignedEscort(state, player, unit, systems)
@@ -257,6 +258,16 @@ function A.settle(state, player, unit, systems)
 		if request.action == "found" then
 			return true
 		end
+	end
+	return false
+end
+function A.builder(state, player, unit, systems)
+	if unit.workQueue and not unit.workQueue.paused then
+		return false
+	end
+	local request = Builders.order(A.knowledge(state, player), player, unit, systems)
+	if request then
+		return Actions.apply(state, player.id, request, systems)
 	end
 	return false
 end

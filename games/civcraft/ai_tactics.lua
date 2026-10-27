@@ -184,7 +184,7 @@ function Tactics.ranked(view, player, unit, systems)
 				defender
 				and not (defender.village and defender.owner == defender.villageOwner)
 				and (
-					defender.kind == "settler" or Threats.opponent(view, player, defender, systems)
+					Stacks.isCivilian(defender) or Threats.opponent(view, player, defender, systems)
 				)
 			then
 				forecast = Combat.predictOrder(view, unit, choice, systems)

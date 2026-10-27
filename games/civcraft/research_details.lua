@@ -1,4 +1,5 @@
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local Works = dofile("/games/civcraft/tile_improvements.lua")
 local Details = {}
 local purposes = {
 	agriculture = "Secure a food surplus so cities can grow and staff more worked tiles.",
@@ -78,11 +79,26 @@ function Details.paragraphs(systems, id, player)
 		paragraphs[1] =
 			"Develop Industrial Complexes to support productive cities and your remaining victory races."
 	end
-	if id == "agriculture" and player and ContentRules.usesP1Economy(player) then
+	if id == "agriculture" and ContentRules.hasBuilders(player) then
+		paragraphs[#paragraphs + 1] =
+			"UNLOCKS: Builder Wheat Fields (+2 food on a staffed fertile flat tile). City Farms are retired."
+	elseif id == "agriculture" and player and ContentRules.usesP1Economy(player) then
 		paragraphs[#paragraphs + 1] =
 			"IMPROVES: Wheat Farms from +1 to +2 food. Farms are already available."
 	else
 		paragraphs[#paragraphs + 1] = "UNLOCKS: " .. tech.unlock .. "."
+	end
+	if ContentRules.hasBuilders(player) then
+		for _, kind in ipairs(Works.order) do
+			local definition = Works.definitions[kind]
+			if definition.tech == id and kind ~= "farm" then
+				paragraphs[#paragraphs + 1] = "BUILDER WORK: "
+					.. definition.name
+					.. " (+"
+					.. definition.industry
+					.. " industry on a worked eligible tile)."
+			end
+		end
 	end
 	for _, entry in ipairs(Details.unlocks(systems, id, player)) do
 		local record = entry.record

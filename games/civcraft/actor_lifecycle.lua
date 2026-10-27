@@ -8,6 +8,7 @@ local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
 local QueuedRoutes = dofile("/games/civcraft/queued_routes.lua")
 local Actions = dofile("/games/civcraft/actions.lua")
 local Reports = dofile("/games/civcraft/reports.lua")
+local WorkQueue = dofile("/games/civcraft/queued_work.lua")
 local Actors = {}
 
 function Actors.pump(state, callbacks)
@@ -53,6 +54,7 @@ function Actors.pump(state, callbacks)
 				end
 				-- Allowances already exist; queued orders can only spend those budgets.
 				QueuedRoutes.run(state, participant.id, Systems, Actions.apply)
+				WorkQueue.run(state, participant.id, Systems, Actions.apply)
 				if participant.ai then
 					if not participant.ready then
 						participant.turnBaseline = Reports.capture(state, participant)
