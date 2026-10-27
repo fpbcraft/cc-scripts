@@ -209,8 +209,12 @@ function renderer:button() end
 function renderer:textWidth(value)
 	return #tostring(value) * 4
 end
-local ui =
-	{ r = renderer, playerID = 0, selected = { x = c.x, y = c.y, kind = "city" }, cityPanel = "overview" }
+local ui = {
+	r = renderer,
+	playerID = 0,
+	selected = { x = c.x, y = c.y, kind = "city" },
+	cityPanel = "overview",
+}
 Inspector.draw(ui, state, p, { x = 1, y = 1, w = 220, h = 200 }, true)
 local output = table.concat(captured, " ")
 assert(output:find("CAPACITY", 1, true) and output:find("GROWTH FOOD", 1, true))

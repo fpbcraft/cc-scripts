@@ -51,8 +51,18 @@ reconstruction and no repeated citizen debit. It passed on CraftOS-PC 2.8.3 /
 ComputerCraft 1.112.0. Inspector assertions verify row generation, not visual
 readability or multiplayer delivery.
 
+All 61 Lua regression scripts pass. The final capacity-preview/Codex additions
+were then rechecked through focused native rules and a native hotseat/war flow.
+[Validation record](validation/m2a-source-validation.json).
+
 M1 and P1 focused native rule scripts also pass. Lua lifecycle conformance and
-technology-canvas tests pass. Eight Python M1/P1 contracts pass. Selene reports
+technology-canvas tests pass. All 41 Python laboratory contracts pass, including Development V2 Lua 5.3 /
+LuaJIT checkpoint and round-boundary equality. Native host/AI and hotseat/war
+sessions select Development V2, process round two and reload its saved campaign.
+The published f1d1b8d installer also passes a native host session with the existing
+Redesign V1 default, confirming the new runtime module is packaged. These are
+scripted text-terminal input flows; physical monitor/rednet remains unverified.
+Selene reports
 zero errors/warnings for changed rules/UI and the new test.
 
 ## Remaining M2 work
