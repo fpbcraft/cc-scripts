@@ -2,6 +2,11 @@
 
 Implementation of the next gameplay iteration is tracked in [IMPLEMENTATION-v0.9.md](IMPLEMENTATION-v0.9.md), based on [design draft v0.9.1](ROADMAP-v0.9.md).
 
+The subsequent balance redesign is specified in the [design ADRs](docs/adr/README.md)
+and [balance implementation roadmap](docs/ROADMAP-balance.md). These capture
+accepted design choices and planned milestones, rather than claiming the redesign
+is already implemented.
+
 The upcoming iteration adds layered Minecraft-inspired biomes and two larger map
 presets: **Huge 48×32** and **Vast 64×40**. New worlds use sparse, habitat-specific
 deposits and repaired starting areas; existing saves keep their original terrain
