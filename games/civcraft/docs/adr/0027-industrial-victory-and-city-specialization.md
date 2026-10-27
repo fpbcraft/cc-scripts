@@ -53,3 +53,10 @@ historical test results to changed rules without rerunning the appropriate check
 - [Recorded answers and verbatim user notes](../../research/lab/design_decision_answers.json)
 - [Follow-up question wording](../../research/lab/design_followup_questions.json)
 - [Design reconciliation](../../research/lab/DESIGN_RECONCILIATION.md)
+
+## M1 implementation record
+
+The new `balance1` campaign implements this decision's M1 scope while retaining
+Original/P1 semantics. The [versioned contract and prototype parameters](../M1-CAMPAIGN-SCOPE.md)
+and its linked native/save evidence distinguish delivered behavior from later
+End staging, economic calibration and other roadmap work.
