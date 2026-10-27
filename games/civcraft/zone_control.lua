@@ -8,7 +8,7 @@ local function stats(unit, systems)
 end
 function Zone.ignores(unit, systems, state)
 	local kind = stats(unit, systems)
-	local other = state and unit.kind == "settler" and Stacks.partner(state, unit)
+	local other = state and Stacks.isCivilian(unit) and Stacks.partner(state, unit)
 	local guard = other and stats(other, systems) or {}
 	return kind.mounted
 		or kind.air

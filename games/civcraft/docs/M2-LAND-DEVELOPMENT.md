@@ -73,3 +73,51 @@ zero errors/warnings for changed rules/UI and the new test.
 - Native interactive development, save/observer/network integration and a
   campaign version ready to become the default.
 - Joint opening calibration remains deferred while balance studies are paused.
+
+## M2b: charged land development
+
+Landwork V3 (`balance3`) adds Builders and inherits M2a's capacity and Settler
+rules. It is a separate selectable profile so saved M2a campaigns retain their
+city Farm/Quarry economy. Redesign V1 remains the default pending final M2
+integration checks.
+
+A Builder costs 22 industry, moves two, has three charges and no upkeep. It
+spends one charge and remaining movement to improve its current tile; its final
+charge removes it and detaches its escort. Capture preserves remaining charges,
+spends movement and clears the previous owner's orders. Builders share the
+civilian stacking/protection rules with Settlers.
+
+| Improvement | Research | Placement | Worked-tile effect |
+|---|---|---|---|
+| Wheat Field | Wheat Farming | Fertile open flat land | +2 food; Oak Villagers add 1 |
+| Quarry | Stone Tools | Clear hill or stone deposit | +2 industry; Iron Villagers add 1 |
+| Lumber Camp | Crafting | Woods or jungle | +1 industry; feature retained |
+
+Improvements belong to the tile, so territory changes transfer their benefits.
+They do not produce without a citizen working the tile. Fields and quarries
+replace city Farm/Quarry buildings in this profile; their city yield bonuses are
+ignored even if a manually supplied state contains them. Homesteads unlock Tend
+Crops. No harvesting/removing features is included in this first catalog.
+
+The Builder inspector offers improvement planning and replace/append modes.
+Map selection previews tile food/industry before and after and the Builder's
+charge count before confirmation. Work tasks persist and spend ordinary
+movement through shared actions. Each task rechecks terrain, prerequisites,
+ownership, occupancy and route eligibility. Visible enemy units within at least
+two tiles (or their ranged reach), and enemy cities within two, pause work.
+Hidden enemy changes do not reveal themselves through safety checks. Manual
+movement replaces work; paused work offers resume/cancel. Appended tasks cannot
+exceed remaining charges and duplicate queued tile targets are rejected.
+
+AI recruitment accounts for existing/queued Builders and undeveloped eligible
+city tiles. Operational AI values worked tiles and city food/industry needs,
+checks observed route safety and issues the same queue action as human players.
+Player observations retain last-seen improvements and copy records rather than
+exposing mutable authoritative tables. Save/load retains charges, tasks, pauses,
+improvements and fractional city food. Installer manifests include the three new
+modules. New shared-rule proposal actions use observer knowledge.
+
+Focused Lua and native CraftOS rule/UI/save checks pass. The native branch uses
+the real renderer and inspector button coordinates to plan and confirm a field.
+Full regression, Landwork campaign-session and cross-runtime integration checks
+are in progress; this paragraph does not claim M2 completion or calibrated prices.

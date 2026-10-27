@@ -90,6 +90,7 @@ function Campaigns.update(view, player, systems)
 	for _, unit in ipairs(units) do
 		local stats = systems.units[unit.kind] or {}
 		local role = unit.kind == "settler" and "settler"
+			or stats.builder and "builder"
 			or stats.engineer and "engineer"
 			or stats.healer and "healer"
 			or stats.naval and "naval"

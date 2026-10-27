@@ -85,6 +85,7 @@ function I.draw(r, kind, x, y, size, color)
 	local aliases = {
 		brassengineer = "engineer",
 		railengineer = "engineer",
+		builder = "engineer",
 		alchemist = "engineer",
 		supplycrew = "engineer",
 		expedition = "engineer",
