@@ -1,0 +1,312 @@
+{
+  "schemaVersion": 2,
+  "fixture": "wartime_save_parity_fixture.lua",
+  "config": {
+    "seed": 75123,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "players": [
+      {
+        "civilization": "forge"
+      },
+      {
+        "civilization": "scholar"
+      }
+    ]
+  },
+  "source": {
+    "head": "ff6380cef9e96bc2822ad76229e3bb399ed8033e",
+    "luaSourceHash": "ba678804d08c508d5e9f46ecffe3cf001f80c19f99cba0ce155e7fef7fda4e7b",
+    "fixtureSha256": {
+      "check_wartime_save_parity.py": "aaca85064a29b6287e965481d091b7a716232c8a77c28b3b2604fddab1adb54a",
+      "wartime_save_parity_fixture.lua": "0d2c20d02ce298ef2d23733f192302301073a757784db9c5ff0cc688f5539680",
+      "wartime_save_parity_native.lua": "e04a36cf4460fd9af63a7c4fcd3f7f0ab931e5c08dc6a94f0ac3af2bbad41ea2"
+    }
+  },
+  "host": {
+    "machine": "arm64",
+    "python": "3.14.6",
+    "craftos": "/Applications/CraftOS-PC.app/Contents/MacOS/craftos"
+  },
+  "offline": {
+    "runtime": "Lupa Lua 5.3",
+    "hostileContinuation": {
+      "ok": true,
+      "error": null
+    },
+    "registeredWar": {
+      "outcome": {
+        "declareWar": {
+          "reason": "War announced for next round",
+          "ok": true
+        },
+        "capture": {
+          "ok": true
+        },
+        "settlerOwner": 0,
+        "warActive": true
+      },
+      "checkpointHashes": {
+        "label": "registered-war-capture",
+        "stateSha256": "2b88356199264724a1428819afc745232da0f654e3d68acf788909c79502deaa",
+        "observation0Sha256": "00792b402b0ca31a7702e3435868d80827a12967c4f317c8a660be21ac7b3e14",
+        "observation1Sha256": "6ba17a3b56b2d89b6826bd6967fabaf8b9973e3f0e81bf144046a5ff60749cb0"
+      }
+    },
+    "checkpointHashes": [
+      {
+        "label": "before-capture",
+        "stateSha256": "70b20404629c72094c5ad5f9abef73c5388c2e6c18d21bc0d4dae6953aaf3964",
+        "observation0Sha256": "1f5aee4d92025612d15968d581acf015246174aa48a5279145c5cb3f57106f34",
+        "observation1Sha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "after-capture",
+        "stateSha256": "55f450c37eb17aee52432dd0d6282c795ebeda57f417677d3330ca511d42ec9a",
+        "observation0Sha256": "37c45d58231f94db5edefecad1d7cbff1215cc4d1666a564aaa5153cf9f36b4d",
+        "observation1Sha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "continuation-direct",
+        "stateSha256": "97fdd72b3cc5775692a4df2f98f16bedd2958d1fea7d23de17ba3b42fbaf82cf",
+        "observation0Sha256": "b328741f4e30cad4a2cb6c9efcbb97901fb655371c1de80bb2203ff5503b4d4d",
+        "observation1Sha256": "dc5eb3ac6d356e102e680ea89e02b6561e12d963e071739b671958017dcf1e2b"
+      }
+    ]
+  },
+  "native": {
+    "savePath": "/games/civcraft/data/slot-1.dat",
+    "hostileContinuation": {
+      "ok": true
+    },
+    "capturedSettlerOwner": -2147483647,
+    "registeredWar": {
+      "outcome": {
+        "declareWar": {
+          "ok": true,
+          "reason": "War announced for next round"
+        },
+        "settlerOwner": 0,
+        "warActive": true,
+        "capture": {
+          "ok": true
+        }
+      },
+      "checkpointHashes": {
+        "label": "registered-war-capture",
+        "stateSha256": "2b88356199264724a1428819afc745232da0f654e3d68acf788909c79502deaa",
+        "observation0Sha256": "00792b402b0ca31a7702e3435868d80827a12967c4f317c8a660be21ac7b3e14",
+        "observation1Sha256": "6ba17a3b56b2d89b6826bd6967fabaf8b9973e3f0e81bf144046a5ff60749cb0"
+      }
+    },
+    "host": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+    "profile": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-wartime-save-3pvxc51j",
+    "consoleLog": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-wartime-save-3pvxc51j/console.log",
+    "exitCode": 0,
+    "checkpointHashes": [
+      {
+        "label": "before-capture",
+        "stateSha256": "70b20404629c72094c5ad5f9abef73c5388c2e6c18d21bc0d4dae6953aaf3964",
+        "observation0Sha256": "1f5aee4d92025612d15968d581acf015246174aa48a5279145c5cb3f57106f34",
+        "observation1Sha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "after-capture",
+        "stateSha256": "55f450c37eb17aee52432dd0d6282c795ebeda57f417677d3330ca511d42ec9a",
+        "observation0Sha256": "37c45d58231f94db5edefecad1d7cbff1215cc4d1666a564aaa5153cf9f36b4d",
+        "observation1Sha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "after-save-load",
+        "stateSha256": "55f450c37eb17aee52432dd0d6282c795ebeda57f417677d3330ca511d42ec9a",
+        "observation0Sha256": "37c45d58231f94db5edefecad1d7cbff1215cc4d1666a564aaa5153cf9f36b4d",
+        "observation1Sha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "continuation-direct",
+        "stateSha256": "97fdd72b3cc5775692a4df2f98f16bedd2958d1fea7d23de17ba3b42fbaf82cf",
+        "observation0Sha256": "b328741f4e30cad4a2cb6c9efcbb97901fb655371c1de80bb2203ff5503b4d4d",
+        "observation1Sha256": "dc5eb3ac6d356e102e680ea89e02b6561e12d963e071739b671958017dcf1e2b"
+      },
+      {
+        "label": "continuation-loaded",
+        "stateSha256": "97fdd72b3cc5775692a4df2f98f16bedd2958d1fea7d23de17ba3b42fbaf82cf",
+        "observation0Sha256": "b328741f4e30cad4a2cb6c9efcbb97901fb655371c1de80bb2203ff5503b4d4d",
+        "observation1Sha256": "dc5eb3ac6d356e102e680ea89e02b6561e12d963e071739b671958017dcf1e2b"
+      }
+    ]
+  },
+  "comparison": {
+    "checks": [
+      {
+        "label": "before-capture",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "70b20404629c72094c5ad5f9abef73c5388c2e6c18d21bc0d4dae6953aaf3964",
+        "nativeSha256": "70b20404629c72094c5ad5f9abef73c5388c2e6c18d21bc0d4dae6953aaf3964"
+      },
+      {
+        "label": "before-capture",
+        "field": "observation0",
+        "equal": true,
+        "offlineSha256": "1f5aee4d92025612d15968d581acf015246174aa48a5279145c5cb3f57106f34",
+        "nativeSha256": "1f5aee4d92025612d15968d581acf015246174aa48a5279145c5cb3f57106f34"
+      },
+      {
+        "label": "before-capture",
+        "field": "observation1",
+        "equal": true,
+        "offlineSha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730",
+        "nativeSha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "after-capture",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "55f450c37eb17aee52432dd0d6282c795ebeda57f417677d3330ca511d42ec9a",
+        "nativeSha256": "55f450c37eb17aee52432dd0d6282c795ebeda57f417677d3330ca511d42ec9a"
+      },
+      {
+        "label": "after-capture",
+        "field": "observation0",
+        "equal": true,
+        "offlineSha256": "37c45d58231f94db5edefecad1d7cbff1215cc4d1666a564aaa5153cf9f36b4d",
+        "nativeSha256": "37c45d58231f94db5edefecad1d7cbff1215cc4d1666a564aaa5153cf9f36b4d"
+      },
+      {
+        "label": "after-capture",
+        "field": "observation1",
+        "equal": true,
+        "offlineSha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730",
+        "nativeSha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "continuation-direct",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "97fdd72b3cc5775692a4df2f98f16bedd2958d1fea7d23de17ba3b42fbaf82cf",
+        "nativeSha256": "97fdd72b3cc5775692a4df2f98f16bedd2958d1fea7d23de17ba3b42fbaf82cf"
+      },
+      {
+        "label": "continuation-direct",
+        "field": "observation0",
+        "equal": true,
+        "offlineSha256": "b328741f4e30cad4a2cb6c9efcbb97901fb655371c1de80bb2203ff5503b4d4d",
+        "nativeSha256": "b328741f4e30cad4a2cb6c9efcbb97901fb655371c1de80bb2203ff5503b4d4d"
+      },
+      {
+        "label": "continuation-direct",
+        "field": "observation1",
+        "equal": true,
+        "offlineSha256": "dc5eb3ac6d356e102e680ea89e02b6561e12d963e071739b671958017dcf1e2b",
+        "nativeSha256": "dc5eb3ac6d356e102e680ea89e02b6561e12d963e071739b671958017dcf1e2b"
+      },
+      {
+        "label": "after-capture==after-save-load",
+        "field": "state",
+        "equal": true,
+        "leftSha256": "55f450c37eb17aee52432dd0d6282c795ebeda57f417677d3330ca511d42ec9a",
+        "rightSha256": "55f450c37eb17aee52432dd0d6282c795ebeda57f417677d3330ca511d42ec9a"
+      },
+      {
+        "label": "continuation-direct==continuation-loaded",
+        "field": "state",
+        "equal": true,
+        "leftSha256": "97fdd72b3cc5775692a4df2f98f16bedd2958d1fea7d23de17ba3b42fbaf82cf",
+        "rightSha256": "97fdd72b3cc5775692a4df2f98f16bedd2958d1fea7d23de17ba3b42fbaf82cf"
+      },
+      {
+        "label": "after-capture==after-save-load",
+        "field": "observation0",
+        "equal": true,
+        "leftSha256": "37c45d58231f94db5edefecad1d7cbff1215cc4d1666a564aaa5153cf9f36b4d",
+        "rightSha256": "37c45d58231f94db5edefecad1d7cbff1215cc4d1666a564aaa5153cf9f36b4d"
+      },
+      {
+        "label": "continuation-direct==continuation-loaded",
+        "field": "observation0",
+        "equal": true,
+        "leftSha256": "b328741f4e30cad4a2cb6c9efcbb97901fb655371c1de80bb2203ff5503b4d4d",
+        "rightSha256": "b328741f4e30cad4a2cb6c9efcbb97901fb655371c1de80bb2203ff5503b4d4d"
+      },
+      {
+        "label": "after-capture==after-save-load",
+        "field": "observation1",
+        "equal": true,
+        "leftSha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730",
+        "rightSha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "continuation-direct==continuation-loaded",
+        "field": "observation1",
+        "equal": true,
+        "leftSha256": "dc5eb3ac6d356e102e680ea89e02b6561e12d963e071739b671958017dcf1e2b",
+        "rightSha256": "dc5eb3ac6d356e102e680ea89e02b6561e12d963e071739b671958017dcf1e2b"
+      },
+      {
+        "label": "active-hostile-diagnostic",
+        "field": "offline",
+        "equal": true,
+        "error": "None"
+      },
+      {
+        "label": "active-hostile-diagnostic",
+        "field": "native",
+        "equal": true,
+        "error": ""
+      },
+      {
+        "label": "registered-war-outcome",
+        "field": "outcome",
+        "equal": true,
+        "offline": {
+          "declareWar": {
+            "reason": "War announced for next round",
+            "ok": true
+          },
+          "capture": {
+            "ok": true
+          },
+          "settlerOwner": 0,
+          "warActive": true
+        },
+        "native": {
+          "declareWar": {
+            "ok": true,
+            "reason": "War announced for next round"
+          },
+          "settlerOwner": 0,
+          "warActive": true,
+          "capture": {
+            "ok": true
+          }
+        }
+      },
+      {
+        "label": "registered-war-capture",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "2b88356199264724a1428819afc745232da0f654e3d68acf788909c79502deaa",
+        "nativeSha256": "2b88356199264724a1428819afc745232da0f654e3d68acf788909c79502deaa"
+      },
+      {
+        "label": "registered-war-capture",
+        "field": "observation0",
+        "equal": true,
+        "offlineSha256": "00792b402b0ca31a7702e3435868d80827a12967c4f317c8a660be21ac7b3e14",
+        "nativeSha256": "00792b402b0ca31a7702e3435868d80827a12967c4f317c8a660be21ac7b3e14"
+      },
+      {
+        "label": "registered-war-capture",
+        "field": "observation1",
+        "equal": true,
+        "offlineSha256": "6ba17a3b56b2d89b6826bd6967fabaf8b9973e3f0e81bf144046a5ff60749cb0",
+        "nativeSha256": "6ba17a3b56b2d89b6826bd6967fabaf8b9973e3f0e81bf144046a5ff60749cb0"
+      }
+    ],
+    "failed": []
+  },
+  "rawArtifact": "/tmp/civcraft-wartime-save-parity.raw.json",
+  "limitation": "The save branch uses an intentionally unregistered hostile owner; capture is exercised by Hostiles.round -> Combat.attack -> Stacks.capture, because Actions.apply cannot submit an order for the wilderness owner. A separate same-run branch covers registered-player declareWar followed by the next-round legal settler capture through Actions.apply. Surprise War remains untested. M0 fixes captured-civilian hostile accounting; the active-hostile continuation must now succeed, and save/reload retains hostile processing. Historical pre-fix results remain in their original artifact."
+}

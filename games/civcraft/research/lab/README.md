@@ -1,5 +1,11 @@
 # CivCraft research and balance laboratory
 
+**Execution update:** balance experiments are paused by the user. Implementation
+now follows the accepted [ADRs](../../docs/adr/README.md) and
+[balance roadmap](../../docs/ROADMAP-balance.md). M0 fixes the historical hostile
+captured-Settler crash; its [current verification](../../docs/M0-BASELINE.md)
+does not retroactively change any historical experiment or source fingerprint.
+
 This initiative follows [the supplied authoritative specification](GOAL_SPECIFICATION.md), SHA-256 `4d5a275d8dec5442b77f5547641920193c1e1a69797262e16b63f90410af60a3`. The user supplied `/Users/fpbrault/Documents/CivCraft_Research_Simulation_ML_Balance_Goal.md`. The specification has been copied here for reproducibility.
 
 **Current status: P1 approved and implemented on `codex/civcraft-p1-balance`; validation and draft PR preparation are in progress.** The user-requested healer change H1 is implemented. P2–P4 remain unapproved proposals. Shared authoritative lifecycle extraction, authentic headless simulation, bounded workers, observer-only candidate generation, policy experiments, checkpoints, and initial measurements exist. Broad conditional balance, robust adversarial policies, recoverability estimates, and the ML deployment comparison remain validation work. See [requirement coverage](REQUIREMENTS_MATRIX.md) rather than treating the existence of ten documents as proof of completion.
