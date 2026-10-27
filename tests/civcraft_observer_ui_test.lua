@@ -5,6 +5,7 @@ end
 local Hex = dofile("games/civcraft/hex.lua")
 local Systems = dofile("games/civcraft/systems.lua")
 local UI = dofile("games/civcraft/ui.lua")
+dofile("tests/helpers/civcraft_layout_only.lua")(UI)
 local World = dofile("games/civcraft/world.lua")
 
 for _, graphics in ipairs({ false, true }) do
