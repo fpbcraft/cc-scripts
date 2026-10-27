@@ -103,11 +103,11 @@ cycle. A dependency does not justify postponing all testing until the end.
 Goal: start from the actual P1 implementation and trustworthy comparison runs.
 
 - [x] Read current Git changes and latest P1 study manifests; preserve unrelated work.
-- [ ] Verify campaign-selected baseline/P1 costs, Farm help, project remainders,
+- [x] Verify campaign-selected baseline/P1 costs, Farm help, project remainders,
   read-only forecasts, save/load and original-campaign compatibility.
-- [ ] Capture source fingerprints, map seeds, policies, enabled hostiles, victory
+- [x] Capture source fingerprints, map seeds, policies, enabled hostiles, victory
   flags and speed for a small reproducible baseline suite.
-- [ ] Reproduce or inspect the known hostile captured-Settler failure and fix its
+- [x] Reproduce or inspect the known hostile captured-Settler failure and fix its
   actor/spawner lifecycle before using hostile-enabled runs as balance evidence.
 - [ ] Capture native opening observations: first build/research choices, city
   expansion, menu starvation, civilian projects, turn time and order load.
@@ -115,6 +115,12 @@ Goal: start from the actual P1 implementation and trustworthy comparison runs.
 Done when: current ruleset tests and selected native cases have explicit results;
 remaining correctness/performance failures are identified without being labeled
 balance findings. No historical no-hostile result is relabeled hostile-enabled.
+
+M0 correctness record: [verified baseline and capture repair](M0-BASELINE.md).
+58 Lua scripts, 34 Python checks, two focused native rule tests, 21 native/save
+parity comparisons and the native host/AI session pass. Broader native expansion,
+menu-load and latency observations remain open. New balance experiments are
+paused by the user's execution instruction; continue with playable mechanics.
 
 ## M1 — Establish the new campaign scope
 

@@ -17,6 +17,12 @@ local Saves = environment.dofile("/games/civcraft/saves.lua")
 local Systems = environment.dofile("/games/civcraft/systems.lua")
 local World = environment.dofile("/games/civcraft/world.lua")
 local Diplomacy = environment.dofile("/games/civcraft/diplomacy.lua")
+local Cooperative = environment.dofile("/games/civcraft/cooperative.lua")
+local work = {}
+local function checkpoint()
+	Cooperative.checkpoint(work, false, true)
+end
+Systems.checkpoint, World.checkpoint = checkpoint, checkpoint
 
 local config = {
 	seed = 75123,
@@ -57,10 +63,7 @@ loaded = Systems.migrate(World.migrate(loaded))
 Diplomacy.migrate(loaded)
 World.reveal(loaded, environment.dofile("/games/civcraft/hex.lua"), Systems)
 checkpoints[#checkpoints + 1] = capture("after-save-load", loaded)
--- Keep the known orphan-settler crash as an explicit diagnostic, then use a
--- controlled hostile-off continuation to test save/reload state continuity.
-direct.hostileMode = "off"
-loaded.hostileMode = "off"
+-- Keep wilderness actors active through the saved captive's next round.
 Lifecycle.advance(direct)
 Lifecycle.advance(loaded)
 
