@@ -2,49 +2,62 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 local T = require("games.cogworks.tutorials")
 local E = require("games.cogworks.engine")
 local function copy(v)
-  if type(v) ~= "table" then
-    return v
-  end
-  local result = {}
-  for k, x in pairs(v) do
-    result[k] = copy(x)
-  end
-  return result
+	if type(v) ~= "table" then
+		return v
+	end
+	local result = {}
+	for k, x in pairs(v) do
+		result[k] = copy(x)
+	end
+	return result
 end
 local saved = {}
 local S = {}
 function S.newProgress()
-  return { campaignVersion = 7, unlocked = 8, level = 1, best = {}, sessions = {}, awards = {}, tutorials = {} }
+	return {
+		campaignVersion = 7,
+		unlocked = 8,
+		level = 1,
+		best = {},
+		sessions = {},
+		awards = {},
+		tutorials = {},
+	}
 end
 function S.loadSettings()
-  return { animations = true, showPorts = true, lastSlot = 1 }
+	return { animations = true, showPorts = true, lastSlot = 1 }
 end
 function S.saveSettings()
-  return true
+	return true
 end
 function S.load(slot)
-  return saved[slot] and copy(saved[slot]) or nil
+	return saved[slot] and copy(saved[slot]) or nil
 end
 function S.has(slot)
-  return saved[slot] ~= nil
+	return saved[slot] ~= nil
 end
 function S.save(slot, value)
-  saved[slot] = copy(value)
-  return true
+	saved[slot] = copy(value)
+	return true
 end
 package.loaded["games.cogworks.storage"] = S
 local A = require("games.cogworks.app")
 assert(#T.forLevel(1) == 1 and T.forLevel(1)[1].key == "I")
 for number, stage in ipairs(E.levels) do
-  local available = {}
-  for _, lesson in ipairs(T.forLevel(number)) do
-    available[lesson.key] = true
-  end
-  for kind, count in pairs(stage.stock) do
-    assert(count == 0 or available[kind], "Every available part can be taught on skipped routes")
-  end
+	local available = {}
+	for _, lesson in ipairs(T.forLevel(number)) do
+		available[lesson.key] = true
+	end
+	for kind, count in pairs(stage.stock) do
+		assert(
+			count == 0 or available[kind],
+			"Every available part can be taught on skipped routes"
+		)
+	end
 end
-assert(#T.unseen(3, { I = true, G = true }) == 1 and T.unseen(3, { I = true, G = true })[1].key == "Q")
+assert(
+	#T.unseen(3, { I = true, G = true }) == 1 and T.unseen(3, { I = true, G = true })[1].key == "Q"
+)
 local app = A.new()
 app:enter(1, false)
 assert(app.scene == "briefing" and app.briefing.number == 1)
@@ -56,8 +69,8 @@ app:openLevel(1)
 app:act("beginLevel")
 assert(app.scene == "game", "Already seen lesson not repeated")
 for i = 1, 40 do
-  app.progress.best[i] = 1
-  app.progress.awards[i] = { sealed = true, master = true, precision = true }
+	app.progress.best[i] = 1
+	app.progress.awards[i] = { sealed = true, master = true, precision = true }
 end
 app.progress.unlocked = 48
 app:openLevel(41)
@@ -69,7 +82,7 @@ app:act("help")
 app:act("replayTutorial")
 assert(app.scene == "tutorial")
 while app.scene == "tutorial" do
-  app:act("tutorialNext")
+	app:act("tutorialNext")
 end
 assert(app.scene == "game", "Ponder replay returns to game")
 local fresh = A.new({ dev = true })

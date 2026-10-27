@@ -1,4 +1,12 @@
-# CIVCRAFT v0.8.0 — Territorial Hex Civilization
+# CIVCRAFT — v0.9 development branch
+
+Implementation of the next gameplay iteration is tracked in [IMPLEMENTATION-v0.9.md](IMPLEMENTATION-v0.9.md), based on [design draft v0.9.1](ROADMAP-v0.9.md).
+
+The upcoming iteration adds layered Minecraft-inspired biomes and two larger map
+presets: **Huge 48×32** and **Vast 64×40**. New worlds use sparse, habitat-specific
+deposits and repaired starting areas; existing saves keep their original terrain
+and deposits. See [world-generation benchmarks](WORLDGEN-BENCHMARK.md) for the
+local measurements and remaining live validation.
 
 A Civilization-inspired, turn-based hex 4X for **CC:Tweaked**, supporting local hot-seat (2–4 human/AI slots) or multiplayer over rednet. Local games use one computer or an Advanced Monitor; networked games use an authoritative host. Computers communicate through **rednet modems**, either wireless (within range) or wired (via the same wired modem network). It also works over interdimensional wireless modems. No HTTP or external web server is needed after installation.
 
@@ -9,10 +17,23 @@ rendering stages and cooperative waits in `/games/civcraft/data/debug.log`.
 The log is closed after each entry so it can be inspected after a forced restart.
 The previous log segment is retained as `debug.log.previous` when the log rotates.
 For network games, use `host --debug` or `join <host-computer-ID> --debug`.
+For `Too long without yielding` during world loading or saving, update the full
+program installation: the roadmap branch now includes a cooperative streaming
+save writer and visibility checkpoints. Existing saves remain readable.
+
 Logs are disabled during normal play. A last `*.begin` without its matching
 `*.end` helps identify the stalled operation; it does not by itself prove its cause.
 
 ## Install on every participating computer
+
+This branch contains the unreleased v0.9 roadmap implementation. To test the
+same development code on every participating computer, use:
+
+```sh
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/codex/civcraft-roadmap/installers/civcraft.lua codex/civcraft-roadmap
+```
+
+The published `main` version can be installed with:
 
 ```sh
 wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/installers/civcraft.lua
@@ -115,26 +136,52 @@ the existing map rather than additional dimension maps.
 
 Saves migrate to version 6 without rerolling terrain, replacing cities, deleting
 units, clearing research/production progress, or changing campaign slots. Stable
-content identifiers resolve to their new Minecraft names. Existing campaigns
+content identifiers resolve to their new Minecraft names. Campaigns without the Create ruleset
 retain the eight-city / round-90 victory rules and default to mobs off; they do
 not receive newly generated landmarks, spawners or villages. New prerequisites
 and balance apply to the updated content, so an unfinished project may need
 additional research or a local prerequisite building before it resumes.
 
-Network players must all update to v0.8; the new protocol separates incompatible
-older clients. The installer preserves `/games/civcraft/data`. To test this branch:
+Network players should all run the same version to share the same rules,
+research controls and observer-safe event playback. The installer preserves `/games/civcraft/data`. To test this branch:
 
 ```sh
-wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/codex/expand-civcraft-content/installers/civcraft.lua codex/expand-civcraft-content
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/codex/civcraft-roadmap/installers/civcraft.lua codex/civcraft-roadmap
 ```
 
 Create a new campaign in an empty slot to get the full expansion. Do not use
 `host --new` on a network save you want to retain.
 
+## AI difficulty
+
+In the lobby, open Campaign Options and select an AI's level to cycle Settler,
+Chieftain, Prince, King and Deity. Each AI can have its own setting, independently
+of hostile mobs. Prince is the default for existing saves. Levels change planning,
+search depth and decision quality; civilization personality, resources, vision,
+combat statistics, costs and action budgets stay the same. King and Deity consider
+legal follow-up attacks and future city yields. Difficulty is fixed after starting.
+
+## Council of Civilizations
+
+The Council forms after Currency with two living civilizations. Open its top-bar
+button for Status, Election or Agenda. Sessions recur every ten speed-scaled
+rounds; ballots close after three. Each civilization has two delegates, with at
+most one extra from a village allied at 60 influence for three rounds. Votes are
+secret until closing; Recent Results shows public ballots and AI explanations.
+
+A strict majority elects leadership. Diplomatic victory additionally needs two
+thirds of all delegates, another civilization's support, Stock Logistics and a
+Council Hall. It is selectable in new campaigns; older saves retain their victory
+settings. Each member can propose one opening-round resolution. Temporary trade
+facilitation, embargo, peace and censure affect real market, commerce, combat and
+reputation rules. Conversation Requests can ask for a voting pledge; the ballot
+must still be cast in Council. Ready members may vote without gaining actions.
+
 ## Shared gameplay and controls
 
 CIVCRAFT is a turn-based 4X game on a **seeded hexagonal world**. In the lobby,
-choose a map size (**Compact 18×12**, **Standard 28×18**, or **Large 40×26**),
+choose a map size (**Compact 24×16**, **Standard 40×26**, **Large 56×36**,
+**Huge 72×46**, or **Vast 96×60**),
 a map type (**Continents**, **Archipelago**, **Pangaea**, or **Highlands**),
 the seed, and each participant's civilization. Two to four human/AI empires
 compete to explore, settle, develop, research, and conquer. Saves preserve the
@@ -146,6 +193,21 @@ Names appear above cities and in city navigation, and remain stable in saves.
   costs, vision and attack ranges. Scouts reveal farther, naval vessels travel
   on water, and settlers found cities at least three hexes apart. Fog hides
   unexplored land and enemy units outside current sight.
+- **Settlers and protection:** An unprotected settler is captured immediately
+  when a melee attacker reaches its tile. Ranged attacks damage it normally.
+  One settler and one protecting unit can share a hex; attacks hit the protector
+  first. Winning melee combat captures the remaining settler, while defeating
+  the protector at range leaves its settler unprotected. Captured settlers have
+  no movement until a later turn. Use Select Settler / Select Guard in the
+  inspector to order the intended unit. Use Attach Escort to link their movement; both units must afford each step.
+- **Zone of control:** Hostile melee land units control adjacent passable land,
+  combat ships control adjacent water, and cities control both. Entering control
+  stops further movement for the current turn; military units can still attack
+  with remaining movement. Civilians and support units exhaust their remaining
+  movement on entry. Mounted units ignore control. Amber destination rings mark
+  stops. A fresh turn may leave a zone it started in. Discovering a hidden guard
+  can interrupt a route or attack approach; the unit stops at its actual position
+  and retains any unused attack. Current maps have no river-edge control rules.
 - **Manage cities:** Each citizen works a tile and has a Food, Industry or Science
   assignment. Jobs and worked tiles share the same population pool. **JOBS +**
   automatically chooses a free owned tile of that yield type; **-** unworks one
@@ -170,14 +232,19 @@ Names appear above cities and in city navigation, and remain stable in saves.
   A waiting screen names the AI currently taking its turn, then shows
   **PROCESSING ROUND** while the next round is prepared.
 
-The map stays central with a permanent, scrollable inspector. The left controls
-always use square icons. **PREV/NEXT**, the scrollbar, and mouse wheel scrolling
-keep inspector actions reachable. The bottom-left icons open **TECH TREE** and
-**NEXT IDLE UNIT**. The labeled **END TURN** button sits at the bottom right.
-The top-right city, book, clipboard and pause icons open **EMPIRE**, **CODEX**,
-**REPORT** and **PAUSE**. Zoom buttons are in the left sidebar, with the fullscreen
-**WORLD OVERVIEW** button anchored at its bottom. Four narrow, clickable map
-edges pan in their respective directions.
+The map stays central with a permanent inspector. City **INFO**, **JOBS**,
+**TILES** and **PROD** views separate statistics from the task being edited;
+compact unit inspectors separate actions from secondary details. Extremely
+short sidebars open a full-screen inspector. **PREV/NEXT**, the scrollbar and
+mouse wheel navigate long lists. Status messages appear below the map.
+
+One primary button occupies the inspector footer. It shows **UNIT ORDERS**,
+**PRODUCTION** or **RESEARCH** and opens the corresponding unresolved decision.
+Once those decisions are resolved, it becomes **END TURN**. Explicitly selecting
+**NO PRODUCTION** satisfies a city's reminder while preserving project progress.
+The top-right buttons open **TECH TREE**, **FACTIONS**, **EMPIRE**, **CODEX**,
+**REPORT** and **PAUSE**. Zoom buttons remain in the left sidebar, with
+**WORLD OVERVIEW** at its bottom. Four clickable map edges pan the view.
 Drag inside the map to pan on a computer; CraftOS monitor windows also support
 mouse dragging. Vanilla Minecraft monitor taps use the edge strips.
 
@@ -191,9 +258,9 @@ its base yields plus buildings and civilization bonuses; adding its worked tiles
 gives the total shown in the inspector. Terrain detail increases with zoom.
 
 **EMPIRE** opens a paged list of all owned units and cities; selecting an entry
-centers the map and opens its inspector. **NEXT IDLE UNIT** cycles through awake
-units with movement left, skipping sleeping and spent units. These navigation
-actions never activate movement mode. When a unit occupies a city tile, use the
+centers the map and opens its inspector. **UNIT ORDERS** cycles through awake
+units with movement left, excluding sleeping, auto-exploring and skipped units.
+This navigation never activates movement mode. When a unit occupies a city tile, use the
 inspector's **CITY / UNIT** chooser to inspect either one; map taps select the
 unit first.
 
@@ -206,10 +273,14 @@ units that can still act. Gold-framed worker badges identify worked tiles. **CAN
 **WAKE UNIT** restores active orders. Other unit actions require their own
 inspector buttons. Escape closes a dialog or cancels the current action first.
 
-**END TURN** asks for confirmation when awake units have moves remaining, a city
-has no production, or an available research project is unassigned. **GO TO** buttons jump to the missing orders; **END ANYWAY**
-skips them. Hotseat handoffs clear the outgoing camera, selection and
-action overlays; the next player starts centered on their own city or unit.
+**SKIP TURN** ignores a unit for the current turn's reminders without spending
+its remaining movement. It becomes available again next turn; accepted new
+orders clear the skip immediately. Unlike Sleep, Skip Turn does not persist
+across turns. An eligible Surprise War response is a new reminder window, using
+only the defender's unspent actions. The primary turn button handles remaining
+unit, production and research decisions before it offers **END TURN**.
+Hotseat handoffs clear the outgoing camera, selection and action overlays; the
+next player starts centered on their own city or unit.
 A scrollable **turn report dialog** lists economic changes, completed research
 and buildings, city growth, and recruited/lost/damaged units. **REPORT** reopens
 it. Reports contain only that player's empire information.
@@ -247,12 +318,19 @@ combat formulas, healing, siege and experience rules.
 
 Scouts and explorers can **AUTO EXPLORE** along safe routes, continuing on new
 rounds until stopped or no frontier remains. Coastal cities need a **SHIPYARD**
-to build naval units. **NAVIGATION** permits land units to embark at two moves
-per water hex; embarked units cannot attack or found cities.
+to build naval units. **NAVIGATION** permits land units to embark at two movement points per water
+hex during a land-start turn. Starting a normal round at sea grants at least six
+movement points and reduces water travel to one point per hex. Landing consumes
+the remaining allowance, so it cannot fund extra movement inland. Embarked
+combat units, including archers, make adjacent melee attacks onto land and receive
+normal retaliation. Land melee cannot initiate attacks against units on water;
+land ranged units may fire at embarked targets without Navigation. Settlers
+cannot found cities at sea. Loading never refreshes movement. A Surprise War
+response starting at sea uses the faster rate with only its unspent movement.
 
 ## Display and modems
 
-Designed for **3×3 through 5×5 Advanced Monitors** at scale 0.5, including rectangular arrangements. Compact layouts preserve both side panels and page long lists. The program selects the largest monitor on each machine, or falls back to a colour-capable computer terminal. Monitor taps and terminal mouse clicks are supported. The renderer uses native pixel graphics when available and standard CC colour text otherwise. No graphics mod, Basalt, Pine3D or extra dependency is required.
+Designed for **3×3 through 5×5 Advanced Monitors** at scale 0.5, including rectangular arrangements. Compact layouts preserve both side panels and page long lists. The program selects the largest monitor on each machine, or falls back to a colour-capable computer terminal. Monitor taps and terminal mouse clicks are supported. The renderer uses native pixel graphics when available and standard CC colour text otherwise. No graphics mod or Pine3D is required. Diplomacy uses a bundled, pinned Basalt 2.5 runtime; the normal CivCraft installer includes it, so no separate dependency installation is needed.
 
 Each machine needs a peripheral modem for networked play; wired modems need to be part of the same wired network. CC:Tweaked does **not** offer unlimited-range normal wireless networking—distance and dimensions matter.
 
@@ -337,3 +415,23 @@ The authoritative implementation objectives, touch layout, world generation, tur
 - **Campaign safety:** named three-slot saves, deterministic world seeds and separate civilization discovery histories remain supported, including on single-terminal CraftOS environments. Older campaign saves migrate without deleting existing slot data.
 
 The game is designed for touch input but also supports keyboards and text terminals. Automated test coverage includes deferred construction and research, strategic eligibility, worked-tile yields, deterministic geography, hot-seat privacy and graphics navigation.
+
+
+## Current campaign navigation and research
+
+The title menu offers New Campaign, Load Campaign, Remote Multiplayer, Settings
+and Exit. New and Load use separate slot menus with Back controls. Replacing an
+occupied campaign requires confirmation; updating the program preserves saves.
+Loading keeps previous events readable in the Event Log without replaying them.
+
+Choose a civilization from its lobby dropdown; the lobby shows its bonuses and
+fixed AI personality. Hosts can configure other participants, while remote human
+players can change only their own civilization before starting.
+
+The research screen keeps the connected tree and a technology sidebar visible
+at every screen size. Select a node, then use the pinned Research button to make
+it active. The sidebar lists its progress, prerequisites, purpose and unlocks,
+with links to their Codex entries. Prerequisites are left of their dependents;
+arrows show direction, amber links enter the selected technology and blue links
+lead onward. Click a prerequisite/dependent in the sidebar to focus it. Pan/zoom
+controls remain available on touch-only screens; the sidebar pages separately.

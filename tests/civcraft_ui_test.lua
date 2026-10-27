@@ -1,96 +1,111 @@
 -- CIVCRAFT uses the Railbreak pixel renderer and real clickable UI elements.
 local oldDofile = dofile
 dofile = function(path)
-  if path:sub(1, 16) == "/games/civcraft/" then
-    return oldDofile(path:sub(2))
-  end
-  return oldDofile(path)
+	if path:sub(1, 16) == "/games/civcraft/" then
+		return oldDofile(path:sub(2))
+	end
+	return oldDofile(path)
 end
 colors = {
-  black = 32768,
-  white = 1,
-  gray = 128,
-  lightGray = 256,
-  orange = 2,
-  lightBlue = 8,
-  yellow = 16,
-  green = 8192,
-  blue = 2048,
-  lime = 32,
-  red = 16384,
-  brown = 4096,
+	black = 32768,
+	white = 1,
+	gray = 128,
+	lightGray = 256,
+	orange = 2,
+	lightBlue = 8,
+	yellow = 16,
+	green = 8192,
+	blue = 2048,
+	lime = 32,
+	red = 16384,
+	brown = 4096,
 }
 local m = { w = 80, h = 45, mode = 0, pixels = 0 }
 function m.getSize(mode)
-  if mode == 2 then
-    return 480, 270
-  end
-  return m.w, m.h
+	if mode == 2 then
+		return 480, 270
+	end
+	return m.w, m.h
 end
 function m.setGraphicsMode(mode)
-  m.mode = mode
+	m.mode = mode
 end
 function m.drawPixels(x, y, color, w, h)
-  assert(x >= 0 and y >= 0 and x + w <= 480 and y + h <= 270, "CIVCRAFT draw beyond screen")
-  m.pixels = m.pixels + 1
+	assert(x >= 0 and y >= 0 and x + w <= 480 and y + h <= 270, "CIVCRAFT draw beyond screen")
+	m.pixels = m.pixels + 1
 end
 function m.getPaletteColor()
-  return 0, 0, 0
+	return 0, 0, 0
 end
 function m.setPaletteColor() end
 local UI = oldDofile("games/civcraft/ui.lua")
 dofile = oldDofile
 local calls = {}
 local ui = UI.new(m, function(action, data)
-  calls[#calls + 1] = { action = action, data = data }
+	calls[#calls + 1] = { action = action, data = data }
 end)
 assert(ui.r.mode == "graphics", "Native pixel mode enabled")
 local state = {
-  phase = "lobby",
-  round = 1,
-  players = { { id = 11, name = "P1" }, { id = 12, name = "P2" } },
-  cities = {},
-  units = {},
+	phase = "lobby",
+	round = 1,
+	players = { { id = 11, name = "P1" }, { id = 12, name = "P2" } },
+	cities = {},
+	units = {},
 }
 ui:draw(state, 11, { localMode = true, screen = "game" })
 local function touchLabel(label)
-  for _, b in ipairs(ui.r.buttons) do
-    if b.label == label then
-      local x = math.floor(ui.r.ox + (b.x + b.w / 2) * ui.r.sx)
-      local y = math.floor(ui.r.oy + (b.y + b.h / 2) * ui.r.sy)
-      assert(ui:tap(x, y), "Pixel button hit: " .. label)
-      return
-    end
-  end
-  error("Button not found: " .. label)
+	for _, b in ipairs(ui.r.buttons) do
+		if b.label == label then
+			local x = math.floor(ui.r.ox + (b.x + b.w / 2) * ui.r.sx)
+			local y = math.floor(ui.r.oy + (b.y + b.h / 2) * ui.r.sy)
+			assert(ui:tap(x, y), "Pixel button hit: " .. label)
+			return
+		end
+	end
+	error("Button not found: " .. label)
 end
 ui:draw(state, 11, {
-  localMode = true,
-  screen = "title",
-  slot = 2,
-  slots = {
-    { occupied = true, name = "EMPIRE ALPHA", round = 4 },
-    { occupied = false, name = "EMPTY SLOT 2" },
-    { occupied = true, name = "EMPIRE BETA", round = 9 },
-  },
+	localMode = true,
+	screen = "title",
+	slot = 2,
+	slots = {
+		{ occupied = true, name = "EMPIRE ALPHA", round = 4 },
+		{ occupied = false, name = "EMPTY SLOT 2" },
+		{ occupied = true, name = "EMPIRE BETA", round = 9 },
+	},
 })
-touchLabel("SLOT 3  EMPIRE BETA  R9")
+ui.titleMenu = "load"
+ui:draw(state, 11, {
+	localMode = true,
+	screen = "title",
+	slot = 2,
+	slots = {
+		{ occupied = true, name = "EMPIRE ALPHA", round = 4 },
+		{ occupied = false },
+		{ occupied = true, name = "EMPIRE BETA", round = 9 },
+	},
+})
+touchLabel("SLOT 3 EMPIRE BETA R9")
 assert(
-  calls[#calls].action == "selectSlot" and calls[#calls].data.slot == 3,
-  "Touchscreen title must switch between saved campaigns"
+	calls[#calls].action == "selectSlot" and calls[#calls].data.slot == 3,
+	"Touchscreen title must switch between saved campaigns"
 )
 ui:draw(state, 11, {
-  localMode = true,
-  screen = "title",
-  slot = 2,
-  slots = {
-    { occupied = true, name = "A", round = 1 },
-    { occupied = false, name = "B" },
-    { occupied = false, name = "C" },
-  },
+	localMode = true,
+	screen = "title",
+	slot = 2,
+	slots = {
+		{ occupied = true, name = "A", round = 1 },
+		{ occupied = false, name = "B" },
+		{ occupied = false, name = "C" },
+	},
 })
+touchLabel("BACK")
+ui:draw(state, 11, { screen = "title" })
 touchLabel("NEW CAMPAIGN")
-assert(calls[#calls].action == "newGame", "Main menu starts a new game")
+ui:draw(state, 11, { screen = "title" })
+touchLabel("CREATE CAMPAIGN")
+assert(calls[#calls].action == "newGame", "Campaign submenu starts a new game")
 state.mapSize = "standard"
 state.mapSeed = 137
 ui:draw(state, 11, { localMode = true, screen = "game" })
@@ -113,7 +128,8 @@ state.players[1].techs = {}
 state.players[1].civ = "verdant"
 state.cities = {}
 state.units = {}
-state.cities = { { x = 2, y = 2, owner = 11, jobs = { food = 1, wood = 1, science = 0 }, buildings = {} } }
+state.cities =
+	{ { x = 2, y = 2, owner = 11, jobs = { food = 1, wood = 1, science = 0 }, buildings = {} } }
 state.units = { { x = 3, y = 2, owner = 11, kind = "warrior" } }
 ui:draw(state, 11, { localMode = true })
 local tile = ui.hexTargets[1]
@@ -123,24 +139,27 @@ local ty = math.floor(ui.r.oy + (tile.y + tile.h / 2) * ui.r.sy)
 assert(ui:tap(tx, ty), "Map accepts touch")
 -- Selecting an owned unit exposes precisely the legal hex destinations.
 local function tapHex(hx, hy)
-  local hit
-  for _, hex in ipairs(ui.hexTargets or {}) do
-    if hex.tx == hx and hex.ty == hy then
-      hit = hex
-      break
-    end
-  end
-  assert(hit, "Hex " .. hx .. "," .. hy .. " has a hitbox")
-  return ui:tap(
-    math.floor(ui.r.ox + (hit.x + hit.w / 2) * ui.r.sx),
-    math.floor(ui.r.oy + (hit.y + hit.h / 2) * ui.r.sy)
-  )
+	local hit
+	for _, hex in ipairs(ui.hexTargets or {}) do
+		if hex.tx == hx and hex.ty == hy then
+			hit = hex
+			break
+		end
+	end
+	assert(hit, "Hex " .. hx .. "," .. hy .. " has a hitbox")
+	return ui:tap(
+		math.floor(ui.r.ox + (hit.x + hit.w / 2) * ui.r.sx),
+		math.floor(ui.r.oy + (hit.y + hit.h / 2) * ui.r.sy)
+	)
 end
 assert(tapHex(3, 2), "Unit can be selected")
 assert(not ui.source and #ui.reachable == 0, "Selection never activates a unit action")
 ui:draw(state, 11, { localMode = true })
 touchLabel("MOVE / ATTACK")
-assert(ui.source and ui.source.x == 3 and #ui.reachable > 0, "Move button activates the legal overlay")
+assert(
+	ui.source and ui.source.x == 3 and #ui.reachable > 0,
+	"Move button activates the legal overlay"
+)
 ui:draw(state, 11, { localMode = true })
 local legal = ui.reachable[1]
 assert(tapHex(legal.x, legal.y), "Highlighted move is clickable")
@@ -148,8 +167,8 @@ assert(ui.pendingMove, "A destination opens move confirmation")
 ui:draw(state, 11, { localMode = true })
 touchLabel("CONFIRM")
 assert(
-  calls[#calls].action == "move" and calls[#calls].data.sx == 3 and calls[#calls].data.sy == 2,
-  "Only confirmed movement emits the simulation order"
+	calls[#calls].action == "move" and calls[#calls].data.sx == 3 and calls[#calls].data.sy == 2,
+	"Only confirmed movement emits the simulation order"
 )
 ui:draw(state, 11, { localMode = true })
 -- Selecting a city exposes its specific actions, not a generic build bar.
@@ -157,22 +176,29 @@ assert(tapHex(2, 2), "Select owned city")
 ui:draw(state, 11, { localMode = true })
 local actions = {}
 for _, btn in ipairs(ui.r.buttons) do
-  actions[btn.label] = true
+	actions[btn.label] = true
 end
 assert(
-  actions.JOBS and actions.TILES and actions.PROD and actions["TECH TREE"],
-  "Staffing, tile management and production controls stay reachable"
+	actions.JOBS and actions.TILES and actions.PROD and actions["TECH TREE"],
+	"Staffing, tile management and production controls stay reachable"
 )
 assert(not actions["MOVE UNIT"], "City should not expose unit movement")
 assert(ui.mapViewport and ui.mapViewport.w > 0, "Central map viewport")
+touchLabel("JOBS")
+ui:draw(state, 11, { localMode = true })
 touchLabel("-")
-assert(calls[#calls].action == "assign" and calls[#calls].data.to == "idle", "Minus frees a citizen")
+assert(
+	calls[#calls].action == "assign" and calls[#calls].data.to == "idle",
+	"Minus frees a citizen"
+)
 state.cities[1].jobs.food = 0
 ui:draw(state, 11, { localMode = true })
 touchLabel("+")
 assert(
-  calls[#calls].action == "assign" and calls[#calls].data.from == "idle" and calls[#calls].data.to == "food",
-  "Plus uses an idle citizen"
+	calls[#calls].action == "assign"
+		and calls[#calls].data.from == "idle"
+		and calls[#calls].data.to == "food",
+	"Plus uses an idle citizen"
 )
 
 local oldPan = ui.panX
@@ -181,22 +207,20 @@ assert(ui.panX >= oldPan, "Pan control clamps within world")
 touchLabel("TILES")
 assert(ui.workCity and ui.workCity.x == 2, "Worker assignment uses map tiles")
 ui:draw(state, 11, { localMode = true })
-touchLabel("NEXT")
-ui:draw(state, 11, { localMode = true })
 touchLabel("DONE WORK")
 assert(not ui.workCity, "Exit worker mode")
 touchLabel("TECH TREE")
 ui:draw(state, 11, { localMode = true })
 local techNode = false
 for _, button in ipairs(ui.r.buttons) do
-  if button.label == "agriculture" or button.label == "WHEAT FARMING" then
-    techNode = true
-  end
+	if button.label == "agriculture" or button.label == "WHEAT FARMING" then
+		techNode = true
+	end
 end
 assert(techNode, "City tech tab opens connected technology graph canvas")
 touchLabel("CLOSE")
 ui:draw(state, 11, { localMode = true })
-touchLabel("END TURN")
+ui:command("end")
 assert(ui.endConfirm, "Unfinished orders require confirmation")
 ui:draw(state, 11, { localMode = true })
 touchLabel("END ANYWAY")

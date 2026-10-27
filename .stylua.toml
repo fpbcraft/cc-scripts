@@ -1,9 +1,9 @@
-# Keep CC:Tweaked Lua readable and compatible with the Lua 5.3 syntax check in CI.
+# Roblox-style layout, using ordinary Lua syntax for CC:Tweaked and CI.
 syntax = "Lua53"
-column_width = 120
+column_width = 100
 line_endings = "Unix"
-indent_type = "Spaces"
-indent_width = 2
+indent_type = "Tabs"
+indent_width = 4
 quote_style = "AutoPreferDouble"
 call_parentheses = "Always"
 collapse_simple_statement = "Never"

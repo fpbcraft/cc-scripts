@@ -5,76 +5,78 @@ disk.install("fpbstore", "main", "--no-startup")
 disk.withoutRuntime()
 
 local P = dofile("lib/fpb/packages.lua")
-local A, B, C, D = string.rep("a", 40), string.rep("b", 40), string.rep("c", 40), string.rep("d", 40)
+local A, B, C, D =
+	string.rep("a", 40), string.rep("b", 40), string.rep("c", 40), string.rep("d", 40)
 local heads = { main = A, pr = B, branch = C }
 local state = { changedCog = false, changedPR = false }
 local function tree(sha)
-  local entries = {}
-  local seen = {}
-  for _, spec in pairs(P.packages) do
-    local paths = {}
-    for _, file in ipairs(spec.files) do
-      paths[#paths + 1] = spec.source .. "/" .. file
-    end
-    for _, lib in ipairs(spec.libraries) do
-      paths[#paths + 1] = "lib/fpb/" .. lib .. ".lua"
-    end
-    for _, path in ipairs(paths) do
-      if not seen[path] then
-        seen[path] = true
-        local blob = A
-        if path == "games/cogworks/levels.lua" then
-          if sha == D and state.changedCog then
-            blob = D
-          elseif sha == D and state.changedPR then
-            blob = B
-          end
-        end
-        entries[#entries + 1] = { path = path, type = "blob", sha = blob }
-      end
-    end
-  end
-  return { tree = entries, truncated = false }
+	local entries = {}
+	local seen = {}
+	for _, spec in pairs(P.packages) do
+		local paths = {}
+		for _, file in ipairs(spec.files) do
+			paths[#paths + 1] = spec.source .. "/" .. file
+		end
+		for _, lib in ipairs(spec.libraries) do
+			paths[#paths + 1] = "lib/fpb/" .. lib .. ".lua"
+		end
+		for _, path in ipairs(paths) do
+			if not seen[path] then
+				seen[path] = true
+				local blob = A
+				if path == "games/cogworks/levels.lua" then
+					if sha == D and state.changedCog then
+						blob = D
+					elseif sha == D and state.changedPR then
+						blob = B
+					end
+				end
+				entries[#entries + 1] = { path = path, type = "blob", sha = blob }
+			end
+		end
+	end
+	return { tree = entries, truncated = false }
 end
 
 local responses = {}
 local original = disk.env.http.get
 disk.env.http.get = function(url, ...)
-  if url:find("api.github.com", 1, true) then
-    local body
-    if url:find("/pulls/52", 1, true) then
-      body = "pr"
-      responses.pr = { head = { sha = heads.pr, repo = { full_name = "fpbcraft/cc-scripts" } } }
-    elseif url:find("/commits/feature%2Fexperiment", 1, true) then
-      body = "branch"
-      responses.branch = { sha = heads.branch }
-    elseif url:find("/commits/main", 1, true) then
-      body = "main"
-      responses.main = { sha = heads.main }
-    else
-      local sha = url:match("/git/trees/([a-f0-9]+)")
-      if sha then
-        body = "tree:" .. sha
-        responses[body] = tree(sha)
-      end
-    end
-    if not body then
-      return nil, "Unexpected API request: " .. url
-    end
-    return {
-      getResponseCode = function()
-        return 200
-      end,
-      readAll = function()
-        return body
-      end,
-      close = function() end,
-    }
-  end
-  return original(url, ...)
+	if url:find("api.github.com", 1, true) then
+		local body
+		if url:find("/pulls/52", 1, true) then
+			body = "pr"
+			responses.pr =
+				{ head = { sha = heads.pr, repo = { full_name = "fpbcraft/cc-scripts" } } }
+		elseif url:find("/commits/feature%2Fexperiment", 1, true) then
+			body = "branch"
+			responses.branch = { sha = heads.branch }
+		elseif url:find("/commits/main", 1, true) then
+			body = "main"
+			responses.main = { sha = heads.main }
+		else
+			local sha = url:match("/git/trees/([a-f0-9]+)")
+			if sha then
+				body = "tree:" .. sha
+				responses[body] = tree(sha)
+			end
+		end
+		if not body then
+			return nil, "Unexpected API request: " .. url
+		end
+		return {
+			getResponseCode = function()
+				return 200
+			end,
+			readAll = function()
+				return body
+			end,
+			close = function() end,
+		}
+	end
+	return original(url, ...)
 end
 disk.env.textutils.unserializeJSON = function(body)
-  return responses[body]
+	return responses[body]
 end
 
 local manager = disk.run("fpbstore", "--test-api")
@@ -136,10 +138,10 @@ assert(manager.installedRevision(cog) == D)
 -- Unavailable GitHub metadata must never pretend PR content is main.
 local oldGet = disk.env.http.get
 disk.env.http.get = function(url, ...)
-  if url:find("api.github.com", 1, true) then
-    return nil, "Offline"
-  end
-  return oldGet(url, ...)
+	if url:find("api.github.com", 1, true) then
+		return nil, "Offline"
+	end
+	return oldGet(url, ...)
 end
 assert(not pcall(manager.install, cog, "pr/53"), "PR installs require verified head commit")
 print("Store source regression: PR, branch, file-level updates, and main switch passed")

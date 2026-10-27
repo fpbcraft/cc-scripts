@@ -2,95 +2,95 @@
 package.path = "./apps/factory/?.lua;" .. package.path
 local disk = {}
 local function serialize(v)
-  if type(v) == "table" then
-    local out = {}
-    for k, x in pairs(v) do
-      out[#out + 1] = "[" .. serialize(k) .. "]=" .. serialize(x)
-    end
-    return "{" .. table.concat(out, ",") .. "}"
-  end
-  if type(v) == "string" then
-    return string.format("%q", v)
-  end
-  return tostring(v)
+	if type(v) == "table" then
+		local out = {}
+		for k, x in pairs(v) do
+			out[#out + 1] = "[" .. serialize(k) .. "]=" .. serialize(x)
+		end
+		return "{" .. table.concat(out, ",") .. "}"
+	end
+	if type(v) == "string" then
+		return string.format("%q", v)
+	end
+	return tostring(v)
 end
 fs = {
-  combine = function(a, b)
-    return a .. "/" .. b
-  end,
-  exists = function(p)
-    return disk[p] ~= nil
-  end,
-  open = function(p, mode)
-    if mode == "r" then
-      if not disk[p] then
-        return nil
-      end
-      return {
-        readAll = function()
-          return disk[p]
-        end,
-        close = function() end,
-      }
-    end
-    return {
-      write = function(v)
-        disk[p] = v
-      end,
-      close = function() end,
-    }
-  end,
-  delete = function(p)
-    disk[p] = nil
-  end,
-  move = function(a, b)
-    disk[b] = disk[a]
-    disk[a] = nil
-  end,
+	combine = function(a, b)
+		return a .. "/" .. b
+	end,
+	exists = function(p)
+		return disk[p] ~= nil
+	end,
+	open = function(p, mode)
+		if mode == "r" then
+			if not disk[p] then
+				return nil
+			end
+			return {
+				readAll = function()
+					return disk[p]
+				end,
+				close = function() end,
+			}
+		end
+		return {
+			write = function(v)
+				disk[p] = v
+			end,
+			close = function() end,
+		}
+	end,
+	delete = function(p)
+		disk[p] = nil
+	end,
+	move = function(a, b)
+		disk[b] = disk[a]
+		disk[a] = nil
+	end,
 }
 textutils = {
-  serialize = serialize,
-  unserialize = function(raw)
-    return assert(load("return " .. raw))()
-  end,
+	serialize = serialize,
+	unserialize = function(raw)
+		return assert(load("return " .. raw))()
+	end,
 }
 local connected = {
-  gauge_0 = { type = "custom_gauge", value = 20 },
-  gauge_1 = { type = "custom_gauge", value = 100 },
-  relay_0 = { type = "redstone_relay" },
+	gauge_0 = { type = "custom_gauge", value = 20 },
+	gauge_1 = { type = "custom_gauge", value = 100 },
+	relay_0 = { type = "redstone_relay" },
 }
 local sent = 0
 peripheral = {
-  getNames = function()
-    local out = {}
-    for n in pairs(connected) do
-      out[#out + 1] = n
-    end
-    return out
-  end,
-  getType = function(n)
-    return connected[n] and connected[n].type
-  end,
-  getMethods = function(n)
-    if not connected[n] then
-      return nil
-    end
-    if connected[n].type == "redstone_relay" then
-      return { "setOutput", "getOutput" }
-    end
-    return { "getValue", "getOtherStuff", "setValue", "trigger", "getItemDetail" }
-  end,
-  call = function(name, method)
-    local d = assert(connected[name])
-    if method == "getValue" then
-      return d.value
-    end
-    if method == "setValue" or method == "setOutput" then
-      sent = sent + 1
-      return true
-    end
-    error("Method requires arguments")
-  end,
+	getNames = function()
+		local out = {}
+		for n in pairs(connected) do
+			out[#out + 1] = n
+		end
+		return out
+	end,
+	getType = function(n)
+		return connected[n] and connected[n].type
+	end,
+	getMethods = function(n)
+		if not connected[n] then
+			return nil
+		end
+		if connected[n].type == "redstone_relay" then
+			return { "setOutput", "getOutput" }
+		end
+		return { "getValue", "getOtherStuff", "setValue", "trigger", "getItemDetail" }
+	end,
+	call = function(name, method)
+		local d = assert(connected[name])
+		if method == "getValue" then
+			return d.value
+		end
+		if method == "setValue" or method == "setOutput" then
+			sent = sent + 1
+			return true
+		end
+		error("Method requires arguments")
+	end,
 }
 local Devices = require("devices")
 local manager = Devices.new("apps/factory/data")

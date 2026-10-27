@@ -2,7 +2,7 @@
 std = "cc-tweaked"
 # Selene 0.32 cannot parse Lua 5.3 bitwise operators in this host-only test.
 # The file is still syntax-checked and run by the existing Lua CI workflow.
-exclude = ["tests/auth_test.lua"]
+exclude = ["tests/auth_test.lua", "games/civcraft/vendor/basalt.lua"]
 
 [lints]
 # Existing code contains legitimately unused locals and intentional shadowing.

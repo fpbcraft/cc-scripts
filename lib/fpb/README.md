@@ -17,7 +17,7 @@ existing display/render/auth APIs while forwarding to this library.
 
 Installers bundle required modules at `<program>/_lib/fpb/`; programs never depend
 on another app's copy. Library changes must update this source, not generated
-installed copies. Basalt remains a dependency of factory and airship only.
+installed copies. Factory and airship install Basalt through the dependency installer. CivCraft ships a pinned Basalt runtime with its diplomacy UI.
 
 ## Installer behaviour
 
