@@ -19,6 +19,7 @@ colors = colors
 	}
 dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local UI = dofile("/games/civcraft/ui.lua")
+dofile("tests/helpers/civcraft_layout_only.lua")(UI)
 local Council = dofile("/games/civcraft/council.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Systems = dofile("/games/civcraft/systems.lua")

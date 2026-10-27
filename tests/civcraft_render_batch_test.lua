@@ -80,6 +80,16 @@ assert(
 	r.frameRows == frameRows,
 	"Frame pixel storage is reused instead of rebuilt for each primitive"
 )
+-- Clearing an already blank frame is free, but clearing after drawing must
+-- still overwrite every pixel (including a cached scaled row).
+r:begin()
+r:fill(0, 0, r.w, r.h, 0)
+assert(r.frameClear, "A redundant full-frame clear leaves the buffer untouched")
+r:fill(3, 3, 2, 2, 8)
+assert(not r.frameClear, "A painted frame is no longer clean")
+r:fill(0, 0, r.w, r.h, 0)
+r:finish()
+assert(pixel(3, 3) == 0, "Full-frame clearing after drawing is never skipped")
 local cached = r.scaledRows
 r:resize()
 assert(r.scaledRows == nil, "Resizing invalidates scaled rows")

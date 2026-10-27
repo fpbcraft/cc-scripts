@@ -1,304 +1,431 @@
--- WORMFRONT v0.2: time-based artillery, deterministic combat and pickups.
--- Only the authoritative host advances physics and the turn clock.
+-- WORMFRONT: authoritative turn/weapon/rope simulation (CC:Tweaked / Lua 5.2).
 local S = {}
-S.W, S.H = 72, 36
-S.TURN_SECONDS = 45
-local weapons = {
-	{ name = "ROCKET", radius = 4.5, damage = 42, speed = 1 },
-	{ name = "MEGA", radius = 7, damage = 64, speed = 0.86 },
+S.W, S.H, S.TURN_SECONDS = 144, 60, 45
+S.weapons = {
+	{ name = "BAZOOKA", kind = "rocket", radius = 5, damage = 45, unlimited = true },
+	{ name = "GRENADE", kind = "grenade", radius = 5, damage = 50, gift = 3 },
+	{ name = "DYNAMITE", kind = "dynamite", radius = 9, damage = 75, gift = 1 },
+	{ name = "BASEBALL BAT", kind = "bat", damage = 34, gift = 2 },
+	{ name = "AIR STRIKE", kind = "strike", radius = 4, damage = 24, gift = 1 },
+	{ name = "MINIGUN", kind = "minigun", damage = 9, gift = 1 },
+	{ name = "MINE", kind = "mine", radius = 6, damage = 60, gift = 2 },
+	{ name = "FIRE PUNCH", kind = "punch", damage = 38, gift = 2 },
+	{ name = "HANDGUN", kind = "handgun", damage = 20, gift = 3 },
+	{ name = "PETROL BOMB", kind = "petrol", radius = 4, damage = 22, gift = 2 },
 }
-S.weapons = weapons
-local function clamp(n, lo, hi)
-	return math.max(lo, math.min(hi, n))
+local function clamp(n, a, b)
+	return math.max(a, math.min(b, n))
 end
-
--- Local PRNG: match generation and mid-game crates never affect global math.random.
-local function random(g, lo, hi)
+local function rand(g, a, b)
 	g.rng = (g.rng * 48271) % 2147483647
-	local fraction = g.rng / 2147483647
-	if lo then
-		return lo + math.floor(fraction * (hi - lo + 1))
-	end
-	return fraction
+	local n = g.rng / 2147483647
+	return a and a + math.floor(n * (b - a + 1)) or n
 end
-
-local function solid(g, x, y)
+local function tile(g, x, y)
 	x, y = math.floor(x + 0.5), math.floor(y + 0.5)
-	return x >= 1 and x <= S.W and y >= 1 and y <= S.H and g.terrain[x]:sub(y, y) == "#"
+	if x < 1 or x > S.W or y < 1 or y > S.H then
+		return "."
+	end
+	return g.terrain[x]:sub(y, y)
 end
-
-local function ground(g, x)
+local function solid(g, x, y)
+	local t = tile(g, x, y)
+	return t == "#" or t == "="
+end
+local function groundAt(g, x)
+	x = math.floor(x + 0.5)
+	for y = 1, S.H do
+		if tile(g, x, y) == "#" then
+			return y
+		end
+	end
+	return S.H + 1
+end
+local function floorAt(g, x, from)
+	x = math.floor(x + 0.5)
 	if x < 1 or x > S.W then
 		return S.H + 1
 	end
-	for y = 1, S.H do
+	for y = clamp(math.floor(from or 1), 1, S.H), S.H do
 		if solid(g, x, y) then
 			return y
 		end
 	end
 	return S.H + 1
 end
-
 local function alive(g, team)
-	for _, worm in ipairs(g.worms) do
-		if worm.team == team and worm.hp > 0 then
+	for _, w in ipairs(g.worms) do
+		if w.team == team and w.hp > 0 then
 			return true
 		end
 	end
 	return false
 end
-
 function S.worm(g)
-	local id = g.selected[g.turn]
-	if id and g.worms[id] and g.worms[id].team == g.turn and g.worms[id].hp > 0 then
-		return g.worms[id]
-	end
-	for i, worm in ipairs(g.worms) do
-		if worm.team == g.turn and worm.hp > 0 then
-			g.selected[g.turn] = i
-			return worm
-		end
-	end
+	local w = g.worms[g.selected[g.turn] or 0]
+	return w and w.hp > 0 and w.team == g.turn and w or nil
 end
-
-local function drop(g)
-	if #g.items >= 4 then
-		return
-	end
-	for _ = 1, 40 do
-		local x = random(g, 4, S.W - 3)
-		local y = ground(g, x) - 1
-		local clear = y > 4 and y < S.H - 2
-		for _, w in ipairs(g.worms) do
-			if w.hp > 0 and math.abs(w.x - x) < 2 then
-				clear = false
-			end
-		end
-		if clear then
-			g.items[#g.items + 1] =
-				{ x = x, y = y, kind = ({ "MEDKIT", "AMMO", "SHIELD" })[random(g, 1, 3)] }
+local function nextWorm(g, team)
+	local previous = g.selected[team] or 0
+	for offset = 1, #g.worms do
+		local i = (previous + offset - 1) % #g.worms + 1
+		local w = g.worms[i]
+		if w.team == team and w.hp > 0 then
+			g.selected[team] = i
 			return
 		end
 	end
+	g.selected[team] = nil
 end
-
-local function collect(g, worm)
+local function hurt(w, amount)
+	if amount <= 0 or w.hp <= 0 then
+		return
+	end
+	if w.shield then
+		amount = math.floor(amount / 2)
+		w.shield = false
+	end
+	w.hp = math.max(0, w.hp - amount)
+end
+local function acquire(g, w)
 	for i = #g.items, 1, -1 do
 		local item = g.items[i]
-		if (worm.x - item.x) ^ 2 + (worm.y - item.y) ^ 2 <= 2.5 then
+		if (w.x - item.x) ^ 2 + (w.y - item.y) ^ 2 <= 3.1 then
 			if item.kind == "MEDKIT" then
-				worm.hp = math.min(100, worm.hp + 30)
-			elseif item.kind == "AMMO" then
-				worm.mega = worm.mega + 1
+				w.hp = math.min(100, w.hp + 30)
+			elseif item.kind == "SHIELD" then
+				w.shield = true
 			else
-				worm.shield = true
+				local weapon = item.weapon or 2
+				g.inventory[w.team][weapon] = (g.inventory[w.team][weapon] or 0)
+					+ S.weapons[weapon].gift
+				g.message = S.weapons[weapon].name .. " +" .. S.weapons[weapon].gift
 			end
-			g.message = item.kind .. " COLLECTED!"
 			table.remove(g.items, i)
 		end
 	end
 end
-
+local function crates(g)
+	if #g.items >= 6 then
+		return
+	end
+	for _ = 1, 60 do
+		local x = rand(g, 6, S.W - 5)
+		local y = floorAt(g, x) - 1
+		local clear = y > 12 and y < S.H - 2
+		for _, w in ipairs(g.worms) do
+			if w.hp > 0 and math.abs(w.x - x) <= 2 then
+				clear = false
+			end
+		end
+		if clear then
+			local typeRoll = rand(g, 1, 5)
+			local item = { x = x, y = y }
+			if typeRoll == 1 then
+				item.kind = "MEDKIT"
+			elseif typeRoll == 2 then
+				item.kind = "SHIELD"
+			else
+				item.kind = "WEAPON"
+				item.weapon = rand(g, 2, #S.weapons)
+			end
+			g.items[#g.items + 1] = item
+			return
+		end
+	end
+end
+local function land(g, w, at)
+	local old = w.jumpStartY or w.y
+	w.y, w.airborne, w.vx, w.vy, w.jumpStartY = at, false, nil, nil, nil
+	if at >= S.H then
+		w.hp = 0
+	else
+		hurt(w, math.max(0, math.floor((at - old - 4) * 6)))
+		if w.hp > 0 then
+			acquire(g, w)
+		end
+	end
+end
 local function settle(g)
 	for _, w in ipairs(g.worms) do
-		if w.hp > 0 and not w.airborne then
-			local old = w.y
-			local y = ground(g, w.x) - 1
-			if y >= S.H then
-				w.hp = 0
-			else
-				w.y = y
-				local fall = math.max(0, y - old)
-				if fall > 4 then
-					local damage = (fall - 4) * 6
-					if w.shield then
-						damage = math.floor(damage / 2)
-						w.shield = false
-					end
-					w.hp = math.max(0, w.hp - damage)
-				end
-				if w.hp > 0 then
-					collect(g, w)
-				end
+		if w.hp > 0 and not w.airborne and not w.rope then
+			local at = floorAt(g, w.x, w.y + 0.2) - 1
+			if at > w.y then
+				land(g, w, at)
 			end
 		end
 	end
 	for i = #g.items, 1, -1 do
 		local item = g.items[i]
-		item.y = ground(g, item.x) - 1
+		item.y = floorAt(g, item.x, item.y) - 1
 		if item.y >= S.H then
 			table.remove(g.items, i)
 		end
 	end
 end
-
 local function crater(g, cx, cy, radius)
+	g.terrainRevision = (g.terrainRevision or 0) + 1
 	for x = math.max(1, math.floor(cx - radius)), math.min(S.W, math.ceil(cx + radius)) do
-		local column = g.terrain[x]
-		local chars = {}
+		local column, chars = g.terrain[x], {}
 		for y = 1, S.H do
 			chars[y] = (x - cx) ^ 2 + (y - cy) ^ 2 <= radius * radius and "." or column:sub(y, y)
 		end
 		g.terrain[x] = table.concat(chars)
 	end
 end
-
-local function nextTurn(g)
+local function damage(g, x, y, radius, base)
+	for _, w in ipairs(g.worms) do
+		if w.hp > 0 then
+			local distance = math.sqrt((x - w.x) ^ 2 + (y - w.y) ^ 2)
+			hurt(w, math.floor(base * math.max(0, 1 - distance / (radius + 3))))
+			if w.hp > 0 and distance < radius + 2 then
+				w.airborne, w.rope = true, nil
+				local strength = (radius + 2 - distance) / (radius + 2)
+				w.vx = (w.x < x and -1 or 1) * strength * 10
+				w.vy = -strength * 8
+				w.jumpStartY = w.y
+			end
+		end
+	end
+end
+local function blast(g, x, y, weapon)
+	local spec = S.weapons[weapon]
+	local radius = spec.radius or 3
+	crater(g, x, y, radius)
+	damage(g, x, y, radius, spec.damage)
+	g.explosion = { x = x, y = y, radius = radius, elapsed = 0 }
+	g.projectile, g.state = nil, "blast"
+	g.message = spec.name .. " HIT"
+	if spec.kind == "petrol" then
+		g.fires[#g.fires + 1] = { x = x, y = floorAt(g, x, y) - 1, ttl = 4 }
+	end
+	settle(g)
+end
+local function finishTurn(g)
 	local count, victor = 0, nil
 	for team = 1, g.teams do
 		if alive(g, team) then
 			count, victor = count + 1, team
 		end
 	end
-	if count <= 1 then
-		g.phase, g.winner = "finished", victor
-		g.message = victor and ("TEAM " .. victor .. " WINS!") or "DRAW!"
-		g.state, g.charging, g.projectile, g.explosion = "end", false, nil, nil
+	if count < 2 then
+		g.phase, g.winner, g.state = "finished", victor, "end"
+		g.message = victor and "TEAM " .. victor .. " WINS!" or "DRAW!"
 		return
 	end
+	g.played[g.turn] = true
 	repeat
 		g.turn = g.turn % g.teams + 1
 		if g.turn == 1 then
 			g.round = g.round + 1
 		end
 	until alive(g, g.turn)
+	if g.played[g.turn] or not S.worm(g) then
+		nextWorm(g, g.turn)
+	end
 	g.turnLeft, g.state, g.charging, g.charge = S.TURN_SECONDS, "aim", false, 0
-	g.wind = random(g, -3, 3)
-	g.projectile, g.explosion, g.trail = nil, nil, {}
+	g.projectile, g.explosion, g.trail, g.target = nil, nil, {}, nil
+	g.wind = rand(g, -3, 3)
 	g.message = "TEAM " .. g.turn .. " TURN"
 	if g.round % 2 == 0 then
-		drop(g)
+		crates(g)
 	end
-	S.worm(g)
 end
-
-local function explode(g, x, y, weapon)
-	local item = weapons[weapon]
-	crater(g, x, y, item.radius)
-	for _, w in ipairs(g.worms) do
-		if w.hp > 0 then
-			local distance = math.sqrt((w.x - x) ^ 2 + (w.y - y) ^ 2)
-			local damage =
-				math.floor(item.damage * math.max(0, 1 - distance / (item.radius + 2)) + 0.5)
-			if w.shield and damage > 0 then
-				damage = math.floor(damage / 2)
-				w.shield = false
-			end
-			w.hp = math.max(0, w.hp - damage)
-		end
+local function startFlight(g, w)
+	local spec = S.weapons[w.weapon]
+	local a = math.rad(w.aim)
+	local charged = clamp(g.charge / 1.8, 0.08, 1)
+	local speed = 5.5 + 20 * charged
+	if spec.kind == "grenade" or spec.kind == "petrol" then
+		speed = speed * 0.75
 	end
-	settle(g)
-	g.projectile = nil
-	g.state = "blast"
-	g.explosion = { x = x, y = y, radius = item.radius, elapsed = 0 }
-	g.message = item.name .. " IMPACT!"
-end
-
-local function release(g, worm)
-	if not g.charging then
-		return false, "Not charging"
-	end
-	g.charging = false
-	if worm.weapon == 2 then
-		if worm.mega == 0 then
-			return false, "Out of mega bombs"
-		end
-		worm.mega = worm.mega - 1
-	end
-	local fraction = clamp(g.charge / 1.8, 0.08, 1)
-	local speed = (5.5 + 19 * fraction) * weapons[worm.weapon].speed
-	local angle = math.rad(worm.aim)
 	g.projectile = {
-		x = worm.x + math.cos(angle) * 1.9,
-		y = worm.y - math.sin(angle) * 1.9,
-		vx = math.cos(angle) * speed,
-		vy = -math.sin(angle) * speed,
-		weapon = worm.weapon,
-		elapsed = 0,
+		x = w.x + math.cos(a) * 2,
+		y = w.y - math.sin(a) * 2,
+		vx = math.cos(a) * speed,
+		vy = -math.sin(a) * speed,
+		weapon = w.weapon,
+		ttl = spec.kind == "grenade" and 3 or spec.kind == "petrol" and 2.5 or 10,
+		bounce = spec.kind == "grenade",
 	}
-	g.trail, g.state = {}, "flight"
-	g.message = "FIRING " .. weapons[worm.weapon].name
-	return true
+	g.state, g.charging, g.trail = "flight", false, {}
 end
-
+local function strike(g, w)
+	local spec = S.weapons[w.weapon]
+	local angle = math.rad(w.aim)
+	if spec.kind == "strike" then
+		local center = clamp(g.target or w.x + w.facing * 22, 4, S.W - 4)
+		for i = -2, 2 do
+			local x = clamp(center + i * 3, 1, S.W)
+			local y = floorAt(g, x) - 1
+			crater(g, x, y, spec.radius)
+			damage(g, x, y, spec.radius, spec.damage)
+		end
+		settle(g)
+		g.explosion = { x = center, y = floorAt(g, center) - 1, radius = 9, elapsed = 0 }
+	elseif spec.kind == "bat" or spec.kind == "punch" then
+		local reach = spec.kind == "bat" and 5 or 4
+		for _, enemy in ipairs(g.worms) do
+			if
+				enemy.hp > 0
+				and enemy ~= w
+				and (enemy.x - w.x) * w.facing > 0
+				and math.abs(enemy.x - w.x) <= reach
+				and math.abs(enemy.y - w.y) <= 3
+			then
+				hurt(enemy, spec.damage)
+				if enemy.hp > 0 then
+					enemy.rope, enemy.airborne, enemy.jumpStartY = nil, true, enemy.y
+					enemy.vx = w.facing * (spec.kind == "bat" and 20 or 12)
+					enemy.vy = spec.kind == "punch" and -15 or -7
+				end
+			end
+		end
+		g.explosion = { x = w.x + w.facing * 3, y = w.y - 2, radius = 2, elapsed = 0 }
+	else
+		local shots = spec.kind == "minigun" and 8 or 2
+		for i = 1, shots do
+			local spread = spec.kind == "minigun" and (i - 4.5) * 0.045 or (i - 1.5) * 0.025
+			local vx, vy = math.cos(angle + spread), -math.sin(angle + spread)
+			for d = 1, 45 do
+				local x = w.x + vx * d
+				local y = w.y + vy * d
+				if solid(g, x, y) then
+					break
+				end
+				local hit
+				for _, enemy in ipairs(g.worms) do
+					if
+						enemy ~= w
+						and enemy.hp > 0
+						and (enemy.x - x) ^ 2 + (enemy.y - y) ^ 2 < 1.7
+					then
+						hurt(enemy, spec.damage)
+						hit = true
+						break
+					end
+				end
+				if hit then
+					break
+				end
+			end
+		end
+		g.explosion = { x = w.x + math.cos(angle) * 2, y = w.y - 2, radius = 1.5, elapsed = 0 }
+	end
+	g.state, g.charging = "blast", false
+end
 function S.new(teams, seed)
 	assert(type(teams) == "number" and teams >= 2 and teams <= 4, "Expected 2-4 teams")
 	local g = {
-		version = 2,
-		seed = math.floor(tonumber(seed) or 1),
+		version = 3,
+		terrainRevision = 0,
 		teams = teams,
+		seed = math.floor(tonumber(seed) or 1),
 		terrain = {},
 		worms = {},
 		selected = {},
+		played = {},
+		inventory = {},
 		items = {},
-		turn = 1,
-		round = 1,
+		mines = {},
+		fires = {},
 		phase = "playing",
 		state = "aim",
+		turn = 1,
+		round = 1,
 		turnLeft = S.TURN_SECONDS,
-		wind = 0,
 		charge = 0,
 		charging = false,
-		projectile = nil,
-		explosion = nil,
 		trail = {},
-		message = "AIM WITH UP / DOWN",
+		wind = 0,
+		message = "FIND A WEAPON CRATE",
 	}
 	g.rng = g.seed % 2147483646 + 1
-	g.theme = random(g, 1, 4)
-	local elevation = random(g, 20, 27)
-	local variation = random(g, 3, 6)
-	local phase = random(g) * 6.28
+	g.theme = rand(g, 1, 4)
+	local height = rand(g, 38, 48)
+	local phase = rand(g) * 6.28
 	for x = 1, S.W do
-		local h = elevation
-			+ math.sin(x * (0.10 + g.theme * 0.015) + phase) * variation
-			+ math.cos(x * 0.27 + phase) * (variation / 2)
-			+ random(g, -1, 1)
-		local surface = clamp(math.floor(h), 17, 31)
-		g.terrain[x] = ("."):rep(surface - 1) .. ("#"):rep(S.H - surface + 1)
+		local y = clamp(
+			math.floor(
+				height
+					+ math.sin(x * 0.068 + phase) * 7
+					+ math.cos(x * 0.19 + phase) * 3
+					+ rand(g, -1, 1)
+			),
+			30,
+			54
+		)
+		g.terrain[x] = ("."):rep(y - 1) .. ("#"):rep(S.H - y + 1)
 	end
-	-- Varied ridges, valleys and craters without obstructing guaranteed starting sites.
-	if g.theme == 3 or g.theme == 4 then
-		crater(g, random(g, 20, 52), 21, random(g, 3, 5))
+	-- Suspended destructible platforms, apart from guaranteed ground spawn.
+	for _ = 1, 10 do
+		local x0, span = rand(g, 8, S.W - 23), rand(g, 8, 17)
+		local y = rand(g, 19, 33)
+		for x = x0, x0 + span do
+			local col = g.terrain[x]
+			if col:sub(y, y) == "." then
+				g.terrain[x] = col:sub(1, y - 1) .. "=" .. col:sub(y + 1)
+			end
+		end
 	end
 	for team = 1, teams do
+		g.inventory[team] = { [1] = -1 }
 		for n = 1, 3 do
-			local slot = (n - 1) * teams + team
-			local x = clamp(math.floor((slot - 0.5) * (S.W - 10) / (teams * 3)) + 5, 3, S.W - 2)
-			local aim = (team % 2 == 1) and 45 or 135
-			local w = {
+			local pos = (n - 1) * teams + team
+			local x = clamp(math.floor(pos * (S.W - 12) / (teams * 3 + 1)) + 6, 3, S.W - 2)
+			g.worms[#g.worms + 1] = {
 				team = team,
 				x = x,
-				y = ground(g, x) - 1,
+				y = groundAt(g, x) - 1,
 				hp = 100,
-				aim = aim,
-				facing = aim < 90 and 1 or -1,
+				aim = team % 2 == 1 and 45 or 135,
+				facing = team % 2 == 1 and 1 or -1,
 				weapon = 1,
-				mega = 2,
-				shield = false,
 				airborne = false,
 			}
-			g.worms[#g.worms + 1] = w
 			if n == 1 then
 				g.selected[team] = #g.worms
 			end
 		end
 	end
-	g.wind = random(g, -3, 3)
-	drop(g)
-	drop(g)
+	g.wind = rand(g, -3, 3)
+	for _ = 1, 4 do
+		crates(g)
+	end
 	return g
 end
-
+local function reel(w, dir)
+	w.rope.length = clamp(w.rope.length + dir * 2, 3, 40)
+end
+local function attach(g, w, x, y)
+	local dx, dy = x - w.x, y - w.y
+	local dist = math.sqrt(dx * dx + dy * dy)
+	if dist < 3 or dist > 44 then
+		return false, "Rope out of range"
+	end
+	local anchor
+	for i = 1, math.floor(dist * 4) do
+		local t = i / (dist * 4)
+		local px, py = w.x + dx * t, w.y + dy * t
+		if solid(g, px, py) then
+			anchor = { x = px, y = py }
+			break
+		end
+	end
+	if not anchor then
+		return false, "Aim rope at terrain"
+	end
+	local length = math.sqrt((w.x - anchor.x) ^ 2 + (w.y - anchor.y) ^ 2)
+	w.rope = { x = anchor.x, y = anchor.y, length = length }
+	w.airborne, w.vx, w.vy, w.jumpStartY = true, w.vx or 0, w.vy or 0, w.y
+	return true
+end
 function S.apply(g, team, action)
 	if type(g) ~= "table" or g.phase ~= "playing" then
 		return false, "Match not active"
 	end
-	if team ~= g.turn then
+	if team ~= g.turn or type(action) ~= "table" then
 		return false, "Not your turn"
-	end
-	if type(action) ~= "table" then
-		return false, "Invalid action"
 	end
 	if g.state ~= "aim" then
 		return false, "Shot in progress"
@@ -308,192 +435,315 @@ function S.apply(g, team, action)
 		return false, "No living worm"
 	end
 	local kind, dir = action.kind, action.dir
-	if kind == "release" or (kind == "fire" and g.charging) then
-		return release(g, w)
-	elseif kind == "fire" or kind == "charge" then
-		if w.airborne then
-			return false, "Land before firing"
-		end
-		if w.weapon == 2 and w.mega <= 0 then
-			return false, "Out of mega bombs"
-		end
-		if not g.charging then
-			g.charging, g.charge = true, 0
-		end
-	elseif g.charging then
+	if g.charging and kind ~= "release" and kind ~= "fire" then
 		return false, "Release shot first"
+	end
+	if kind == "select" then
+		return false, "Worm selection is automatic"
+	elseif kind == "weapon" then
+		local id = action.id
+		if id == nil then
+			id = w.weapon
+			for _ = 1, #S.weapons do
+				id = id % #S.weapons + 1
+				if (g.inventory[team][id] or 0) ~= 0 then
+					break
+				end
+			end
+		end
+		if
+			type(id) ~= "number"
+			or id % 1 ~= 0
+			or not S.weapons[id]
+			or (g.inventory[team][id] or 0) == 0
+		then
+			return false, "Weapon unavailable"
+		end
+		w.weapon = id
+		return true
+	elseif kind == "setTarget" then
+		if type(action.x) ~= "number" or action.x ~= action.x or action.x == math.huge then
+			return false, "Invalid strike target"
+		end
+		g.target = clamp(math.floor(action.x), 1, S.W)
+		return true
+	elseif kind == "rope" then
+		if w.rope then
+			w.rope = nil
+			return true
+		end
+		local x, y = action.x, action.y
+		if x == nil then
+			local a = math.rad(w.aim)
+			x, y = w.x + math.cos(a) * 40, w.y - math.sin(a) * 40
+		end
+		if
+			type(x) ~= "number"
+			or type(y) ~= "number"
+			or x ~= x
+			or y ~= y
+			or math.abs(x) == math.huge
+			or math.abs(y) == math.huge
+		then
+			return false, "Invalid rope target"
+		end
+		return attach(g, w, x, y)
+	elseif kind == "reel" then
+		if not w.rope or (dir ~= -1 and dir ~= 1) then
+			return false, "No rope"
+		end
+		reel(w, dir)
+		return true
 	elseif kind == "move" then
 		if dir ~= -1 and dir ~= 1 then
 			return false, "Invalid direction"
 		end
+		w.facing = dir
 		if w.airborne then
-			-- Horizontal air control is applied by changing jump velocity.
-			w.vx = dir * 8
+			w.vx = clamp((w.vx or 0) + dir * (w.rope and 2.2 or 3), -15, 15)
 		else
 			local x = w.x + dir
-			if x < 2 or x >= S.W then
-				return false, "Edge of map"
-			end
-			local y = ground(g, x) - 1
-			if y >= S.H or math.abs(y - w.y) > 2 then
-				return false, "Too steep"
-			end
-			for _, other in ipairs(g.worms) do
-				if
-					other ~= w
-					and other.hp > 0
-					and math.abs(other.x - x) < 0.65
-					and math.abs(other.y - y) < 0.9
-				then
-					return false, "Occupied"
-				end
+			local y = floorAt(g, x, w.y - 2) - 1
+			if x < 2 or x >= S.W or y >= S.H or math.abs(y - w.y) > 2 then
+				return false, "Blocked"
 			end
 			w.x, w.y = x, y
-			collect(g, w)
+			acquire(g, w)
 		end
-		w.facing = dir
-		w.aim = dir == 1 and math.min(w.aim, 89) or math.max(w.aim, 91)
+		return true
 	elseif kind == "jump" then
+		if w.rope then
+			w.rope = nil
+			return true
+		end
 		if w.airborne then
-			return false, "Already jumping"
+			return false, "Already airborne"
 		end
-		w.airborne, w.vx, w.vy = true, w.facing * 6, -11
-		w.jumpStartY = w.y
-		w.y = w.y - 0.4
-	elseif kind == "setAim" then
-		if
-			type(action.angle) ~= "number"
-			or action.angle ~= action.angle
-			or action.angle < 0
-			or action.angle > 180
-		then
-			return false, "Invalid aim angle"
+		w.airborne, w.vx, w.vy, w.jumpStartY = true, w.facing * 7, -13, w.y
+		w.y = w.y - 0.5
+		return true
+	elseif kind == "aim" or kind == "setAim" then
+		if g.charging then
+			return false, "Release shot"
 		end
-		w.aim = clamp(math.floor(action.angle + 0.5), 5, 175)
-		w.facing = w.aim <= 90 and 1 or -1
-	elseif kind == "aim" then
-		if dir ~= -1 and dir ~= 1 then
-			return false, "Invalid aim"
-		end
-		w.aim = clamp(w.aim + dir * 3, 5, 175)
-		w.facing = w.aim <= 90 and 1 or -1
-	elseif kind == "select" then
-		local i = g.selected[team] or 0
-		for _ = 1, #g.worms do
-			i = i % #g.worms + 1
-			if g.worms[i].team == team and g.worms[i].hp > 0 then
-				g.selected[team] = i
-				break
+		if kind == "aim" then
+			if dir ~= -1 and dir ~= 1 then
+				return false, "Invalid aim"
 			end
+			w.aim = clamp(w.aim + dir * 3, 5, 175)
+		else
+			local a = action.angle
+			if type(a) ~= "number" or a ~= a or a < 0 or a > 180 then
+				return false, "Invalid aim"
+			end
+			w.aim = clamp(math.floor(a), 5, 175)
 		end
-	elseif kind == "weapon" then
-		w.weapon = w.weapon == 1 and w.mega > 0 and 2 or 1
+		w.facing = w.aim <= 90 and 1 or -1
+		return true
 	elseif kind == "pass" then
-		nextTurn(g)
-	else
-		return false, "Unknown action"
-	end
-	return true
-end
-
-function S.tick(g, dt)
-	if not g or g.phase ~= "playing" or type(dt) ~= "number" or dt < 0 or dt ~= dt then
-		return false
-	end
-	dt = math.min(dt, 2)
-	if dt == 0 then
-		return false
-	end
-	-- Movement physics and turn clocks advance exclusively on the host.
-	for _, w in ipairs(g.worms) do
-		if w.hp > 0 and w.airborne then
-			local newX = clamp(w.x + w.vx * dt, 2, S.W - 1)
-			local newY = w.y + w.vy * dt
-			w.vy = w.vy + 25 * dt
-			if newY >= ground(g, newX) - 1 and w.vy >= 0 then
-				w.x, w.y = newX, ground(g, newX) - 1
-				w.airborne, w.vx, w.vy = false, nil, nil
-				local fall = math.max(0, w.y - (w.jumpStartY or w.y))
-				w.jumpStartY = nil
-				if w.y >= S.H then
-					w.hp = 0
-				elseif fall > 4 then
-					local damage = math.floor((fall - 4) * 6)
-					if w.shield then
-						damage = math.floor(damage / 2)
-						w.shield = false
-					end
-					w.hp = math.max(0, w.hp - damage)
-				end
-				if w.hp > 0 then
-					collect(g, w)
-				end
-			elseif newY > S.H + 1 then
-				w.hp, w.airborne = 0, false
-			else
-				w.x, w.y = newX, newY
+		finishTurn(g)
+		return true
+	elseif kind == "charge" or kind == "fire" then
+		if g.charging then
+			kind = "release"
+		else
+			if w.airborne then
+				return false, "Land first"
 			end
+			if (g.inventory[team][w.weapon] or 0) == 0 then
+				return false, "Out of ammunition"
+			end
+			g.charging, g.charge = true, 0
+			return true
 		end
 	end
-	if g.state == "aim" and not alive(g, g.turn) then
-		nextTurn(g)
+	if kind == "release" then
+		if not g.charging then
+			return false, "Not charging"
+		end
+		if (g.inventory[team][w.weapon] or 0) == 0 then
+			return false, "Out of ammunition"
+		end
+		if g.inventory[team][w.weapon] > 0 then
+			g.inventory[team][w.weapon] = g.inventory[team][w.weapon] - 1
+		end
+		local spec = S.weapons[w.weapon]
+		if spec.kind == "rocket" or spec.kind == "grenade" or spec.kind == "petrol" then
+			startFlight(g, w)
+		elseif spec.kind == "dynamite" then
+			g.projectile = {
+				x = w.x + w.facing * 2,
+				y = w.y - 1,
+				vx = w.facing * 2,
+				vy = 0,
+				ttl = 3,
+				weapon = w.weapon,
+				bounce = true,
+			}
+			g.state, g.charging = "flight", false
+		elseif spec.kind == "mine" then
+			g.mines[#g.mines + 1] = {
+				x = w.x + w.facing * 2,
+				y = floorAt(g, w.x + w.facing * 2) - 1,
+				team = team,
+				arm = 0.6,
+			}
+			g.state, g.charging = "blast", false
+			g.explosion = { x = -100, y = -100, radius = 0, elapsed = 0 }
+		else
+			strike(g, w)
+		end
+		w.rope = nil
 		return true
 	end
-	if g.state == "aim" then
-		g.turnLeft = math.max(0, g.turnLeft - dt)
-		if g.charging then
-			g.charge = math.min(1.8, g.charge + dt)
-		end
-		if g.turnLeft <= 0 then
-			if g.charging then
-				release(g, S.worm(g))
+	return false, "Unknown action"
+end
+local function physics(g, dt)
+	local step = math.min(dt, 0.07)
+	for _, w in ipairs(g.worms) do
+		if w.hp > 0 and w.airborne then
+			local vx, vy = w.vx or 0, w.vy or 0
+			local x = clamp(w.x + vx * step, 2, S.W - 1)
+			local y = w.y + vy * step
+			vy = vy + 25 * step
+			if w.rope then
+				local rope = w.rope
+				local dx, dy = x - rope.x, y - rope.y
+				local dist = math.sqrt(dx * dx + dy * dy)
+				if dist > rope.length then
+					local nx, ny = dx / dist, dy / dist
+					x, y = rope.x + nx * rope.length, rope.y + ny * rope.length
+					local radial = vx * nx + vy * ny
+					if radial > 0 then
+						vx, vy = vx - radial * nx, vy - radial * ny
+					end
+				end
+				if not solid(g, rope.x, rope.y) then
+					w.rope = nil
+				end
+			end
+			local floor = floorAt(g, x, w.y + 0.3) - 1
+			if not w.rope and vy >= 0 and y >= floor and w.y <= floor + 0.5 then
+				w.x = x
+				land(g, w, floor)
+			elseif y > S.H + 2 then
+				w.hp, w.rope, w.airborne = 0, nil, false
+			elseif not solid(g, x, y) then
+				w.x, w.y, w.vx, w.vy = x, y, vx * 0.99, vy
+				acquire(g, w)
 			else
-				nextTurn(g)
+				w.vx, w.vy = 0, 0
 			end
 		end
-	elseif g.state == "flight" then
-		local p = g.projectile
-		local substeps = math.max(1, math.ceil(dt / 0.025))
-		local step = dt / substeps
-		for _ = 1, substeps do
-			if g.state ~= "flight" then
-				break
+	end
+end
+local function projectile(g, dt)
+	local p = g.projectile
+	if not p then
+		return
+	end
+	local spec = S.weapons[p.weapon]
+	local steps = math.max(1, math.ceil(dt / 0.025))
+	local delta = dt / steps
+	for _ = 1, steps do
+		if g.state ~= "flight" then
+			break
+		end
+		p.x, p.y = p.x + p.vx * delta, p.y + p.vy * delta
+		p.vx, p.vy = p.vx + g.wind * 0.65 * delta, p.vy + 17 * delta
+		p.ttl = p.ttl - delta
+		local hit = p.y > 0 and solid(g, p.x, p.y)
+		for _, w in ipairs(g.worms) do
+			if
+				w.hp > 0
+				and (w ~= S.worm(g) or p.ttl < 2.7)
+				and (w.x - p.x) ^ 2 + (w.y - p.y) ^ 2 < 1.5
+			then
+				hit = true
 			end
-			p.x = p.x + p.vx * step
-			p.y = p.y + p.vy * step
-			p.vx = p.vx + g.wind * 0.55 * step
-			p.vy = p.vy + 16 * step
-			p.elapsed = p.elapsed + step
-			local collide = p.y >= 1 and solid(g, p.x, p.y)
+		end
+		if hit then
+			if p.bounce and p.ttl > 0 then
+				p.y = p.y - 1
+				p.vy = -math.abs(p.vy) * 0.4
+				p.vx = p.vx * 0.75
+			else
+				blast(g, p.x, p.y, p.weapon)
+			end
+		elseif p.ttl <= 0 then
+			blast(g, p.x, math.min(p.y, S.H - 1), p.weapon)
+		elseif p.x <= 0 or p.x >= S.W or p.y > S.H + 2 then
+			g.state, g.projectile = "blast", nil
+			g.explosion = { x = -100, y = -100, radius = 0, elapsed = 0 }
+		end
+	end
+	if g.projectile then
+		g.trail[#g.trail + 1] = { x = p.x, y = p.y }
+		if #g.trail > 15 then
+			table.remove(g.trail, 1)
+		end
+	end
+end
+function S.tick(g, dt)
+	if not g or g.phase ~= "playing" or type(dt) ~= "number" or dt ~= dt or dt <= 0 then
+		return false
+	end
+	dt = math.min(dt, 0.4)
+	local segments = math.max(1, math.ceil(dt / 0.06))
+	for _ = 1, segments do
+		local step = dt / segments
+		physics(g, step)
+		for i = #g.fires, 1, -1 do
+			local fire = g.fires[i]
+			fire.ttl = fire.ttl - step
 			for _, w in ipairs(g.worms) do
-				if w.hp > 0 and (p.elapsed > 0.16 or w ~= S.worm(g)) then
-					if (p.x - w.x) ^ 2 + (p.y - w.y) ^ 2 < 1.2 then
-						collide = true
+				if w.hp > 0 and math.abs(w.x - fire.x) < 3 and math.abs(w.y - fire.y) < 3 then
+					w.burn = (w.burn or 0) + step
+					if w.burn >= 0.5 then
+						hurt(w, 4)
+						w.burn = 0
 					end
 				end
 			end
-			if collide then
-				explode(g, p.x, p.y, p.weapon)
-			elseif p.x <= 0 or p.x > S.W or p.y > S.H + 1 or p.elapsed > 10 then
-				g.projectile, g.state = nil, "blast"
-				g.explosion = { x = -100, y = -100, radius = 0, elapsed = 0 }
-				g.message = "MISS!"
+			if fire.ttl <= 0 then
+				table.remove(g.fires, i)
 			end
 		end
-		if g.state == "flight" then
-			g.trail[#g.trail + 1] = { x = p.x, y = p.y }
-			if #g.trail > 18 then
-				table.remove(g.trail, 1)
+		for i = #g.mines, 1, -1 do
+			local mine = g.mines[i]
+			mine.arm = math.max(0, mine.arm - step)
+			if mine.arm == 0 then
+				for _, w in ipairs(g.worms) do
+					if w.hp > 0 and (w.x - mine.x) ^ 2 + (w.y - mine.y) ^ 2 < 9 then
+						blast(g, mine.x, mine.y, 7)
+						table.remove(g.mines, i)
+						break
+					end
+				end
 			end
 		end
-	elseif g.state == "blast" then
-		g.explosion.elapsed = g.explosion.elapsed + dt
-		if g.explosion.elapsed >= 0.85 then
-			nextTurn(g)
+		if g.state == "aim" then
+			if not alive(g, g.turn) then
+				finishTurn(g)
+			else
+				g.turnLeft = math.max(0, g.turnLeft - step)
+				if g.charging then
+					g.charge = math.min(1.8, g.charge + step)
+				end
+				if g.turnLeft == 0 then
+					finishTurn(g)
+				end
+			end
+		elseif g.state == "flight" then
+			projectile(g, step)
+		elseif g.state == "blast" then
+			g.explosion.elapsed = g.explosion.elapsed + step
+			if g.explosion.elapsed >= 0.85 then
+				finishTurn(g)
+			end
 		end
 	end
 	return true
 end
-
-S.solid, S.ground, S.alive, S.nextTurn = solid, ground, alive, nextTurn
+S.solid, S.ground, S.floorAt, S.nextTurn = solid, groundAt, floorAt, finishTurn
 return S
