@@ -190,6 +190,26 @@ function I.draw(ui, state, player, rect, modal)
 			text("POP " .. (city.population or 2) .. "  IDLE " .. Systems.idle(city), 7)
 			rows[#rows + 1] = { yields = yields }
 			local growth = Systems.growth(player, city, state)
+			if growth.capacity then
+				text(
+					"CAPACITY "
+						.. growth.capacity
+						.. " / GROWTH "
+						.. (growth.growthFactor * 100)
+						.. "%",
+					13
+				)
+				local sources = growth.capacitySources
+				text(
+					"BASE "
+						.. sources.base
+						.. " + WATER "
+						.. sources.water
+						.. " + SERVICES "
+						.. sources.infrastructure
+				)
+				text("GROWTH FOOD " .. growth.foodGain .. " / RAW SURPLUS " .. growth.surplus)
+			end
 			text(
 				growth.status == "GROWING" and ("POP +1 IN " .. growth.turns .. "T")
 					or growth.status == "STARVING" and (growth.canShrink and ("POP -1 IN " .. growth.turns .. "T") or "STARVING - MIN POP")
@@ -227,6 +247,17 @@ function I.draw(ui, state, player, rect, modal)
 		end
 		if ui.cityPanel == "production" then
 			local project = city.project
+			if ContentRules.hasDevelopment(state) then
+				text("SETTLER: 1 CITIZEN; NEEDS POP 2", 13)
+				if
+					project
+					and project.kind == "unit"
+					and project.id == "settler"
+					and (city.population or 2) < 2
+				then
+					text("SETTLER PAUSED: WAITING FOR POP 2", 31)
+				end
+			end
 			text(
 				project and ("MAKING " .. Systems.label(project.kind, project.id))
 					or "NO PRODUCTION",
