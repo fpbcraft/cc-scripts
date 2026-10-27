@@ -128,4 +128,7 @@ Its first run reached successful gameplay assertions but crashed in CraftOS's
 native modem receive handler during teardown. The test now keeps clients' Lua
 states alive until the host has processed their acknowledgements, exited and
 written its result, then lets the host shut them down. No production networking
-rule was changed for that emulator teardown repair. The published installer follow-up is still pending in this record.
+rule was changed for that emulator teardown repair. The published `d5aef7a` installer passes a native host/AI session with Landwork
+V3, retaining original and migrated save fixtures.
+
+[Detailed M2b verification record](validation/m2b-source-validation.json).
