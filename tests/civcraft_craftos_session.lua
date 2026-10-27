@@ -7,6 +7,7 @@ local includeAI, includeSettings, includeResearch, includeCampaign = false, fals
 local includeWar = false
 local touchMonitor = false
 local includeHost = false
+local includeDevelopment = false
 local includeConversation = false
 local includeHistory = false
 local includeDifficulty = false
@@ -18,6 +19,9 @@ local includeRoutes = false
 local routeRecord
 local routeResumed = false
 for _, argument in ipairs({ ... }) do
+	if argument == "--development" then
+		includeDevelopment = true
+	end
 	if argument == "--civilization" then
 		includeCivilization = true
 	end
@@ -278,6 +282,16 @@ dofile = function(path)
 				end
 				return
 			end
+			if
+				includeDevelopment
+				and stage == 1
+				and state.phase == "lobby"
+				and state.contentRules ~= "balance2"
+			then
+				self:command("contentRules")
+				os.queueEvent("term_resize")
+				return
+			end
 			if includeAI and not aiConfigured and stage == 1 and state.phase == "lobby" then
 				if includeHost then
 					if tap(self, "+ AI") then
@@ -325,7 +339,9 @@ dofile = function(path)
 					"CAMPAIGN OPTIONS",
 					"LENGTH STANDARD",
 					"LENGTH EPIC",
-					state.contentRules == "balance1" and "SCORE DEADLINE" or "SCORE ON",
+					dofile("/games/civcraft/content_rules.lua").isRedesign(state)
+							and "SCORE DEADLINE"
+						or "SCORE ON",
 					"CLOSE",
 				}
 				if tap(self, labels[campaignStep + 1]) then
@@ -684,12 +700,15 @@ if includeWar then
 		"The defending group's starting player rotates at the global boundary"
 	)
 end
+if includeDevelopment then
+	assert(state.contentRules == "balance2", "Development profile must survive native save/reload")
+end
 if includeCampaign then
 	assert(
 		state.gameSpeed == "quick"
-			and state.roundLimit == (state.contentRules == "balance1" and 167 or 120)
+			and state.roundLimit == (dofile("/games/civcraft/content_rules.lua").isRedesign(state) and 167 or 120)
 			and (
-				state.contentRules == "balance1"
+				dofile("/games/civcraft/content_rules.lua").isRedesign(state)
 					and dofile("/games/civcraft/campaign_rules.lua").enabled(state, "score")
 				or state.victories.score == false
 			),
