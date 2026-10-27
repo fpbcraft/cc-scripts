@@ -4,6 +4,19 @@ local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local R = {}
+local function sortedKeys(records)
+	local keys = {}
+	for key in pairs(records) do
+		keys[#keys + 1] = key
+	end
+	table.sort(keys, function(a, b)
+		if type(a) == type(b) then
+			return a < b
+		end
+		return type(a) < type(b)
+	end)
+	return keys
+end
 function R.capture(state, p)
 	local s = {
 		food = p.food or 0,
@@ -121,12 +134,13 @@ function R.build(state, p, before)
 			end
 		end
 	end
-	for key in pairs(before.cities) do
+	for _, key in ipairs(sortedKeys(before.cities)) do
 		if not now.cities[key] then
 			lines[#lines + 1] = "City lost at " .. key
 		end
 	end
-	for id, u in pairs(now.units) do
+	for _, id in ipairs(sortedKeys(now.units)) do
+		local u = now.units[id]
 		local old = before.units[id]
 		if not old then
 			lines[#lines + 1] = "Unit recruited: " .. ((Content.units[u.kind] or {}).name or u.kind)
@@ -137,17 +151,19 @@ function R.build(state, p, before)
 				.. " HP"
 		end
 	end
-	for id, u in pairs(before.units) do
+	for _, id in ipairs(sortedKeys(before.units)) do
+		local u = before.units[id]
 		if not now.units[id] then
 			lines[#lines + 1] = "Unit lost: " .. ((Content.units[u.kind] or {}).name or u.kind)
 		end
 	end
-	for id in pairs(now.wonders) do
+	for _, id in ipairs(sortedKeys(now.wonders)) do
 		if not (before.wonders or {})[id] then
 			lines[#lines + 1] = "Wonder gained: " .. Content.wonders[id].name
 		end
 	end
-	for id, value in pairs(now.influence) do
+	for _, id in ipairs(sortedKeys(now.influence)) do
+		local value = now.influence[id]
 		if value ~= ((before.influence or {})[id] or 0) then
 			lines[#lines + 1] = "Village influence: " .. value
 		end

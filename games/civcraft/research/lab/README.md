@@ -23,6 +23,14 @@ Earlier [opening balance research](../civ6-balance-2026-10-26/BALANCE-RESEARCH.m
 
 P1 implementation and validation: [P1_IMPLEMENTATION.md](P1_IMPLEMENTATION.md).
 
+The [optional LuaJIT backend](LUAJIT_BACKEND.md) accelerates new simulation
+studies while preserving Lua 5.3 as the reference. Its eight-case conformance
+study checks complete state boundaries, actions and observer projections.
+The [48-match P1 pacing pilot](P1_PACING_REPORT.md) measures the approved
+prototype against original rules: later expansion, fewer idle city-rounds,
+but delayed scouting, converging midgame unit counts and increased Industrial
+endings under fixed expedition policies.
+
 Latest focused checks: [expanded observer proposals](PROPOSAL_INTERFACE_REPORT.md),
 [requested healing boundary](HEALING_CHANGE_VALIDATION.md), and
 [lead persistence/endgame timing](LEAD_PERSISTENCE_REPORT.md).

@@ -1,0 +1,1501 @@
+{
+  "economies": {
+    "baseline": {
+      "finalUnitsMedian": 5.0,
+      "finishRounds": {
+        "max": 145,
+        "median": 109.5,
+        "min": 92
+      },
+      "milestones": {
+        "firstFarm": {
+          "medianRound": 20.5,
+          "reached": 48,
+          "totalPlayers": 48
+        },
+        "firstLibrary": {
+          "medianRound": 26.0,
+          "reached": 48,
+          "totalPlayers": 48
+        },
+        "firstMarket": {
+          "medianRound": 33,
+          "reached": 39,
+          "totalPlayers": 48
+        },
+        "firstScoutPresent": {
+          "medianRound": 5.0,
+          "reached": 48,
+          "totalPlayers": 48
+        },
+        "firstTechnology": {
+          "medianRound": 12.0,
+          "reached": 48,
+          "totalPlayers": 48
+        },
+        "firstTrainedSettler": {
+          "medianRound": 4.0,
+          "reached": 48,
+          "totalPlayers": 48
+        },
+        "secondAge": {
+          "medianRound": 25.0,
+          "reached": 48,
+          "totalPlayers": 48
+        },
+        "secondCity": {
+          "medianRound": 4.5,
+          "reached": 48,
+          "totalPlayers": 48
+        },
+        "thirdAge": {
+          "medianRound": 47.0,
+          "reached": 48,
+          "totalPlayers": 48
+        }
+      },
+      "periods": {
+        "1-30": {
+          "availableBuildingOptions": 2443,
+          "cityRounds": 3743,
+          "idleCityRounds": 1388,
+          "idleShare": 0.37082554100988513,
+          "meanLegalBuildingOptionsPerCityRound": 0.6526850120224419,
+          "meanUnitsPerPlayerRound": 3.9444444444444446,
+          "oneBuildingOptionCityRounds": 1273,
+          "oneBuildingOptionShare": 0.3401015228426396,
+          "repeatableShare": 0.0,
+          "rounds": 1440,
+          "unitRounds": 5680,
+          "zeroBuildingOptionCityRounds": 2002,
+          "zeroBuildingOptionShare": 0.5348650814854395
+        },
+        "31-60": {
+          "availableBuildingOptions": 4194,
+          "cityRounds": 4320,
+          "idleCityRounds": 1564,
+          "idleShare": 0.36203703703703705,
+          "meanLegalBuildingOptionsPerCityRound": 0.9708333333333333,
+          "meanUnitsPerPlayerRound": 5.0,
+          "oneBuildingOptionCityRounds": 1662,
+          "oneBuildingOptionShare": 0.38472222222222224,
+          "repeatableShare": 0.0,
+          "rounds": 1440,
+          "unitRounds": 7200,
+          "zeroBuildingOptionCityRounds": 1737,
+          "zeroBuildingOptionShare": 0.40208333333333335
+        },
+        "61+": {
+          "availableBuildingOptions": 12202,
+          "cityRounds": 8010,
+          "idleCityRounds": 2090,
+          "idleShare": 0.26092384519350814,
+          "meanLegalBuildingOptionsPerCityRound": 1.5233458177278403,
+          "meanUnitsPerPlayerRound": 5.159550561797753,
+          "oneBuildingOptionCityRounds": 3204,
+          "oneBuildingOptionShare": 0.4,
+          "repeatableShare": 0.0,
+          "rounds": 2670,
+          "unitRounds": 13776,
+          "zeroBuildingOptionCityRounds": 2200,
+          "zeroBuildingOptionShare": 0.2746566791510612
+        }
+      },
+      "players": 48,
+      "statuses": {
+        "finished": 24
+      },
+      "victoryReasons": {
+        "END EXPEDITION": 7,
+        "INDUSTRIAL": 17
+      }
+    },
+    "p1": {
+      "finalUnitsMedian": 6.0,
+      "finishRounds": {
+        "max": 126,
+        "median": 115.0,
+        "min": 110
+      },
+      "milestones": {
+        "firstFarm": {
+          "medianRound": 22,
+          "reached": 47,
+          "totalPlayers": 48
+        },
+        "firstLibrary": {
+          "medianRound": 30.0,
+          "reached": 48,
+          "totalPlayers": 48
+        },
+        "firstMarket": {
+          "medianRound": 34,
+          "reached": 45,
+          "totalPlayers": 48
+        },
+        "firstScoutPresent": {
+          "medianRound": 19.0,
+          "reached": 48,
+          "totalPlayers": 48
+        },
+        "firstTechnology": {
+          "medianRound": 11.0,
+          "reached": 48,
+          "totalPlayers": 48
+        },
+        "firstTrainedSettler": {
+          "medianRound": 9.0,
+          "reached": 48,
+          "totalPlayers": 48
+        },
+        "secondAge": {
+          "medianRound": 20.0,
+          "reached": 48,
+          "totalPlayers": 48
+        },
+        "secondCity": {
+          "medianRound": 9.5,
+          "reached": 48,
+          "totalPlayers": 48
+        },
+        "thirdAge": {
+          "medianRound": 38.0,
+          "reached": 48,
+          "totalPlayers": 48
+        }
+      },
+      "periods": {
+        "1-30": {
+          "availableBuildingOptions": 4292,
+          "cityRounds": 2840,
+          "idleCityRounds": 96,
+          "idleShare": 0.03380281690140845,
+          "meanLegalBuildingOptionsPerCityRound": 1.5112676056338028,
+          "meanUnitsPerPlayerRound": 2.6840277777777777,
+          "oneBuildingOptionCityRounds": 1277,
+          "oneBuildingOptionShare": 0.4496478873239437,
+          "project:ponder": 61,
+          "project:tend": 146,
+          "repeatableCityRounds": 207,
+          "repeatableShare": 0.07288732394366197,
+          "rounds": 1440,
+          "unitRounds": 3865,
+          "zeroBuildingOptionCityRounds": 273,
+          "zeroBuildingOptionShare": 0.09612676056338028
+        },
+        "31-60": {
+          "availableBuildingOptions": 11575,
+          "cityRounds": 4320,
+          "idleCityRounds": 0,
+          "idleShare": 0.0,
+          "meanLegalBuildingOptionsPerCityRound": 2.6793981481481484,
+          "meanUnitsPerPlayerRound": 4.9944444444444445,
+          "oneBuildingOptionCityRounds": 621,
+          "oneBuildingOptionShare": 0.14375,
+          "project:ponder": 1414,
+          "project:tend": 14,
+          "project:trade": 190,
+          "repeatableCityRounds": 1618,
+          "repeatableShare": 0.37453703703703706,
+          "rounds": 1440,
+          "unitRounds": 7192,
+          "zeroBuildingOptionCityRounds": 115,
+          "zeroBuildingOptionShare": 0.02662037037037037
+        },
+        "61+": {
+          "availableBuildingOptions": 47050,
+          "cityRounds": 7872,
+          "idleCityRounds": 6,
+          "idleShare": 0.0007621951219512195,
+          "meanLegalBuildingOptionsPerCityRound": 5.976880081300813,
+          "meanUnitsPerPlayerRound": 5.270960365853658,
+          "oneBuildingOptionCityRounds": 0,
+          "oneBuildingOptionShare": 0.0,
+          "project:ponder": 2944,
+          "project:tend": 43,
+          "project:trade": 286,
+          "repeatableCityRounds": 3273,
+          "repeatableShare": 0.41577743902439024,
+          "rounds": 2624,
+          "unitRounds": 13831,
+          "zeroBuildingOptionCityRounds": 0,
+          "zeroBuildingOptionShare": 0.0
+        }
+      },
+      "players": 48,
+      "statuses": {
+        "finished": 24
+      },
+      "victoryReasons": {
+        "END EXPEDITION": 3,
+        "INDUSTRIAL": 20,
+        "INDUSTRIAL / INDUSTRIAL": 1
+      }
+    }
+  },
+  "independentMapBlocks": 4,
+  "limits": [
+    "Four independent map blocks; seat/roster/policy cells within maps are correlated.",
+    "Fixed pre-P1 policies and Forge personalities; no retraining or overall fairness claim.",
+    "Available buildings are legal options, not a measure of their strategic value.",
+    "Milestones are first post-actor observations; missing milestones are unreached, not zero.",
+    "Hostiles off because the known captured-Settler error remains unresolved.",
+    "Milestone deltas use complete player pairs only; reach counts are reported separately.",
+    "Late periods and final assets have different ending times; compare early fixed windows for pacing.",
+    "No iid-player confidence interval: only four independent map blocks, with correlated roster/policy/seat cells.",
+    "Policies were selected under the original economy. Adaptation and human play remain necessary."
+  ],
+  "matches": 48,
+  "paired": {
+    "byCivilization": {
+      "forge": {
+        "appearancesPerEconomy": 32,
+        "baselineWins": 8,
+        "p1Wins": 12,
+        "secondCityMedianDelta": 5.0
+      },
+      "scholar": {
+        "appearancesPerEconomy": 16,
+        "baselineWins": 16,
+        "p1Wins": 13,
+        "secondCityMedianDelta": 5.0
+      }
+    },
+    "conditions": [
+      {
+        "baselineWinners": [
+          0
+        ],
+        "finishRoundDelta": -2,
+        "mapType": "pangaea",
+        "p1Winners": [
+          0
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -21,
+              "firstLibrary": -12,
+              "firstScoutPresent": 14,
+              "firstTechnology": -2,
+              "firstTrainedSettler": 5,
+              "secondAge": -5,
+              "secondCity": 5,
+              "thirdAge": -16
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -3,
+              "firstLibrary": -3,
+              "firstMarket": -4,
+              "firstScoutPresent": 14,
+              "firstTechnology": -3,
+              "firstTrainedSettler": 5,
+              "secondAge": -24,
+              "secondCity": 5,
+              "thirdAge": -12
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "selected-expedition",
+        "roster": [
+          "forge",
+          "forge"
+        ],
+        "seed": 611953,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          0
+        ],
+        "finishRoundDelta": -29,
+        "mapType": "pangaea",
+        "p1Winners": [
+          0
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -10,
+              "firstLibrary": -6,
+              "firstMarket": -8,
+              "firstScoutPresent": 14,
+              "firstTechnology": -2,
+              "firstTrainedSettler": 5,
+              "secondAge": -8,
+              "secondCity": 5,
+              "thirdAge": -12
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -3,
+              "firstLibrary": -3,
+              "firstMarket": -4,
+              "firstScoutPresent": 14,
+              "firstTechnology": -3,
+              "firstTrainedSettler": 5,
+              "secondAge": -24,
+              "secondCity": 5,
+              "thirdAge": -12
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "industrial-specialist",
+        "roster": [
+          "forge",
+          "forge"
+        ],
+        "seed": 611953,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          0
+        ],
+        "finishRoundDelta": 16,
+        "mapType": "pangaea",
+        "p1Winners": [
+          0
+        ],
+        "players": [
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": -4,
+              "firstLibrary": 7,
+              "firstScoutPresent": 19,
+              "firstTechnology": 2,
+              "firstTrainedSettler": 5,
+              "secondAge": 3,
+              "secondCity": 5,
+              "thirdAge": 7
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -3,
+              "firstLibrary": -3,
+              "firstMarket": -4,
+              "firstScoutPresent": 14,
+              "firstTechnology": -3,
+              "firstTrainedSettler": 5,
+              "secondAge": -24,
+              "secondCity": 5,
+              "thirdAge": -12
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "selected-expedition",
+        "roster": [
+          "scholar",
+          "forge"
+        ],
+        "seed": 611953,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          0
+        ],
+        "finishRoundDelta": 7,
+        "mapType": "pangaea",
+        "p1Winners": [
+          0
+        ],
+        "players": [
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": 3,
+              "firstLibrary": 12,
+              "firstMarket": 12,
+              "firstScoutPresent": 13,
+              "firstTechnology": 2,
+              "firstTrainedSettler": 5,
+              "secondAge": -6,
+              "secondCity": 5,
+              "thirdAge": 9
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -3,
+              "firstLibrary": -3,
+              "firstMarket": -4,
+              "firstScoutPresent": 14,
+              "firstTechnology": -3,
+              "firstTrainedSettler": 5,
+              "secondAge": -24,
+              "secondCity": 5,
+              "thirdAge": -12
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "industrial-specialist",
+        "roster": [
+          "scholar",
+          "forge"
+        ],
+        "seed": 611953,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          1
+        ],
+        "finishRoundDelta": 4,
+        "mapType": "pangaea",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -21,
+              "firstLibrary": -12,
+              "firstScoutPresent": 14,
+              "firstTechnology": -2,
+              "firstTrainedSettler": 5,
+              "secondAge": -5,
+              "secondCity": 5,
+              "thirdAge": -16
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": 6,
+              "firstLibrary": 6,
+              "firstMarket": 6,
+              "firstScoutPresent": 20,
+              "firstTechnology": 2,
+              "firstTrainedSettler": 5,
+              "secondAge": 3,
+              "secondCity": 5,
+              "thirdAge": 5
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "selected-expedition",
+        "roster": [
+          "forge",
+          "scholar"
+        ],
+        "seed": 611953,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          1
+        ],
+        "finishRoundDelta": 4,
+        "mapType": "pangaea",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -10,
+              "firstLibrary": -6,
+              "firstMarket": -8,
+              "firstScoutPresent": 14,
+              "firstTechnology": -2,
+              "firstTrainedSettler": 5,
+              "secondAge": -8,
+              "secondCity": 5,
+              "thirdAge": -12
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": 6,
+              "firstLibrary": 6,
+              "firstMarket": 6,
+              "firstScoutPresent": 20,
+              "firstTechnology": 2,
+              "firstTrainedSettler": 5,
+              "secondAge": 3,
+              "secondCity": 5,
+              "thirdAge": 5
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "industrial-specialist",
+        "roster": [
+          "forge",
+          "scholar"
+        ],
+        "seed": 611953,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          0
+        ],
+        "finishRoundDelta": -7,
+        "mapType": "pangaea",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -4,
+              "firstLibrary": -12,
+              "firstScoutPresent": 20,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 5,
+              "secondAge": -4,
+              "secondCity": 5,
+              "thirdAge": -16
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -9,
+              "firstLibrary": -12,
+              "firstMarket": -13,
+              "firstScoutPresent": 14,
+              "firstTechnology": -2,
+              "firstTrainedSettler": 5,
+              "secondAge": -5,
+              "secondCity": 5,
+              "thirdAge": -17
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "selected-expedition",
+        "roster": [
+          "forge",
+          "forge"
+        ],
+        "seed": 753979,
+        "winnerChanged": true
+      },
+      {
+        "baselineWinners": [
+          0
+        ],
+        "finishRoundDelta": -20,
+        "mapType": "pangaea",
+        "p1Winners": [
+          0
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": 7,
+              "firstLibrary": -3,
+              "firstMarket": -4,
+              "firstScoutPresent": 7,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 5,
+              "secondAge": -6,
+              "secondCity": 5,
+              "thirdAge": -10
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -9,
+              "firstLibrary": -12,
+              "firstMarket": -13,
+              "firstScoutPresent": 14,
+              "firstTechnology": -2,
+              "firstTrainedSettler": 5,
+              "secondAge": -5,
+              "secondCity": 5,
+              "thirdAge": -17
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "industrial-specialist",
+        "roster": [
+          "forge",
+          "forge"
+        ],
+        "seed": 753979,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          0
+        ],
+        "finishRoundDelta": 20,
+        "mapType": "pangaea",
+        "p1Winners": [
+          0
+        ],
+        "players": [
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": 6,
+              "firstLibrary": 10,
+              "firstScoutPresent": 16,
+              "firstTechnology": 2,
+              "firstTrainedSettler": 5,
+              "secondAge": 5,
+              "secondCity": 5,
+              "thirdAge": 8
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -9,
+              "firstLibrary": -12,
+              "firstMarket": -13,
+              "firstScoutPresent": 14,
+              "firstTechnology": -2,
+              "firstTrainedSettler": 5,
+              "secondAge": -5,
+              "secondCity": 5,
+              "thirdAge": -17
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "selected-expedition",
+        "roster": [
+          "scholar",
+          "forge"
+        ],
+        "seed": 753979,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          0
+        ],
+        "finishRoundDelta": 5,
+        "mapType": "pangaea",
+        "p1Winners": [
+          0
+        ],
+        "players": [
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstLibrary": 7,
+              "firstMarket": 7,
+              "firstScoutPresent": 7,
+              "firstTechnology": 2,
+              "firstTrainedSettler": 5,
+              "secondAge": 7,
+              "secondCity": 5,
+              "thirdAge": 7
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -9,
+              "firstLibrary": -12,
+              "firstMarket": -13,
+              "firstScoutPresent": 14,
+              "firstTechnology": -2,
+              "firstTrainedSettler": 5,
+              "secondAge": -5,
+              "secondCity": 5,
+              "thirdAge": -17
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "industrial-specialist",
+        "roster": [
+          "scholar",
+          "forge"
+        ],
+        "seed": 753979,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          1
+        ],
+        "finishRoundDelta": 5,
+        "mapType": "pangaea",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -4,
+              "firstLibrary": -12,
+              "firstScoutPresent": 20,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 5,
+              "secondAge": -4,
+              "secondCity": 5,
+              "thirdAge": -16
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": 5,
+              "firstLibrary": 8,
+              "firstMarket": 7,
+              "firstScoutPresent": 14,
+              "firstTechnology": 2,
+              "firstTrainedSettler": 5,
+              "secondAge": 4,
+              "secondCity": 5,
+              "thirdAge": 6
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "selected-expedition",
+        "roster": [
+          "forge",
+          "scholar"
+        ],
+        "seed": 753979,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          1
+        ],
+        "finishRoundDelta": 5,
+        "mapType": "pangaea",
+        "p1Winners": [
+          0,
+          1
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": 7,
+              "firstLibrary": -3,
+              "firstMarket": -4,
+              "firstScoutPresent": 7,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 5,
+              "secondAge": -6,
+              "secondCity": 5,
+              "thirdAge": -10
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": 5,
+              "firstLibrary": 8,
+              "firstMarket": 7,
+              "firstScoutPresent": 14,
+              "firstTechnology": 2,
+              "firstTrainedSettler": 5,
+              "secondAge": 4,
+              "secondCity": 5,
+              "thirdAge": 6
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "industrial-specialist",
+        "roster": [
+          "forge",
+          "scholar"
+        ],
+        "seed": 753979,
+        "winnerChanged": true
+      },
+      {
+        "baselineWinners": [
+          1
+        ],
+        "finishRoundDelta": -22,
+        "mapType": "archipelago",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -9,
+              "firstLibrary": -12,
+              "firstMarket": -13,
+              "firstScoutPresent": 27,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 8,
+              "secondAge": -3,
+              "secondCity": 9,
+              "thirdAge": -17
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": 2,
+              "firstLibrary": -4,
+              "firstMarket": -5,
+              "firstScoutPresent": 7,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 5,
+              "secondAge": -6,
+              "secondCity": 5,
+              "thirdAge": -10
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "selected-expedition",
+        "roster": [
+          "forge",
+          "forge"
+        ],
+        "seed": 817069,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          1
+        ],
+        "finishRoundDelta": -22,
+        "mapType": "archipelago",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": 2,
+              "firstLibrary": -1,
+              "firstMarket": -3,
+              "firstScoutPresent": 25,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 8,
+              "secondAge": -21,
+              "secondCity": 9,
+              "thirdAge": -9
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": 2,
+              "firstLibrary": -4,
+              "firstMarket": -5,
+              "firstScoutPresent": 7,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 5,
+              "secondAge": -6,
+              "secondCity": 5,
+              "thirdAge": -10
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "industrial-specialist",
+        "roster": [
+          "forge",
+          "forge"
+        ],
+        "seed": 817069,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          0
+        ],
+        "finishRoundDelta": 7,
+        "mapType": "archipelago",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": 5,
+              "firstLibrary": 6,
+              "firstMarket": 8,
+              "firstScoutPresent": 32,
+              "firstTechnology": 1,
+              "firstTrainedSettler": 8,
+              "secondAge": 5,
+              "secondCity": 9,
+              "thirdAge": 6
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": 2,
+              "firstLibrary": -4,
+              "firstMarket": -5,
+              "firstScoutPresent": 7,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 5,
+              "secondAge": -6,
+              "secondCity": 5,
+              "thirdAge": -10
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "selected-expedition",
+        "roster": [
+          "scholar",
+          "forge"
+        ],
+        "seed": 817069,
+        "winnerChanged": true
+      },
+      {
+        "baselineWinners": [
+          0
+        ],
+        "finishRoundDelta": 4,
+        "mapType": "archipelago",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": 5,
+              "firstLibrary": 6,
+              "firstMarket": 7,
+              "firstScoutPresent": 25,
+              "firstTechnology": 1,
+              "firstTrainedSettler": 8,
+              "secondAge": 5,
+              "secondCity": 9,
+              "thirdAge": 7
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": 2,
+              "firstLibrary": -4,
+              "firstMarket": -5,
+              "firstScoutPresent": 7,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 5,
+              "secondAge": -6,
+              "secondCity": 5,
+              "thirdAge": -10
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "industrial-specialist",
+        "roster": [
+          "scholar",
+          "forge"
+        ],
+        "seed": 817069,
+        "winnerChanged": true
+      },
+      {
+        "baselineWinners": [
+          1
+        ],
+        "finishRoundDelta": 8,
+        "mapType": "archipelago",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -9,
+              "firstLibrary": -12,
+              "firstMarket": -13,
+              "firstScoutPresent": 27,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 8,
+              "secondAge": -3,
+              "secondCity": 9,
+              "thirdAge": -17
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": 6,
+              "firstLibrary": 6,
+              "firstMarket": 8,
+              "firstScoutPresent": 7,
+              "firstTechnology": 3,
+              "firstTrainedSettler": 5,
+              "secondAge": 8,
+              "secondCity": 5,
+              "thirdAge": 7
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "selected-expedition",
+        "roster": [
+          "forge",
+          "scholar"
+        ],
+        "seed": 817069,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          1
+        ],
+        "finishRoundDelta": 8,
+        "mapType": "archipelago",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": 2,
+              "firstLibrary": -1,
+              "firstMarket": -3,
+              "firstScoutPresent": 25,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 8,
+              "secondAge": -21,
+              "secondCity": 9,
+              "thirdAge": -9
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": 6,
+              "firstLibrary": 6,
+              "firstMarket": 8,
+              "firstScoutPresent": 7,
+              "firstTechnology": 3,
+              "firstTrainedSettler": 5,
+              "secondAge": 8,
+              "secondCity": 5,
+              "thirdAge": 7
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "industrial-specialist",
+        "roster": [
+          "forge",
+          "scholar"
+        ],
+        "seed": 817069,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          0
+        ],
+        "finishRoundDelta": -13,
+        "mapType": "archipelago",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -9,
+              "firstLibrary": -13,
+              "firstScoutPresent": 17,
+              "firstTechnology": -2,
+              "firstTrainedSettler": 5,
+              "secondAge": -5,
+              "secondCity": 5,
+              "thirdAge": -17
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -1,
+              "firstLibrary": -3,
+              "firstMarket": -4,
+              "firstScoutPresent": 9,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 5,
+              "secondAge": -6,
+              "secondCity": 5,
+              "thirdAge": -9
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "selected-expedition",
+        "roster": [
+          "forge",
+          "forge"
+        ],
+        "seed": 932081,
+        "winnerChanged": true
+      },
+      {
+        "baselineWinners": [
+          1
+        ],
+        "finishRoundDelta": -24,
+        "mapType": "archipelago",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": 2,
+              "firstLibrary": -2,
+              "firstMarket": -5,
+              "firstScoutPresent": 17,
+              "firstTechnology": -2,
+              "firstTrainedSettler": 5,
+              "secondAge": -23,
+              "secondCity": 5,
+              "thirdAge": -12
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -1,
+              "firstLibrary": -3,
+              "firstMarket": -4,
+              "firstScoutPresent": 9,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 5,
+              "secondAge": -6,
+              "secondCity": 5,
+              "thirdAge": -9
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "industrial-specialist",
+        "roster": [
+          "forge",
+          "forge"
+        ],
+        "seed": 932081,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          0
+        ],
+        "finishRoundDelta": 15,
+        "mapType": "archipelago",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": 7,
+              "firstLibrary": 7,
+              "firstScoutPresent": 19,
+              "firstTechnology": 2,
+              "firstTrainedSettler": 5,
+              "secondAge": 4,
+              "secondCity": 5,
+              "thirdAge": 7
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -1,
+              "firstLibrary": -3,
+              "firstMarket": -4,
+              "firstScoutPresent": 9,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 5,
+              "secondAge": -6,
+              "secondCity": 5,
+              "thirdAge": -9
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "selected-expedition",
+        "roster": [
+          "scholar",
+          "forge"
+        ],
+        "seed": 932081,
+        "winnerChanged": true
+      },
+      {
+        "baselineWinners": [
+          0
+        ],
+        "finishRoundDelta": 2,
+        "mapType": "archipelago",
+        "p1Winners": [
+          0
+        ],
+        "players": [
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": 7,
+              "firstLibrary": 8,
+              "firstMarket": 8,
+              "firstScoutPresent": 20,
+              "firstTechnology": 2,
+              "firstTrainedSettler": 5,
+              "secondAge": 4,
+              "secondCity": 5,
+              "thirdAge": 7
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -1,
+              "firstLibrary": -3,
+              "firstMarket": -4,
+              "firstScoutPresent": 9,
+              "firstTechnology": -1,
+              "firstTrainedSettler": 5,
+              "secondAge": -6,
+              "secondCity": 5,
+              "thirdAge": -9
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "industrial-specialist",
+        "roster": [
+          "scholar",
+          "forge"
+        ],
+        "seed": 932081,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          1
+        ],
+        "finishRoundDelta": 3,
+        "mapType": "archipelago",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": -9,
+              "firstLibrary": -13,
+              "firstScoutPresent": 17,
+              "firstTechnology": -2,
+              "firstTrainedSettler": 5,
+              "secondAge": -5,
+              "secondCity": 5,
+              "thirdAge": -17
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": 2,
+              "firstLibrary": 5,
+              "firstMarket": 7,
+              "firstScoutPresent": 9,
+              "firstTechnology": 2,
+              "firstTrainedSettler": 5,
+              "secondAge": 8,
+              "secondCity": 5,
+              "thirdAge": 8
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "selected-expedition",
+        "roster": [
+          "forge",
+          "scholar"
+        ],
+        "seed": 932081,
+        "winnerChanged": false
+      },
+      {
+        "baselineWinners": [
+          1
+        ],
+        "finishRoundDelta": 3,
+        "mapType": "archipelago",
+        "p1Winners": [
+          1
+        ],
+        "players": [
+          {
+            "civilization": "forge",
+            "milestoneDeltas": {
+              "firstFarm": 2,
+              "firstLibrary": -2,
+              "firstMarket": -5,
+              "firstScoutPresent": 17,
+              "firstTechnology": -2,
+              "firstTrainedSettler": 5,
+              "secondAge": -23,
+              "secondCity": 5,
+              "thirdAge": -12
+            },
+            "seat": 0
+          },
+          {
+            "civilization": "scholar",
+            "milestoneDeltas": {
+              "firstFarm": 2,
+              "firstLibrary": 5,
+              "firstMarket": 7,
+              "firstScoutPresent": 9,
+              "firstTechnology": 2,
+              "firstTrainedSettler": 5,
+              "secondAge": 8,
+              "secondCity": 5,
+              "thirdAge": 8
+            },
+            "seat": 1
+          }
+        ],
+        "profile": "industrial-specialist",
+        "roster": [
+          "forge",
+          "scholar"
+        ],
+        "seed": 932081,
+        "winnerChanged": false
+      }
+    ],
+    "finishRoundDeltaMedian": 4.0,
+    "mapBlockMeanFinishRoundDeltas": {
+      "archipelago:817069": -2.8333333333333335,
+      "archipelago:932081": -2.3333333333333335,
+      "pangaea:611953": 0,
+      "pangaea:753979": 1.3333333333333333
+    },
+    "milestones": {
+      "firstFarm": {
+        "completePlayerPairs": 47,
+        "maxDelta": 7,
+        "medianDelta": 2,
+        "minDelta": -21
+      },
+      "firstLibrary": {
+        "completePlayerPairs": 48,
+        "maxDelta": 12,
+        "medianDelta": -3.0,
+        "minDelta": -13
+      },
+      "firstMarket": {
+        "completePlayerPairs": 39,
+        "maxDelta": 12,
+        "medianDelta": -4,
+        "minDelta": -13
+      },
+      "firstScoutPresent": {
+        "completePlayerPairs": 48,
+        "maxDelta": 32,
+        "medianDelta": 14.0,
+        "minDelta": 7
+      },
+      "firstTechnology": {
+        "completePlayerPairs": 48,
+        "maxDelta": 3,
+        "medianDelta": -1.0,
+        "minDelta": -3
+      },
+      "firstTrainedSettler": {
+        "completePlayerPairs": 48,
+        "maxDelta": 8,
+        "medianDelta": 5.0,
+        "minDelta": 5
+      },
+      "secondAge": {
+        "completePlayerPairs": 48,
+        "maxDelta": 8,
+        "medianDelta": -5.0,
+        "minDelta": -24
+      },
+      "secondCity": {
+        "completePlayerPairs": 48,
+        "maxDelta": 9,
+        "medianDelta": 5.0,
+        "minDelta": 5
+      },
+      "thirdAge": {
+        "completePlayerPairs": 48,
+        "maxDelta": 9,
+        "medianDelta": -10.0,
+        "minDelta": -17
+      }
+    },
+    "winnerChanges": 6
+  },
+  "pairedConditions": 24,
+  "sourceUnchanged": true,
+  "status": "complete"
+}

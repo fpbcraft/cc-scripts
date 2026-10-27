@@ -42,7 +42,7 @@ function Metrics.capture(state)
 		end
 		for _, city in ipairs(state.cities) do
 			if city.owner == player.id then
-				local yield = Systems.cityYield(state, city)
+				local yield = Systems.yields(player, city, state, nil, nil, true)
 				local available = {}
 				for id in pairs(Systems.buildings) do
 					if Systems.canBuild(player, city, id, state) then

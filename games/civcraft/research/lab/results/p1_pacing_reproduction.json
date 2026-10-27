@@ -1,0 +1,22 @@
+{
+  "matches": 48,
+  "allComparedFieldsEqual": true,
+  "fields": [
+    "config",
+    "status",
+    "round",
+    "winnerIds",
+    "victoryReason",
+    "initialStateHash",
+    "finalStateHash",
+    "players",
+    "dispatches"
+  ],
+  "sourceUnchangedBothRuns": true,
+  "firstHarnessSha256": "85a401184b6cb0bc87be0b9e09dd8fa8b28586e7ca1a4678a782a600838e3415",
+  "finalHarnessSha256": "ca34be7d46802016781abb811dcb6b270c62d3bc522381e1c021188d25690c58",
+  "harnessChange": "Only guard empty telemetry and preserve diagnostic errors in the child wrapper; all successful-match calculations are unchanged.",
+  "initialStateHashesEqual": true,
+  "finalStateHashesEqual": true,
+  "notes": "Repetition demonstrates deterministic reproduction, not 48 additional independent conditions. Build-helper validation recompiled the same pinned LuaJIT/Lupa sources during repetition; per-match extension fingerprints are retained."
+}

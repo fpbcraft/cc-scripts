@@ -28,6 +28,7 @@ def play(config: dict) -> dict:
     runtime, telemetry = None, None
     try:
         runtime = Runtime(config, instruction_budget=config.get('instructionBudget', 200_000_000))
+        result['runtime'] = runtime.runtime_info
         telemetry = runtime.lua.globals().dofile('/lab/telemetry.lua').install(
             runtime.lua.table_from({'actionBudget': config.get('actionBudget', 4096),
                                     'trace': config.get('trace', False)}))

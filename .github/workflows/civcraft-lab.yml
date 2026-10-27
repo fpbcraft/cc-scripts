@@ -5,6 +5,9 @@ on:
       - 'games/civcraft/**'
       - 'tools/civcraft_lab/**'
       - 'tests/test_civcraft_lab.py'
+      - 'tests/test_civcraft_p1.py'
+      - 'tests/test_civcraft_luajit.py'
+      - 'tests/test_civcraft_pacing_probe.py'
       - '.github/workflows/civcraft-lab.yml'
   workflow_dispatch:
 jobs:
@@ -22,5 +25,7 @@ jobs:
           python -m unittest -v
           tests/test_civcraft_lab.py
           tests/test_civcraft_p1.py
+          tests/test_civcraft_luajit.py
+          tests/test_civcraft_pacing_probe.py
           games/civcraft/research/lab/test_proposal_interface.py
           games/civcraft/research/lab/test_coordinated_siege_policy.py

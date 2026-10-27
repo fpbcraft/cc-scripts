@@ -56,6 +56,11 @@ loss. Controlled no-hostile studies declare that restriction.
 These gaps guide continued research; they are not an additional veto on
 prototyping a reviewed package. Gameplay proposals must be reviewed before
 implementation, as requested by the user. H1 was separately and explicitly
-requested and is the only game-rule change applied so far. No trained AI has
+requested. P1 was subsequently approved and implemented; its
+[48-match paired pilot](P1_PACING_REPORT.md) now provides fixed-policy
+evidence, with adaptation and human pacing review still outstanding.
+The [LuaJIT backend](LUAJIT_BACKEND.md) passed eight controlled conformance
+cases and accelerates new studies while retaining Lua 5.3 as a reference.
+No trained AI has
 been installed live, no release has been published, and physical Minecraft
 monitor/rednet validation is not claimed.

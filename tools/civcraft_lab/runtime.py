@@ -2,16 +2,19 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 from pathlib import Path
 from typing import Any
 
 try:
-    from lupa.lua53 import LuaRuntime, lua_type
+    from lupa.lua53 import lua_type
 except ImportError as exc:
     raise ImportError("Install tools/civcraft_lab/requirements.txt; Lua 5.3 Lupa is required") from exc
 
 REPOSITORY = Path(__file__).resolve().parents[2]
 BOOTSTRAP = """
+table.unpack = table.unpack or unpack
+table.pack = table.pack or function(...) return {n=select('#', ...), ...} end
 local native = dofile
 dofile = function(path)
     if path:match('^/games/civcraft/') then return native(LAB_ROOT .. path) end
@@ -29,7 +32,10 @@ LAB_CANONICAL = dofile('/lab/canonical.lua')
 
 
 def from_lua(value: Any) -> Any:
-    if lua_type(value) != "table":
+    value_type = lua_type(value)
+    if value_type is None and type(value).__module__ == 'lupa.luajit21':
+        value_type = importlib.import_module('lupa.luajit21').lua_type(value)
+    if value_type != "table":
         return value
     keys = list(value.keys())
     if keys and all(isinstance(k, int) for k in keys) and set(keys) == set(range(1, len(keys) + 1)):
@@ -51,7 +57,18 @@ class Runtime:
         seed = config.get('seed', 12345)
         if isinstance(seed, bool) or not isinstance(seed, int) or not 0 <= seed < 2147483647:
             raise ValueError('World seed must be an integer in [0, 2147483647)')
-        self.lua = LuaRuntime(unpack_returned_tuples=True, register_eval=False, register_builtins=False)
+        backend = config.get('runtimeBackend', 'lua53')
+        if backend not in ('lua53', 'luajit21'):
+            raise ValueError('runtimeBackend must be lua53 or luajit21')
+        try:
+            module = importlib.import_module('lupa.' + backend)
+        except ImportError as exc:
+            raise ImportError(f'Lupa backend {backend} is not installed; see LUAJIT_BACKEND.md') from exc
+        self.lua = module.LuaRuntime(unpack_returned_tuples=True, register_eval=False, register_builtins=False)
+        self.backend = backend
+        self.runtime_info = {'backend': backend, 'luaVersion': self.lua.eval('_VERSION'),
+                             'jitVersion': self.lua.eval('jit and jit.version or nil'),
+                             'extensionSha256': hashlib.sha256(Path(module.__file__).read_bytes()).hexdigest()}
         self.lua.globals().LAB_ROOT = str(REPOSITORY)
         self.lua.execute(BOOTSTRAP)
         self.engine = self.lua.globals().LAB_ENGINE

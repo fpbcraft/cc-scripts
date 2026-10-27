@@ -25,8 +25,8 @@
     "contentRules": "p1"
   },
   "source": {
-    "head": "9b1c441b18f4de271a96a5cb48a894315c0c3252",
-    "luaSourceHash": "541f4ea82d938d188f57b41978438885c6114935d4578052a0e4cfcd210c13c4",
+    "head": "f989df17496b3f00eedda2327f824c701eeb79b3",
+    "luaSourceHash": "2f7df5bd3cea3b0fef59318760b41b55259cc2f19b2b5c7126c39e5a6b2c8c49",
     "files": {
       "games/civcraft/actions.lua": "7091044f5923171f5820dfcca52f9452c31e015bf7943e8aad97229a60563f54",
       "games/civcraft/actor_lifecycle.lua": "7faea66b75457b4d7d2b5966f22cd7e58c606ff706f37f353d25578a28e0a628",
@@ -77,7 +77,7 @@
       "games/civcraft/diplomatic_perception.lua": "db32e6a02a24665af78ea3031a9de9ed55d6aa023cbf6da78a374d9a4a7d4e35",
       "games/civcraft/economy.lua": "c569137642a1a98a05d2fa6c8894632eda4d996658334d432691dd84739be469",
       "games/civcraft/empire_menu.lua": "2104bf5404e4c28a755535462297fc50f32c3a7c5054c3c7513539afbcf48b3c",
-      "games/civcraft/encyclopedia.lua": "8df16a7497b1b9ab2dbbac5b338835f1a66ecc7ba0405e6aed59b320ab5dc102",
+      "games/civcraft/encyclopedia.lua": "b2e1c58b1aa0ddbbb2b49db828d5249099b1e157e92605221263db80e31ba526",
       "games/civcraft/escort_paths.lua": "9b22af804434ba96cea868a015982241cdff41ab7890982c1511f1d96fc40323",
       "games/civcraft/event_feed.lua": "58d36dc711e7e048eaa9c09876909afb6e1de37fc8550d0499bc4d1bfbe0f279",
       "games/civcraft/event_summary.lua": "df36cf54f6821e5ad8f3e289d3e77ecf3b5834911493383ec8112aad42296db7",
@@ -105,7 +105,7 @@
       "games/civcraft/queued_routes.lua": "4445d6acc2db355ed60aeacf5f3622f510e64fac2fad226229ff3f2364d90437",
       "games/civcraft/railways.lua": "eaa3e973f18052a0b94f66525379651e2616fe985c035547f42e30ad968f7fdb",
       "games/civcraft/render.lua": "e28cdcdaf71365e0652946afeca699788b906c75538c0c8c76a019b9a5422101",
-      "games/civcraft/reports.lua": "ca238c2541b4969f87965bea1fb7a1931ecc485b47aa36ad5585114c90c27474",
+      "games/civcraft/reports.lua": "2c1118382b8e1d9ee3786e887e017470607d88b4100fb949bfdcd5c3655026bb",
       "games/civcraft/research_details.lua": "8a809fba50792aa1c664e0792f44f13931ec8908825c776db8c00e9f25fb244b",
       "games/civcraft/saves.lua": "ca4083c162d5e39e207dfe9a963186ea8e597ed60cedb042feab082bf280c6ae",
       "games/civcraft/settings_view.lua": "a5a2ff29a338f91fbbb2cdcc7c8517522ccc290cde9ee1db69f30bad1d8aa1a3",
@@ -129,17 +129,18 @@
       "games/civcraft/zone_control.lua": "cdaad55984d1073139663fa43baf78a10b8c94ac1d3d5fb75748ff9d44a93f55",
       "tools/civcraft_lab/canonical.lua": "cb6091ef3e795767d1bb8d6fb51cd7f51fa15fd377d6f168ba84065d2ab01cba",
       "tools/civcraft_lab/engine.lua": "fd7f08f152f06c41be5fcd19ac260633dece96cd18a238dcf5824c17990856ea",
-      "tools/civcraft_lab/metrics.lua": "70cf6e6e3c50e13f3cbda7b3732944705591fc5e137f592ab21ab7f93bbad2e8",
+      "tools/civcraft_lab/metrics.lua": "367f0fa55f1f4ea7534d8c5a529e684c617b1d7c9b7e6fb59d6089d34cc08fb2",
       "tools/civcraft_lab/parity_fixture.lua": "10225800999288fe7b66e4de94671766f6ccb646040ccaf1b7d048f8652708b3",
       "tools/civcraft_lab/policies.lua": "10768fb78edd0583c4a13895f73c286e8b8625488885c2df0d8af68892459270",
       "tools/civcraft_lab/proposals.lua": "900b88a7ab951caae14c125723db19c2b429c105e76b71b850a02b07def050dc",
       "tools/civcraft_lab/telemetry.lua": "b4f44ea189a3a5ce004684f2b2fd36b5e1ff6a46d9a477f48b91eb76710ec25b",
+      "tools/civcraft_lab/build_luajit_backend.py": "04167619beab5878f39254adad64f09dbbbab721ea5adfc06320c4229c9f0688",
       "tools/civcraft_lab/check_native_parity.py": "dd25f0cac6eed0c27778b08b7df2871e7dffbe7cdf9861196ff731eb54be1f5c",
       "tools/civcraft_lab/crossplay.py": "c3ce41a35c7688fd17a9da7e352cc67fd6110958a5ba2324b1002920152b4fe2",
       "tools/civcraft_lab/evolve.py": "63d0dc9cbdefd2befc0f36439d360e60bc3271fd4d77381b115903631f503e83",
-      "tools/civcraft_lab/run.py": "a2959877f9e146e0213bf27baedc6ee75dc72a7abd580134011d7413c4f8640b",
-      "tools/civcraft_lab/runner.py": "d04c9879816639dcfd27fa836df7ba7926558dfa1aa5b385990a8d3fbb311362",
-      "tools/civcraft_lab/runtime.py": "ad039650f497fbcd372a7b1ac5d5e195d0f7063cb99ecdd21e10d7f87d35780f",
+      "tools/civcraft_lab/run.py": "5e57aafadc764bf4d50057dbf258b07c198e030676b5ca249c788764aad77660",
+      "tools/civcraft_lab/runner.py": "3676106105d25bf7b6f84356e33002d95789fac6b34c8b986d4ffb4f429936e9",
+      "tools/civcraft_lab/runtime.py": "7d78e8339d40b83f2d5b5d1c0d4beb6decdc5c1e8c58ae3f366a2f96b9490732",
       "tools/civcraft_lab/workers.py": "57750df3bc3c8a490578526af20739a46452021204ca885761cebad1b5c8be1d",
       "tools/civcraft_lab/requirements.txt": "c355c313ec4744320b1e0d22e7e70465d899a48e8c62293578ddff95d0672c6b"
     }
@@ -149,21 +150,21 @@
   "offlineRound": 115,
   "offlineVictory": "END EXPEDITION",
   "native": {
-    "peakSampledLuaKilobytes": 20919.30078125,
     "round": 115,
-    "victoryReason": "END EXPEDITION",
-    "worstActorMillis": 89,
-    "elapsedMillis": 12409,
-    "host": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
-    "gcCycles": 408,
+    "elapsedMillis": 14389,
     "winnerIds": [
       0
     ],
-    "yields": 408,
-    "phase": "over"
+    "phase": "over",
+    "peakSampledLuaKilobytes": 20752.512695312,
+    "victoryReason": "END EXPEDITION",
+    "yields": 465,
+    "gcCycles": 465,
+    "host": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+    "worstActorMillis": 103
   },
   "fullStateEqual": true,
   "offlineHash": "64d6fc8f3d0df25750afa27a0a25268d87ed349adb2298c59744dc6934b47bde",
   "nativeHash": "64d6fc8f3d0df25750afa27a0a25268d87ed349adb2298c59744dc6934b47bde",
-  "profile": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-full-policy-gq67ma5n"
+  "profile": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-full-policy-kylvkzkx"
 }
