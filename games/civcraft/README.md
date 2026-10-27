@@ -1,9 +1,13 @@
 # CIVCRAFT — v0.9 development branch
 
-New campaigns now default to **Redesign V1**: Conquest and End Expedition, a
-250-round Standard deadline with Score fallback, and territory-based recovery.
-Original/P1 saves retain their rules. See [M1's implemented contract](docs/M1-CAMPAIGN-SCOPE.md).
-Builders, city specialization and the later redesign systems remain upcoming.
+New campaigns default to **Landwork V3**: charge-based Builders, worked-tile
+fields/quarries/lumber camps, Settlement Capacity and population-consuming
+Settlers, alongside Conquest/End Expedition, a 250-round Standard deadline with
+Score fallback and territory-based recovery. Earlier campaign saves retain their
+rules. See [M2's implementation record](docs/M2-LAND-DEVELOPMENT.md) and
+[M1's campaign contract](docs/M1-CAMPAIGN-SCOPE.md). City specialty sites and
+later redesign systems remain upcoming. Prototype prices are not calibrated
+balance guarantees.
 
 Implementation of the next gameplay iteration is tracked in [IMPLEMENTATION-v0.9.md](IMPLEMENTATION-v0.9.md), based on [design draft v0.9.1](ROADMAP-v0.9.md).
 

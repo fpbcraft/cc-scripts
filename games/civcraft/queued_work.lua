@@ -63,7 +63,10 @@ function Work.submit(state, player, unit, kind, x, y, append, systems)
 	tasks[#tasks + 1] = { kind = kind, x = x, y = y }
 	unit.moveQueue = nil
 	unit.workQueue = { version = 1, tasks = tasks }
-	unit.standby, unit.healing, unit.skippedTurn = false, false, nil
+	local Stacks = dofile("/games/civcraft/unit_stacks.lua")
+	for _, member in ipairs({ unit, Stacks.partner(state, unit) }) do
+		member.standby, member.healing, member.skippedTurn = false, false, nil
+	end
 	return true, "Builder work queued", preview
 end
 function Work.pause(state, unit, reason)
@@ -92,6 +95,10 @@ function Work.run(state, owner, systems, apply, force)
 			queue.processed = stamp
 			-- At most one task completes per turn; movement is bounded by the unit allowance.
 			for _ = 1, 32 do
+				local companion = Stacks.partner(state, unit)
+				if companion and (companion.moved or (companion.movesLeft or 0) <= 0) then
+					break
+				end
 				if unit.moved or (unit.movesLeft or 0) <= 0 or not unit.workQueue then
 					break
 				end

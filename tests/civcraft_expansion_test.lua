@@ -2,15 +2,24 @@ local native = dofile
 dofile = function(path)
 	return native(path:gsub("^/games/civcraft/", "games/civcraft/"))
 end
-local S = dofile("games/civcraft/systems.lua")
-local W = dofile("games/civcraft/world.lua")
-local H = dofile("games/civcraft/hex.lua")
-local C = dofile("games/civcraft/combat.lua")
-local L = dofile("games/civcraft/landmarks.lua")
-local R = dofile("games/civcraft/railways.lua")
-local M = dofile("games/civcraft/hostiles.lua")
-local V = dofile("games/civcraft/villages.lua")
-local Victory = dofile("games/civcraft/victory.lua")
+dofile("/games/civcraft/module_cache.lua").install(_ENV)
+local S = dofile("/games/civcraft/systems.lua")
+local W = dofile("/games/civcraft/world.lua")
+local H = dofile("/games/civcraft/hex.lua")
+local C = dofile("/games/civcraft/combat.lua")
+local L = dofile("/games/civcraft/landmarks.lua")
+local R = dofile("/games/civcraft/railways.lua")
+local M = dofile("/games/civcraft/hostiles.lua")
+local V = dofile("/games/civcraft/villages.lua")
+local Victory = dofile("/games/civcraft/victory.lua")
+if rawget(_G, "_HOST") and os.queueEvent then
+	local function checkpoint()
+		os.queueEvent("expansion_checkpoint")
+		os.pullEvent("expansion_checkpoint")
+	end
+	W.checkpoint = checkpoint
+	S.checkpoint = checkpoint
+end
 local function fixture()
 	local world = {
 		seed = 42,

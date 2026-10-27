@@ -68,6 +68,14 @@ function Details.unlocks(systems, id, context)
 				{ category = category, id = key, record = systems[category][key] }
 		end
 	end
+	if ContentRules.hasBuilders(context) then
+		for _, kind in ipairs(Works.order) do
+			local record = Works.definitions[kind]
+			if record.tech == id then
+				entries[#entries + 1] = { category = "improvements", id = kind, record = record }
+			end
+		end
+	end
 	return entries
 end
 

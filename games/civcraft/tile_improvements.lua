@@ -12,7 +12,10 @@ local Works = {
 }
 function Works.bonus(world, x, y)
 	local record = world and (world.improvements or {})[x .. ":" .. y]
-	local definition = record and not record.damaged and Works.definitions[record.kind]
+	local definition = record
+		and not record.damaged
+		and not (world.landmarks or {})[x .. ":" .. y]
+		and Works.definitions[record.kind]
 	return definition and definition.food or 0, definition and definition.industry or 0
 end
 function Works.canPlace(state, player, kind, x, y, systems)
@@ -42,6 +45,14 @@ function Works.canPlace(state, player, kind, x, y, systems)
 	end
 	if city.x == x and city.y == y then
 		return false, "City centers cannot be improved"
+	end
+	if
+		city.project
+		and city.project.kind == "wonder"
+		and city.project.x == x
+		and city.project.y == y
+	then
+		return false, "Tile is reserved for a wonder"
 	end
 	if (state.world.landmarks or {})[key] then
 		return false, "Landmarks and wonders reserve this tile"

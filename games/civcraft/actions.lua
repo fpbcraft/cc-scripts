@@ -532,6 +532,11 @@ local function apply(state, id, req, Systems)
 			jobs = { food = 1, wood = 1, science = 0 },
 			buildings = {},
 		})
+		local plot = World.key(x, y)
+		if state.world.improvements and state.world.improvements[plot] then
+			state.world.improvements[plot] = nil
+			state.improvementRevision = (state.improvementRevision or 0) + 1
+		end
 		local founded = state.cities[#state.cities]
 		Systems.nameCity(state, founded)
 		state.nextId = state.nextId + 1
