@@ -101,16 +101,11 @@ function Audit.run(checkpoint)
 					remaining = math.floor(remaining / (count + 1))
 					local candidate = value > 0 and value - 1 or false
 					ballots[id + 1] = candidate
-					local ok, why = Actions.apply(
-						state,
-						id,
-						{
-							action = "councilVote",
-							session = state.council.session.id,
-							candidate = candidate,
-						},
-						Systems
-					)
+					local ok, why = Actions.apply(state, id, {
+						action = "councilVote",
+						session = state.council.session.id,
+						candidate = candidate,
+					}, Systems)
 					assert(ok, why)
 					if id ~= 0 and candidate == 0 then
 						noConsent = false

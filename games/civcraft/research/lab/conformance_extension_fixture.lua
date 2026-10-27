@@ -38,7 +38,10 @@ local function pair(state)
 		for x = 2, state.world.width - 1 do
 			if land(state, x, y) and not cityAt(state, x, y) then
 				for _, nextTile in ipairs(Hex.neighbours(x, y, state)) do
-					if land(state, nextTile.x, nextTile.y) and not cityAt(state, nextTile.x, nextTile.y) then
+					if
+						land(state, nextTile.x, nextTile.y)
+						and not cityAt(state, nextTile.x, nextTile.y)
+					then
 						return { x = x, y = y }, nextTile
 					end
 				end
@@ -148,7 +151,7 @@ function Fixture.defenderReaction(state, positions)
 	return Actions.apply(state, state.players[2].id, {
 		action = "move",
 		sx = positions.target.x,
-			sy = positions.target.y,
+		sy = positions.target.y,
 		x = positions.attacker.x,
 		y = positions.attacker.y,
 	}, Systems)

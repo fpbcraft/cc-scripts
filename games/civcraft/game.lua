@@ -235,7 +235,11 @@ local function apply(id, req)
 	if req.action == "aiDifficulty" then
 		return Difficulty.configure(state, id, req)
 	end
-	if req.action == "gameSpeed" or req.action == "toggleVictory" or req.action == "contentRules" then
+	if
+		req.action == "gameSpeed"
+		or req.action == "toggleVictory"
+		or req.action == "contentRules"
+	then
 		return CampaignRules.configure(state, id, req)
 	end
 	if req.action == "addAI" or req.action == "removeAI" then

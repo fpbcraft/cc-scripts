@@ -1,2 +1,7 @@
 # Keep the pinned third-party Basalt distribution unmodified.
 games/civcraft/vendor/basalt.lua
+# Generated research exports/vectors retain byte-exact benchmark serialization.
+games/civcraft/research/lab/formats/*.lua
+games/civcraft/research/lab/results/adversarial_archive_candidates/*.lua
+games/civcraft/research/lab/datasets/actual_holdout_vectors.lua
+games/civcraft/research/lab/selected_policy.lua

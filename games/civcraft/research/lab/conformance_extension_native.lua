@@ -78,7 +78,8 @@ local function run_sequence(state, fixture, traceEnabled)
 	local positions = fixture.setupSurprise(state)
 	local telemetry
 	if traceEnabled then
-		telemetry = environment.dofile("/lab/telemetry.lua").install({ trace = true, actionBudget = 64 })
+		telemetry =
+			environment.dofile("/lab/telemetry.lua").install({ trace = true, actionBudget = 64 })
 	end
 	local ops = operations(positions)
 	local checkpoints, outcomes = {}, {}
