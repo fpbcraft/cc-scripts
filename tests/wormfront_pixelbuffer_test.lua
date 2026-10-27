@@ -3,19 +3,19 @@ local B = dofile("lib/fpb/pixelbuffer.lua")
 local calls = {}
 local device = {}
 function device.drawPixels(x, y, pixels, width, height)
-  calls[#calls + 1] = { x = x, y = y, pixels = pixels, width = width, height = height }
+	calls[#calls + 1] = { x = x, y = y, pixels = pixels, width = width, height = height }
 end
 local canvas = {
-  mode = "graphics",
-  m = device,
-  sx = 2,
-  sy = 2,
-  ox = 0,
-  oy = 0,
-  w = 12,
-  h = 6,
-  pw = 24,
-  ph = 12,
+	mode = "graphics",
+	m = device,
+	sx = 2,
+	sy = 2,
+	ox = 0,
+	oy = 0,
+	w = 12,
+	h = 6,
+	pw = 24,
+	ph = 12,
 }
 function canvas:resize() end
 function canvas:close() end
@@ -45,5 +45,8 @@ r:close()
 local text = { mode = "text" }
 assert(B.attach(text) == text and not text.buffered, "Text-mode fallback must be unchanged")
 local fractional = { mode = "graphics", m = device, sx = 1.5, sy = 2 }
-assert(B.attach(fractional) == fractional and not fractional.buffered, "Unsupported scaling must fall back")
+assert(
+	B.attach(fractional) == fractional and not fractional.buffered,
+	"Unsupported scaling must fall back"
+)
 print("FPB framebuffer: dirty rows, binary bitmap batching and text fallback passed")

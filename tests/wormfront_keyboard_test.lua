@@ -3,12 +3,20 @@
 local file = assert(io.open("games/wormfront/main.lua", "r"))
 local script = file:read("*a")
 file:close()
-local keyboard = assert(script:match('elseif event == "key" and keys then(.-)elseif event == "key_up"'))
-local release = assert(script:match('elseif event == "key_up" and keys then(.-)elseif event == "char"'))
-local character = assert(script:match('elseif event == "char" then(.-)elseif event == "rednet_message"'))
-local network = assert(script:match('elseif event == "rednet_message" then(.-)elseif event == "monitor_resize"'))
+local keyboard =
+	assert(script:match('elseif event == "key" and keys then(.-)elseif event == "key_up"'))
+local release =
+	assert(script:match('elseif event == "key_up" and keys then(.-)elseif event == "char"'))
+local character =
+	assert(script:match('elseif event == "char" then(.-)elseif event == "rednet_message"'))
+local network = assert(
+	script:match('elseif event == "rednet_message" then(.-)elseif event == "monitor_resize"')
+)
 for _, section in ipairs({ keyboard, release, character, network }) do
-  assert(not section:find("redraw(", 1, true), "Input or rednet events must not trigger immediate frames")
+	assert(
+		not section:find("redraw(", 1, true),
+		"Input or rednet events must not trigger immediate frames"
+	)
 end
 assert(script:find("if current - lastDraw >= (ui.r.buffered and 0.10 or 0.2) then", 1, true))
 assert(script:find("local timer = os.startTimer(0.05)", 1, true))
