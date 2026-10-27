@@ -358,6 +358,13 @@ function I.draw(ui, state, player, rect, modal)
 					)
 				)
 				local label = Systems.label(kind, id) .. " " .. turns .. "T"
+				if
+					kind == "building"
+					and ContentRules.hasDevelopment(state)
+					and (source[id].capacity or 0) > 0
+				then
+					text(Systems.label(kind, id) .. ": CAPACITY +" .. source[id].capacity)
+				end
 				if kind == "project" then
 					local output = Systems.projectPreview(player, city, id, state, yields)
 					label = Systems.label(kind, id) .. (output.active and " / ROUND" or " PAUSED")

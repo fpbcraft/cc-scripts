@@ -209,7 +209,13 @@ function E.describe(category, entry, player, state)
 		if ContentRules.hasDevelopment(state or player) then
 			if entry.id == "population" then
 				return {
+					entry.text,
 					"Settlement Capacity starts at 4, gains 1 beside water, 2 from Homesteads, 2 from Water Services and 1 from a Trading Hall. Positive growth food is 100% at least two citizens below capacity, 50% one below, 25% at capacity or one above, and 12.5% two or more above. Minimum growth time increases by the same factor. Food consumption and starvation remain unchanged. Completing a Settler consumes one citizen after growth resolves; a city needs at least two citizens.",
+				}
+			elseif entry.id == "yields" then
+				return {
+					entry.text,
+					"Development V2: Settlement Capacity scales positive growth food and the minimum growth time. The city inspector shows the effective food gain and forecast. Food consumption and starvation are unchanged. See POPULATION AND JOBS for the capacity curve.",
 				}
 			elseif entry.id == "production" then
 				return {
@@ -312,6 +318,11 @@ function E.describe(category, entry, player, state)
 			record.description or "",
 			"One of this building per city.",
 		}
+		if ContentRules.hasDevelopment(state or player) and (record.capacity or 0) > 0 then
+			lines[#lines + 1] = "Settlement Capacity +"
+				.. record.capacity
+				.. "; no automatic citizens."
+		end
 		if entry.id == "councilhall" and ContentRules.isRedesign(state or player) then
 			lines[2] =
 				"Retired in Redesign V1. Council leadership and resolutions do not require this building. Original and P1 campaigns retain its diplomatic-victory role."
