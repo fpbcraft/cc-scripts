@@ -75,7 +75,8 @@ function Rules.configure(state, id, request)
 		if version == nil then
 			version = state.contentRules == "p1" and "balance1"
 				or state.contentRules == "balance1" and "balance2"
-				or state.contentRules == "balance2" and "baseline"
+				or state.contentRules == "balance2" and "balance3"
+				or state.contentRules == "balance3" and "baseline"
 				or "p1"
 		end
 		if
@@ -83,6 +84,7 @@ function Rules.configure(state, id, request)
 			and version ~= "p1"
 			and version ~= "balance1"
 			and version ~= "balance2"
+			and version ~= "balance3"
 		then
 			return false, "Unknown content economy"
 		end

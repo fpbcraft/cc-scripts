@@ -3,11 +3,12 @@ local Rails = dofile("/games/civcraft/railways.lua")
 local Landmarks = dofile("/games/civcraft/landmarks.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local CouncilRules = dofile("/games/civcraft/council_rules.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local E = {}
 function E.effects(city, state, systems)
 	local result = { food = 0, industry = 0, science = 0, gold = 0 }
 	for id, built in pairs(city.buildings or {}) do
-		if built then
+		if built and not (ContentRules.hasBuilders(state) and (id == "farm" or id == "mine")) then
 			for k, v in pairs((Content.buildings[id] or {}).effects or {}) do
 				result[k] = (result[k] or 0) + v
 			end

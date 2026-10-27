@@ -18,7 +18,8 @@ function Summary.text(event)
 	local actor, result = event.actor or event.defender, event.result or {}
 	local unit = actor and Content.units[actor.kind]
 	local name = actor and (actor.name or unit and unit.name or actor.kind) or ""
-	local label = result.capturedSettler and "SETTLER CAPTURE"
+	local label = result.capturedSettler
+			and (result.capturedCivilianKind == "builder" and "BUILDER CAPTURE" or "SETTLER CAPTURE")
 		or result.captured and "CITY CAPTURE"
 		or labels[event.type]
 		or event.type:upper()

@@ -1,3 +1,4 @@
+local Works = dofile("/games/civcraft/tile_improvements.lua")
 -- Observation-only action candidates.
 --
 -- The authoritative dispatcher remains the legality oracle. This module must
@@ -300,6 +301,39 @@ end
 
 local function addUnitActions(result, view, playerId, units)
 	for _, unit in ipairs(units) do
+		if unit.kind == "builder" then
+			local player
+			for _, candidate in ipairs(view.players or {}) do
+				if candidate.id == playerId then
+					player = candidate
+				end
+			end
+			if unit.workQueue then
+				add(result, { action = "cancelWork", unitID = unit.id, x = unit.x, y = unit.y })
+				if unit.workQueue.paused then
+					add(result, { action = "resumeWork", unitID = unit.id, x = unit.x, y = unit.y })
+				end
+			end
+			for _, city in ipairs(view.cities or {}) do
+				if city.owner == playerId then
+					for _, tile in ipairs(Systems.workable(view, city)) do
+						for _, kind in ipairs(Works.order) do
+							if Works.preview(view, player, unit, kind, tile.x, tile.y, Systems) then
+								add(result, {
+									action = "queueWork",
+									unitID = unit.id,
+									x = unit.x,
+									y = unit.y,
+									tileX = tile.x,
+									tileY = tile.y,
+									kind = kind,
+								})
+							end
+						end
+					end
+				end
+			end
+		end
 		add(result, { action = "heal", unitID = unit.id, x = unit.x, y = unit.y })
 		add(result, { action = "skipTurn", unitID = unit.id, x = unit.x, y = unit.y })
 		add(result, {

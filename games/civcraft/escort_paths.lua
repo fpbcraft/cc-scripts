@@ -100,9 +100,9 @@ function Paths.reachable(state, unit, partner, owner, systems, hex, zone, indivi
 					if cost and escortCost and cost <= budget and escortCost <= otherBudget then
 						local id = key(point.x, point.y)
 						if enemy then
-							local civilian = Stacks.settler(state.units, point.x, point.y)
+							local civilian = Stacks.civilian(state.units, point.x, point.y)
 							if
-								unit.kind ~= "settler"
+								not Stacks.isCivilian(unit)
 								and (stats.strength or 0) > 0
 								and Movement.attackRange(state, unit, stats, hex) == 1
 								and unit.attackedRound ~= state.round
