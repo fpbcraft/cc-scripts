@@ -1,0 +1,88 @@
+{
+  "luaRegressions": {
+    "command": "/tmp/lua-5.3.6/src/lua tests/civcraft*_test.lua (each script independently)",
+    "count": 54,
+    "failed": 0,
+    "elapsedSeconds": 837.23,
+    "rawLog": "/tmp/civcraft-lifecycle-regressions.log",
+    "revisionCaveat": "Ran during lifecycle extraction. End-turn helper subsequently exercised in current native session and Python tests."
+  },
+  "nativeUiSessions": [
+    {
+      "command": "python3 tests/run_civcraft_native_session.py",
+      "result": "PASS",
+      "profile": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-session-pl394xcx"
+    },
+    {
+      "command": "python3 tests/run_civcraft_native_session.py --host",
+      "result": "PASS",
+      "profile": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-session-u5gu82rs"
+    }
+  ],
+  "nativeParity": {
+    "fixtures": 3,
+    "checks": 54,
+    "failed": 0,
+    "artifact": "native_parity.json"
+  },
+  "pythonLabTests": {
+    "count": 12,
+    "failed": 0,
+    "command": "/tmp/civcraft-lua-env/bin/python -m unittest discover -s tests -p test_civcraft_lab.py -v"
+  },
+  "frozenLifecycleReference": {
+    "fixtures": 6,
+    "players": [
+      2,
+      3,
+      4
+    ],
+    "passed": true,
+    "command": "/tmp/lua-5.3.6/src/lua tests/civcraft_lifecycle_test.lua"
+  },
+  "nativeFullPolicy": {
+    "artifact": "full_policy_native_parity.json",
+    "round": 125,
+    "fullStateEqual": true,
+    "limitations": "One complete Forge mirror with no hostiles; native timing is total adapter/game cost."
+  },
+  "nativeWarAndSave": {
+    "artifact": "wartime_save_parity.json",
+    "checks": 21,
+    "failed": 0,
+    "scope": "Handcrafted registered war/capture and actual native Saves.save/load; includes two expected known hostile crash diagnostics, not 21 successful gameplay transitions."
+  },
+  "latestPythonRepeat": {
+    "count": 12,
+    "failed": 0,
+    "elapsedSeconds": 1.685
+  },
+  "latestLint": {
+    "seleneErrors": 0,
+    "seleneWarnings": 0,
+    "caveat": "Selene prints lua52 feature banner but reports no diagnostics."
+  },
+  "finalArtifactChecks": {
+    "researchMarkdownBrokenLinks": 0,
+    "researchPythonSyntax": "PASS",
+    "resultJsonParse": "PASS",
+    "catalogVerification": "PASS",
+    "gitDiffCheck": "PASS",
+    "coreAndResearchLuaStyle": "PASS",
+    "coreSourcePreservedDuringExperiments": true
+  },
+  "healingH1": {
+    "artifact": "healing_boundary_validation.json",
+    "cases": 128,
+    "nativeAndOfflineEqual": true,
+    "semanticsPassed": true,
+    "relatedLuaTests": [
+      "civcraft_actions_test.lua",
+      "civcraft_tactics_test.lua",
+      "civcraft_campaign_test.lua"
+    ],
+    "labTests": 12,
+    "seleneErrors": 0,
+    "scope": "User requested healer territory-rule change; broad rebalance remains proposed. Working tree only, no deployment."
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "rawArtifact": "/tmp/civcraft-faction-policy-pilot.json",
+  "source": {
+    "head": "97944b8bc85e011d00abbdf45bf9aecdb82050ae",
+    "luaSourceHash": "9b12a1a22939d9e06834dff3743756f7b864eb3e12f40aaa109917ab1f0af38f",
+    "sourceChangedDuringRun": false
+  },
+  "host": {
+    "machine": "arm64",
+    "python": "3.14.6",
+    "cpuCount": 12,
+    "hardwareModel": "not verified by this runner",
+    "workers": 3,
+    "elapsedSeconds": 175.18739441595972
+  },
+  "fixture": {
+    "matches": 36,
+    "statusCounts": {"finished": 36},
+    "seeds": [203807, 708091],
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "maxRounds": 180,
+    "policy": {
+      "version": 1,
+      "goal": "expedition",
+      "weights": {"food": 1.277163, "industry": 1.235594, "science": 1.416576, "gold": 1.469771}
+    },
+    "victoryReasons": {"END EXPEDITION": 36},
+    "medianRound": 122.0,
+    "meanRound": 119.22222222222223,
+    "seatWins": {"seat0": 29, "seat1": 7},
+    "nonForgeFirstSeatWins": "18/18"
+  },
+  "civilizationComparisons": {
+    "highland": {"matches": 4, "wins": 2, "rate": 0.5, "medianRound": 126.0},
+    "iron": {"matches": 4, "wins": 2, "rate": 0.5, "medianRound": 126.0},
+    "mariner": {"matches": 4, "wins": 3, "rate": 0.75, "medianRound": 117.5},
+    "merchant": {"matches": 4, "wins": 2, "rate": 0.5, "medianRound": 126.0},
+    "nomad": {"matches": 4, "wins": 4, "rate": 1.0, "medianRound": 114.5},
+    "scholar": {"matches": 4, "wins": 4, "rate": 1.0, "medianRound": 100.0},
+    "sentinel": {"matches": 4, "wins": 2, "rate": 0.5, "medianRound": 126.0},
+    "verdant": {"matches": 4, "wins": 2, "rate": 0.5, "medianRound": 126.0},
+    "wild": {"matches": 4, "wins": 4, "rate": 1.0, "medianRound": 114.5}
+  },
+  "interpretation": {
+    "identicalPolicy": true,
+    "pureBonusAblation": false,
+    "personalityConfound": "ai_personalities.forCivilization remains civilization-specific; outcomes combine faction rules with different AI personality profiles.",
+    "seatAssociation": "Every non-Forge faction won both trials when placed in seat 0; aggregate seat-0 wins were 29/36. This is an observed seat/start-position association, not proof of actor-order causality.",
+    "ablation": "fixed-personality ablation completed separately; see faction_policy_ablation.json and /tmp/civcraft-faction-policy-ablation.raw.json",
+    "use": "diagnostic pilot only, not a civilization balance estimate"
+  }
+}

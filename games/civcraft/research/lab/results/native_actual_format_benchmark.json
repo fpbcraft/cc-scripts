@@ -1,0 +1,118 @@
+{
+  "formats": [
+    {
+      "format": "weights",
+      "processReturnCode": 0,
+      "profile": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-native-format-b6nnd8li",
+      "result": {
+        "batchMs": 4000,
+        "batches": 5,
+        "durationMs": 20000,
+        "formats": {
+          "weights": {
+            "bytes": 25052,
+            "calls": 158628,
+            "callsPerSecond": 7931.4,
+            "elapsedMs": 20000,
+            "fallbackRate": 0,
+            "firstAction": "production:settler",
+            "heapDeltaKB": 0.4140625,
+            "maxSingleCallMs": 108,
+            "path": "/research/lab/formats/actual_weights.lua",
+            "replayAgreement": 1,
+            "replayCalls": 158628,
+            "replayMismatches": 0,
+            "replayRecords": 1488
+          }
+        },
+        "schema": "observer-ranked-decision-v1",
+        "status": "native_benchmark"
+      },
+      "stderrTail": [],
+      "stdoutTail": [
+        "8,\"replayRecords\":1488,\"replayCalls\":158628,\"bytes\"",
+        ":25052}},\"durationMs\":20000,\"batches\":5,\"batchMs\":4",
+        "000,\"status\":\"native_benchmark\"}"
+      ]
+    },
+    {
+      "format": "rule_tree",
+      "processReturnCode": 0,
+      "profile": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-native-format-9tho8wog",
+      "result": {
+        "batchMs": 4000,
+        "batches": 5,
+        "durationMs": 20000,
+        "formats": {
+          "rule_tree": {
+            "bytes": 4467,
+            "calls": 12284068,
+            "callsPerSecond": 613988.50402359,
+            "elapsedMs": 20007,
+            "fallbackRate": 0.85282115012714,
+            "firstAction": "production:settler",
+            "heapDeltaKB": 0.3828125,
+            "maxSingleCallMs": 2,
+            "path": "/research/lab/formats/actual_rule_tree.lua",
+            "replayAgreement": 1,
+            "replayCalls": 12284068,
+            "replayMismatches": 0,
+            "replayRecords": 1488
+          }
+        },
+        "schema": "observer-ranked-decision-v1",
+        "status": "native_benchmark"
+      },
+      "stderrTail": [],
+      "stdoutTail": [
+        "tion\":\"production:settler\",\"fallbackRate\":0.8528211",
+        "5012714,\"bytes\":4467,\"maxSingleCallMs\":2,\"elapsedMs",
+        "\":20007}}}"
+      ]
+    },
+    {
+      "format": "tiny_quantized_mlp",
+      "processReturnCode": 0,
+      "profile": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-native-format-25mhtb5x",
+      "result": {
+        "batchMs": 4000,
+        "batches": 5,
+        "durationMs": 20000,
+        "formats": {
+          "tiny_quantized_mlp": {
+            "bytes": 6187,
+            "calls": 173424,
+            "callsPerSecond": 8671.2,
+            "elapsedMs": 20000,
+            "fallbackRate": 0,
+            "firstAction": "production:settler",
+            "heapDeltaKB": 0.4140625,
+            "maxSingleCallMs": 3,
+            "path": "/research/lab/formats/actual_tiny_quantized_mlp.lua",
+            "replayAgreement": 1,
+            "replayCalls": 173424,
+            "replayMismatches": 0,
+            "replayRecords": 1488
+          }
+        },
+        "schema": "observer-ranked-decision-v1",
+        "status": "native_benchmark"
+      },
+      "stderrTail": [],
+      "stdoutTail": [
+        "671.2,\"calls\":173424,\"fallbackRate\":0}},\"batches\":5",
+        ",\"batchMs\":4000,\"status\":\"native_benchmark\",\"schema",
+        "\":\"observer-ranked-decision-v1\",\"durationMs\":20000}"
+      ]
+    }
+  ],
+  "fresh_process_per_format": true,
+  "source_hashes": {
+    "datasets/actual_holdout_vectors.lua": "453f38b9e411f0136e17bbfca1d016d6562781db36a0e05403e1b654867d45f6",
+    "formats/actual_rule_tree.lua": "9b20846e2707bb5e630e32a8aaeb1eaf9542d3882cb5543fb1641fb6e64963c2",
+    "formats/actual_tiny_quantized_mlp.lua": "597138a6a8833cf160d657c94980bb02aec8d1d2f13d965a728177d917c6aa1e",
+    "formats/actual_weights.lua": "372097c2cf301c7af81b60cbc8e11c0b4a4c853a2c13aebd582b2bbab0aaa954",
+    "native_inference_benchmark.lua": "840a689637fb1fa81043c076b0ddc76bc0d69de23e850373ca02e0bb852c2aae"
+  },
+  "status": "native_actual_format_benchmark"
+}

@@ -1,0 +1,158 @@
+{
+  "analysisSha256": "164a5cc74177c5639b01866efca6f9332a5ce8bb2d4fb45345fc8e2b3ca94b9e",
+  "independentMapBlocks": 2,
+  "inputHashes": {
+    "coordinated_siege_holdout.json": "1feac865faad25ba5bfcd810b3ac26f0bfe39f8e279be0b8093d1f908ae33a79",
+    "coordinated_siege_holdout_strength8.json": "ac99d7222279d6ce891554242f11a97f34c891cc015ac96ee53f4c5526fef816"
+  },
+  "limits": [
+    "Four paired cells share two map seeds; no broad fairness or equivalence claim.",
+    "Earlier hook bundle is research-only; control is not the unchanged shipping AI.",
+    "Accepted recruitment queues and final completed units are different measurements.",
+    "The same evaluation maps were reused after a content-threshold implementation correction."
+  ],
+  "pairedCells": 4,
+  "pairs": [
+    {
+      "arms": [
+        {
+          "acceptedSiegeQueues": 0,
+          "arm": "existing_hooks",
+          "conquestSeatWon": false,
+          "finalGold": 498,
+          "finalSiegeUnits": 0,
+          "finalSwordUnits": 0,
+          "finalUnitCount": 7,
+          "firstSiegeQueueRound": null,
+          "opponentCitiesCaptured": 0,
+          "round": 127,
+          "victoryReason": "INDUSTRIAL"
+        },
+        {
+          "acceptedSiegeQueues": 0,
+          "arm": "coordinated",
+          "conquestSeatWon": false,
+          "finalGold": 498,
+          "finalSiegeUnits": 0,
+          "finalSwordUnits": 0,
+          "finalUnitCount": 7,
+          "firstSiegeQueueRound": null,
+          "opponentCitiesCaptured": 0,
+          "round": 127,
+          "victoryReason": "INDUSTRIAL"
+        }
+      ],
+      "armsFinalStateEqual": true,
+      "initialStatesEqual": true,
+      "repeatedControlStateEqual": true,
+      "seat": 0,
+      "seed": 387493
+    },
+    {
+      "arms": [
+        {
+          "acceptedSiegeQueues": 2,
+          "arm": "existing_hooks",
+          "conquestSeatWon": false,
+          "finalGold": 8,
+          "finalSiegeUnits": 1,
+          "finalSwordUnits": 11,
+          "finalUnitCount": 19,
+          "firstSiegeQueueRound": 112,
+          "opponentCitiesCaptured": 0,
+          "round": 160,
+          "victoryReason": "INDUSTRIAL"
+        },
+        {
+          "acceptedSiegeQueues": 7,
+          "arm": "coordinated",
+          "conquestSeatWon": false,
+          "finalGold": 10,
+          "finalSiegeUnits": 3,
+          "finalSwordUnits": 9,
+          "finalUnitCount": 19,
+          "firstSiegeQueueRound": 112,
+          "opponentCitiesCaptured": 0,
+          "round": 160,
+          "victoryReason": "INDUSTRIAL"
+        }
+      ],
+      "armsFinalStateEqual": false,
+      "initialStatesEqual": true,
+      "repeatedControlStateEqual": true,
+      "seat": 1,
+      "seed": 387493
+    },
+    {
+      "arms": [
+        {
+          "acceptedSiegeQueues": 0,
+          "arm": "existing_hooks",
+          "conquestSeatWon": false,
+          "finalGold": 1060,
+          "finalSiegeUnits": 0,
+          "finalSwordUnits": 0,
+          "finalUnitCount": 7,
+          "firstSiegeQueueRound": null,
+          "opponentCitiesCaptured": 0,
+          "round": 136,
+          "victoryReason": "INDUSTRIAL"
+        },
+        {
+          "acceptedSiegeQueues": 0,
+          "arm": "coordinated",
+          "conquestSeatWon": false,
+          "finalGold": 1060,
+          "finalSiegeUnits": 0,
+          "finalSwordUnits": 0,
+          "finalUnitCount": 7,
+          "firstSiegeQueueRound": null,
+          "opponentCitiesCaptured": 0,
+          "round": 136,
+          "victoryReason": "INDUSTRIAL"
+        }
+      ],
+      "armsFinalStateEqual": true,
+      "initialStatesEqual": true,
+      "repeatedControlStateEqual": true,
+      "seat": 0,
+      "seed": 923671
+    },
+    {
+      "arms": [
+        {
+          "acceptedSiegeQueues": 1,
+          "arm": "existing_hooks",
+          "conquestSeatWon": false,
+          "finalGold": 3,
+          "finalSiegeUnits": 1,
+          "finalSwordUnits": 8,
+          "finalUnitCount": 16,
+          "firstSiegeQueueRound": 94,
+          "opponentCitiesCaptured": 0,
+          "round": 129,
+          "victoryReason": "INDUSTRIAL"
+        },
+        {
+          "acceptedSiegeQueues": 8,
+          "arm": "coordinated",
+          "conquestSeatWon": false,
+          "finalGold": 1,
+          "finalSiegeUnits": 2,
+          "finalSwordUnits": 6,
+          "finalUnitCount": 15,
+          "firstSiegeQueueRound": 75,
+          "opponentCitiesCaptured": 0,
+          "round": 129,
+          "victoryReason": "INDUSTRIAL"
+        }
+      ],
+      "armsFinalStateEqual": false,
+      "initialStatesEqual": true,
+      "repeatedControlStateEqual": true,
+      "seat": 1,
+      "seed": 923671
+    }
+  ],
+  "purpose": "Matched current-policy siege intervention analysis"
+}

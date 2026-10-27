@@ -183,7 +183,12 @@ function A.choose(state, player, city, systems)
 			currentEligible = true
 		end
 	end
-	if currentEligible and context.surplus >= 0 and not context.emergency then
+	if
+		currentEligible
+		and known.project.kind ~= "project"
+		and context.surplus >= 0
+		and not context.emergency
+	then
 		return true -- Complete ordinary investments before considering a replacement.
 	end
 	for index = 1, math.min(4, #choices) do

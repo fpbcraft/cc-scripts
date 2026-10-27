@@ -9,8 +9,6 @@ end
 dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local args = { ... }
 local MODE = args[1] or "local"
-local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
-local QueuedRoutes = dofile("/games/civcraft/queued_routes.lua")
 local PROTOCOL = "fpbcraft.civcraft.v2"
 local localMode = MODE == "local"
 local SAVE = "/games/civcraft/data/save.dat"
@@ -81,21 +79,17 @@ if displaySide and config and config.get and config.set then
 end
 local Hex = dofile("/games/civcraft/hex.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
+local Lifecycle = dofile("/games/civcraft/match_lifecycle.lua")
+local Actors = dofile("/games/civcraft/actor_lifecycle.lua")
 local World = dofile("/games/civcraft/world.lua")
 local mapSizes = World.sizeOrder
 local Saves = dofile("/games/civcraft/saves.lua")
 local Cooperative = dofile("/games/civcraft/cooperative.lua")
-local Reports = dofile("/games/civcraft/reports.lua")
 local Audio = dofile("/games/civcraft/audio.lua")
-local Combat = dofile("/games/civcraft/combat.lua")
 local Actions = dofile("/games/civcraft/actions.lua")
-local Hostiles = dofile("/games/civcraft/hostiles.lua")
-local Villages = dofile("/games/civcraft/villages.lua")
 local Victory = dofile("/games/civcraft/victory.lua")
 local CommandQueue = dofile("/games/civcraft/command_queue.lua")
 local Events = dofile("/games/civcraft/events.lua")
-local Council = dofile("/games/civcraft/council.lua")
-local CouncilAI = dofile("/games/civcraft/council_ai.lua")
 local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
 local Presentation = dofile("/games/civcraft/presentation.lua")
 local Snapshots = dofile("/games/civcraft/snapshots.lua")
@@ -122,36 +116,12 @@ end
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
-local DiplomaticPerception = dofile("/games/civcraft/diplomatic_perception.lua")
 local pumpActors = function() end
 local W, H = Hex.width, Hex.height
 local state
 local turnProgress = function() end
 local function newGame()
-	return {
-		campaignID = newCampaignID(),
-		version = 6,
-		ruleset = "create",
-		roundLimit = 180,
-		gameSpeed = "standard",
-		victoryRulesVersion = 2,
-		diplomacy = Diplomacy.new(),
-		scheduler = Scheduler.new(),
-		hostileMode = "standard",
-		phase = "lobby",
-		round = 1,
-		turn = 1,
-		players = {},
-		cities = {},
-		units = {},
-		nextId = 1,
-		logs = { "Welcome to CIVCRAFT" },
-		winner = nil,
-		mapSize = "standard",
-		mapType = "continents",
-		mapSeed = 12345,
-		name = "NEW EMPIRE",
-	}
+	return Lifecycle.newLobby(newCampaignID(), "p1")
 end
 state = newGame()
 local hasHumanSave = false
@@ -161,20 +131,7 @@ local function log(s)
 		table.remove(state.logs)
 	end
 end
-local function addUnit(owner, x, y, kind)
-	local u = {
-		id = state.nextId,
-		owner = owner,
-		x = x,
-		y = y,
-		kind = kind,
-		moved = false,
-		movesLeft = Systems.units[kind].move,
-	}
-	state.nextId = state.nextId + 1
-	table.insert(state.units, u)
-	return u
-end
+
 local function player(id)
 	for i, p in ipairs(state.players) do
 		if p.id == id then
@@ -197,43 +154,8 @@ local function save()
 	trace("save.end")
 end
 local function initMap()
-	state.world = World.generate(state.mapSeed, state.mapSize, #state.players, state.mapType)
+	Lifecycle.initialize(state)
 	W, H = state.world.width, state.world.height
-	state.name = "EMPIRE " .. state.world.seed
-	for i, p in ipairs(state.players) do
-		local pos = state.world.starts[i]
-		local x, y = pos.x, pos.y
-		table.insert(state.cities, {
-			id = state.nextId,
-			x = x,
-			y = y,
-			owner = p.id,
-			capitalOf = p.id,
-			level = 1,
-			population = 2,
-			foodStore = 0,
-			jobs = { food = 1, wood = 1, science = 0 },
-			buildings = {},
-		})
-		state.nextId = state.nextId + 1
-		addUnit(p.id, x + ((x < W / 2) and 1 or -1), y, "warrior")
-		p.food = 12
-		p.wood = 12
-		p.science = 0
-		p.tech = 0
-		p.ready = false
-		p.techs = p.techs or {}
-		p.civ = p.civ or Systems.civs[i].id
-	end
-	state.phase = "game"
-	state.round = 1
-	state.turn = 1
-	Hostiles.generate(state)
-	Villages.generate(state)
-	Systems.migrate(state)
-	Council.advance(state)
-	Diplomacy.boundary(state)
-	World.reveal(state, Hex, Systems)
 	pumpActors()
 	log("Game started: " .. #state.players .. " civilizations")
 	save()
@@ -273,45 +195,7 @@ end
 local function nextTurn()
 	trace("round.begin", state.round)
 	turnProgress("PROCESSING ROUND", "Economy, exploration and reports")
-	state.round = state.round + 1
-	for _, p in ipairs(state.players) do
-		p.ready = false
-	end
-	Council.advance(state)
-	Diplomacy.boundary(state)
-	Events.prune(state)
-	Combat.round(state, Systems)
-	Systems.production(state, Hex)
-	Villages.round(state, Systems, Combat)
-	Hostiles.round(state, Systems)
-	for _, u in ipairs(state.units) do
-		local owner = player(u.owner)
-		local base = Systems.units[u.kind] or Systems.units.warrior
-		MovementBudget.reset(state, u, base, owner, Hex)
-	end
-	World.reveal(state, Hex, Systems)
-	DiplomaticPerception.promises(state, Hex, World, Systems.units)
-	for _, unit in ipairs(state.units) do
-		if unit.autoExplore and not unit.standby and Scheduler.canAct(state, unit.owner) then
-			unit.autoExploreRound = state.round
-			Systems.autoExplore(state, unit, Hex)
-		end
-	end
-	for _, p in ipairs(state.players) do
-		p.age = Systems.age(p)
-		p.endStage = 0
-		for _, city in ipairs(state.cities) do
-			if city.owner == p.id then
-				for i, id in ipairs({ "eyes", "equipment", "dragon" }) do
-					if city.buildings[id] then
-						p.endStage = math.max(p.endStage, i)
-					end
-				end
-			end
-		end
-		p.turnReport = Reports.build(state, p, p.turnBaseline)
-		p.reportRound = state.round
-	end
+	Lifecycle.advance(state)
 	winner(true)
 	pumpActors()
 	log("Round " .. state.round)
@@ -319,63 +203,15 @@ local function nextTurn()
 	trace("round.end", state.round)
 end
 pumpActors = function()
-	if state.phase ~= "game" then
-		return
-	end
-	for _ = 1, #state.players do
-		local ranAI = false
-		for _, participant in ipairs(state.players) do
-			if participant.ai then
-				Systems.diplomaticResponses(state, participant)
-				if
-					state.council
-					and state.council.session
-					and state.council.session.status == "voting"
-				then
-					CouncilAI.run(state, participant, Presentation.capture(state, participant.id))
-				end
-			end
-			if Scheduler.canAct(state, participant.id) then
-				for _, unit in ipairs(state.units) do
-					if
-						unit.owner == participant.id and state.scheduler.reactions[participant.id]
-					then
-						MovementBudget.response(
-							state,
-							unit,
-							Systems.units[unit.kind] or Systems.units.warrior,
-							participant,
-							Hex
-						)
-					end
-					if
-						unit.owner == participant.id
-						and unit.autoExplore
-						and not unit.standby
-						and unit.autoExploreRound ~= state.round
-					then
-						unit.autoExploreRound = state.round
-						Systems.autoExplore(state, unit, Hex)
-					end
-				end
-				-- Allowances already exist; queued orders can only spend those budgets.
-				QueuedRoutes.run(state, participant.id, Systems, Actions.apply)
-				if participant.ai then
-					if not participant.ready then
-						participant.turnBaseline = Reports.capture(state, participant)
-					end
-					turnProgress("AI TAKING ITS TURN", participant.name)
-					trace("ai.begin", participant.name)
-					Systems.aiTurn(state, participant, Hex)
-					trace("ai.end", participant.name)
-					ranAI = true
-				end
-			end
-		end
-		if not ranAI then
-			break
-		end
-	end
+	Actors.pump(state, {
+		before = function(_, participant)
+			turnProgress("AI TAKING ITS TURN", participant.name)
+			trace("ai.begin", participant.name)
+		end,
+		after = function(_, participant)
+			trace("ai.end", participant.name)
+		end,
+	})
 end
 local function apply(id, req)
 	local p = player(id)
@@ -399,7 +235,7 @@ local function apply(id, req)
 	if req.action == "aiDifficulty" then
 		return Difficulty.configure(state, id, req)
 	end
-	if req.action == "gameSpeed" or req.action == "toggleVictory" then
+	if req.action == "gameSpeed" or req.action == "toggleVictory" or req.action == "contentRules" then
 		return CampaignRules.configure(state, id, req)
 	end
 	if req.action == "addAI" or req.action == "removeAI" then
@@ -481,12 +317,7 @@ local function apply(id, req)
 		return ok, why
 	end
 	if req.action == "end" then
-		if not p.ready then
-			p.turnBaseline = Reports.capture(state, p)
-		end
-		Scheduler.finish(state, id)
-		Events.notice(state, "order", nil, "end", id)
-		log(p.name .. " is ready")
+		Lifecycle.finish(state, id)
 		pumpActors()
 		if Scheduler.complete(state) then
 			nextTurn()

@@ -1,0 +1,211 @@
+{
+  "adapterFingerprints": {
+    "fixedPersonalityAblation": "b93141939a766f486c5d3cee44f1a44c4e1322810f89e0b8dc0aeeae1499fe6d",
+    "runtime": "ad039650f497fbcd372a7b1ac5d5e195d0f7063cb99ecdd21e10d7f87d35780f",
+    "workers": "57750df3bc3c8a490578526af20739a46452021204ca885761cebad1b5c8be1d"
+  },
+  "analysisOnly": true,
+  "civilizationSummary": {
+    "highland": {
+      "games": 16,
+      "targetWinCredit": 0.5,
+      "victoryReasons": {
+        "END EXPEDITION": 16
+      }
+    },
+    "iron": {
+      "games": 16,
+      "targetWinCredit": 0.5625,
+      "victoryReasons": {
+        "END EXPEDITION": 16
+      }
+    },
+    "mariner": {
+      "games": 16,
+      "targetWinCredit": 0.4375,
+      "victoryReasons": {
+        "END EXPEDITION": 16
+      }
+    },
+    "merchant": {
+      "games": 16,
+      "targetWinCredit": 0.5,
+      "victoryReasons": {
+        "END EXPEDITION": 16
+      }
+    },
+    "nomad": {
+      "games": 16,
+      "targetWinCredit": 0.5,
+      "victoryReasons": {
+        "END EXPEDITION": 16
+      }
+    },
+    "scholar": {
+      "games": 16,
+      "targetWinCredit": 1.0,
+      "victoryReasons": {
+        "END EXPEDITION": 16
+      }
+    },
+    "sentinel": {
+      "games": 16,
+      "targetWinCredit": 0.5,
+      "victoryReasons": {
+        "END EXPEDITION": 16
+      }
+    },
+    "verdant": {
+      "games": 16,
+      "targetWinCredit": 0.5625,
+      "victoryReasons": {
+        "END EXPEDITION": 16
+      }
+    },
+    "wild": {
+      "games": 16,
+      "targetWinCredit": 0.5,
+      "victoryReasons": {
+        "END EXPEDITION": 16
+      }
+    }
+  },
+  "configuration": {
+    "gamesAttempted": 152,
+    "hostileMode": "off",
+    "mapBlocks": {
+      "archipelago": [
+        620117,
+        620119
+      ],
+      "continents": [
+        610111,
+        610113
+      ],
+      "highlands": [
+        640137,
+        640139
+      ],
+      "pangaea": [
+        630127,
+        630131
+      ]
+    },
+    "mapSize": "compact",
+    "maxRounds": 180,
+    "nonForge": [
+      "verdant",
+      "iron",
+      "scholar",
+      "nomad",
+      "wild",
+      "mariner",
+      "highland",
+      "merchant",
+      "sentinel"
+    ],
+    "workers": 4
+  },
+  "executionQuality": {
+    "attempted": 152,
+    "finished": 152,
+    "runStats": {
+      "elapsedSeconds": 499.8613201659755,
+      "launched": 152,
+      "reused": 0
+    },
+    "statusCounts": {
+      "finished": 152
+    }
+  },
+  "limits": [
+    "This fixed selected-expedition slice is not a route-fairness study.",
+    "Hoeffding intervals are honest eight-block descriptive bounds, not population estimates over all maps.",
+    "All map families have two seeds; player IDs, actor order and policy tie-breaks remain normal.",
+    "Hostiles are disabled; results do not generalize to wilderness pressure.",
+    "Errors/timeouts are execution-quality outcomes, never losses or route failures."
+  ],
+  "manifest": "/Users/fpbrault/Documents/ChatGPT/cc scripts/games/civcraft/research/lab/baseline_matrix_manifest.json",
+  "mapBlockIntervals": {
+    "aggregate": {
+      "clusterCount": 8,
+      "hoeffding95": [
+        0.08233860434003965,
+        1
+      ],
+      "targetWinCredit": 0.5625
+    },
+    "blocks": [
+      {
+        "games": 18,
+        "mapFamily": "archipelago",
+        "seed": 620117,
+        "targetWinCredit": 0.6111111111111112
+      },
+      {
+        "games": 18,
+        "mapFamily": "archipelago",
+        "seed": 620119,
+        "targetWinCredit": 0.5555555555555556
+      },
+      {
+        "games": 18,
+        "mapFamily": "continents",
+        "seed": 610111,
+        "targetWinCredit": 0.5555555555555556
+      },
+      {
+        "games": 18,
+        "mapFamily": "continents",
+        "seed": 610113,
+        "targetWinCredit": 0.5555555555555556
+      },
+      {
+        "games": 18,
+        "mapFamily": "highlands",
+        "seed": 640137,
+        "targetWinCredit": 0.5555555555555556
+      },
+      {
+        "games": 18,
+        "mapFamily": "highlands",
+        "seed": 640139,
+        "targetWinCredit": 0.5555555555555556
+      },
+      {
+        "games": 18,
+        "mapFamily": "pangaea",
+        "seed": 630127,
+        "targetWinCredit": 0.5555555555555556
+      },
+      {
+        "games": 18,
+        "mapFamily": "pangaea",
+        "seed": 630131,
+        "targetWinCredit": 0.5555555555555556
+      }
+    ]
+  },
+  "postRunAnalysisScriptSha256": "76b77c19493b104e4c96081e391ca9424bbb89d7681569bc94ead32623be8a81",
+  "purpose": "Fixed strategy slice; not all-route fairness or all-population faction balance",
+  "rawRunDirectory": "/Users/fpbrault/Documents/ChatGPT/cc scripts/games/civcraft/research/lab/runs",
+  "routeIntentVsFinish": {
+    "counts": {
+      "actual-END EXPEDITION": 144,
+      "intended-expedition-games": 144
+    },
+    "targetIntent": "expedition"
+  },
+  "runRoot": "/Users/fpbrault/Documents/ChatGPT/cc scripts/games/civcraft/research/lab/runs/baseline-matrix-v1",
+  "schemaVersion": 1,
+  "scriptSha256AfterRun": "27de64ce6533a7e1b5af01438a1735e7e84c336a8a1699921a01cbc433d3f083",
+  "scriptSha256BeforeRun": "27de64ce6533a7e1b5af01438a1735e7e84c336a8a1699921a01cbc433d3f083",
+  "sourceHashBeforeAfter": {
+    "after": "9b12a1a22939d9e06834dff3743756f7b864eb3e12f40aaa109917ab1f0af38f",
+    "before": "9b12a1a22939d9e06834dff3743756f7b864eb3e12f40aaa109917ab1f0af38f",
+    "sourceChangedDuringRun": false
+  },
+  "victoryReasons": {
+    "END EXPEDITION": 152
+  }
+}

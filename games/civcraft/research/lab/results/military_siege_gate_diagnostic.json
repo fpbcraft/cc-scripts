@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Fortified siege tactical-gate diagnostic and positive wall-breach/capture control",
+  "sourceHead": "97944b8bc85e011d00abbdf45bf9aecdb82050ae",
+  "driver": "games/civcraft/research/lab/military_competence_benchmark.py",
+  "driverSha256": "0d6f7ef4e85d0a4d735659a78f1fb9b42720fdda1810e94228c78820868ff196",
+  "raw": "/tmp/civcraft-siege-gate-diagnostic.json",
+  "rawSha256": "b81d7f0e2d39ece4b1f879fc258d012dd39593efc85de0b7b43b7b44661a3f0f",
+  "plannerBoundary": {
+    "scenario": "siege_breach",
+    "round": 1,
+    "campaign": {"kind": "city", "targetID": 3, "targetOwner": 1, "targetXY": [20, 13], "phase": "siege", "wallHP": 100, "needsSiege": false, "strength": 7},
+    "catapult": {"id": 9, "xy": [19, 12], "hp": 100, "movesLeft": 2, "role": "siege"},
+    "otherRoles": {"swordsman": "garrison", "warrior": "screening"},
+    "reachableCount": 10,
+    "legalAttackCandidates": [
+      {"type": "ranged_city_wall_attack", "requestXY": [20, 13], "cost": 2, "forecast": {"wallHPBefore": 100, "wallHPAfter": 68, "wallDamage": 32, "attackerHPAfter": 100, "retaliation": 0}},
+      {"type": "ranged_unit_attack", "requestXY": [20, 14], "cost": 2, "forecast": {"damage": 48, "defenderHPAfter": 52, "attackerHPAfter": 100, "retaliation": 0}}
+    ],
+    "tacticsRanking": {"topThree": [{"rank": 1, "requestXY": [19, 10], "score": -18, "riskDamage": 0}, {"rank": 2, "requestXY": [20, 10], "score": -18, "riskDamage": 0}, {"rank": 3, "requestXY": [18, 11], "score": -18, "riskDamage": 0}], "unitAttackRank": 4, "unitAttackScore": -32, "cityWallAttackRank": 10, "cityWallAttackScore": -60.8, "cityWallAttackRiskDamage": 80, "cityWallAttackForecastWallDamage": 32},
+    "interpretation": "The legal city-wall shot is not unavailable; the ordinary ranker places it tenth because Threats.at estimates 80 damage from the fortified enemy city at the catapult position. Standby/retreat scores -18, while the wall shot is penalised to -60.8. The same move request succeeds through Actions.apply."
+  },
+  "manualLegalAttack": {"request": {"action": "move", "unitID": 9, "sx": 19, "sy": 12, "x": 20, "y": 13}, "accepted": true, "wallHPBefore": 100, "wallHPAfter": 68, "catapultHPAfter": 100},
+  "oneCatapultTacticalHook": {
+    "scenario": "siege_breach",
+    "hook": "siegeAttackHook: re-rank only original choices with forecast.wallDamage > 0",
+    "acceptedCityWallAttackRound": 1,
+    "firstWallHP": 68,
+    "defenderCityStrikes": [1, 2],
+    "catapultHPAfterFirstStrike": 50,
+    "catapultHPAfterSecondStrike": 0,
+    "terminalWallHP": 100,
+    "terminalCaptures": 0,
+    "finding": "Forcing one legal siege shot exposes the real counterfire tradeoff: the city strikes and kills the lone catapult before repeated wall damage can accumulate; wallHP regenerates to 100."
+  },
+  "fortifiedCapturePositiveControl": {
+    "scenario": "fortified_capture",
+    "setupBudget": {"catapults": 3, "swordsmen": 2, "warriors": 1, "enemyDefenders": 1, "targetWallHP": 100},
+    "hook": "same siegeAttackHook; all choices remain live legal Actions.apply requests",
+    "wallTimeline": [{"round": 1, "wallHP": 4}, {"round": 2, "wallHP": 0}, {"round": 3, "wallHP": 0, "cityOwner": 0}],
+    "acceptedCityStrikes": [{"round": 1, "target": "catapult", "resultHP": 50}, {"round": 2, "target": "catapult", "result": "destroyed"}],
+    "captureRound": 3,
+    "terminal": {"cityOwner": 0, "cityWallHP": 0, "catapultSurvivors": 2, "swordsmanHP": [100, 61], "warriorHP": 100, "attackerLosses": 1, "defenderSurvivorHP": 100},
+    "finding": "A reasonable multi-siege group can breach a 100-wall-HP city in two legal rounds and capture on round 3 despite two defensive city strikes. This is a controlled competence positive, not a full-game balance estimate; it shows the single-siege quota/exposure is materially different from an actual siege-group capability."
+  },
+  "limitations": [
+    "The fortified positive control intentionally supplies three ordinary catapults and a melee escort; it is labelled scenario budget, not a resource-free full-game claim.",
+    "No unit costs, combat stats, walls, movement or action rules were changed.",
+    "The tactical hook changes only ranking among existing legal forecasts and is not installed live AI."
+  ]
+}

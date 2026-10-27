@@ -1,0 +1,454 @@
+[
+  {
+    "config": {
+      "seed": 12347,
+      "mapSize": "compact",
+      "mapType": "continents",
+      "hostileMode": "standard",
+      "players": [
+        {
+          "civilization": "forge"
+        },
+        {
+          "civilization": "scholar"
+        }
+      ]
+    },
+    "host": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+    "profile": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-lab-parity-fjocox05",
+    "checks": [
+      {
+        "label": "initial",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "abf9cfc7b9b6da0b6e5fc2b59ce6e1fc2ed4a8012a410c727d6532b2a7b7c2b0",
+        "nativeSha256": "abf9cfc7b9b6da0b6e5fc2b59ce6e1fc2ed4a8012a410c727d6532b2a7b7c2b0"
+      },
+      {
+        "label": "initial",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "86096cc55a4776d72bfafcb15f15aac3f5d748227e6ada7ad5adc87b1a2ec4d0",
+        "nativeSha256": "86096cc55a4776d72bfafcb15f15aac3f5d748227e6ada7ad5adc87b1a2ec4d0"
+      },
+      {
+        "label": "research",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "5ee50577687d403991ce81ea747868eb80aee721356f10bbb42b8c2f6d10f186",
+        "nativeSha256": "5ee50577687d403991ce81ea747868eb80aee721356f10bbb42b8c2f6d10f186"
+      },
+      {
+        "label": "research",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "6c188059217e5855b91180465d07cca8800e9d625c4fcd141b95332ffc44e8ef",
+        "nativeSha256": "6c188059217e5855b91180465d07cca8800e9d625c4fcd141b95332ffc44e8ef"
+      },
+      {
+        "label": "rejection",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "5ee50577687d403991ce81ea747868eb80aee721356f10bbb42b8c2f6d10f186",
+        "nativeSha256": "5ee50577687d403991ce81ea747868eb80aee721356f10bbb42b8c2f6d10f186"
+      },
+      {
+        "label": "rejection",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "6c188059217e5855b91180465d07cca8800e9d625c4fcd141b95332ffc44e8ef",
+        "nativeSha256": "6c188059217e5855b91180465d07cca8800e9d625c4fcd141b95332ffc44e8ef"
+      },
+      {
+        "label": "actors1",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "580e19a5407791b40db6931ab6957b4f01f3d2a45c44a6c3a43548d56428e735",
+        "nativeSha256": "580e19a5407791b40db6931ab6957b4f01f3d2a45c44a6c3a43548d56428e735"
+      },
+      {
+        "label": "actors1",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "a69d045b62504f0731334f543147476223381dfc82aade513c469b71722599d3",
+        "nativeSha256": "a69d045b62504f0731334f543147476223381dfc82aade513c469b71722599d3"
+      },
+      {
+        "label": "boundary1",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "9f1101c4b070616edf254c11d98a56c012d807dd547e6e7dbe2d711dcab263f5",
+        "nativeSha256": "9f1101c4b070616edf254c11d98a56c012d807dd547e6e7dbe2d711dcab263f5"
+      },
+      {
+        "label": "boundary1",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "840a5342807f3f7776d74d3bf55d61b3ed3a53bd85ed8fdf91f423100aaf9fd6",
+        "nativeSha256": "840a5342807f3f7776d74d3bf55d61b3ed3a53bd85ed8fdf91f423100aaf9fd6"
+      },
+      {
+        "label": "actors2",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "ee47531155888cfaa732873170d4e3f84ecf0e7b2a4150a1a0675b031c52a0a1",
+        "nativeSha256": "ee47531155888cfaa732873170d4e3f84ecf0e7b2a4150a1a0675b031c52a0a1"
+      },
+      {
+        "label": "actors2",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "6dd4664b02bdd4f296556b1b72d19b05d7f370cdf438b60edba230b58678585a",
+        "nativeSha256": "6dd4664b02bdd4f296556b1b72d19b05d7f370cdf438b60edba230b58678585a"
+      },
+      {
+        "label": "boundary2",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "7607c5dc9285395f37d5a182e4354cf8cfd5ce450eb8bf814f763cf765e9d3d5",
+        "nativeSha256": "7607c5dc9285395f37d5a182e4354cf8cfd5ce450eb8bf814f763cf765e9d3d5"
+      },
+      {
+        "label": "boundary2",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "a52b5dfa2be55cb70fa4339b04f5cd7982a8bb33cef2b4b7951a324f4cbe1e26",
+        "nativeSha256": "a52b5dfa2be55cb70fa4339b04f5cd7982a8bb33cef2b4b7951a324f4cbe1e26"
+      },
+      {
+        "label": "actors3",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "80b9a4eb7f1e2cde55db70094d6e82eef97830b6eeb52a8aa60a4c69ea2a8e61",
+        "nativeSha256": "80b9a4eb7f1e2cde55db70094d6e82eef97830b6eeb52a8aa60a4c69ea2a8e61"
+      },
+      {
+        "label": "actors3",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "32db4efef21307ce2df40d897518223a9f9843b3d3eebacdf0251dc47b5ef2ac",
+        "nativeSha256": "32db4efef21307ce2df40d897518223a9f9843b3d3eebacdf0251dc47b5ef2ac"
+      },
+      {
+        "label": "boundary3",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "f9e0a3781c9736b0cb52d88d5d34792a60b2ce3dd973cea574495e479f244d1d",
+        "nativeSha256": "f9e0a3781c9736b0cb52d88d5d34792a60b2ce3dd973cea574495e479f244d1d"
+      },
+      {
+        "label": "boundary3",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "27e6be8ebbf8c9ac03a49ad26334cb11ff314960e58b3091b40db0610dbbdbd1",
+        "nativeSha256": "27e6be8ebbf8c9ac03a49ad26334cb11ff314960e58b3091b40db0610dbbdbd1"
+      }
+    ]
+  },
+  {
+    "config": {
+      "seed": 12349,
+      "mapSize": "compact",
+      "mapType": "continents",
+      "hostileMode": "standard",
+      "players": [
+        {
+          "civilization": "forge"
+        },
+        {
+          "civilization": "scholar"
+        },
+        {
+          "civilization": "iron"
+        },
+        {
+          "civilization": "merchant"
+        }
+      ]
+    },
+    "host": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+    "profile": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-lab-parity-go1oc485",
+    "checks": [
+      {
+        "label": "initial",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "b81c17fcd4e1ae45cc64938b29d29405c9625a0273e972147a60aebc03e0ee77",
+        "nativeSha256": "b81c17fcd4e1ae45cc64938b29d29405c9625a0273e972147a60aebc03e0ee77"
+      },
+      {
+        "label": "initial",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "d04fc9c2c90938cbfb3af6c5e0a6b7dbd1343badffba053ade00dc6d8d5cba0f",
+        "nativeSha256": "d04fc9c2c90938cbfb3af6c5e0a6b7dbd1343badffba053ade00dc6d8d5cba0f"
+      },
+      {
+        "label": "research",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "4432a5b0695282b55b10b60e70f7cd7f9711a2881609489840671691b644d840",
+        "nativeSha256": "4432a5b0695282b55b10b60e70f7cd7f9711a2881609489840671691b644d840"
+      },
+      {
+        "label": "research",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "bd24e7817a68ea03d0611fe1ea5d82033fee07d7d0d72d2f7f6704fae97b255d",
+        "nativeSha256": "bd24e7817a68ea03d0611fe1ea5d82033fee07d7d0d72d2f7f6704fae97b255d"
+      },
+      {
+        "label": "rejection",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "4432a5b0695282b55b10b60e70f7cd7f9711a2881609489840671691b644d840",
+        "nativeSha256": "4432a5b0695282b55b10b60e70f7cd7f9711a2881609489840671691b644d840"
+      },
+      {
+        "label": "rejection",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "bd24e7817a68ea03d0611fe1ea5d82033fee07d7d0d72d2f7f6704fae97b255d",
+        "nativeSha256": "bd24e7817a68ea03d0611fe1ea5d82033fee07d7d0d72d2f7f6704fae97b255d"
+      },
+      {
+        "label": "actors1",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "b366539faf345d3498c575b469234970e7f9a392a39858a9510822994b28d868",
+        "nativeSha256": "b366539faf345d3498c575b469234970e7f9a392a39858a9510822994b28d868"
+      },
+      {
+        "label": "actors1",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "533437a5bdce4d140c83ac7a2aa0286ea3f381c7482340331a62db9e87ed4bbd",
+        "nativeSha256": "533437a5bdce4d140c83ac7a2aa0286ea3f381c7482340331a62db9e87ed4bbd"
+      },
+      {
+        "label": "boundary1",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "49b582ae1a0c297c8922c8cde46f0223cbbe62032dac6ed8b5c5d0f97de81c19",
+        "nativeSha256": "49b582ae1a0c297c8922c8cde46f0223cbbe62032dac6ed8b5c5d0f97de81c19"
+      },
+      {
+        "label": "boundary1",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "93dbcf2376502400c8a4a611f8afb60b2974a54c37f1ca52328dcc470209dcc8",
+        "nativeSha256": "93dbcf2376502400c8a4a611f8afb60b2974a54c37f1ca52328dcc470209dcc8"
+      },
+      {
+        "label": "actors2",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "a00704074f3b9cc3d462bfbdc0ee78a9b9f9de8eb2016bba2107878ddc38a4ee",
+        "nativeSha256": "a00704074f3b9cc3d462bfbdc0ee78a9b9f9de8eb2016bba2107878ddc38a4ee"
+      },
+      {
+        "label": "actors2",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "a97c353d180a8eff3836d8ee8664227a25b4335597fad4bd4818ba2a0d72f486",
+        "nativeSha256": "a97c353d180a8eff3836d8ee8664227a25b4335597fad4bd4818ba2a0d72f486"
+      },
+      {
+        "label": "boundary2",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "6e38ff994d8c33ff0de880873366500db0d99f39645e5673a7f8355c96f697bc",
+        "nativeSha256": "6e38ff994d8c33ff0de880873366500db0d99f39645e5673a7f8355c96f697bc"
+      },
+      {
+        "label": "boundary2",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "c18c3590297054943cfbab80f85980e0fa4f3f2b14ce05352969c5108f7aa78f",
+        "nativeSha256": "c18c3590297054943cfbab80f85980e0fa4f3f2b14ce05352969c5108f7aa78f"
+      },
+      {
+        "label": "actors3",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "51577171658c061a148177291d42c5c47480f9a75e30b5a0bcf81b3f6e98618d",
+        "nativeSha256": "51577171658c061a148177291d42c5c47480f9a75e30b5a0bcf81b3f6e98618d"
+      },
+      {
+        "label": "actors3",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "bdf6ea1ae9bd9dee0fd8deda0ffde960bce06ed0a36821d0b86716945411a307",
+        "nativeSha256": "bdf6ea1ae9bd9dee0fd8deda0ffde960bce06ed0a36821d0b86716945411a307"
+      },
+      {
+        "label": "boundary3",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "d8adeec9996457ce3092640105ab782d2f127152b733213ecdacef7d10cfe236",
+        "nativeSha256": "d8adeec9996457ce3092640105ab782d2f127152b733213ecdacef7d10cfe236"
+      },
+      {
+        "label": "boundary3",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "17d2cfd41b9c3ddb419bafd750316bde4a900418dbf8d23d0bb3a7bc1bf19e99",
+        "nativeSha256": "17d2cfd41b9c3ddb419bafd750316bde4a900418dbf8d23d0bb3a7bc1bf19e99"
+      }
+    ]
+  },
+  {
+    "config": {
+      "seed": 12347,
+      "mapSize": "compact",
+      "mapType": "continents",
+      "hostileMode": "standard",
+      "players": [
+        {
+          "civilization": "forge",
+          "policy": {
+            "version": 1,
+            "goal": "expedition",
+            "weights": {
+              "science": 2,
+              "industry": 0.75
+            }
+          }
+        },
+        {
+          "civilization": "scholar"
+        }
+      ]
+    },
+    "host": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+    "profile": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-lab-parity-_tz33ckp",
+    "checks": [
+      {
+        "label": "initial",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "abf9cfc7b9b6da0b6e5fc2b59ce6e1fc2ed4a8012a410c727d6532b2a7b7c2b0",
+        "nativeSha256": "abf9cfc7b9b6da0b6e5fc2b59ce6e1fc2ed4a8012a410c727d6532b2a7b7c2b0"
+      },
+      {
+        "label": "initial",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "86096cc55a4776d72bfafcb15f15aac3f5d748227e6ada7ad5adc87b1a2ec4d0",
+        "nativeSha256": "86096cc55a4776d72bfafcb15f15aac3f5d748227e6ada7ad5adc87b1a2ec4d0"
+      },
+      {
+        "label": "research",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "5ee50577687d403991ce81ea747868eb80aee721356f10bbb42b8c2f6d10f186",
+        "nativeSha256": "5ee50577687d403991ce81ea747868eb80aee721356f10bbb42b8c2f6d10f186"
+      },
+      {
+        "label": "research",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "6c188059217e5855b91180465d07cca8800e9d625c4fcd141b95332ffc44e8ef",
+        "nativeSha256": "6c188059217e5855b91180465d07cca8800e9d625c4fcd141b95332ffc44e8ef"
+      },
+      {
+        "label": "rejection",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "5ee50577687d403991ce81ea747868eb80aee721356f10bbb42b8c2f6d10f186",
+        "nativeSha256": "5ee50577687d403991ce81ea747868eb80aee721356f10bbb42b8c2f6d10f186"
+      },
+      {
+        "label": "rejection",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "6c188059217e5855b91180465d07cca8800e9d625c4fcd141b95332ffc44e8ef",
+        "nativeSha256": "6c188059217e5855b91180465d07cca8800e9d625c4fcd141b95332ffc44e8ef"
+      },
+      {
+        "label": "actors1",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "36dfde136d5b09e9cbe99421069d1d64679360e1fc0756aef4eb1076de3d872b",
+        "nativeSha256": "36dfde136d5b09e9cbe99421069d1d64679360e1fc0756aef4eb1076de3d872b"
+      },
+      {
+        "label": "actors1",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "0e1e3840a368e8cf8d20738739a4320d2d9982337bb7acf6699350a2107a3a7e",
+        "nativeSha256": "0e1e3840a368e8cf8d20738739a4320d2d9982337bb7acf6699350a2107a3a7e"
+      },
+      {
+        "label": "boundary1",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "ad1b33b092bd8ddd2686f6057e51fcd50e6e379075303f80c842781e01ff7b60",
+        "nativeSha256": "ad1b33b092bd8ddd2686f6057e51fcd50e6e379075303f80c842781e01ff7b60"
+      },
+      {
+        "label": "boundary1",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "9900d6586c4fa3fc85180dbc6c67956fd3eac0295686311ba3fad96db2f57161",
+        "nativeSha256": "9900d6586c4fa3fc85180dbc6c67956fd3eac0295686311ba3fad96db2f57161"
+      },
+      {
+        "label": "actors2",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "6af49cf2af5333d6fb750abed963a2cba2f146e44a2928929b1ea25d3c73f6e7",
+        "nativeSha256": "6af49cf2af5333d6fb750abed963a2cba2f146e44a2928929b1ea25d3c73f6e7"
+      },
+      {
+        "label": "actors2",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "aa70afdf00db11e63f6a684bdabe0fa9e328b800e7961a062deb7b83ce49e250",
+        "nativeSha256": "aa70afdf00db11e63f6a684bdabe0fa9e328b800e7961a062deb7b83ce49e250"
+      },
+      {
+        "label": "boundary2",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "97f257e3824c8dfc3a225396b1bb1f0f1d04cdc5af57b5d28d2424316536cabb",
+        "nativeSha256": "97f257e3824c8dfc3a225396b1bb1f0f1d04cdc5af57b5d28d2424316536cabb"
+      },
+      {
+        "label": "boundary2",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "023f2f49ce8dae997a3bc64dda4525a1cccf87c902d82091ed74ddc634219d7f",
+        "nativeSha256": "023f2f49ce8dae997a3bc64dda4525a1cccf87c902d82091ed74ddc634219d7f"
+      },
+      {
+        "label": "actors3",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "b14d52d5afd4a04b72679129b4e74dc6c415c7997565be2f36803d68a0632676",
+        "nativeSha256": "b14d52d5afd4a04b72679129b4e74dc6c415c7997565be2f36803d68a0632676"
+      },
+      {
+        "label": "actors3",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "6c702bcdd63e054929396a0468351574c1f0bc23446a2a9e40b00428bba27b5c",
+        "nativeSha256": "6c702bcdd63e054929396a0468351574c1f0bc23446a2a9e40b00428bba27b5c"
+      },
+      {
+        "label": "boundary3",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "84c730c06a795bcd7bcc6c0a396d756d47e28a091dd0d848c9b0ebe2da1cbd33",
+        "nativeSha256": "84c730c06a795bcd7bcc6c0a396d756d47e28a091dd0d848c9b0ebe2da1cbd33"
+      },
+      {
+        "label": "boundary3",
+        "field": "observation",
+        "equal": true,
+        "offlineSha256": "bea402f923f7cb2325ed742e3e071c2e4c0331474d5ad6e21df967395f402449",
+        "nativeSha256": "bea402f923f7cb2325ed742e3e071c2e4c0331474d5ad6e21df967395f402449"
+      }
+    ]
+  }
+]

@@ -1,0 +1,313 @@
+{
+  "schemaVersion": 2,
+  "fixture": "wartime_save_parity_fixture.lua",
+  "config": {
+    "seed": 75123,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "players": [
+      {
+        "civilization": "forge"
+      },
+      {
+        "civilization": "scholar"
+      }
+    ]
+  },
+  "source": {
+    "head": "97944b8bc85e011d00abbdf45bf9aecdb82050ae",
+    "luaSourceHash": "9b12a1a22939d9e06834dff3743756f7b864eb3e12f40aaa109917ab1f0af38f",
+    "fixtureSha256": {
+      "check_wartime_save_parity.py": "1102a2dc2d31ac22e2bbc349022ad944f904c9b6ec5b28a941cbec395f7b933f",
+      "wartime_save_parity_fixture.lua": "0d2c20d02ce298ef2d23733f192302301073a757784db9c5ff0cc688f5539680",
+      "wartime_save_parity_native.lua": "2a4fd775ef19561269b4678b96057813d56461e9ae20ea426998aba8e92fc0b8"
+    }
+  },
+  "host": {
+    "machine": "arm64",
+    "python": "3.14.6",
+    "craftos": "/Applications/CraftOS-PC.app/Contents/MacOS/craftos"
+  },
+  "offline": {
+    "runtime": "Lupa Lua 5.3",
+    "hostileContinuation": {
+      "ok": false,
+      "error": "...Documents/ChatGPT/cc scripts/games/civcraft/hostiles.lua:103: table index is nil\nstack traceback:\n\t[string \"<python>\"]:9: in function <[string \"<python>\"]:1>\n\t[C]: in function 'error'"
+    },
+    "registeredWar": {
+      "outcome": {
+        "declareWar": {
+          "ok": true,
+          "reason": "War announced for next round"
+        },
+        "capture": {
+          "ok": true
+        },
+        "warActive": true,
+        "settlerOwner": 0
+      },
+      "checkpointHashes": {
+        "label": "registered-war-capture",
+        "stateSha256": "2b88356199264724a1428819afc745232da0f654e3d68acf788909c79502deaa",
+        "observation0Sha256": "00792b402b0ca31a7702e3435868d80827a12967c4f317c8a660be21ac7b3e14",
+        "observation1Sha256": "6ba17a3b56b2d89b6826bd6967fabaf8b9973e3f0e81bf144046a5ff60749cb0"
+      }
+    },
+    "checkpointHashes": [
+      {
+        "label": "before-capture",
+        "stateSha256": "70b20404629c72094c5ad5f9abef73c5388c2e6c18d21bc0d4dae6953aaf3964",
+        "observation0Sha256": "1f5aee4d92025612d15968d581acf015246174aa48a5279145c5cb3f57106f34",
+        "observation1Sha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "after-capture",
+        "stateSha256": "55f450c37eb17aee52432dd0d6282c795ebeda57f417677d3330ca511d42ec9a",
+        "observation0Sha256": "37c45d58231f94db5edefecad1d7cbff1215cc4d1666a564aaa5153cf9f36b4d",
+        "observation1Sha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "continuation-direct",
+        "stateSha256": "27bea6d6f00af426fa9603ef0f2b4590d2b1be29b78846b86326eeec9206425f",
+        "observation0Sha256": "fc1a3d06a039e64811bd28efb35e7bced5c54ac8a69c41a5459c5edd05477f45",
+        "observation1Sha256": "01358a94fe364bc8999024e7268160467632cbad5bd691a4cf2c33075cbaa8cc"
+      }
+    ]
+  },
+  "native": {
+    "registeredWar": {
+      "outcome": {
+        "capture": {
+          "ok": true
+        },
+        "warActive": true,
+        "declareWar": {
+          "reason": "War announced for next round",
+          "ok": true
+        },
+        "settlerOwner": 0
+      },
+      "checkpointHashes": {
+        "label": "registered-war-capture",
+        "stateSha256": "2b88356199264724a1428819afc745232da0f654e3d68acf788909c79502deaa",
+        "observation0Sha256": "00792b402b0ca31a7702e3435868d80827a12967c4f317c8a660be21ac7b3e14",
+        "observation1Sha256": "6ba17a3b56b2d89b6826bd6967fabaf8b9973e3f0e81bf144046a5ff60749cb0"
+      }
+    },
+    "capturedSettlerOwner": -2147483647,
+    "savePath": "/games/civcraft/data/slot-1.dat",
+    "host": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+    "hostileContinuation": {
+      "error": "/games/civcraft/hostiles.lua:103: table index is nil",
+      "ok": false
+    },
+    "profile": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-wartime-save-cr59b2fb",
+    "consoleLog": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-wartime-save-cr59b2fb/console.log",
+    "exitCode": 0,
+    "checkpointHashes": [
+      {
+        "label": "before-capture",
+        "stateSha256": "70b20404629c72094c5ad5f9abef73c5388c2e6c18d21bc0d4dae6953aaf3964",
+        "observation0Sha256": "1f5aee4d92025612d15968d581acf015246174aa48a5279145c5cb3f57106f34",
+        "observation1Sha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "after-capture",
+        "stateSha256": "55f450c37eb17aee52432dd0d6282c795ebeda57f417677d3330ca511d42ec9a",
+        "observation0Sha256": "37c45d58231f94db5edefecad1d7cbff1215cc4d1666a564aaa5153cf9f36b4d",
+        "observation1Sha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "after-save-load",
+        "stateSha256": "55f450c37eb17aee52432dd0d6282c795ebeda57f417677d3330ca511d42ec9a",
+        "observation0Sha256": "37c45d58231f94db5edefecad1d7cbff1215cc4d1666a564aaa5153cf9f36b4d",
+        "observation1Sha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "continuation-direct",
+        "stateSha256": "27bea6d6f00af426fa9603ef0f2b4590d2b1be29b78846b86326eeec9206425f",
+        "observation0Sha256": "fc1a3d06a039e64811bd28efb35e7bced5c54ac8a69c41a5459c5edd05477f45",
+        "observation1Sha256": "01358a94fe364bc8999024e7268160467632cbad5bd691a4cf2c33075cbaa8cc"
+      },
+      {
+        "label": "continuation-loaded",
+        "stateSha256": "27bea6d6f00af426fa9603ef0f2b4590d2b1be29b78846b86326eeec9206425f",
+        "observation0Sha256": "fc1a3d06a039e64811bd28efb35e7bced5c54ac8a69c41a5459c5edd05477f45",
+        "observation1Sha256": "01358a94fe364bc8999024e7268160467632cbad5bd691a4cf2c33075cbaa8cc"
+      }
+    ]
+  },
+  "comparison": {
+    "checks": [
+      {
+        "label": "before-capture",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "70b20404629c72094c5ad5f9abef73c5388c2e6c18d21bc0d4dae6953aaf3964",
+        "nativeSha256": "70b20404629c72094c5ad5f9abef73c5388c2e6c18d21bc0d4dae6953aaf3964"
+      },
+      {
+        "label": "before-capture",
+        "field": "observation0",
+        "equal": true,
+        "offlineSha256": "1f5aee4d92025612d15968d581acf015246174aa48a5279145c5cb3f57106f34",
+        "nativeSha256": "1f5aee4d92025612d15968d581acf015246174aa48a5279145c5cb3f57106f34"
+      },
+      {
+        "label": "before-capture",
+        "field": "observation1",
+        "equal": true,
+        "offlineSha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730",
+        "nativeSha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "after-capture",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "55f450c37eb17aee52432dd0d6282c795ebeda57f417677d3330ca511d42ec9a",
+        "nativeSha256": "55f450c37eb17aee52432dd0d6282c795ebeda57f417677d3330ca511d42ec9a"
+      },
+      {
+        "label": "after-capture",
+        "field": "observation0",
+        "equal": true,
+        "offlineSha256": "37c45d58231f94db5edefecad1d7cbff1215cc4d1666a564aaa5153cf9f36b4d",
+        "nativeSha256": "37c45d58231f94db5edefecad1d7cbff1215cc4d1666a564aaa5153cf9f36b4d"
+      },
+      {
+        "label": "after-capture",
+        "field": "observation1",
+        "equal": true,
+        "offlineSha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730",
+        "nativeSha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "continuation-direct",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "27bea6d6f00af426fa9603ef0f2b4590d2b1be29b78846b86326eeec9206425f",
+        "nativeSha256": "27bea6d6f00af426fa9603ef0f2b4590d2b1be29b78846b86326eeec9206425f"
+      },
+      {
+        "label": "continuation-direct",
+        "field": "observation0",
+        "equal": true,
+        "offlineSha256": "fc1a3d06a039e64811bd28efb35e7bced5c54ac8a69c41a5459c5edd05477f45",
+        "nativeSha256": "fc1a3d06a039e64811bd28efb35e7bced5c54ac8a69c41a5459c5edd05477f45"
+      },
+      {
+        "label": "continuation-direct",
+        "field": "observation1",
+        "equal": true,
+        "offlineSha256": "01358a94fe364bc8999024e7268160467632cbad5bd691a4cf2c33075cbaa8cc",
+        "nativeSha256": "01358a94fe364bc8999024e7268160467632cbad5bd691a4cf2c33075cbaa8cc"
+      },
+      {
+        "label": "after-capture==after-save-load",
+        "field": "state",
+        "equal": true,
+        "leftSha256": "55f450c37eb17aee52432dd0d6282c795ebeda57f417677d3330ca511d42ec9a",
+        "rightSha256": "55f450c37eb17aee52432dd0d6282c795ebeda57f417677d3330ca511d42ec9a"
+      },
+      {
+        "label": "continuation-direct==continuation-loaded",
+        "field": "state",
+        "equal": true,
+        "leftSha256": "27bea6d6f00af426fa9603ef0f2b4590d2b1be29b78846b86326eeec9206425f",
+        "rightSha256": "27bea6d6f00af426fa9603ef0f2b4590d2b1be29b78846b86326eeec9206425f"
+      },
+      {
+        "label": "after-capture==after-save-load",
+        "field": "observation0",
+        "equal": true,
+        "leftSha256": "37c45d58231f94db5edefecad1d7cbff1215cc4d1666a564aaa5153cf9f36b4d",
+        "rightSha256": "37c45d58231f94db5edefecad1d7cbff1215cc4d1666a564aaa5153cf9f36b4d"
+      },
+      {
+        "label": "continuation-direct==continuation-loaded",
+        "field": "observation0",
+        "equal": true,
+        "leftSha256": "fc1a3d06a039e64811bd28efb35e7bced5c54ac8a69c41a5459c5edd05477f45",
+        "rightSha256": "fc1a3d06a039e64811bd28efb35e7bced5c54ac8a69c41a5459c5edd05477f45"
+      },
+      {
+        "label": "after-capture==after-save-load",
+        "field": "observation1",
+        "equal": true,
+        "leftSha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730",
+        "rightSha256": "57ce8bccff437c6d7898178d210bead919d14f9ca21b0311bbba6665adfdb730"
+      },
+      {
+        "label": "continuation-direct==continuation-loaded",
+        "field": "observation1",
+        "equal": true,
+        "leftSha256": "01358a94fe364bc8999024e7268160467632cbad5bd691a4cf2c33075cbaa8cc",
+        "rightSha256": "01358a94fe364bc8999024e7268160467632cbad5bd691a4cf2c33075cbaa8cc"
+      },
+      {
+        "label": "active-hostile-diagnostic",
+        "field": "offline",
+        "equal": true,
+        "error": "...Documents/ChatGPT/cc scripts/games/civcraft/hostiles.lua:103: table index is nil\nstack traceback:\n\t[string \"<python>\"]:9: in function <[string \"<python>\"]:1>\n\t[C]: in function 'error'"
+      },
+      {
+        "label": "active-hostile-diagnostic",
+        "field": "native",
+        "equal": true,
+        "error": "/games/civcraft/hostiles.lua:103: table index is nil"
+      },
+      {
+        "label": "registered-war-outcome",
+        "field": "outcome",
+        "equal": true,
+        "offline": {
+          "declareWar": {
+            "ok": true,
+            "reason": "War announced for next round"
+          },
+          "capture": {
+            "ok": true
+          },
+          "warActive": true,
+          "settlerOwner": 0
+        },
+        "native": {
+          "capture": {
+            "ok": true
+          },
+          "warActive": true,
+          "declareWar": {
+            "reason": "War announced for next round",
+            "ok": true
+          },
+          "settlerOwner": 0
+        }
+      },
+      {
+        "label": "registered-war-capture",
+        "field": "state",
+        "equal": true,
+        "offlineSha256": "2b88356199264724a1428819afc745232da0f654e3d68acf788909c79502deaa",
+        "nativeSha256": "2b88356199264724a1428819afc745232da0f654e3d68acf788909c79502deaa"
+      },
+      {
+        "label": "registered-war-capture",
+        "field": "observation0",
+        "equal": true,
+        "offlineSha256": "00792b402b0ca31a7702e3435868d80827a12967c4f317c8a660be21ac7b3e14",
+        "nativeSha256": "00792b402b0ca31a7702e3435868d80827a12967c4f317c8a660be21ac7b3e14"
+      },
+      {
+        "label": "registered-war-capture",
+        "field": "observation1",
+        "equal": true,
+        "offlineSha256": "6ba17a3b56b2d89b6826bd6967fabaf8b9973e3f0e81bf144046a5ff60749cb0",
+        "nativeSha256": "6ba17a3b56b2d89b6826bd6967fabaf8b9973e3f0e81bf144046a5ff60749cb0"
+      }
+    ],
+    "failed": []
+  },
+  "rawArtifact": "/tmp/civcraft-wartime-save-parity.raw.json",
+  "limitation": "The save branch uses an intentionally unregistered hostile owner; capture is exercised by Hostiles.round -> Combat.attack -> Stacks.capture, because Actions.apply cannot submit an order for the wilderness owner. A separate same-run branch covers registered-player declareWar followed by the next-round legal settler capture through Actions.apply. Surprise War remains untested. Active-hostile continuation is expected to reproduce the known hostiles.lua:103 orphan-settler error, so the save/reload continuation comparison disables hostile processing symmetrically after recording that diagnostic."
+}

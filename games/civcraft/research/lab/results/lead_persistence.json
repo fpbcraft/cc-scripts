@@ -1,0 +1,892 @@
+{
+  "clusterBootstrap95Intervals": {
+    "31": {
+      "confidenceCoverage": [
+        0.0,
+        0.5416666666666666
+      ],
+      "confidentPredictionMeanFinalWinCredit": [
+        0,
+        1.0
+      ],
+      "scoreLeaderMeanFinalWinCredit": [
+        0.5,
+        0.9
+      ]
+    },
+    "61": {
+      "confidenceCoverage": [
+        0.0,
+        0.5416666666666666
+      ],
+      "confidentPredictionMeanFinalWinCredit": [
+        0,
+        1.0
+      ],
+      "scoreLeaderMeanFinalWinCredit": [
+        0.25,
+        0.7916666666666666
+      ]
+    },
+    "91": {
+      "confidenceCoverage": [
+        0.25,
+        0.625
+      ],
+      "confidentPredictionMeanFinalWinCredit": [
+        1.0,
+        1.0
+      ],
+      "scoreLeaderMeanFinalWinCredit": [
+        0.6666666666666666,
+        0.9166666666666666
+      ]
+    }
+  },
+  "independentMapBlocks": 6,
+  "limits": [
+    "Six map clusters, fixed Forge controllers, compact Pangaea, no hostiles.",
+    "Scores and critic use privileged evaluator totals; these are not observations supplied to playing policies.",
+    "Confidence uses the already fixed calibrated model and 0.8 threshold, without refitting on test outcomes.",
+    "Predictability under fixed controllers is not inevitability under stronger play or proof of a causal runaway lead.",
+    "No optimal continuation, intervention or counter-strategy is evaluated by this descriptive analysis."
+  ],
+  "modelSha256": "6c934d1d12255db9276c2ca5178285741bf2935028f9666f310dd14ac5f60d0e",
+  "purpose": "Retrospective fixed-controller lead/outcome associations on the untouched outcome-model test maps",
+  "rawSha256": "1878e08763796a4f00fd59b444434abd9869f2a85f59f4dcfea3138812b2db93",
+  "rows": [
+    {
+      "confidence": 0.5250856371083769,
+      "leaderWinCredit": 0,
+      "match": 0,
+      "modelProbabilityPlayerZero": 0.47491436289162314,
+      "predictedWinCredit": 0,
+      "remainingRounds": 105,
+      "round": 31,
+      "scoreLeader": 1,
+      "seed": 320461
+    },
+    {
+      "confidence": 0.6181863467091935,
+      "leaderWinCredit": 0,
+      "match": 0,
+      "modelProbabilityPlayerZero": 0.38181365329080647,
+      "predictedWinCredit": 0,
+      "remainingRounds": 75,
+      "round": 61,
+      "scoreLeader": 1,
+      "seed": 320461
+    },
+    {
+      "confidence": 0.6534515004179747,
+      "leaderWinCredit": 0,
+      "match": 0,
+      "modelProbabilityPlayerZero": 0.6534515004179747,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 45,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320461
+    },
+    {
+      "confidence": 0.5250856371083769,
+      "leaderWinCredit": 1.0,
+      "match": 1,
+      "modelProbabilityPlayerZero": 0.47491436289162314,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 93,
+      "round": 31,
+      "scoreLeader": 1,
+      "seed": 320461
+    },
+    {
+      "confidence": 0.5756974842208604,
+      "leaderWinCredit": 1.0,
+      "match": 1,
+      "modelProbabilityPlayerZero": 0.4243025157791395,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 63,
+      "round": 61,
+      "scoreLeader": 1,
+      "seed": 320461
+    },
+    {
+      "confidence": 0.8886627905998602,
+      "leaderWinCredit": 1.0,
+      "match": 1,
+      "modelProbabilityPlayerZero": 0.1113372094001398,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 33,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320461
+    },
+    {
+      "confidence": 0.5250856371083769,
+      "leaderWinCredit": 1.0,
+      "match": 2,
+      "modelProbabilityPlayerZero": 0.47491436289162314,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 93,
+      "round": 31,
+      "scoreLeader": 1,
+      "seed": 320461
+    },
+    {
+      "confidence": 0.5878207611942114,
+      "leaderWinCredit": 1.0,
+      "match": 2,
+      "modelProbabilityPlayerZero": 0.41217923880578855,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 63,
+      "round": 61,
+      "scoreLeader": 1,
+      "seed": 320461
+    },
+    {
+      "confidence": 0.7613919714679693,
+      "leaderWinCredit": 1.0,
+      "match": 2,
+      "modelProbabilityPlayerZero": 0.2386080285320307,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 33,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320461
+    },
+    {
+      "confidence": 0.5250856371083769,
+      "leaderWinCredit": 1.0,
+      "match": 3,
+      "modelProbabilityPlayerZero": 0.47491436289162314,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 93,
+      "round": 31,
+      "scoreLeader": 1,
+      "seed": 320461
+    },
+    {
+      "confidence": 0.5878207611942114,
+      "leaderWinCredit": 1.0,
+      "match": 3,
+      "modelProbabilityPlayerZero": 0.41217923880578855,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 63,
+      "round": 61,
+      "scoreLeader": 1,
+      "seed": 320461
+    },
+    {
+      "confidence": 0.7613919714679693,
+      "leaderWinCredit": 1.0,
+      "match": 3,
+      "modelProbabilityPlayerZero": 0.2386080285320307,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 33,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320461
+    },
+    {
+      "confidence": 0.5233082669133584,
+      "leaderWinCredit": null,
+      "match": 4,
+      "modelProbabilityPlayerZero": 0.47669173308664153,
+      "predictedWinCredit": 0,
+      "remainingRounds": 96,
+      "round": 31,
+      "scoreLeader": null,
+      "seed": 320471
+    },
+    {
+      "confidence": 0.5276576465686786,
+      "leaderWinCredit": 1.0,
+      "match": 4,
+      "modelProbabilityPlayerZero": 0.5276576465686786,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 66,
+      "round": 61,
+      "scoreLeader": 0,
+      "seed": 320471
+    },
+    {
+      "confidence": 0.779403937244424,
+      "leaderWinCredit": 1.0,
+      "match": 4,
+      "modelProbabilityPlayerZero": 0.779403937244424,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 36,
+      "round": 91,
+      "scoreLeader": 0,
+      "seed": 320471
+    },
+    {
+      "confidence": 0.5218066666046948,
+      "leaderWinCredit": null,
+      "match": 5,
+      "modelProbabilityPlayerZero": 0.47819333339530523,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 94,
+      "round": 31,
+      "scoreLeader": null,
+      "seed": 320471
+    },
+    {
+      "confidence": 0.5662709496252819,
+      "leaderWinCredit": 0,
+      "match": 5,
+      "modelProbabilityPlayerZero": 0.4337290503747181,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 64,
+      "round": 61,
+      "scoreLeader": 0,
+      "seed": 320471
+    },
+    {
+      "confidence": 0.848409014527788,
+      "leaderWinCredit": 1.0,
+      "match": 5,
+      "modelProbabilityPlayerZero": 0.1515909854722119,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 34,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320471
+    },
+    {
+      "confidence": 0.5233082669133584,
+      "leaderWinCredit": null,
+      "match": 6,
+      "modelProbabilityPlayerZero": 0.47669173308664153,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 95,
+      "round": 31,
+      "scoreLeader": null,
+      "seed": 320471
+    },
+    {
+      "confidence": 0.5160517213006706,
+      "leaderWinCredit": 0,
+      "match": 6,
+      "modelProbabilityPlayerZero": 0.4839482786993295,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 65,
+      "round": 61,
+      "scoreLeader": 0,
+      "seed": 320471
+    },
+    {
+      "confidence": 0.6970712449572587,
+      "leaderWinCredit": 1.0,
+      "match": 6,
+      "modelProbabilityPlayerZero": 0.30292875504274136,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 35,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320471
+    },
+    {
+      "confidence": 0.5218066666046948,
+      "leaderWinCredit": null,
+      "match": 7,
+      "modelProbabilityPlayerZero": 0.47819333339530523,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 94,
+      "round": 31,
+      "scoreLeader": null,
+      "seed": 320471
+    },
+    {
+      "confidence": 0.5178514700013146,
+      "leaderWinCredit": 0,
+      "match": 7,
+      "modelProbabilityPlayerZero": 0.4821485299986854,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 64,
+      "round": 61,
+      "scoreLeader": 0,
+      "seed": 320471
+    },
+    {
+      "confidence": 0.6929092503381631,
+      "leaderWinCredit": 1.0,
+      "match": 7,
+      "modelProbabilityPlayerZero": 0.30709074966183686,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 34,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320471
+    },
+    {
+      "confidence": 0.9465969217831315,
+      "leaderWinCredit": 1.0,
+      "match": 8,
+      "modelProbabilityPlayerZero": 0.9465969217831315,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 85,
+      "round": 31,
+      "scoreLeader": 0,
+      "seed": 320477
+    },
+    {
+      "confidence": 0.9887970801793785,
+      "leaderWinCredit": 1.0,
+      "match": 8,
+      "modelProbabilityPlayerZero": 0.9887970801793785,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 55,
+      "round": 61,
+      "scoreLeader": 0,
+      "seed": 320477
+    },
+    {
+      "confidence": 0.9990998375482795,
+      "leaderWinCredit": 1.0,
+      "match": 8,
+      "modelProbabilityPlayerZero": 0.9990998375482795,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 25,
+      "round": 91,
+      "scoreLeader": 0,
+      "seed": 320477
+    },
+    {
+      "confidence": 0.9434186157729446,
+      "leaderWinCredit": 1.0,
+      "match": 9,
+      "modelProbabilityPlayerZero": 0.9434186157729446,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 104,
+      "round": 31,
+      "scoreLeader": 0,
+      "seed": 320477
+    },
+    {
+      "confidence": 0.993751523835838,
+      "leaderWinCredit": 1.0,
+      "match": 9,
+      "modelProbabilityPlayerZero": 0.993751523835838,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 74,
+      "round": 61,
+      "scoreLeader": 0,
+      "seed": 320477
+    },
+    {
+      "confidence": 0.9972791017065833,
+      "leaderWinCredit": 1.0,
+      "match": 9,
+      "modelProbabilityPlayerZero": 0.9972791017065833,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 44,
+      "round": 91,
+      "scoreLeader": 0,
+      "seed": 320477
+    },
+    {
+      "confidence": 0.9459457456198058,
+      "leaderWinCredit": 1.0,
+      "match": 10,
+      "modelProbabilityPlayerZero": 0.9459457456198058,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 85,
+      "round": 31,
+      "scoreLeader": 0,
+      "seed": 320477
+    },
+    {
+      "confidence": 0.9886506747031526,
+      "leaderWinCredit": 1.0,
+      "match": 10,
+      "modelProbabilityPlayerZero": 0.9886506747031526,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 55,
+      "round": 61,
+      "scoreLeader": 0,
+      "seed": 320477
+    },
+    {
+      "confidence": 0.9993063319636505,
+      "leaderWinCredit": 1.0,
+      "match": 10,
+      "modelProbabilityPlayerZero": 0.9993063319636505,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 25,
+      "round": 91,
+      "scoreLeader": 0,
+      "seed": 320477
+    },
+    {
+      "confidence": 0.9463429398417357,
+      "leaderWinCredit": 1.0,
+      "match": 11,
+      "modelProbabilityPlayerZero": 0.9463429398417357,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 92,
+      "round": 31,
+      "scoreLeader": 0,
+      "seed": 320477
+    },
+    {
+      "confidence": 0.978098918017643,
+      "leaderWinCredit": 1.0,
+      "match": 11,
+      "modelProbabilityPlayerZero": 0.978098918017643,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 62,
+      "round": 61,
+      "scoreLeader": 0,
+      "seed": 320477
+    },
+    {
+      "confidence": 0.9990807754289,
+      "leaderWinCredit": 1.0,
+      "match": 11,
+      "modelProbabilityPlayerZero": 0.9990807754289,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 32,
+      "round": 91,
+      "scoreLeader": 0,
+      "seed": 320477
+    },
+    {
+      "confidence": 0.883503478501094,
+      "leaderWinCredit": 0,
+      "match": 12,
+      "modelProbabilityPlayerZero": 0.11649652149890603,
+      "predictedWinCredit": 0,
+      "remainingRounds": 101,
+      "round": 31,
+      "scoreLeader": 1,
+      "seed": 320489
+    },
+    {
+      "confidence": 0.8644660014412893,
+      "leaderWinCredit": 0,
+      "match": 12,
+      "modelProbabilityPlayerZero": 0.13553399855871076,
+      "predictedWinCredit": 0,
+      "remainingRounds": 71,
+      "round": 61,
+      "scoreLeader": 1,
+      "seed": 320489
+    },
+    {
+      "confidence": 0.5434892299278418,
+      "leaderWinCredit": 0,
+      "match": 12,
+      "modelProbabilityPlayerZero": 0.5434892299278418,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 41,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320489
+    },
+    {
+      "confidence": 0.5798706788017907,
+      "leaderWinCredit": 1.0,
+      "match": 13,
+      "modelProbabilityPlayerZero": 0.42012932119820934,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 94,
+      "round": 31,
+      "scoreLeader": 1,
+      "seed": 320489
+    },
+    {
+      "confidence": 0.546007655547371,
+      "leaderWinCredit": 0,
+      "match": 13,
+      "modelProbabilityPlayerZero": 0.4539923444526291,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 64,
+      "round": 61,
+      "scoreLeader": 0,
+      "seed": 320489
+    },
+    {
+      "confidence": 0.862066902624516,
+      "leaderWinCredit": 1.0,
+      "match": 13,
+      "modelProbabilityPlayerZero": 0.13793309737548395,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 34,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320489
+    },
+    {
+      "confidence": 0.5798706788017907,
+      "leaderWinCredit": 1.0,
+      "match": 14,
+      "modelProbabilityPlayerZero": 0.42012932119820934,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 95,
+      "round": 31,
+      "scoreLeader": 1,
+      "seed": 320489
+    },
+    {
+      "confidence": 0.5832422239486161,
+      "leaderWinCredit": 1.0,
+      "match": 14,
+      "modelProbabilityPlayerZero": 0.4167577760513838,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 65,
+      "round": 61,
+      "scoreLeader": 1,
+      "seed": 320489
+    },
+    {
+      "confidence": 0.6573881710130194,
+      "leaderWinCredit": 1.0,
+      "match": 14,
+      "modelProbabilityPlayerZero": 0.3426118289869806,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 35,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320489
+    },
+    {
+      "confidence": 0.5798706788017907,
+      "leaderWinCredit": 1.0,
+      "match": 15,
+      "modelProbabilityPlayerZero": 0.42012932119820934,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 94,
+      "round": 31,
+      "scoreLeader": 1,
+      "seed": 320489
+    },
+    {
+      "confidence": 0.5832422239486161,
+      "leaderWinCredit": 1.0,
+      "match": 15,
+      "modelProbabilityPlayerZero": 0.4167577760513838,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 64,
+      "round": 61,
+      "scoreLeader": 1,
+      "seed": 320489
+    },
+    {
+      "confidence": 0.7072050245662123,
+      "leaderWinCredit": 1.0,
+      "match": 15,
+      "modelProbabilityPlayerZero": 0.2927949754337877,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 34,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320489
+    },
+    {
+      "confidence": 0.5298817864964457,
+      "leaderWinCredit": 0,
+      "match": 16,
+      "modelProbabilityPlayerZero": 0.5298817864964457,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 102,
+      "round": 31,
+      "scoreLeader": 1,
+      "seed": 320491
+    },
+    {
+      "confidence": 0.609315130010351,
+      "leaderWinCredit": 0,
+      "match": 16,
+      "modelProbabilityPlayerZero": 0.39068486998964896,
+      "predictedWinCredit": 0,
+      "remainingRounds": 72,
+      "round": 61,
+      "scoreLeader": 1,
+      "seed": 320491
+    },
+    {
+      "confidence": 0.7178321454626418,
+      "leaderWinCredit": 0,
+      "match": 16,
+      "modelProbabilityPlayerZero": 0.7178321454626418,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 42,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320491
+    },
+    {
+      "confidence": 0.5158113314912501,
+      "leaderWinCredit": null,
+      "match": 17,
+      "modelProbabilityPlayerZero": 0.5158113314912501,
+      "predictedWinCredit": 0,
+      "remainingRounds": 98,
+      "round": 31,
+      "scoreLeader": null,
+      "seed": 320491
+    },
+    {
+      "confidence": 0.5222738401699039,
+      "leaderWinCredit": 0,
+      "match": 17,
+      "modelProbabilityPlayerZero": 0.5222738401699039,
+      "predictedWinCredit": 0,
+      "remainingRounds": 68,
+      "round": 61,
+      "scoreLeader": 0,
+      "seed": 320491
+    },
+    {
+      "confidence": 0.8051982257876118,
+      "leaderWinCredit": 0,
+      "match": 17,
+      "modelProbabilityPlayerZero": 0.19480177421238823,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 38,
+      "round": 91,
+      "scoreLeader": 0,
+      "seed": 320491
+    },
+    {
+      "confidence": 0.5158113314912501,
+      "leaderWinCredit": null,
+      "match": 18,
+      "modelProbabilityPlayerZero": 0.5158113314912501,
+      "predictedWinCredit": 0,
+      "remainingRounds": 100,
+      "round": 31,
+      "scoreLeader": null,
+      "seed": 320491
+    },
+    {
+      "confidence": 0.5002856090843593,
+      "leaderWinCredit": 0,
+      "match": 18,
+      "modelProbabilityPlayerZero": 0.5002856090843593,
+      "predictedWinCredit": 0,
+      "remainingRounds": 70,
+      "round": 61,
+      "scoreLeader": 0,
+      "seed": 320491
+    },
+    {
+      "confidence": 0.588291357313899,
+      "leaderWinCredit": 1.0,
+      "match": 18,
+      "modelProbabilityPlayerZero": 0.41170864268610097,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 40,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320491
+    },
+    {
+      "confidence": 0.5158113314912501,
+      "leaderWinCredit": null,
+      "match": 19,
+      "modelProbabilityPlayerZero": 0.5158113314912501,
+      "predictedWinCredit": 0,
+      "remainingRounds": 100,
+      "round": 31,
+      "scoreLeader": null,
+      "seed": 320491
+    },
+    {
+      "confidence": 0.5002856090843593,
+      "leaderWinCredit": 0,
+      "match": 19,
+      "modelProbabilityPlayerZero": 0.5002856090843593,
+      "predictedWinCredit": 0,
+      "remainingRounds": 70,
+      "round": 61,
+      "scoreLeader": 0,
+      "seed": 320491
+    },
+    {
+      "confidence": 0.588291357313899,
+      "leaderWinCredit": 1.0,
+      "match": 19,
+      "modelProbabilityPlayerZero": 0.41170864268610097,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 40,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320491
+    },
+    {
+      "confidence": 0.546404259489958,
+      "leaderWinCredit": 0,
+      "match": 20,
+      "modelProbabilityPlayerZero": 0.546404259489958,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 99,
+      "round": 31,
+      "scoreLeader": 1,
+      "seed": 320503
+    },
+    {
+      "confidence": 0.5299142022622952,
+      "leaderWinCredit": 0,
+      "match": 20,
+      "modelProbabilityPlayerZero": 0.5299142022622952,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 69,
+      "round": 61,
+      "scoreLeader": 1,
+      "seed": 320503
+    },
+    {
+      "confidence": 0.8130918520850531,
+      "leaderWinCredit": 0,
+      "match": 20,
+      "modelProbabilityPlayerZero": 0.8130918520850531,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 39,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320503
+    },
+    {
+      "confidence": 0.5450649190438839,
+      "leaderWinCredit": 1.0,
+      "match": 21,
+      "modelProbabilityPlayerZero": 0.5450649190438839,
+      "predictedWinCredit": 0,
+      "remainingRounds": 98,
+      "round": 31,
+      "scoreLeader": 1,
+      "seed": 320503
+    },
+    {
+      "confidence": 0.5135059316749812,
+      "leaderWinCredit": 1.0,
+      "match": 21,
+      "modelProbabilityPlayerZero": 0.5135059316749812,
+      "predictedWinCredit": 0,
+      "remainingRounds": 68,
+      "round": 61,
+      "scoreLeader": 1,
+      "seed": 320503
+    },
+    {
+      "confidence": 0.736074255348792,
+      "leaderWinCredit": 1.0,
+      "match": 21,
+      "modelProbabilityPlayerZero": 0.26392574465120805,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 38,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320503
+    },
+    {
+      "confidence": 0.5500672917840075,
+      "leaderWinCredit": null,
+      "match": 22,
+      "modelProbabilityPlayerZero": 0.5500672917840075,
+      "predictedWinCredit": 0,
+      "remainingRounds": 99,
+      "round": 31,
+      "scoreLeader": null,
+      "seed": 320503
+    },
+    {
+      "confidence": 0.5334599921155656,
+      "leaderWinCredit": 1.0,
+      "match": 22,
+      "modelProbabilityPlayerZero": 0.5334599921155656,
+      "predictedWinCredit": 0,
+      "remainingRounds": 69,
+      "round": 61,
+      "scoreLeader": 1,
+      "seed": 320503
+    },
+    {
+      "confidence": 0.5028981826841818,
+      "leaderWinCredit": 1.0,
+      "match": 22,
+      "modelProbabilityPlayerZero": 0.49710181731581815,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 39,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320503
+    },
+    {
+      "confidence": 0.5450649190438839,
+      "leaderWinCredit": 1.0,
+      "match": 23,
+      "modelProbabilityPlayerZero": 0.5450649190438839,
+      "predictedWinCredit": 0,
+      "remainingRounds": 99,
+      "round": 31,
+      "scoreLeader": 1,
+      "seed": 320503
+    },
+    {
+      "confidence": 0.5366785568559176,
+      "leaderWinCredit": 1.0,
+      "match": 23,
+      "modelProbabilityPlayerZero": 0.5366785568559176,
+      "predictedWinCredit": 0,
+      "remainingRounds": 69,
+      "round": 61,
+      "scoreLeader": 1,
+      "seed": 320503
+    },
+    {
+      "confidence": 0.5067857394820537,
+      "leaderWinCredit": 1.0,
+      "match": 23,
+      "modelProbabilityPlayerZero": 0.49321426051794626,
+      "predictedWinCredit": 1.0,
+      "remainingRounds": 39,
+      "round": 91,
+      "scoreLeader": 1,
+      "seed": 320503
+    }
+  ],
+  "scriptSha256": "94fc63875104dfcfc4bbb11654386d8d8701095e3976c80b84a70a8ef0abd52b",
+  "summary": {
+    "31": {
+      "confidenceCoverage": 0.20833333333333334,
+      "confidentPredictionMeanFinalWinCredit": 0.8,
+      "medianRoundsRemainingWhenConfident": 92,
+      "modelConfidentSnapshots": 5,
+      "scoreLeaderMeanFinalWinCredit": 0.75,
+      "scoreTies": 8,
+      "snapshots": 24,
+      "uniqueScoreLeaders": 16
+    },
+    "61": {
+      "confidenceCoverage": 0.20833333333333334,
+      "confidentPredictionMeanFinalWinCredit": 0.8,
+      "medianRoundsRemainingWhenConfident": 62,
+      "modelConfidentSnapshots": 5,
+      "scoreLeaderMeanFinalWinCredit": 0.5416666666666666,
+      "scoreTies": 0,
+      "snapshots": 24,
+      "uniqueScoreLeaders": 24
+    },
+    "91": {
+      "confidenceCoverage": 0.375,
+      "confidentPredictionMeanFinalWinCredit": 1.0,
+      "medianRoundsRemainingWhenConfident": 34,
+      "modelConfidentSnapshots": 9,
+      "scoreLeaderMeanFinalWinCredit": 0.7916666666666666,
+      "scoreTies": 0,
+      "snapshots": 24,
+      "uniqueScoreLeaders": 24
+    }
+  },
+  "testMapSeeds": [
+    320461,
+    320471,
+    320477,
+    320489,
+    320491,
+    320503
+  ]
+}

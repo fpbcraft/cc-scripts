@@ -270,8 +270,23 @@ function I.draw(ui, state, player, rect, modal)
 					},
 				},
 			}
+			if state.contentRules == "p1" then
+				rows[#rows + 1] = {
+					buttons = {
+						{
+							label = "PROJECTS",
+							style = { selected = ui.productionCategory == "project" },
+							run = function()
+								ui.productionCategory = "project"
+								ui.inspectorOffset = 0
+							end,
+						},
+					},
+				}
+			end
 			local kind = ui.productionCategory or "unit"
 			local source = kind == "wonder" and Systems.wonders
+				or kind == "project" and Systems.projects
 				or kind == "building" and Systems.buildings
 				or Systems.units
 			local list = {}
@@ -281,6 +296,8 @@ function I.draw(ui, state, player, rect, modal)
 					allowed = player.techs[source[id].tech] and Landmarks.available(state, id)
 				elseif kind == "unit" then
 					allowed = Systems.canRecruit(player, id, state, Hex, city)
+				elseif kind == "project" then
+					allowed = Systems.canProject(player, city, id)
 				else
 					allowed = Systems.canBuild(player, city, id, state)
 				end
@@ -308,9 +325,26 @@ function I.draw(ui, state, player, rect, modal)
 							/ math.max(1, yields.industry)
 					)
 				)
+				local label = Systems.label(kind, id) .. " " .. turns .. "T"
+				if kind == "project" then
+					local output = Systems.projectPreview(player, city, id, state, yields)
+					label = Systems.label(kind, id) .. (output.active and " / ROUND" or " PAUSED")
+					text(source[id].description)
+					local record = source[id]
+					text("NEXT ROUND +" .. output[record.output] .. " " .. record.output:upper())
+					text(
+						"REMAINDER "
+							.. ((city.projectRemainders or {})[id] or 0)
+							.. "/"
+							.. record.divisor
+					)
+					if not output.active then
+						text("Select unfinished research to resume.")
+					end
+				end
 				rows[#rows + 1] = {
 					project = {
-						label = Systems.label(kind, id) .. " " .. turns .. "T",
+						label = label,
 						selected = active,
 						run = function()
 							if kind == "wonder" then
@@ -325,6 +359,7 @@ function I.draw(ui, state, player, rect, modal)
 						info = function()
 							ui:openCodex(
 								kind == "wonder" and "wonders"
+									or kind == "project" and "projects"
 									or kind == "unit" and "units"
 									or "buildings",
 								id

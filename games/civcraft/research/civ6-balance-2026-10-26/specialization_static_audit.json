@@ -1,0 +1,48 @@
+{
+  "head": "97944b8bc85e011d00abbdf45bf9aecdb82050ae",
+  "source": "Runtime content export from prior baseline; git diff confirms referenced balance files unchanged at current head. Arithmetic/static audit, not match win-rate evidence.",
+  "dependency_closures": {
+    "bank": {
+      "local_building_count_including_target": 13,
+      "base_industry_total": 890,
+      "ids": [
+        "assembly",
+        "bank",
+        "beltlogistics",
+        "burner",
+        "crafter",
+        "deployer",
+        "freight",
+        "mixer",
+        "portal",
+        "press",
+        "station",
+        "steamplant",
+        "waterwheel"
+      ]
+    },
+    "dragon": {
+      "local_building_count_including_target": 6,
+      "base_industry_total": 728,
+      "ids": [
+        "academy",
+        "dragon",
+        "equipment",
+        "eyes",
+        "observatory",
+        "portal"
+      ]
+    }
+  },
+  "three_pop2_city_treasury_without_buildings_or_treaties": {
+    "income_per_round": 12,
+    "stone_guard_upkeep": 1,
+    "guards_affordable_at_zero_net": 12,
+    "note": "Counts all guards; scouts, settlers and support would also use this budget."
+  },
+  "highland_bonus_damage_multiplier": {
+    "outgoing_if_power_added": 1.1274968515793757,
+    "incoming_when_defense_added": 0.8869204367171575,
+    "note": "Actual Highland bonus is defense only on hills; city bonus Sentinel is defense. Rounding/caps change realized HP."
+  }
+}

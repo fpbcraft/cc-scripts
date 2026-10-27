@@ -86,7 +86,7 @@ local function inspector(r, systems, player, rect, model, openCodex)
 	for _, id in ipairs(chosen.requires or {}) do
 		link(id, "< ")
 	end
-	for _, paragraph in ipairs(Details.paragraphs(systems, model.selected)) do
+	for _, paragraph in ipairs(Details.paragraphs(systems, model.selected, player)) do
 		text(paragraph)
 	end
 	for _, entry in ipairs(Details.unlocks(systems, model.selected)) do

@@ -65,11 +65,16 @@ function Details.unlocks(systems, id)
 	return entries
 end
 
-function Details.paragraphs(systems, id)
+function Details.paragraphs(systems, id, player)
 	local tech = systems.techs[id]
 	local paragraphs =
 		{ purposes[id] or "Expand the technologies and projects available to your civilization." }
-	paragraphs[#paragraphs + 1] = "UNLOCKS: " .. tech.unlock .. "."
+	if id == "agriculture" and player and player.contentRules == "p1" then
+		paragraphs[#paragraphs + 1] =
+			"IMPROVES: Wheat Farms from +1 to +2 food. Farms are already available."
+	else
+		paragraphs[#paragraphs + 1] = "UNLOCKS: " .. tech.unlock .. "."
+	end
 	for _, entry in ipairs(Details.unlocks(systems, id)) do
 		local record = entry.record
 		local benefit = record.description or record.ability or ""

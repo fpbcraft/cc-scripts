@@ -1,0 +1,56 @@
+{
+  "dataset_sha256": "0ef6cc9c71f12677c7a2eb222292253ae614e55cef7efb7972f5511258f71e0e",
+  "games": [
+    {
+      "rounds": 151,
+      "seed": 75123,
+      "split": "train",
+      "status": "finished",
+      "victoryReason": "INDUSTRIAL",
+      "winnerIds": [
+        0
+      ]
+    },
+    {
+      "rounds": 137,
+      "seed": 18731,
+      "split": "train",
+      "status": "finished",
+      "victoryReason": "INDUSTRIAL",
+      "winnerIds": [
+        0
+      ]
+    },
+    {
+      "rounds": 146,
+      "seed": 95117,
+      "split": "holdout",
+      "status": "finished",
+      "victoryReason": "INDUSTRIAL",
+      "winnerIds": [
+        1
+      ]
+    },
+    {
+      "rounds": 139,
+      "seed": 808381,
+      "split": "holdout",
+      "status": "finished",
+      "victoryReason": "INDUSTRIAL",
+      "winnerIds": [
+        1
+      ]
+    }
+  ],
+  "holdout_seeds": [
+    95117,
+    808381
+  ],
+  "records": 2952,
+  "source_changed_during_run": false,
+  "status": "actual_observer_traces",
+  "train_seeds": [
+    75123,
+    18731
+  ]
+}

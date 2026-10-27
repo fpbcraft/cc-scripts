@@ -10,6 +10,8 @@ local AI = dofile("/games/civcraft/ai.lua")
 local Actions = dofile("/games/civcraft/actions.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
 local Content = dofile("/games/civcraft/content.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local Projects = dofile("/games/civcraft/civilian_projects.lua")
 local Economy = dofile("/games/civcraft/economy.lua")
 local Events = dofile("/games/civcraft/events.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
@@ -21,6 +23,8 @@ M.techs = Content.techs
 M.techOrder = Content.techOrder
 M.units = Content.units
 M.buildings = Content.buildings
+M.projects = Projects.definitions
+M.canProject = Projects.available
 M.ages = Content.ages
 M.resources = Content.resources
 M.resourceOrder = Content.resourceOrder
@@ -44,6 +48,7 @@ function M.label(kind, id)
 	local source = kind == "unit" and M.units
 		or kind == "wonder" and M.wonders
 		or kind == "tech" and M.techs
+		or kind == "project" and M.projects
 		or M.buildings
 	return (source[id] or {}).name or tostring(id):upper()
 end
@@ -151,9 +156,12 @@ function M.workTile(state, city, x, y)
 	M.ensureWorkers(state, city)
 	return true
 end
-function M.civ(id)
+function M.civ(id, context)
 	for _, v in ipairs(M.civs) do
 		if v.id == id then
+			if id == "scholar" and ContentRules.isP1(context) then
+				return { id = v.id, name = v.name, bonus = "Capital +1 science" }
+			end
 			return v
 		end
 	end
@@ -202,6 +210,7 @@ function M.nameCity(state, city)
 	end
 end
 function M.migrate(state)
+	ContentRules.validate(state.contentRules)
 	state.ruleset = state.ruleset or "legacy"
 	state.gameSpeed = state.gameSpeed or "standard"
 	state.roundLimit = state.roundLimit or (state.ruleset == "create" and 180 or 90)
@@ -212,6 +221,7 @@ function M.migrate(state)
 	end
 	World.ensureTerritories(state, Hex, (state.version or 0) < 5)
 	for i, p in ipairs(state.players or {}) do
+		p.contentRules = state.contentRules
 		p.civ = p.civ or M.civs[(i - 1) % #M.civs + 1].id
 		p.techs = p.techs or {}
 		if p.settlersTrained == nil then
@@ -302,7 +312,7 @@ function M.coastal(state, c)
 	end
 	return false
 end
-function M.treasury(p, state)
+function M.treasury(p, state, includeProjects)
 	local income, upkeep = 0, 0
 	for _, other in ipairs(state.players or {}) do
 		if
@@ -317,6 +327,14 @@ function M.treasury(p, state)
 		if city.owner == p.id then
 			local effects = Economy.effects(city, state, M)
 			income = income + 2 + (city.population or 2) + effects.gold
+			if
+				includeProjects ~= false
+				and ContentRules.isP1(p)
+				and city.project
+				and city.project.kind == "project"
+			then
+				income = income + M.projectOutput(p, city, state).gold
+			end
 		end
 	end
 	for _, unit in ipairs(state.units or {}) do
@@ -348,7 +366,7 @@ function M.canBuild(p, c, id, state)
 	local b = M.buildings[id]
 	if
 		not b
-		or b.tech and not p.techs[b.tech]
+		or b.tech and not p.techs[b.tech] and not (id == "farm" and ContentRules.isP1(p))
 		or c.buildings[id]
 		or b.coastal and not M.coastal(state, c)
 	then
@@ -394,7 +412,7 @@ end
 -- Retain familiar action names as pure queue selection (no purchases).
 function M.queue(p, c, kind, id, state, hex, x, y)
 	if kind == "none" then
-		if c.project then
+		if c.project and c.project.kind ~= "project" then
 			c.projectProgress = c.projectProgress or {}
 			c.projectProgress[c.project.kind .. ":" .. c.project.id] = c.project.progress
 		end
@@ -414,10 +432,14 @@ function M.queue(p, c, kind, id, state, hex, x, y)
 		if not M.canRecruit(p, id, state, hex, c) then
 			return false, "Unit locked or missing strategic resource"
 		end
+	elseif kind == "project" then
+		if not M.canProject(p, c, id) then
+			return false, "Civilian project needs its city building and P1 economy"
+		end
 	else
 		return false, "Unknown project category"
 	end
-	if c.project then
+	if c.project and c.project.kind ~= "project" then
 		c.projectProgress = c.projectProgress or {}
 		c.projectProgress[c.project.kind .. ":" .. c.project.id] = c.project.progress
 	end
@@ -491,16 +513,20 @@ function M.techCost(id, player)
 	return tech and CampaignRules.cost(tech.cost, player) or nil
 end
 function M.projectCost(kind, id, player)
+	if kind == "project" then
+		return M.projects[id] and M.projects[id].divisor or nil
+	end
 	local record = (kind == "unit" and M.units or kind == "wonder" and M.wonders or M.buildings)[id]
 	if not record then
 		return nil
 	end
 	local base = record.production or math.ceil((record.wood or 8) * 2.5)
+	local step = record.productionStep or 0
+	if kind == "unit" then
+		base, step = ContentRules.unitCost(id, record, player)
+	end
 	if kind == "unit" and id == "settler" then
-		return CampaignRules.cost(
-			base + (record.productionStep or 0) * ((player and player.settlersTrained) or 0),
-			player
-		)
+		return CampaignRules.cost(base + step * ((player and player.settlersTrained) or 0), player)
 	end
 	return CampaignRules.cost(base, player)
 end
@@ -509,6 +535,12 @@ function M.centerYields(p, c, state)
 	local civ = p.civ
 	local buildings = c.buildings or {}
 	local food, industry, science = 2 + e.food, 1 + e.industry, 1 + e.science
+	if ContentRules.isP1(p) then
+		science = science + 1
+		if buildings.farm and not (p.techs or {}).agriculture then
+			food = food - 1
+		end
+	end
 	if civ == "verdant" and buildings.farm then
 		food = food + 1
 	end
@@ -516,7 +548,7 @@ function M.centerYields(p, c, state)
 		industry = industry + 1
 	end
 	if civ == "scholar" then
-		science = science + 2
+		science = science + (ContentRules.isP1(p) and (c.capitalOf == p.id and 1 or 0) or 2)
 	end
 	if civ == "forge" and buildings.workshop then
 		industry = industry + 2
@@ -598,9 +630,17 @@ local function spawn(state, p, c, id, hex)
 	end
 	return true
 end
+function M.projectOutput(p, c, state, yield)
+	yield = yield or M.yields(p, c, state, Hex)
+	return Projects.preview(p, c, yield.industry, M)
+end
+function M.projectPreview(p, c, id, state, yield)
+	yield = yield or M.yields(p, c, state, Hex)
+	return Projects.preview(p, c, yield.industry, M, id)
+end
 function M.growth(p, c, state)
 	local yield = M.yields(p, c, state, Hex)
-	local surplus = yield.food - 2 * (c.population or 2)
+	local surplus = yield.food - 2 * (c.population or 2) + M.projectOutput(p, c, state, yield).food
 	local threshold = CampaignRules.cost(20 + 8 * (c.population or 2), p)
 	local result = {
 		surplus = surplus,
@@ -745,17 +785,20 @@ function M.production(state, hex)
 		for id, rate in pairs(rates) do
 			p.stockpile[id] = p.stockpile[id] + rate
 		end
-		local totalScience = 0
+		local totalScience, projectGold = 0, 0
 		for _, c in ipairs(state.cities) do
 			if c.owner == p.id then
 				if M.checkpoint then
 					M.checkpoint()
 				end
 				local yield = M.yields(p, c, state, hex, owned)
-				totalScience = totalScience + yield.science
+				local output = M.projectOutput(p, c, state, yield)
+				totalScience = totalScience + yield.science + output.science
+				projectGold = projectGold + output.gold
 				p.food = math.max(0, (p.food or 0) + yield.food - 2 * (c.population or 2))
 				p.wood = (p.wood or 0) + yield.industry
 				local growth = M.growth(p, c, state)
+				Projects.commit(c, output)
 				c.growthAge = (c.growthAge or 0) + 1
 				c.foodStore = math.max(0, (c.foodStore or 0) + growth.surplus)
 				if growth.surplus < 0 then
@@ -792,7 +835,7 @@ function M.production(state, hex)
 				if state.world then
 					World.expandCity(state, hex, c)
 				end
-				if c.project then
+				if c.project and c.project.kind ~= "project" then
 					local pr = c.project
 					local valid = pr.kind == "wonder"
 							and Landmarks.canPlace(state, c, pr.id, pr.x, pr.y, M)
@@ -833,8 +876,8 @@ function M.production(state, hex)
 				end
 			end
 		end
-		local treasury = M.treasury(p, state)
-		p.gold = (p.gold or 20) + treasury.net
+		local treasury = M.treasury(p, state, false)
+		p.gold = (p.gold or 20) + treasury.net + projectGold
 		if p.gold < 0 then
 			for index = #state.units, 1, -1 do
 				local unit = state.units[index]

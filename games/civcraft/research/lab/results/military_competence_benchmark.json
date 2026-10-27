@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Compact summary of bounded military hook comparison; full traces remain in /tmp",
+  "hookScope": "production-quality-only hook before observer-safe frontier routing; frontier follow-up is military_frontier_hook_matrix.json",
+  "sourceHead": "97944b8bc85e011d00abbdf45bf9aecdb82050ae",
+  "sourceChangedDuringRun": false,
+  "driver": "games/civcraft/research/lab/military_competence_benchmark.py",
+  "rawFullGame": "/tmp/civcraft-military-competence.raw.json",
+  "rawFullGameSha256": "45654188a39dc989da29edb8a015d62f6e09ee26ec327822653e17eb66d0be88",
+  "rawFixture": "/tmp/civcraft-military-fixture-comparison.json",
+  "fullGames": [
+    {"seed": 75123, "conquestSeat": 0, "baseline": {"round": 180, "reason": "SCORE", "winners": [1], "attempted": 2912, "accepted": 2781, "rejected": 131}, "hook": {"round": 180, "reason": "SCORE", "winners": [1], "attempted": 2912, "accepted": 2781, "rejected": 131}},
+    {"seed": 75123, "conquestSeat": 1, "baseline": {"round": 149, "reason": "INDUSTRIAL", "winners": [0], "attempted": 2027, "accepted": 2024, "rejected": 3}, "hook": {"round": 149, "reason": "INDUSTRIAL", "winners": [0], "attempted": 2027, "accepted": 2024, "rejected": 3}},
+    {"seed": 95117, "conquestSeat": 0, "baseline": {"round": 135, "reason": "INDUSTRIAL", "winners": [1], "attempted": 2024, "accepted": 2018, "rejected": 6}, "hook": {"round": 135, "reason": "INDUSTRIAL", "winners": [1], "attempted": 2024, "accepted": 2018, "rejected": 6}},
+    {"seed": 95117, "conquestSeat": 1, "baseline": {"round": 151, "reason": "INDUSTRIAL", "winners": [0], "attempted": 2247, "accepted": 2239, "rejected": 8}, "hook": {"round": 151, "reason": "INDUSTRIAL", "winners": [0], "attempted": 2247, "accepted": 2239, "rejected": 8}},
+    {"seed": 18731, "conquestSeat": 0, "baseline": {"round": 152, "reason": "INDUSTRIAL", "winners": [1], "attempted": 2497, "accepted": 2391, "rejected": 106}, "hook": {"round": 152, "reason": "INDUSTRIAL", "winners": [1], "attempted": 2497, "accepted": 2391, "rejected": 106}},
+    {"seed": 18731, "conquestSeat": 1, "baseline": {"round": 138, "reason": "INDUSTRIAL", "winners": [0], "attempted": 2114, "accepted": 2109, "rejected": 5}, "hook": {"round": 138, "reason": "INDUSTRIAL", "winners": [0], "attempted": 2114, "accepted": 2109, "rejected": 5}}
+  ],
+  "fixtures": [
+    {"scenario": "siege_breach", "baseline": {"attempted": 53, "accepted": 53, "rejected": 0, "p0UnitQueues": [[1, "settler"], [4, "warrior"], [6, "catapult"], [7, "warrior"]]}, "hook": {"attempted": 49, "accepted": 49, "rejected": 0, "p0UnitQueues": [[1, "settler"], [4, "catapult"], [6, "catapult"]]}},
+    {"scenario": "capital_defense", "baseline": {"attempted": 56, "accepted": 56, "rejected": 0}, "hook": {"attempted": 56, "accepted": 56, "rejected": 0}},
+    {"scenario": "settler_protection", "baseline": {"attempted": 44, "accepted": 44, "rejected": 0}, "hook": {"attempted": 44, "accepted": 44, "rejected": 0}}
+  ],
+  "interpretation": [
+    "All 12 full-game arms finished; no timeout, censor or runtime error occurred.",
+    "Baseline and hook were identical on all six matched seed/seat pairs in this holdout; this does not establish conquest impossibility or success.",
+    "The hook changed siege-breach queue choices in the isolated fixture (two catapult queues versus one), but did not produce a capture within the eight-round horizon.",
+    "No full-game elimination claim is made; terminal routes were SCORE/INDUSTRIAL, not conquest."
+  ]
+}

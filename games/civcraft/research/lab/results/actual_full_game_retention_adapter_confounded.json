@@ -1,0 +1,14 @@
+{
+  "status": "invalid_for_strength_claim",
+  "reason": "The pre-correction adapter replaced AI.choose and AI.research instead of preserving source semantics. It bypassed current-project, emergency/surplus, Difficulty.choices, candidate validation and retry behavior.",
+  "source_changed_during_run": false,
+  "preserved_as": "post-run-only diagnostic; do not compare compact formats from this artifact",
+  "matches_summary": {
+    "original_teacher": {"95117": {"winnerIds": [1], "round": 135}, "808381": {"winnerIds": [1], "round": 139}},
+    "archived_champion": {"95117": {"targetSeat0Winner": true, "targetSeat1Winner": true}, "808381": {"targetSeat0Winner": true, "targetSeat1Winner": true}},
+    "weights": {"95117": {"winnerIds": [1], "targetSeat0Loss": true, "targetSeat1Loss": true}, "808381": {"winnerIds": [1], "targetSeat0Loss": true, "targetSeat1Loss": true}},
+    "rule_tree": {"95117": {"winnerIds": [1], "targetSeat0Loss": true, "targetSeat1Loss": true}, "808381": {"winnerIds": [1], "targetSeat0Loss": true, "targetSeat1Loss": true}},
+    "tiny_quantized_mlp": {"95117": {"winnerIds": [1], "targetSeat0Loss": true, "targetSeat1Loss": true}, "808381": {"winnerIds": [1], "targetSeat0Loss": true, "targetSeat1Loss": true}}
+  },
+  "note": "The corrected 24-match result in actual_full_game_retention.json supersedes this diagnostic."
+}

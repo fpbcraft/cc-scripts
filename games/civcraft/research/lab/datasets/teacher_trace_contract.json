@@ -1,0 +1,17 @@
+{
+  "schema_version": "observer-ranked-decision-v1",
+  "status": "capture_specification_only",
+  "source_calls": {
+    "production": "Production.ranked(view, player, city, systems)",
+    "research": "Research.ranked(view, player, systems)"
+  },
+  "required_record_fields": [
+    "game_id", "seed", "round", "seat", "faction", "observer_view",
+    "legal_actions", "candidate_scores", "selected_action", "teacher_policy_id",
+    "source_hash"
+  ],
+  "candidate_score_rule": "Preserve source rank and score; do not replace a ranked choice with a route/goal label.",
+  "split_rule": "Assign complete game/seed to train or holdout; never split adjacent decisions from one trajectory.",
+  "observer_rule": "observer_view must be Presentation.capture/World.forPlayer data; metrics.lua and authoritative state are prohibited.",
+  "fixture_note": "policy_format_fixture.jsonl is plumbing-only and does not satisfy this contract."
+}

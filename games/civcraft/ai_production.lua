@@ -167,6 +167,18 @@ function Production.ranked(view, player, city, systems, canExpand)
 			add("unit", id, unitValue(id, unit, counts, context, player, canExpand))
 		end
 	end
+	for id, project in pairs(systems.projects or {}) do
+		if systems.canProject(player, city, id) then
+			local output = systems.projectPreview(player, city, id, view, context.yields)
+			if output.active then
+				local score = Values.effects(
+					{ [project.output] = context.yields.industry / project.divisor },
+					context
+				)
+				result[#result + 1] = { kind = "project", id = id, score = score, turns = 1 }
+			end
+		end
+	end
 	for id, wonder in pairs(systems.wonders) do
 		for _, tile in ipairs(systems.workable(view, city)) do
 			if Landmarks.canPlace(view, city, id, tile.x, tile.y, systems) then

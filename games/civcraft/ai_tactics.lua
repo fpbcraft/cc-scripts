@@ -48,12 +48,9 @@ local function support(view, player, unit, x, y, systems)
 	end
 	local value = 0
 	for _, other in ipairs(view.units) do
-		local claim = World.territoryCity(view, Hex, other.x, other.y)
 		if
 			other.id ~= unit.id
 			and other.owner == player.id
-			and claim
-			and claim.owner == player.id
 			and Hex.distance(x, y, other.x, other.y) <= 1
 		then
 			value = value + math.min(10, 100 - (other.hp or 100)) * 2

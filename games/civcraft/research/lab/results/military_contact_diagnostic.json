@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Privileged checkpoint diagnostic for failed conquest-policy case; checkpoints are never exposed to policy code",
+  "sourceHead": "97944b8bc85e011d00abbdf45bf9aecdb82050ae",
+  "config": {"seed": 95117, "mapSize": "compact", "mapType": "pangaea", "hostileMode": "off", "conquestSeat": 0, "maxRounds": 180},
+  "rawDiagnostic": "/tmp/civcraft-military-diagnostic-95117.json",
+  "rawDiagnosticSha256": "f7621ba30ad9211b330a3d3bdb1603079ae681463781a4e1819b0cfef2f3199d",
+  "status": "finished",
+  "terminalRound": 135,
+  "firstContactRound": null,
+  "dispatches": {"attempted": 2024, "accepted": 2018, "rejected": 6, "rejectionReasons": {"Wonder needs its research and an empty owned land hex; one per world": 6}},
+  "checkpoints": [
+    {"round": 1, "contacts": [], "visibleEnemyCities": 0, "primary": "conquest", "campaign": {"kind": "explore", "phase": "muster", "targetID": 1, "targetOwner": 0, "needsSiege": false}, "units": {"warrior": 1}, "technologies": 0, "gold": 20},
+    {"round": 10, "contacts": [], "visibleEnemyCities": 0, "primary": "conquest", "campaign": {"kind": "explore", "phase": "muster", "targetID": 1, "targetOwner": 0, "needsSiege": false}, "units": {"settler": 1, "warrior": 3}, "technologies": 0, "gold": 35},
+    {"round": 30, "contacts": [], "visibleEnemyCities": 0, "primary": "conquest", "campaign": {"kind": "explore", "phase": "approach", "targetID": 1, "targetOwner": 0, "needsSiege": false}, "units": {"scout": 1, "warrior": 6}, "technologies": 2, "gold": 153},
+    {"round": 60, "contacts": [], "visibleEnemyCities": 0, "primary": "conquest", "campaign": {"kind": "explore", "phase": "approach", "targetID": 1, "targetOwner": 0, "needsSiege": false}, "units": {"scout": 1, "warrior": 6}, "technologies": 5, "gold": 554},
+    {"round": 90, "contacts": [], "visibleEnemyCities": 0, "primary": "conquest", "campaign": {"kind": "explore", "phase": "approach", "targetID": 1, "targetOwner": 0, "needsSiege": false}, "units": {"scout": 1, "warrior": 6}, "technologies": 8, "gold": 1173},
+    {"round": 120, "contacts": [], "visibleEnemyCities": 0, "primary": "conquest", "campaign": {"kind": "explore", "phase": "approach", "targetID": 1, "targetOwner": 0, "needsSiege": false}, "units": {"scout": 1, "warrior": 6}, "technologies": 13, "gold": 1970},
+    {"round": 135, "contacts": [], "visibleEnemyCities": 0, "primary": "conquest", "campaign": {"kind": "explore", "phase": "approach", "targetID": 1, "targetOwner": 0, "needsSiege": false}, "units": {"scout": 1, "warrior": 6}, "technologies": 16, "gold": 2391}
+  ],
+  "finding": "This failed conquest case never acquired an opposing contact or visible enemy city. The campaign remained explore against the player's own capital, so declaration, siege targeting and enemy pathing never became reachable. By the terminal checkpoint it had six warriors, one scout, 16 technologies, 2391 gold and abundant iron, yet zero declareWar actions.",
+  "traceWindow": "The raw diagnostic retains all accepted/rejected actions through round 30 (354 traced actions), including the early warrior/settler/scout production and no declaration action."
+}

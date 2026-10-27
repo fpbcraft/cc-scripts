@@ -1,0 +1,1298 @@
+[
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "verdant",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "verdant",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "iron",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "iron",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "scholar",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "scholar",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "nomad",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "nomad",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "mariner",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "mariner",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "highland",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "highland",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "merchant",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "merchant",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "sentinel",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "sentinel",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "wild",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 203807,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "wild",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "verdant",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "verdant",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "iron",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "iron",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "scholar",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "scholar",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "nomad",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "nomad",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "mariner",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "mariner",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "highland",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "highland",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "merchant",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "merchant",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "sentinel",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "sentinel",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "wild",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  },
+  {
+    "seed": 708091,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "telemetryEvery": 10,
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      },
+      {
+        "civilization": "wild",
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          },
+          "goal": "expedition"
+        }
+      }
+    ]
+  }
+]
