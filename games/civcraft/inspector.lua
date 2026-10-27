@@ -578,13 +578,14 @@ function I.draw(ui, state, player, rect, modal)
 		if ContentRules.isRedesign(state) then
 			local recovery = Combat.restRecovery(state, unit, Systems)
 			local amount = math.min(100 - (unit.hp or 100), recovery.total)
-			rows[#rows + 1] = {
-				text = "REST: +"
-					.. amount
-					.. " HP this round ("
-					.. recovery.territory
-					.. "). Acting prevents recovery.",
-			}
+			local text = "REST FORECAST: +"
+				.. amount
+				.. " HP ("
+				.. recovery.territory
+				.. "). Acting prevents recovery."
+			for _, line in ipairs(Panels.wrap(r, text, w - 10)) do
+				rows[#rows + 1] = { text = line }
+			end
 		end
 		if stats.engineer then
 			rows[#rows + 1] = {
