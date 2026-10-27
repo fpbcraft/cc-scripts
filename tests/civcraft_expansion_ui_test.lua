@@ -17,6 +17,7 @@ colors = {
 	brown = 4096,
 }
 local UI = dofile("games/civcraft/ui.lua")
+dofile("tests/helpers/civcraft_layout_only.lua")(UI)
 local S = dofile("games/civcraft/systems.lua")
 local W = dofile("games/civcraft/world.lua")
 local H = dofile("games/civcraft/hex.lua")
