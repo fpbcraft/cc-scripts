@@ -1,0 +1,354 @@
+[
+  {
+    "id": "F01",
+    "title": "Growth: capacity or housing and amenities?",
+    "context": "D05: Your C is tentative. One capacity governs growth only; B separates housing from happiness and empire-wide resource pressures. Numerical examples are proposals.",
+    "question": "Which growth system should we specify?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — One Settlement Capacity (recommended): e.g. capacity 6 slows growth near population 6; housing/water/service investment raises it. One meter, but no independent happiness economy."
+      },
+      {
+        "key": "B",
+        "text": "B — Separate housing and amenities: a well-housed city can still be unhappy, and a happy city can lack housing. Richer tall/wide and trade decisions; more meters, content and shortage rules."
+      },
+      {
+        "key": "C",
+        "text": "C — Housing only, explicitly named Housing: preserve the clearest Civ VI growth constraint; defer amenities. Simple and expandable, but fewer happiness/trade pressures."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F02",
+    "title": "Building chains: closer Civ VI structure or compact roles?",
+    "context": "D09: Both designs can use your placed sites. B groups several tiered buildings under districts with maintenance and advanced power needs; C uses shorter Minecraft chains and selected operating requirements.",
+    "question": "What should a mature specialized site contain?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — Compact roles (recommended): e.g. Works with basic Workshop, a processing branch, and an Assembly upgrade; SU for powered machines and a few material recipes. Clear jobs; less tier breadth."
+      },
+      {
+        "key": "B",
+        "text": "B — Closer Civ VI families: several tiers per specialty, broader gold maintenance and advanced SU requirements. More long-term investment; more operating budgets and mandatory-looking steps."
+      },
+      {
+        "key": "C",
+        "text": "C — Hybrid: two or three tiers per site, with one mutually exclusive branch. More choice than a linear ladder; added branching and replacement rules."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F03",
+    "title": "Civics: independent progress or milestone doctrines?",
+    "context": "D11: A full second tree supplies a separate strategic clock; a doctrine track can offer empire policies without another yield or long tree. Both can support upkeep and Builder/Trader policy choices.",
+    "question": "Which organization system should we design?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — Milestone doctrines (recommended): a small set of empire policies unlocked by broad achievements, not science alone. Fewer meters; fewer ways to invest deliberately in faster doctrine progress."
+      },
+      {
+        "key": "B",
+        "text": "B — Compact independent civics: e.g. 12–18 Minecraft-themed charters using a culture-like yield. Choose science versus organization investment; adds a yield, producers and another research screen."
+      },
+      {
+        "key": "C",
+        "text": "C — Fuller Civ VI-like civic tree and policy slots: deepest political planning; largest content and AI burden, even without diplomatic victory."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F04",
+    "title": "Bankruptcy: how close should we copy Civ VI?",
+    "context": "D24: CivCraft has gold, unit upkeep and forced removal. It lacks a complete policy/amenity/shortage ecosystem. Civ VI also permits forced disbanding; choosing B does not inherently protect veterans.",
+    "question": "Which budget and insolvency behavior do you mean by B?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — Civ VI-inspired budgets with agency (recommended): visible forecasts, doctrine maintenance reductions, a bounded warning/retirement window, then a deterministic fallback. Preserves choice; an intentional adaptation."
+      },
+      {
+        "key": "B",
+        "text": "B — Closest practical Civ VI bankruptcy: maintenance policies and escalating shortage penalties, including forced unit losses. Familiar pressure; still punitive, and amenity penalties require an equivalent system."
+      },
+      {
+        "key": "C",
+        "text": "C — Keep current shortage behavior but add forecasts and maintenance doctrines. Smallest implementation; recent valuable units can still disappear under the current removal order."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F05",
+    "title": "Industrial victory: retain or remove?",
+    "context": "D27: You lean toward removal. A complementary network can reward production, logistics and repair independently of science; if it mostly repeats End preparation, it should not be a separate victory.",
+    "question": "What should happen to Industrial victory in the next version?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — Remove it for now: industry supports Conquest and End Expedition; Score is the deadline fallback. Clearest scope, but only two active victory races remain."
+      },
+      {
+        "key": "B",
+        "text": "B — Prototype a distinct network victory (conditional recommendation): specialize, transport and sustain public deliveries under disruption. A different peaceful route; extra balance work and possible overlap with End."
+      },
+      {
+        "key": "C",
+        "text": "C — Make it an optional experimental victory, disabled by default. Preserves a testbed; splits balance and testing between rulesets."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F06",
+    "title": "Healing: confirm the change from your earlier rule",
+    "context": "D23: Earlier you explicitly wanted passive healing only at home and healers abroad. Your new B allows ordinary recovery abroad as Civ VI does. This is a real revision, not merely a thematic choice.",
+    "question": "Which healing rule is now intended?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — Use your latest B: ordinary rest heals abroad at lower territory-dependent rates; healers improve recovery. More forgiving expeditions, but support is less essential."
+      },
+      {
+        "key": "B",
+        "text": "B — Retain your earlier H1: ordinary rest heals only in owned territory; healers can heal abroad. Strong logistics identity; unsupported expeditions cannot recover."
+      },
+      {
+        "key": "C",
+        "text": "C — Neutral camps only: ordinary healing at home or established camps; healers work elsewhere. Additional strategic footholds, but more rules and targets."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F07",
+    "title": "Builders and Traders without excessive orders",
+    "context": "D04 and D16 select actual civilian units; D20 now selects Civ VI-like grouping. These pieces need useful decisions without recreating the unit clutter you dislike.",
+    "question": "How should routine civilian work be controlled?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — Queued Builder tasks and autonomous repeating Trader routes (recommended): choose improvements and destinations; units execute movement. Strategic choices remain; automation must stop safely when threatened."
+      },
+      {
+        "key": "B",
+        "text": "B — Mostly manual orders: direct each Builder move and periodically renew trade routes. Maximum control; more repeated interaction and AI work."
+      },
+      {
+        "key": "C",
+        "text": "C — Strong automation: assign a city development priority and preferred trade partners. Lowest order load; fewer individual land-use choices."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F08",
+    "title": "Focus slots and placed sites: use one limit",
+    "context": "D01–03 select a few visible sites, limited city focuses and simple geographic bonuses. Counting sites and focuses separately would unnecessarily restrict development.",
+    "question": "How should specialization slots relate to map sites?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — One slot equals one specialty site (recommended): basic buildings and improvements use no slot; growth opens a small additional allowance. One understandable limit; switching needs a redevelopment cost."
+      },
+      {
+        "key": "B",
+        "text": "B — Fixed specialty allowance per city: one or two sites regardless of population. Strong permanent roles; growth adds fewer strategic options."
+      },
+      {
+        "key": "C",
+        "text": "C — Focus slots are bonus assignments, not construction limits: sites remain buildable, selected focuses make them efficient. Flexible, but cities may still converge on building everything."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F09",
+    "title": "Settler population cost versus P1 prices",
+    "context": "D06 B adds population loss to the already more expensive P1 Settler. Capacity, Builder investment and growth can compound that penalty.",
+    "question": "How should we integrate population-consuming Settlers?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — Charge one population, with a dedicated price/growth recalibration (recommended). Clear expansion trade-off; P1 Settler numbers become a starting test rather than a fixed final price."
+      },
+      {
+        "key": "B",
+        "text": "B — Charge one population and initially retain exact P1 prices. Clean ablation; greater risk of slow or punitive expansion."
+      },
+      {
+        "key": "C",
+        "text": "C — Compare both candidates before selecting a default. Better evidence; leaves the new opening specification provisional for longer."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F10",
+    "title": "Builder improvements versus limited raiding",
+    "context": "D04 adds improvements; D22 currently limits raiding to important sites and transport. If farms and mines are immune, Builder investments have different military exposure from Civ VI.",
+    "question": "Which improvements should be pillageable?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — Specialty sites, routes and strategic-resource improvements (recommended): meaningful industrial and military targets, bounded repair burden; ordinary food tiles are protected."
+      },
+      {
+        "key": "B",
+        "text": "B — All worked improvements as in broader Civ VI-style pillaging: more tactical targets and raider value; more repair work and snowball risk."
+      },
+      {
+        "key": "C",
+        "text": "C — Only sites and routes: simplest military interface; individual mines and farms remain safe even when occupied."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F11",
+    "title": "Unit roster: define the middle ground",
+    "context": "D17 seeks Civ-like roles with fewer definitions; D18 upgrades and D19 one formation tier should prevent repeated recruitment from filling the map.",
+    "question": "Which roster scope should guide the next content proposal?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — Core land roles plus compact navy (recommended): melee, ranged, mobile, anti-mobile and siege, with milestone upgrades and a small support roster. Clear counters; some roles need map-specific justification."
+      },
+      {
+        "key": "B",
+        "text": "B — Same core plus a minimal late airship layer: one strike role and one defense answer. More late-game variety; adds range, basing and interception rules."
+      },
+      {
+        "key": "C",
+        "text": "C — Consolidate the current roster first, then identify gaps through play. Lower redesign risk; may preserve weak role coverage longer."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F12",
+    "title": "Wonder roster: between a few and a Civ-sized ecosystem",
+    "context": "D10 asks for a middle ground. A fixed count alone cannot ensure distinct strategies, and wonders must not become mandatory victory prerequisites.",
+    "question": "What initial scale should the wonder proposal target?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — About 12–16 distinct wonders across six Ages (recommended): several strategic roles and geography conditions; each needs a viable non-wonder alternative."
+      },
+      {
+        "key": "B",
+        "text": "B — About 18–24: more contested build choices; substantially more unique effects and AI valuations."
+      },
+      {
+        "key": "C",
+        "text": "C — First redesign the existing six, then add wonders only where a specific strategic gap remains. Tightest scope; fewer simultaneous wonder races."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F13",
+    "title": "SU: where is mechanical capacity shared?",
+    "context": "D38 uses Create Stress Units. SU measures capacity and impact, not a stored fuel. Real shafts transmit rotation; railways should not silently transmit torque.",
+    "question": "What should be the boundary of a CivCraft kinetic network?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — Per-city SU pool (recommended): local generators supply local machines, with no shaft routing. Strong city identity and low complexity; explicitly abstracts physical connections."
+      },
+      {
+        "key": "B",
+        "text": "B — Per connected Works-site network: share only through explicit mechanical links. More faithful placement and raiding; extra connection rules and path checks."
+      },
+      {
+        "key": "C",
+        "text": "C — Per-city pool plus transportable fuel/materials: generation stays local; trade supports remote steam plants. Rich interdependence; more resource and route dependencies."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F14",
+    "title": "SU overload and machine operating choices",
+    "context": "Actual Create stops an overstressed network. A strategy-game adaptation could instead allocate capacity by player priority. Neither should subtract SU permanently each round.",
+    "question": "What should happen when machine impact exceeds capacity?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — Player priority/activation list (recommended): lower-priority powered operations pause; basics continue. Readable choices, but deliberately differs from full-network Create stalling."
+      },
+      {
+        "key": "B",
+        "text": "B — Create-like network stall: all kinetic machinery on that network stops until capacity or load is corrected. Faithful and consequential; a raid or new machine can cause a sharp cascade."
+      },
+      {
+        "key": "C",
+        "text": "C — Block voluntary overloading, but stall after damage: construction warns or requires spare capacity; raids can still interrupt the network. Fewer accidental mistakes; extra exception rules."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F15",
+    "title": "250 turns: deadline or intended finish?",
+    "context": "D33 proposes 250 rather than 180 rounds. Increasing a deadline alone does not slow research, alter travel time or ensure eras are worth playing.",
+    "question": "What pacing target should simulations and playtests use?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — 250-round deadline, most competitive wins targeted around rounds 180–230 (recommended starting hypothesis). Room for recovery and contests; requires retiming and measured playtests."
+      },
+      {
+        "key": "B",
+        "text": "B — A typical game should last around 250 rounds, with a later deadline. Longer strategic arc; more human and ComputerCraft turn workload."
+      },
+      {
+        "key": "C",
+        "text": "C — Offer 180-round Quick and 250-round Standard, calibrated separately. More player choice; larger test matrix and separate travel/economy tuning."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  },
+  {
+    "id": "F16",
+    "title": "Resource scarcity and viable strategies",
+    "context": "D15 selects Civ VI-like stockpiles and consumption, with Minecraft materials. Upgrades, SU fuel and trade can amplify bad resource starts; viability across factions needs alternative access.",
+    "question": "How should a player without a key local resource remain competitive?",
+    "options": [
+      {
+        "key": "A",
+        "text": "A — Costly access alternatives (recommended): imports, village contracts and selected inferior substitutes. Scarcity matters without hard exclusion; fallback prices need testing."
+      },
+      {
+        "key": "B",
+        "text": "B — Hard local/import dependence: fight, settle or negotiate for the resource. Strong geography and diplomacy; particular starts or hostile opponents can shut out a unit family."
+      },
+      {
+        "key": "C",
+        "text": "C — Guarantee access to essential early inputs near every start; scarce advanced resources remain contested. Fairer openings; less early geographic asymmetry."
+      }
+    ],
+    "prior": null,
+    "recommendation": null
+  }
+]
