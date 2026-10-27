@@ -30,26 +30,9 @@ jobs:
         env:
           SHARD: ${{ matrix.shard }}
           SHARDS: 9
-          CIVCRAFT_CONTROLS_SHARD: ${{ matrix.shard }}
-          CIVCRAFT_CONTROLS_SHARDS: 9
         run: |
           set -euo pipefail
-          index=0
-          count=0
-          for test in tests/*_test.lua; do
-            # The expensive controls test covers 18 layouts. Run two layouts per
-            # shard rather than forcing all 18 to run in one long-lived process.
-            if [[ "$test" == "tests/civcraft_controls_test.lua" ]] || (( index % SHARDS == SHARD )); then
-              echo "Running $test (shard $SHARD of $SHARDS)"
-              lua5.3 "$test"
-              count=$((count + 1))
-            fi
-            index=$((index + 1))
-          done
-          if (( count == 0 )); then
-            echo "No regression tests assigned to shard $SHARD"
-            exit 1
-          fi
+          python3 scripts/ci_lua_tests.py --shard "$SHARD" --shards "$SHARDS"
 
   # Keep the existing required check name while ensuring every shard passes.
   test:
