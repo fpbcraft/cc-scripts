@@ -9,7 +9,7 @@ local args = { ... }
 local Sim = require("sim")
 local UI = require("ui")
 local Display = require("lib.fpb.display")
-local protocol = "fpb.wormfront.v2"
+local protocol = "fpb.wormfront.v3"
 local role = args[1] or "local"
 if role == "--test-api" then
 	return { UI = UI, Sim = Sim }
@@ -100,13 +100,29 @@ local function send(id, kind, extra)
 end
 
 local sequence = 0
+local terrainAcknowledged = {}
+local broadcastDirty = false
 local function publish()
 	if role ~= "host" or not game then
 		return
 	end
 	sequence = sequence + 1
+	local withoutTerrain
 	for i = 2, #players do
-		send(players[i], "state", { game = game, count = #players, seq = sequence })
+		local id = players[i]
+		local state = game
+		if terrainAcknowledged[id] == game.terrainRevision then
+			if not withoutTerrain then
+				withoutTerrain = {}
+				for key, value in pairs(game) do
+					if key ~= "terrain" then
+						withoutTerrain[key] = value
+					end
+				end
+			end
+			state = withoutTerrain
+		end
+		send(id, "state", { game = state, count = #players, seq = sequence })
 	end
 end
 
@@ -124,7 +140,6 @@ local function redraw()
 	Display.present(monitor, mode)
 end
 
-local lastNetwork = 0
 local function dispatch(action)
 	if action.kind == "exit" then
 		quit = true
@@ -159,7 +174,7 @@ local function dispatch(action)
 	if not ok then
 		status = err
 	elseif role == "host" then
-		publish()
+		broadcastDirty = true
 	end
 end
 
@@ -185,6 +200,7 @@ local function network(sender, data, channel)
 			if index then
 				count = #players
 				send(sender, "welcome", { slot = index, count = count })
+				terrainAcknowledged[sender] = nil
 				publish()
 			else
 				send(sender, "denied")
@@ -193,11 +209,21 @@ local function network(sender, data, channel)
 			if players[game.turn] == sender then
 				local ok = Sim.apply(game, game.turn, data.action)
 				if ok then
-					publish()
+					broadcastDirty = true
 				else
-					send(sender, "state", { game = game, count = #players, seq = sequence })
+					broadcastDirty = true
 				end
 			end
+		elseif data.type == "terrain_ack" then
+			for i = 2, #players do
+				if players[i] == sender and data.revision == game.terrainRevision then
+					terrainAcknowledged[sender] = data.revision
+					break
+				end
+			end
+		elseif data.type == "terrain_request" then
+			terrainAcknowledged[sender] = nil
+			publish()
 		end
 	elseif role == "join" and sender == hostId then
 		if data.type == "welcome" then
@@ -209,8 +235,22 @@ local function network(sender, data, channel)
 			and type(data.seq) == "number"
 		then
 			if data.seq >= newestState then
+				local state = data.game
+				if not state.terrain then
+					if
+						not game
+						or not game.terrain
+						or game.terrainRevision ~= state.terrainRevision
+					then
+						send(hostId, "terrain_request")
+						return
+					end
+					state.terrain = game.terrain
+				else
+					send(hostId, "terrain_ack", { revision = state.terrainRevision })
+				end
 				newestState = data.seq
-				game, count = data.game, data.count
+				game, count = state, data.count
 				status = ""
 			end
 		elseif data.type == "denied" then
@@ -265,11 +305,12 @@ local function simulationStep()
 			end
 		end
 	end
-	if role == "host" and game and current - lastBroadcast >= 0.15 then
+	if role == "host" and game and current - lastBroadcast >= (broadcastDirty and 0.12 or 0.28) then
 		publish()
 		lastBroadcast = current
+		broadcastDirty = false
 	end
-	if current - lastDraw >= 0.11 then
+	if current - lastDraw >= (ui.r.buffered and 0.10 or 0.2) then
 		redraw()
 		lastDraw = current
 	end
@@ -281,20 +322,18 @@ local function run()
 		send(hostId, "join")
 		lastJoin = now()
 	end
-	local timer = os.startTimer(0.1)
+	local timer = os.startTimer(0.05)
 	while not quit do
 		local event, a, b, c = os.pullEvent()
 		if event == "timer" and a == timer then
 			simulationStep()
-			timer = os.startTimer(0.1)
+			timer = os.startTimer(0.05)
 		elseif event == "monitor_touch" and (not monitorName or a == monitorName) then
 			ui:touch(b, c)
-			redraw()
 		elseif event == "mouse_click" and computerMode then
 			local x, y = Display.click(monitor, mode, b, c)
 			if x then
 				ui:touch(x, y)
-				redraw()
 			end
 		elseif event == "mouse_scroll" and mode == "virtual-text" then
 			monitor.pan(0, a * 4)
@@ -313,34 +352,36 @@ local function run()
 				end
 			elseif key == keys.j then
 				dispatch({ kind = "jump" })
-			elseif key == keys.tab then
-				dispatch({ kind = "select" })
+			elseif key == keys.r or key == keys.t then
+				dispatch({ kind = "rope" })
+			elseif key == keys.pageUp then
+				dispatch({ kind = "reel", dir = -1 })
+			elseif key == keys.pageDown then
+				dispatch({ kind = "reel", dir = 1 })
 			elseif key == keys.enter then
 				dispatch({ kind = "pass" })
 			end
-			redraw()
 		elseif event == "key_up" and keys then
 			if a == keys.space and held[a] then
 				dispatch({ kind = "release" })
 			end
 			held[a] = nil
-			redraw()
 		elseif event == "char" then
 			local kind = (a == "w" and "weapon")
-				or (a == "j" and "jump")
 				or (a == "f" and "fire")
 				or (a == "q" and "exit")
 				or nil
 			if kind then
 				dispatch({ kind = kind })
-				redraw()
+			elseif a:match("^[0-9]$") then
+				local id = tonumber(a)
+				dispatch({ kind = "weapon", id = id == 0 and 10 or id })
 			end
 		elseif event == "rednet_message" then
 			network(a, b, c)
-			redraw()
 		elseif event == "monitor_resize" or event == "term_resize" then
 			ui:resize()
-			redraw()
+			lastDraw = 0
 		end
 	end
 end
