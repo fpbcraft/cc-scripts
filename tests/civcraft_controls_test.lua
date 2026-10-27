@@ -104,10 +104,33 @@ for _, y in ipairs({ 2, 3 }) do
 		assert(matches == 2, "Territory side must share both endpoints with its neighbour")
 	end
 end
+-- CI distributes the 18 monitor/mode combinations across independent workers.
+-- Without these variables, running this file locally still checks every layout.
+local shardValue = os.getenv("CIVCRAFT_CONTROLS_SHARD")
+local shardCountValue = os.getenv("CIVCRAFT_CONTROLS_SHARDS")
+local shard = tonumber(shardValue)
+local shardCount = tonumber(shardCountValue)
+local validShard = shard and shardCount
+	and shard >= 0
+	and shard < shardCount
+	and shard % 1 == 0
+	and shardCount % 1 == 0
+assert((not shardValue and not shardCountValue) or validShard, "Invalid controls layout shard")
+local layoutIndex = 0
+local function heightsForShard()
+	local heights = {}
+	for _, height in ipairs({ 38, 52, 67 }) do
+		if not shard or layoutIndex % shardCount == shard then
+			heights[#heights + 1] = height
+		end
+		layoutIndex = layoutIndex + 1
+	end
+	return heights
+end
 local checks = 0
 for _, graphics in ipairs({ false, true }) do
 	for _, cw in ipairs({ 57, 79, 100 }) do
-		for _, ch in ipairs({ 38, 52, 67 }) do
+		for _, ch in ipairs(heightsForShard()) do
 			local calls = {}
 			local ui = UI.new(monitor(cw, ch, graphics), function(action, args)
 				calls[#calls + 1] = { action, args }
