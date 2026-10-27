@@ -3,6 +3,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "15 6 * * *"
+  workflow_dispatch:
 jobs:
   syntax:
     runs-on: ubuntu-latest
@@ -15,32 +18,70 @@ jobs:
         run: |
           find . -type f -name '*.lua' -not -path './.git/*' -print0 | xargs -0 -n1 luac5.3 -p
 
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      run_tests: ${{ steps.impact.outputs.run_tests }}
+      full: ${{ steps.impact.outputs.full }}
+      tests: ${{ steps.impact.outputs.tests }}
+      matrix: ${{ steps.impact.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate Lua impact selector
+        run: python3 -m unittest discover -s scripts -p 'test_ci_lua_select.py' -v
+      - name: Resolve changed files and affected regression tests
+        id: impact
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            python3 scripts/ci_lua_select.py --base "$BASE_SHA" --output "$GITHUB_OUTPUT"
+          else
+            python3 scripts/ci_lua_select.py --full --output "$GITHUB_OUTPUT"
+          fi
+
   regressions:
+    needs: plan
+    if: needs.plan.outputs.run_tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
-      matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
       - name: Install Lua
         run: sudo apt-get update && sudo apt-get install -y lua5.3
-      - name: Run application, library and installer regressions
+      - name: Run selected application, library and installer regressions
         env:
           SHARD: ${{ matrix.shard }}
-          SHARDS: 9
+          SHARDS: ${{ matrix.shards }}
+          SELECTED_TESTS_JSON: ${{ needs.plan.outputs.tests }}
         run: |
           set -euo pipefail
-          python3 scripts/ci_lua_tests.py --shard "$SHARD" --shards "$SHARDS"
+          python3 scripts/ci_lua_tests.py --shard "$SHARD" --shards "$SHARDS" --selected-json "$SELECTED_TESTS_JSON"
 
-  # Keep the existing required check name while ensuring every shard passes.
+  # Keep the existing required check name whether selection runs or skips tests.
   test:
     if: always()
-    needs: [syntax, regressions]
+    needs: [syntax, plan, regressions]
     runs-on: ubuntu-latest
     steps:
-      - name: Verify Lua syntax and all regression shards passed
+      - name: Verify Lua syntax, selector and affected regressions passed
+        env:
+          SYNTAX_STATUS: ${{ needs.syntax.result }}
+          PLAN_STATUS: ${{ needs.plan.result }}
+          REGRESSION_STATUS: ${{ needs.regressions.result }}
+          RUN_TESTS: ${{ needs.plan.outputs.run_tests }}
         run: |
-          test "${{ needs.syntax.result }}" = "success"
-          test "${{ needs.regressions.result }}" = "success"
+          test "$SYNTAX_STATUS" = "success"
+          test "$PLAN_STATUS" = "success"
+          if [[ "$RUN_TESTS" == "true" ]]; then
+            test "$REGRESSION_STATUS" = "success"
+          else
+            test "$REGRESSION_STATUS" = "skipped"
+          fi
