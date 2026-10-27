@@ -217,9 +217,10 @@ def plan(root, selected, reasons, full_reason, max_shards):
         "reason": full_reason or "Dependency impact selection",
         "tests": sorted("tests/" + name for name in selected),
         "shards": count,
+        # The skipped regression job still receives a valid matrix shape.
         "matrix": {"include": [
             {"shard": index, "shards": count} for index in range(count)
-        ]},
+        ] if count else [{"shard": 0, "shards": 1}]},
         "details": {name: sorted(reasons[name]) for name in sorted(reasons)},
     }
 
