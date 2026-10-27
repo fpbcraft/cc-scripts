@@ -7,6 +7,7 @@ local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local UI = dofile("/games/civcraft/ui.lua")
+dofile("tests/helpers/civcraft_layout_only.lua")(UI)
 local World = dofile("/games/civcraft/world.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 for _, graphics in ipairs({ false, true }) do

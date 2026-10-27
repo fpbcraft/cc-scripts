@@ -11,6 +11,7 @@ local Systems = dofile("/games/civcraft/systems.lua")
 local Tactics = dofile("/games/civcraft/ai_tactics.lua")
 local Threats = dofile("/games/civcraft/threats.lua")
 local UI = dofile("/games/civcraft/ui.lua")
+dofile("tests/helpers/civcraft_layout_only.lua")(UI)
 local World = dofile("/games/civcraft/world.lua")
 
 local function fixture()

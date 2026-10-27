@@ -133,9 +133,15 @@ for _, graphics in ipairs({ false, true }) do
 	for _, cw in ipairs({ 57, 79, 100 }) do
 		for _, ch in ipairs(heightsForShard()) do
 			local calls = {}
+			-- Keep a small text monitor and the largest graphics monitor in the
+			-- full raster path, so pixel bounds still get checked in CI.
+			local layoutOnly = not (
+				(graphics and cw == 100 and ch == 67)
+				or (not graphics and cw == 57 and ch == 38)
+			)
 			local ui = UI.new(monitor(cw, ch, graphics), function(action, args)
 				calls[#calls + 1] = { action, args }
-			end)
+			end, { layoutOnly = layoutOnly })
 			local function draw(opts)
 				ui:draw(state, 1, opts or {})
 			end

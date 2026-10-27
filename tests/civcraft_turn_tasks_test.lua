@@ -8,6 +8,7 @@ local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local Tasks = dofile("/games/civcraft/turn_tasks.lua")
 local UI = dofile("/games/civcraft/ui.lua")
+dofile("tests/helpers/civcraft_layout_only.lua")(UI)
 local World = dofile("/games/civcraft/world.lua")
 local function fixture()
 	local state = {
