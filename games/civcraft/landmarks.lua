@@ -141,6 +141,11 @@ function L.complete(state, city, project, systems)
 	if not L.canPlace(state, city, project.id, project.x, project.y, systems) then
 		return false
 	end
+	local plot = key(project.x, project.y)
+	if state.world.improvements and state.world.improvements[plot] then
+		state.world.improvements[plot] = nil
+		state.improvementRevision = (state.improvementRevision or 0) + 1
+	end
 	state.world.landmarks = state.world.landmarks or {}
 	state.world.landmarks[key(project.x, project.y)] =
 		{ kind = project.id, cityId = city.id, natural = false }

@@ -1,10 +1,10 @@
 # M2 land development — implementation record
 
-M2 is in progress. M2a delivers Settlement Capacity and population-consuming
-Settlers in the selectable **Development V2** (`balance2`) profile. New campaigns
-still default to Redesign V1 while charged Builders and their complete player/AI
-workflow are implemented. Original, P1 and Redesign V1 retain their economies.
-This is a mechanics prototype, not a balance-calibration result.
+M2 implements Settlement Capacity, population-consuming Settlers and charged
+Builder tile development in **Landwork V3** (`balance3`), the new-game default.
+Original, P1, Redesign V1 and the interim Development V2 (`balance2`) saves retain
+their economies. This record separates mechanics verification from the opening
+balance calibration that remains paused by the user's instruction.
 
 ## M2a rules
 
@@ -65,21 +65,17 @@ scripted text-terminal input flows; physical monitor/rednet remains unverified.
 Selene reports
 zero errors/warnings for changed rules/UI and the new test.
 
-## Remaining M2 work
+## Remaining release and calibration work
 
-- Charged Builder, initial improvements and the Farm/Quarry double-yield audit.
-- Queued work with threat interruption, capture and invalidated routes.
-- Tile yield/charge previews and operational Builder AI.
-- Native interactive development, save/observer/network integration and a
-  campaign version ready to become the default.
 - Joint opening calibration remains deferred while balance studies are paused.
+- Physical-monitor and target-server observations remain M11 release work.
+- Broader native latency/menu-load observations from M0 remain open.
 
 ## M2b: charged land development
 
 Landwork V3 (`balance3`) adds Builders and inherits M2a's capacity and Settler
 rules. It is a separate selectable profile so saved M2a campaigns retain their
-city Farm/Quarry economy. Redesign V1 remains the default pending final M2
-integration checks.
+city Farm/Quarry economy. Landwork V3 becomes the default with this delivery; earlier profiles remain selectable.
 
 A Builder costs 22 industry, moves two, has three charges and no upkeep. It
 spends one charge and remaining movement to improve its current tile; its final
@@ -105,7 +101,9 @@ charge count before confirmation. Work tasks persist and spend ordinary
 movement through shared actions. Each task rechecks terrain, prerequisites,
 ownership, occupancy and route eligibility. Visible enemy units within at least
 two tiles (or their ranged reach), and enemy cities within two, pause work.
-Hidden enemy changes do not reveal themselves through safety checks. Manual
+Hidden enemy changes do not reveal themselves through safety checks. A wonder
+project reserves its target against new Builder work. Wonder completion and city
+founding replace existing tile improvements rather than duplicating their yields. Manual
 movement replaces work; paused work offers resume/cancel. Appended tasks cannot
 exceed remaining charges and duplicate queued tile targets are rejected.
 
@@ -119,5 +117,15 @@ modules. New shared-rule proposal actions use observer knowledge.
 
 Focused Lua and native CraftOS rule/UI/save checks pass. The native branch uses
 the real renderer and inspector button coordinates to plan and confirm a field.
-Full regression, Landwork campaign-session and cross-runtime integration checks
-are in progress; this paragraph does not claim M2 completion or calibrated prices.
+The default Landwork host/AI and hotseat/war sessions pass. A controlled Builder
+action, round processing and restored observations match between Lua 5.3 and
+LuaJIT; all 42 Python laboratory contracts pass. The full Lua batch passed 61
+scripts and timed out its graphics-heavy controls script at 240 seconds; that
+script passed when rerun alone. This is not a calibrated-price claim.
+
+The native three-computer normal and reversed-race campaigns pass with the new default.
+Its first run reached successful gameplay assertions but crashed in CraftOS's
+native modem receive handler during teardown. The test now keeps clients' Lua
+states alive until the host has processed their acknowledgements, exited and
+written its result, then lets the host shut them down. No production networking
+rule was changed for that emulator teardown repair. The published installer follow-up is still pending in this record.

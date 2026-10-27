@@ -56,6 +56,14 @@ local function fixture()
 	W.reveal(state, H, S)
 	return state, state.players[1], state.units[1], state.cities[1]
 end
+for _, version in ipairs({ "baseline", "p1", "balance1", "balance2" }) do
+	local old, player, builder, city = fixture()
+	old.contentRules = version
+	S.migrate(old)
+	assert(not S.canRecruit(player, "builder", old, H, city))
+	assert(S.canBuild(player, city, "farm", old) and S.canBuild(player, city, "mine", old))
+	assert(not Works.complete(old, player, builder, "farm", S) and builder.charges == 3)
+end
 local state, p, u, c = fixture()
 assert(S.canRecruit(p, "builder", state, H, c))
 assert(not S.canBuild(p, c, "farm", state) and not S.canBuild(p, c, "mine", state))
@@ -87,6 +95,16 @@ assert(Works.canPlace(state, p, "quarry", 3, 4, S))
 state.world.tiles["4:5"] = "forest"
 assert(Works.canPlace(state, p, "lumber", 4, 5, S))
 assert(not Works.canPlace(state, p, "farm", 4, 5, S))
+-- Wonder projects reserve land, and completion replaces prior tile work.
+local Landmarks = dofile("/games/civcraft/landmarks.lua")
+state, p, u, c = fixture()
+c.project = { kind = "wonder", id = "greattree", x = 5, y = 4, progress = 0 }
+assert(not Works.canPlace(state, p, "farm", 5, 4, S))
+c.project = nil
+p.techs.husbandry = true
+state.world.improvements = { ["5:4"] = { kind = "farm" } }
+assert(Landmarks.complete(state, c, { id = "greattree", x = 5, y = 4 }, S))
+assert(not state.world.improvements["5:4"] and not Works.canPlace(state, p, "farm", 5, 4, S))
 -- Last charge removes the unit without orphaning its escort.
 state, p, u, c = fixture()
 u.charges = 1

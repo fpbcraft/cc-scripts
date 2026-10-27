@@ -8,6 +8,7 @@ local includeWar = false
 local touchMonitor = false
 local includeHost = false
 local includeDevelopment = false
+local developmentProfile = "balance2"
 local includeConversation = false
 local includeHistory = false
 local includeDifficulty = false
@@ -19,6 +20,10 @@ local includeRoutes = false
 local routeRecord
 local routeResumed = false
 for _, argument in ipairs({ ... }) do
+	if argument == "--landwork" then
+		includeDevelopment = true
+		developmentProfile = "balance3"
+	end
 	if argument == "--development" then
 		includeDevelopment = true
 	end
@@ -286,7 +291,7 @@ dofile = function(path)
 				includeDevelopment
 				and stage == 1
 				and state.phase == "lobby"
-				and state.contentRules ~= "balance2"
+				and state.contentRules ~= developmentProfile
 			then
 				self:command("contentRules")
 				os.queueEvent("term_resize")
@@ -445,7 +450,9 @@ dofile = function(path)
 				local labels = {
 					"TECH TREE",
 					"agriculture",
-					"CODEX WHEAT FARM",
+					dofile("/games/civcraft/content_rules.lua").hasBuilders(state)
+							and "CODEX WHEAT FIELD"
+						or "CODEX WHEAT FARM",
 					"CLOSE",
 					"TECH TREE",
 					"RESEARCH",
@@ -701,7 +708,10 @@ if includeWar then
 	)
 end
 if includeDevelopment then
-	assert(state.contentRules == "balance2", "Development profile must survive native save/reload")
+	assert(
+		state.contentRules == developmentProfile,
+		"Development profile must survive native save/reload"
+	)
 end
 if includeCampaign then
 	assert(

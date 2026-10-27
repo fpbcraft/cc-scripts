@@ -304,24 +304,14 @@ local function unit(id, name, tech, production, move, attack, defense, range, ex
 	end
 	C.units[id] = u
 end
-unit(
-	"builder",
-	"Builder",
-	nil,
-	22,
-	2,
-	0,
-	1,
-	0,
-	{
-		tileDevelopment = true,
-		builder = true,
-		charges = 3,
-		upkeep = 0,
-		vision = 2,
-		ability = "Spend three charges on owned tile improvements; disappears after the final charge",
-	}
-)
+unit("builder", "Builder", nil, 22, 2, 0, 1, 0, {
+	tileDevelopment = true,
+	builder = true,
+	charges = 3,
+	upkeep = 0,
+	vision = 2,
+	ability = "Spend three charges on owned tile improvements; disappears after the final charge",
+})
 unit("warrior", "Stone Guard", nil, 13, 2, 2, 2, 1, { ability = "Inexpensive early defense" })
 unit(
 	"settler",

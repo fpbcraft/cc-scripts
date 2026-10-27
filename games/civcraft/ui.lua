@@ -245,13 +245,17 @@ function UI:armPlacement(kind, item, id)
 		end
 	end
 	if kind == "work" then
-		for _, city in ipairs(self.state.cities or {}) do
-			if city.owner == self.playerID then
-				for _, tile in ipairs(Systems.workable(self.state, city)) do
-					local preview = Works.preview(self.state, p, item, id, tile.x, tile.y, Systems)
-					if preview then
-						self.reachable[#self.reachable + 1] =
-							{ x = tile.x, y = tile.y, cost = 1, preview = preview }
+		local reserved = self.appendWork and item.workQueue and #item.workQueue.tasks or 0
+		if (item.charges or 0) > reserved then
+			for _, city in ipairs(self.state.cities or {}) do
+				if city.owner == self.playerID then
+					for _, tile in ipairs(Systems.workable(self.state, city)) do
+						local preview =
+							Works.preview(self.state, p, item, id, tile.x, tile.y, Systems)
+						if preview then
+							self.reachable[#self.reachable + 1] =
+								{ x = tile.x, y = tile.y, cost = 1, preview = preview }
+						end
 					end
 				end
 			end
@@ -292,6 +296,10 @@ function UI:tile(x, y)
 					player = self.playerID,
 				}
 				if t.preview then
+					t.preview.reservedCharges = self.placement.append
+							and self.placement.item.workQueue
+							and #self.placement.item.workQueue.tasks
+						or 0
 					local v = t.preview
 					self:feedback(
 						"FOOD "
@@ -307,6 +315,13 @@ function UI:tile(x, y)
 							.. " -> "
 							.. v.chargesAfter
 							.. ". CONFIRM TO QUEUE"
+					)
+				elseif
+					self.placement.kind == "wonder"
+					and (self.state.world.improvements or {})[World.key(x, y)]
+				then
+					self:feedback(
+						"WONDER COMPLETION REPLACES THIS TILE IMPROVEMENT; CONFIRM TO QUEUE"
 					)
 				else
 					self:feedback("CLICK HEX AGAIN OR CONFIRM TO BUILD")
