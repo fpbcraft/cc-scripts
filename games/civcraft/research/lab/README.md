@@ -5,6 +5,9 @@ now follows the accepted [ADRs](../../docs/adr/README.md) and
 [balance roadmap](../../docs/ROADMAP-balance.md). M0 fixes the historical hostile
 captured-Settler crash; its [current verification](../../docs/M0-BASELINE.md)
 does not retroactively change any historical experiment or source fingerprint.
+The [M1 campaign version](../../docs/M1-CAMPAIGN-SCOPE.md) now implements the
+accepted active-victory scope, deadline and territorial recovery; future
+research must use its declared campaign profile rather than relabel old P1 data.
 
 This initiative follows [the supplied authoritative specification](GOAL_SPECIFICATION.md), SHA-256 `4d5a275d8dec5442b77f5547641920193c1e1a69797262e16b63f90410af60a3`. The user supplied `/Users/fpbrault/Documents/CivCraft_Research_Simulation_ML_Balance_Goal.md`. The specification has been copied here for reproducibility.
 
