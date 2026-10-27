@@ -7,6 +7,7 @@ The exhaustive CivCraft controls suite runs on every shard, with two of its
 18 layouts per shard (the same coverage as before).
 """
 import argparse
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -63,19 +64,33 @@ def main():
     parser.add_argument("--shard", type=int, required=True)
     parser.add_argument("--shards", type=int, default=9)
     parser.add_argument("--list", action="store_true", help="Print assignments only")
+    parser.add_argument("--selected-json", help="JSON list of selected test paths")
     args = parser.parse_args()
     if args.shards < 1 or not 0 <= args.shard < args.shards:
         parser.error("shard must be between 0 and shards - 1")
-    tests = sorted(Path("tests").glob("*_test.lua"))
+    all_tests = sorted(Path("tests").glob("*_test.lua"))
+    if args.selected_json is not None:
+        try:
+            selected = json.loads(args.selected_json)
+        except json.JSONDecodeError as error:
+            parser.error(f"Invalid selected-tests JSON: {error}")
+        if not isinstance(selected, list) or any(not isinstance(t, str) for t in selected):
+            parser.error("Selected tests must be a JSON array of file paths")
+        allowed = {test.as_posix(): test for test in all_tests}
+        if len(set(selected)) != len(selected) or any(name not in allowed for name in selected):
+            parser.error("Selected tests contain duplicate, missing or non-regression paths")
+        tests = [allowed[name] for name in sorted(selected)]
+    else:
+        tests = all_tests
     if not tests:
-        parser.error("no Lua regression tests found")
+        parser.error("no Lua regression tests selected")
     groups, costs = assign(tests, args.shards)
     assigned = groups[args.shard]
     if not assigned:
         parser.error("shard is empty")
     print(
         f"Shard {args.shard}/{args.shards}: {len(assigned)} tests, "
-        f"estimated {costs[args.shard]} s (including controls)",
+        f"estimated {costs[args.shard]} s",
         flush=True,
     )
     if args.list:
