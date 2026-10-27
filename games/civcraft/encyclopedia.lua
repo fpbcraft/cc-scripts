@@ -4,6 +4,7 @@ local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
 local ResearchDetails = dofile("/games/civcraft/research_details.lua")
+local Works = dofile("/games/civcraft/tile_improvements.lua")
 local Projects = dofile("/games/civcraft/civilian_projects.lua")
 local E = {}
 local mechanics = {
@@ -185,7 +186,8 @@ function E.entries(category, context)
 	if category == "mechanics" then
 		return mechanics
 	end
-	local source = category == "wonders" and Systems.wonders
+	local source = category == "improvements" and Works.definitions
+		or category == "wonders" and Systems.wonders
 		or category == "projects" and Systems.projects
 		or category == "sites" and Systems.naturalWonders
 		or category == "units" and Systems.units
@@ -269,6 +271,23 @@ function E.describe(category, entry, player, state)
 	end
 	local record = entry.record
 	local lines = {}
+	if category == "improvements" then
+		local placement = entry.id == "farm" and "Fertile open flat land"
+			or entry.id == "quarry" and "Clear hill or stone deposit"
+			or "Woods or jungle; feature retained"
+		return {
+			"Builder charge cost: 1; spends remaining movement.",
+			placement,
+			"Worked tile: +"
+				.. record.food
+				.. " food / +"
+				.. record.industry
+				.. " industry. Oak fields and Iron quarries add one matching yield.",
+			"Requires "
+				.. Systems.techs[record.tech].name
+				.. ". Owned land outside city centers and landmarks. Tile ownership transfers benefits. No yield without a worker.",
+		}
+	end
 	if category == "projects" then
 		return {
 			record.description,
@@ -287,7 +306,7 @@ function E.describe(category, entry, player, state)
 			"Industry cost: " .. Systems.projectCost("wonder", entry.id, player),
 			record.description,
 			"Research: " .. Systems.techs[record.tech].name,
-			"Unique across the world. Choose an empty owned land hex. Benefits follow tile ownership. Capturing a wonder transfers its benefits.",
+			"Unique across the world. Choose an owned land hex outside a city center. Completion replaces any tile improvement. Benefits follow tile ownership. Capturing a wonder transfers its benefits.",
 		}
 	end
 	if category == "units" then
@@ -426,9 +445,26 @@ function E.draw(ui, rect)
 			model.offset = 0
 		end, { selected = model.category == category })
 	end
+	if ContentRules.hasBuilders(ui.state) then
+		r:button(
+			x + math.floor(w / 2) + 1,
+			y + 24,
+			math.floor((w - 6) / 2),
+			10,
+			"TILE WORK",
+			function()
+				model.category = "improvements"
+				model.entry = nil
+				model.offset = 0
+			end,
+			{ selected = model.category == "improvements" }
+		)
+	end
 	local projectRow = ContentRules.usesP1Economy(ui.state) and 11 or 0
 	if projectRow > 0 then
-		r:button(x + 2, y + 24, w - 4, 10, "PROJECTS", function()
+		local projectsWidth = ContentRules.hasBuilders(ui.state) and math.floor((w - 6) / 2)
+			or w - 4
+		r:button(x + 2, y + 24, projectsWidth, 10, "PROJECTS", function()
 			model.category = "projects"
 			model.entry = nil
 			model.offset = 0

@@ -288,12 +288,17 @@ function W.yields(world, x, y, context)
 	end
 	local extraFood, extraIndustry = Works.bonus(world, x, y)
 	local improvement = (world.improvements or {})[key(x, y)]
-	if improvement and not improvement.damaged and context then
-		local city = W.territoryCity(context, Hex, x, y)
+	if
+		improvement
+		and not improvement.damaged
+		and not (world.landmarks or {})[key(x, y)]
+		and context
+	then
 		local owner
 		if world.observedOwners then
 			owner = world.observedOwners[key(x, y)]
 		else
+			local city = W.territoryCity(context, Hex, x, y)
 			owner = city and city.owner
 		end
 		for _, player in ipairs(context.players or {}) do

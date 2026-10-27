@@ -1,6 +1,6 @@
 # CivCraft balance implementation roadmap
 
-Date: 2026-10-27. Mode: implementation. Current position: **M1 delivered; M2 in progress**. This document plans the accepted [38 ADRs](adr/README.md); it
+Date: 2026-10-27. Mode: implementation. Current position: **M2 mechanics delivered; M3 next; balance calibration deferred**. This document plans the accepted [38 ADRs](adr/README.md); it
 does not mark the redesign implemented. All 16 follow-up answers were A.
 
 ## Product and delivery target
@@ -152,20 +152,23 @@ Goal: population, production and Builder work create distinct opening investment
   retain food consumption and avoid an independent amenities meter.
 - [x] Implement population-consuming Settlers with minimum-population validation;
   prevent invalid completions and specify growth/production ordering.
-- [ ] Add Builder charges and a small initial improvement catalog. Audit existing
+- [x] Add Builder charges and a small initial improvement catalog. Audit existing
   Farm/Quarry city bonuses to prevent duplicate yields from the new tile model.
-- [ ] Implement queued work, safe interruption, capture and route invalidation.
-- [ ] Show before/after tile yields, charges and capacity effects before spending.
-- [ ] Adapt settlement and worker AI; compare candidate Settler prices/growth
-  jointly against P1 using matched seeds and explicit Builder investment.
+- [x] Implement queued work, safe interruption, capture and route invalidation.
+- [x] Show before/after tile yields, charges and capacity effects before spending.
+- [x] Adapt settlement and worker AI to population validation and tile development.
+- [ ] Compare candidate Settler prices/growth jointly against P1 using matched
+  seeds and explicit Builder investment. Deferred while balance studies are
+  paused; this is a later calibration gate, not evidence supplied by rule tests.
 
 Done when: a human can choose a competitive development or expansion opening;
 AI uses Builders, and population/charge/yield invariants survive save/load.
 P1 Settler costs are a comparison baseline, not a mandated final result.
 
-M2a implementation: [capacity and Settler transaction record](M2-LAND-DEVELOPMENT.md).
-Development V2 is selectable; Redesign V1 remains the default until the Builder
-slice is ready. The remaining M2 checkboxes are not delivered.
+M2 implementation: [capacity, Settler and charged Builder record](M2-LAND-DEVELOPMENT.md).
+Landwork V3 becomes the new-game default. Earlier profiles retain their semantics.
+Rule, native UI/save, host/hotseat and both three-computer race checks pass; prices
+and competitive opening outcomes remain uncalibrated.
 
 ## M3 — Make cities specialize
 
