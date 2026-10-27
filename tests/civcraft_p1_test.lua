@@ -128,6 +128,10 @@ fake.phase = "game"
 assert(not Rules.configure(fake, 0, { action = "contentRules", version = "baseline" }))
 local desc = E.describe("buildings", { id = "farm", record = S.buildings.farm }, p)
 assert(table.concat(desc, " "):find("Available immediately", 1, true))
+assert(
+	not table.concat(desc, " "):find("+2 food", 1, true),
+	"Unresearched Farm tooltip must show its actual P1 yield"
+)
 if fs and textutils then
 	local Saves = dofile("/games/civcraft/saves.lua")
 	Saves.root = "/p1-save-validation"

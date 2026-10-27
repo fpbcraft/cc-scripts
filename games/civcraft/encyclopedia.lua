@@ -274,6 +274,8 @@ function E.describe(category, entry, player, state)
 			"One of this building per city.",
 		}
 		if entry.id == "farm" and player and player.contentRules == "p1" then
+			lines[2] = (player.techs or {}).agriculture and "+2 food"
+				or "+1 food until Wheat Farming"
 			lines[#lines + 1] = "Available immediately: +1 food. Wheat Farming adds a second food."
 		end
 	else
