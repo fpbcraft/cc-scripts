@@ -2,11 +2,13 @@
 import importlib.util
 import sys
 import unittest
+import tempfile
+from unittest.mock import patch
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools/civcraft_lab'))
 from runtime import Runtime
-from runner import play
+from runner import play, write_run
 from workers import run_bounded
 
 
@@ -16,6 +18,16 @@ def config(backend='luajit21'):
 
 
 class BackendValidationTests(unittest.TestCase):
+    def test_batches_default_to_jit_and_preserve_explicit_reference(self):
+        configs = [config(), config('lua53')]
+        del configs[0]['runtimeBackend']
+        with tempfile.TemporaryDirectory() as directory:
+            with patch('workers.run_bounded', return_value=[]) as run:
+                write_run(configs, Path(directory) / 'result.json')
+        submitted = run.call_args.args[0]
+        self.assertEqual([c['runtimeBackend'] for c in submitted], ['luajit21', 'lua53'])
+        self.assertNotIn('runtimeBackend', configs[0])
+
     def test_unknown_backend_rejected(self):
         result = play(config('unknown'))
         self.assertEqual(result['status'], 'error')

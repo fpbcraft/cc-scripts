@@ -71,6 +71,7 @@ def play(config: dict) -> dict:
 def write_run(configs: list[dict], output: Path, workers: int = 1) -> dict:
     from workers import run_bounded
 
+    configs = [{'runtimeBackend': 'luajit21'} | config for config in configs]
     output.parent.mkdir(parents=True, exist_ok=True)
     manifest = source_manifest()
     started = time.perf_counter()
