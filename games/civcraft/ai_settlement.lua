@@ -46,7 +46,7 @@ function Settlement.value(view, player, x, y, unit)
 		for yy = math.max(1, y - 2), math.min(view.world.height, y + 2) do
 			for xx = math.max(1, x - 3), math.min(view.world.width, x + 3) do
 				if Hex.distance(x, y, xx, yy) == 2 and view.world.tiles[World.key(xx, yy)] then
-					local yields = World.yields(view.world, xx, yy)
+					local yields = World.yields(view.world, xx, yy, view)
 					score = score + (yields.food + yields.industry + yields.science) * future
 				end
 			end
@@ -55,7 +55,7 @@ function Settlement.value(view, player, x, y, unit)
 	for _, point in ipairs(Hex.neighbours(x, y, view)) do
 		local tileKey = World.key(point.x, point.y)
 		if view.world.tiles[tileKey] then
-			local yields = World.yields(view.world, point.x, point.y)
+			local yields = World.yields(view.world, point.x, point.y, view)
 			score = score + yields.food * 0.8 + yields.industry * 0.8 + yields.science
 			local resource = (view.world.resources or {})[tileKey]
 			if resource then

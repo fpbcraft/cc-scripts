@@ -18,6 +18,7 @@ local TurnTasks = dofile("/games/civcraft/turn_tasks.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local World = dofile("/games/civcraft/world.lua")
 local QueuedRoutes = dofile("/games/civcraft/queued_routes.lua")
+local Works = dofile("/games/civcraft/tile_improvements.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
 local UI = {}
@@ -243,7 +244,20 @@ function UI:armPlacement(kind, item, id)
 			p = player
 		end
 	end
-	if kind == "wonder" then
+	if kind == "work" then
+		for _, city in ipairs(self.state.cities or {}) do
+			if city.owner == self.playerID then
+				for _, tile in ipairs(Systems.workable(self.state, city)) do
+					local preview = Works.preview(self.state, p, item, id, tile.x, tile.y, Systems)
+					if preview then
+						self.reachable[#self.reachable + 1] =
+							{ x = tile.x, y = tile.y, cost = 1, preview = preview }
+					end
+				end
+			end
+		end
+		self.placement.append = self.appendWork == true
+	elseif kind == "wonder" then
 		local L = dofile("/games/civcraft/landmarks.lua")
 		for _, tile in ipairs(Systems.workable(self.state, item)) do
 			if L.canPlace(self.state, item, id, tile.x, tile.y, Systems) then
@@ -271,12 +285,32 @@ function UI:tile(x, y)
 			if t.x == x and t.y == y then
 				self.pendingMove = {
 					placement = self.placement,
+					workPreview = t.preview,
 					x = x,
 					y = y,
 					cost = t.cost,
 					player = self.playerID,
 				}
-				self:feedback("CLICK HEX AGAIN OR CONFIRM TO BUILD")
+				if t.preview then
+					local v = t.preview
+					self:feedback(
+						"FOOD "
+							.. v.before.food
+							.. " -> "
+							.. v.after.food
+							.. "; INDUSTRY "
+							.. v.before.industry
+							.. " -> "
+							.. v.after.industry
+							.. "; CHARGES "
+							.. v.chargesBefore
+							.. " -> "
+							.. v.chargesAfter
+							.. ". CONFIRM TO QUEUE"
+					)
+				else
+					self:feedback("CLICK HEX AGAIN OR CONFIRM TO BUILD")
+				end
 				return
 			end
 		end
@@ -1143,7 +1177,17 @@ function UI:confirmMove()
 	if order and order.placement and order.player == self.playerID then
 		local placement = order.placement
 		local item = placement.item
-		if placement.kind == "wonder" then
+		if placement.kind == "work" then
+			self:command("queueWork", {
+				unitID = item.id,
+				x = item.x,
+				y = item.y,
+				kind = placement.id,
+				tileX = order.x,
+				tileY = order.y,
+				append = placement.append,
+			})
+		elseif placement.kind == "wonder" then
 			self:command("queue", {
 				kind = "wonder",
 				id = placement.id,

@@ -4,8 +4,14 @@ local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
 local ResearchDetails = dofile("/games/civcraft/research_details.lua")
+local Projects = dofile("/games/civcraft/civilian_projects.lua")
 local E = {}
 local mechanics = {
+	{
+		id = "builders",
+		name = "BUILDERS AND TILE WORK",
+		text = "Landwork V3 Builders cost 22 industry, have two movement and three charges with no upkeep. Wheat Fields require Wheat Farming and fertile open flat land (+2 food); Quarries require Stone Tools and clear hills or stone (+2 industry); Lumber Camps require Crafting and woods or jungle (+1 industry). Only worked tiles produce yields. Oak fields add one food and Iron quarries add one industry. One successful improvement spends one charge and remaining movement; the final charge removes the Builder. Plan work from its inspector, choose a cyan tile, review yields and charges, then confirm. Append adds tasks up to remaining charges. Queued work pauses on visible threats, lost ownership, occupied or invalid routes. Resume or cancel in the inspector. Manual movement replaces work. Capture preserves charges and clears orders. Harvesting and feature removal are not included. City Farm/Quarry bonuses are retired; Homesteads unlock Tend Crops. Older profiles keep their original rules.",
+	},
 	{
 		id = "turns",
 		name = "TURNS AND VICTORY",
@@ -266,7 +272,7 @@ function E.describe(category, entry, player, state)
 	if category == "projects" then
 		return {
 			record.description,
-			"Requires " .. Systems.label("building", record.building),
+			"Requires " .. Systems.label("building", Projects.building(player, entry.id)),
 			"Runs until changed. Conversion remainders are retained separately for each project. Uses this city's industry instead of construction.",
 		}
 	end

@@ -11,6 +11,7 @@ local Events = dofile("/games/civcraft/events.lua")
 local Generator = dofile("/games/civcraft/worldgen.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local Council = dofile("/games/civcraft/council.lua")
+local Works = dofile("/games/civcraft/tile_improvements.lua")
 local W = {}
 W.sizes = {
 	compact = { 24, 16 },
@@ -229,7 +230,7 @@ function W.expandCity(state, hex, city)
 					end
 				end
 				if adjacent then
-					local yield = W.yields(state.world, x, y)
+					local yield = W.yields(state.world, x, y, state)
 					candidates[#candidates + 1] = {
 						x = x,
 						y = y,
@@ -259,7 +260,7 @@ function W.expandCity(state, hex, city)
 	state.territoryRevision = (state.territoryRevision or 0) + 1
 	return true, tile
 end
-function W.yields(world, x, y)
+function W.yields(world, x, y, context)
 	local food, industry = Biomes.yields(Biomes.tile(world, x, y))
 	local science = 0
 	local deposit = W.deposit(world, x, y)
@@ -285,7 +286,28 @@ function W.yields(world, x, y)
 	if deposit == "redstone" or deposit == "diamond" then
 		science = science + 1
 	end
-	return { food = food, industry = industry, science = science }
+	local extraFood, extraIndustry = Works.bonus(world, x, y)
+	local improvement = (world.improvements or {})[key(x, y)]
+	if improvement and not improvement.damaged and context then
+		local city = W.territoryCity(context, Hex, x, y)
+		local owner
+		if world.observedOwners then
+			owner = world.observedOwners[key(x, y)]
+		else
+			owner = city and city.owner
+		end
+		for _, player in ipairs(context.players or {}) do
+			if player.id == owner then
+				if improvement.kind == "farm" and player.civ == "verdant" then
+					extraFood = extraFood + 1
+				end
+				if improvement.kind == "quarry" and player.civ == "iron" then
+					extraIndustry = extraIndustry + 1
+				end
+			end
+		end
+	end
+	return { food = food + extraFood, industry = industry + extraIndustry, science = science }
 end
 -- Hex territory nearest owner; deterministic tie break by city ID.
 function W.territory(state, hex)
@@ -380,6 +402,8 @@ function W.reveal(state, hex, systems, pendingNotices)
 				tile = copy(world.tiles[tileKey]),
 				geography = copy((world.geography or {})[tileKey]),
 				resource = (world.resources or {})[tileKey] or false,
+				improvement = world.improvements and (copy(world.improvements[tileKey]) or false)
+					or nil,
 				owner = claim and claim.owner or false,
 				round = state.round or 1,
 			}
@@ -567,6 +591,7 @@ function W.forPlayer(state, id, afterSeq)
 			geography = {},
 			resources = {},
 			landmarks = {},
+			improvements = {},
 			rails = {},
 			observedOwners = {},
 			contentVersion = world.contentVersion,
@@ -593,6 +618,11 @@ function W.forPlayer(state, id, afterSeq)
 						view.world.resources[k] = (world.resources or {})[k]
 					elseif record then
 						view.world.resources[k] = record.resource or nil
+					end
+					if visible then
+						view.world.improvements[k] = copy((world.improvements or {})[k])
+					elseif record then
+						view.world.improvements[k] = copy(record.improvement) or nil
 					end
 					view.world.observedOwners[k] = W.observedOwner(state, observer, x, y)
 					view.world.landmarks[k], view.world.rails[k] =

@@ -209,14 +209,14 @@ function C.predict(state, unit, target, systems)
 	end
 	if
 		not ranged
-		and Stacks.settler(state.units, target.x, target.y)
+		and Stacks.civilian(state.units, target.x, target.y)
 		and (
 			Stacks.partner(state, unit) or Stacks.partner(state, Stacks.byID(state, unit.id) or {})
 		)
 	then
 		return nil, "Detach the escort before capturing another settler"
 	end
-	if not city and defender.kind == "settler" and not ranged then
+	if not city and Stacks.isCivilian(defender) and not ranged then
 		return {
 			damage = 0,
 			retaliation = 0,
@@ -225,6 +225,7 @@ function C.predict(state, unit, target, systems)
 			ranged = false,
 			captured = false,
 			capturedSettler = true,
+			capturedCivilianKind = defender.kind == "builder" and "builder" or nil,
 			captureOnly = true,
 			attackerDied = false,
 			defenderDied = false,
@@ -284,8 +285,12 @@ function C.predict(state, unit, target, systems)
 		capturedSettler = not ranged
 				and attackerHP > 0
 				and (captured or not city and targetHP <= 0)
-				and Stacks.settler(state.units, target.x, target.y) ~= nil
+				and Stacks.civilian(state.units, target.x, target.y) ~= nil
 			or false,
+		capturedCivilianKind = (Stacks.civilian(state.units, target.x, target.y) or {}).kind
+					== "builder"
+				and "builder"
+			or nil,
 		ranged = ranged,
 	}
 end
@@ -393,7 +398,7 @@ function C.attack(state, unit, target, systems)
 			city.population = math.max(1, city.population - 1)
 			city.project = nil
 			city.worked = nil
-			if defender and defender.owner == previousOwner and defender.kind ~= "settler" then
+			if defender and defender.owner == previousOwner and not Stacks.isCivilian(defender) then
 				remove(state, defender)
 			end
 			state.territoryRevision = (state.territoryRevision or 0) + 1
@@ -421,7 +426,7 @@ function C.attack(state, unit, target, systems)
 		end
 	end
 	if result.capturedSettler and not result.captureOnly and unit.hp > 0 then
-		local settler = Stacks.settler(state.units, target.x, target.y)
+		local settler = Stacks.civilian(state.units, target.x, target.y)
 		if settler and settler.owner ~= unit.owner then
 			Stacks.capture(state, settler, unit.owner)
 		end
@@ -453,7 +458,8 @@ function C.attack(state, unit, target, systems)
 		Zone.enter(state, unit, systems, Hex)
 	end
 	return true,
-		result.capturedSettler and "Settler captured"
+		result.capturedSettler
+				and (result.capturedCivilianKind == "builder" and "Builder captured" or "Settler captured")
 			or captured and "City captured"
 			or ("Dealt " .. damage .. " HP; received " .. retaliation .. " HP"),
 		result

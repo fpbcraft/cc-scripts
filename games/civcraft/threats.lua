@@ -84,9 +84,9 @@ function Threats.at(map, x, y, unit, excluded)
 	local target = unit
 	if
 		unit
-		and unit.kind == "settler"
+		and Stacks.isCivilian(unit)
 		and protector
-		and protector.kind ~= "settler"
+		and not Stacks.isCivilian(protector)
 		and protector.owner == unit.owner
 	then
 		target = protector

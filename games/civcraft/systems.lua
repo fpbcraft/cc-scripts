@@ -65,7 +65,7 @@ function M.workable(state, city)
 				and Hex.distance(xx, yy, city.x, city.y) <= 3
 				and World.territoryCity(state, Hex, xx, yy) == city
 			then
-				local yield = World.yields(state.world, xx, yy)
+				local yield = World.yields(state.world, xx, yy, state)
 				tiles[#tiles + 1] = { x = xx, y = yy, key = World.key(xx, yy), yield = yield }
 			end
 		end
@@ -404,7 +404,12 @@ function M.canBuild(p, c, id, state)
 end
 function M.canRecruit(p, id, state, hex, city)
 	local u = M.units[id]
-	if not u or u.hostile or (u.tech and not p.techs[u.tech]) then
+	if
+		not u
+		or u.hostile
+		or not ContentRules.available(u, state or p)
+		or (u.tech and not p.techs[u.tech])
+	then
 		return false
 	end
 	if
@@ -575,14 +580,18 @@ function M.centerYields(p, c, state)
 	local food, industry, science = 2 + e.food, 1 + e.industry, 1 + e.science
 	if ContentRules.usesP1Economy(p) then
 		science = science + 1
-		if buildings.farm and not (p.techs or {}).agriculture then
+		if
+			buildings.farm
+			and not ContentRules.hasBuilders(p)
+			and not (p.techs or {}).agriculture
+		then
 			food = food - 1
 		end
 	end
-	if civ == "verdant" and buildings.farm then
+	if civ == "verdant" and buildings.farm and not ContentRules.hasBuilders(p) then
 		food = food + 1
 	end
-	if civ == "iron" and buildings.mine then
+	if civ == "iron" and buildings.mine and not ContentRules.hasBuilders(p) then
 		industry = industry + 1
 	end
 	if civ == "scholar" then
@@ -671,6 +680,9 @@ local function spawn(state, p, c, id, hex)
 	end
 	state.units[#state.units + 1] =
 		{ id = state.nextId, owner = p.id, x = x, y = y, kind = id, moved = true, movesLeft = 0 }
+	if stats.builder then
+		state.units[#state.units].charges = stats.charges
+	end
 	Events.notice(state, "spawn", state.units[#state.units])
 	state.nextId = state.nextId + 1
 	if id == "settler" then
@@ -701,6 +713,9 @@ end
 function M.projectPreview(p, c, id, state, yield)
 	yield = yield or M.yields(p, c, state, Hex, nil, true)
 	return Projects.preview(p, c, yield.industry, M, id)
+end
+function M.tileYields(state, x, y)
+	return World.yields(state.world, x, y, state)
 end
 function M.settlementCapacity(state, city)
 	return Capacity.details(state, city, M.buildings)
@@ -1050,6 +1065,8 @@ function M.aiTurn(state, p, hex)
 		if present and not unit.moved then
 			if unit.kind == "settler" then
 				AI.settle(state, p, unit, M)
+			elseif (M.units[unit.kind] or {}).builder then
+				AI.builder(state, p, unit, M)
 			elseif (M.units[unit.kind] or {}).engineer then
 				AI.engineer(state, p, unit, M)
 			else

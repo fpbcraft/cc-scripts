@@ -24,11 +24,15 @@ local Projects = {
 		},
 	},
 }
+function Projects.building(player, id)
+	return Rules.hasBuilders(player) and id == "tend" and "housing"
+		or (Projects.definitions[id] or {}).building
+end
 function Projects.available(player, city, id)
 	local record = Projects.definitions[id]
 	return Rules.usesP1Economy(player)
 		and record ~= nil
-		and (city.buildings or {})[record.building] == true
+		and (city.buildings or {})[Projects.building(player, id)] == true
 end
 function Projects.preview(player, city, industry, systems, id)
 	local result = { food = 0, science = 0, gold = 0, active = false }

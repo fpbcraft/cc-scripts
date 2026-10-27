@@ -9,6 +9,7 @@ local Villages = dofile("/games/civcraft/villages.lua")
 local World = dofile("/games/civcraft/world.lua")
 local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
+local Works = dofile("/games/civcraft/tile_improvements.lua")
 local I = {}
 local function at(list, x, y)
 	for _, item in ipairs(list or {}) do
@@ -83,8 +84,11 @@ function I.draw(ui, state, player, rect, modal)
 			if ui.selected.kind == "city" then
 				nextKind, nextUnit, caption =
 					"unit", Stacks.at(state.units, city.x, city.y), "SELECT GUARD"
-			elseif unit.kind ~= "settler" then
-				nextKind, nextUnit, caption = "unit", cohabitant, "SELECT SETTLER"
+			elseif not Stacks.isCivilian(unit) then
+				nextKind, nextUnit, caption =
+					"unit",
+					cohabitant,
+					cohabitant.kind == "builder" and "SELECT BUILDER" or "SELECT SETTLER"
 			else
 				nextKind, nextUnit, caption = "city", city, "SELECT CITY"
 			end
@@ -125,7 +129,9 @@ function I.draw(ui, state, player, rect, modal)
 			controlsY,
 			w - 4,
 			11,
-			cohabitant.kind == "settler" and "SELECT SETTLER" or "SELECT GUARD",
+			Stacks.isCivilian(cohabitant)
+					and (cohabitant.kind == "builder" and "SELECT BUILDER" or "SELECT SETTLER")
+				or "SELECT GUARD",
 			function()
 				ui.selected.unitID = cohabitant.id
 				ui.inspectorOffset, ui.unitDetails = 0, false
@@ -625,6 +631,97 @@ function I.draw(ui, state, player, rect, modal)
 				rows[#rows + 1] = { text = line }
 			end
 		end
+		if stats.builder then
+			text("BUILDER CHARGES " .. (unit.charges or 0) .. " / 3", 13)
+			local queue = unit.workQueue
+			if queue then
+				text(
+					"WORK TASKS "
+						.. #queue.tasks
+						.. (queue.paused and " / PAUSED: " .. queue.paused or " / ACTIVE")
+				)
+				for _, task in ipairs(queue.tasks) do
+					text(
+						(Works.definitions[task.kind] or {}).name
+							.. " @ "
+							.. task.x
+							.. ","
+							.. task.y
+					)
+				end
+				rows[#rows + 1] = {
+					buttons = {
+						{
+							label = "CANCEL WORK",
+							run = function()
+								ui:command(
+									"cancelWork",
+									{ unitID = unit.id, x = unit.x, y = unit.y }
+								)
+							end,
+						},
+					},
+				}
+				if queue.paused then
+					rows[#rows + 1] = {
+						buttons = {
+							{
+								label = "RESUME WORK",
+								run = function()
+									ui:command(
+										"resumeWork",
+										{ unitID = unit.id, x = unit.x, y = unit.y }
+									)
+								end,
+							},
+						},
+					}
+				end
+			end
+			rows[#rows + 1] = {
+				buttons = {
+					{
+						label = ui.appendWork and "WORK MODE: APPEND" or "WORK MODE: REPLACE",
+						run = function()
+							ui.appendWork = not ui.appendWork
+						end,
+					},
+				},
+			}
+			for _, kind in ipairs(Works.order) do
+				local definition = Works.definitions[kind]
+				if player.techs[definition.tech] then
+					rows[#rows + 1] = {
+						buttons = {
+							{
+								label = "PLAN " .. definition.name,
+								run = function()
+									ui:armPlacement("work", unit, kind)
+								end,
+							},
+						},
+					}
+				end
+			end
+			local preview = ui.pendingMove and ui.pendingMove.workPreview
+			if preview then
+				text("WORK PREVIEW: " .. Works.definitions[preview.kind].name, 13)
+				text("CHARGES " .. preview.chargesBefore .. " -> " .. preview.chargesAfter)
+				text(
+					"FOOD "
+						.. preview.before.food
+						.. " -> "
+						.. preview.after.food
+						.. " / INDUSTRY "
+						.. preview.before.industry
+						.. " -> "
+						.. preview.after.industry
+				)
+				text(
+					"Only worked tiles produce yields. Route pauses on visible threats. Confirm queues work."
+				)
+			end
+		end
 		if stats.engineer then
 			rows[#rows + 1] = {
 				buttons = {
@@ -765,7 +862,7 @@ function I.draw(ui, state, player, rect, modal)
 				or Biomes.label(Hex.tile(ui.selected.x, ui.selected.y, state))
 		)
 		if known ~= "hidden" then
-			local yields = World.yields(state.world, ui.selected.x, ui.selected.y)
+			local yields = World.yields(state.world, ui.selected.x, ui.selected.y, state)
 			rows[#rows + 1] = { yields = yields }
 			text(World.deposit(state.world, ui.selected.x, ui.selected.y) or "NO DEPOSIT")
 		end
@@ -782,6 +879,15 @@ function I.draw(ui, state, player, rect, modal)
 						or "Benefits follow ownership of this tile."
 				)
 			end
+		end
+		local improvement = (state.world.improvements or {})[World.key(ui.selected.x, ui.selected.y)]
+		if improvement then
+			text(
+				"TILE WORK: "
+					.. (Works.definitions[improvement.kind] or {}).name
+					.. (improvement.damaged and " / DAMAGED" or ""),
+				13
+			)
 		end
 		if rail then
 			text("RAILWAY: 1/4 move between owned rail hexes.", 13)

@@ -103,6 +103,7 @@ local function emergency(view, player, cities)
 					and Diplomacy.canAttack(view, player.id, unit.owner)
 					and not unit.villageGuard
 					and unit.kind ~= "settler"
+					and unit.kind ~= "builder"
 					and Hex.distance(city.x, city.y, unit.x, unit.y) <= 3
 				then
 					return "defendCapital"
