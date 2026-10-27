@@ -4,8 +4,9 @@ on:
     branches: [main]
   pull_request:
 jobs:
-  test:
+  syntax:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Install Lua
@@ -13,9 +14,50 @@ jobs:
       - name: Syntax check all Lua files
         run: |
           find . -type f -name '*.lua' -not -path './.git/*' -print0 | xargs -0 -n1 luac5.3 -p
-      - name: Run all application, library and installer regressions
+
+  regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua
+        run: sudo apt-get update && sudo apt-get install -y lua5.3
+      - name: Run application, library and installer regressions
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: 9
+          CIVCRAFT_CONTROLS_SHARD: ${{ matrix.shard }}
+          CIVCRAFT_CONTROLS_SHARDS: 9
         run: |
+          set -euo pipefail
+          index=0
+          count=0
           for test in tests/*_test.lua; do
-            echo "Running $test"
-            lua5.3 "$test"
+            # The expensive controls test covers 18 layouts. Run two layouts per
+            # shard rather than forcing all 18 to run in one long-lived process.
+            if [[ "$test" == "tests/civcraft_controls_test.lua" ]] || (( index % SHARDS == SHARD )); then
+              echo "Running $test (shard $SHARD of $SHARDS)"
+              lua5.3 "$test"
+              count=$((count + 1))
+            fi
+            index=$((index + 1))
           done
+          if (( count == 0 )); then
+            echo "No regression tests assigned to shard $SHARD"
+            exit 1
+          fi
+
+  # Keep the existing required check name while ensuring every shard passes.
+  test:
+    if: always()
+    needs: [syntax, regressions]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify Lua syntax and all regression shards passed
+        run: |
+          test "${{ needs.syntax.result }}" = "success"
+          test "${{ needs.regressions.result }}" = "success"
