@@ -65,11 +65,8 @@ def run_offline() -> dict:
     except Exception as exc:
         hostile_continuation = {"ok": False, "error": str(exc)}
     direct = runtime.call(canonical.decode, runtime.call(canonical.encode, runtime.state))
-    # The active-hostile continuation currently reproduces the known orphan
-    # captured-settler failure at hostiles.lua:103. Disable hostile processing
-    # symmetrically to test save/reload state continuity without repairing the
-    # gameplay invariant in this research fixture.
-    direct.hostileMode = "off"
+    # Keep hostile processing enabled: captured civilians must survive the
+    # next round without being treated as spawned combat mobs.
     runtime.call(lifecycle["advance"], direct)
     checkpoints.append(capture("continuation-direct", direct))
     registered_state = runtime.call(runtime.engine.newGame, runtime.lua.table_from(CONFIG, recursive=True))
@@ -131,7 +128,7 @@ def compare(offline: dict, native: dict) -> dict:
         diagnostic = record.get("hostileContinuation", {})
         error = str(diagnostic.get("error", ""))
         checks.append({"label": "active-hostile-diagnostic", "field": side,
-                       "equal": diagnostic.get("ok") is False and "hostiles.lua:103" in error,
+                       "equal": diagnostic.get("ok") is True,
                        "error": error})
     offline_war, native_war = offline["registeredWar"], native["registeredWar"]
     checks.append({"label": "registered-war-outcome", "field": "outcome",
@@ -177,7 +174,7 @@ def main() -> None:
     parser.add_argument("--craftos", type=Path,
                         default=Path("/Applications/CraftOS-PC.app/Contents/MacOS/craftos"))
     parser.add_argument("--output", type=Path,
-                        default=HERE / "results/wartime_save_parity.json")
+                        default=HERE / "results/wartime_save_parity_m0.json")
     parser.add_argument("--raw-output", type=Path,
                         default=Path("/tmp/civcraft-wartime-save-parity.raw.json"),
                         help="Raw canonical payload record; compact result stores hashes only")
@@ -194,7 +191,7 @@ def main() -> None:
         "offline": offline,
         "native": native,
         "comparison": comparison,
-        "limitation": "The save branch uses an intentionally unregistered hostile owner; capture is exercised by Hostiles.round -> Combat.attack -> Stacks.capture, because Actions.apply cannot submit an order for the wilderness owner. A separate same-run branch covers registered-player declareWar followed by the next-round legal settler capture through Actions.apply. Surprise War remains untested. Active-hostile continuation is expected to reproduce the known hostiles.lua:103 orphan-settler error, so the save/reload continuation comparison disables hostile processing symmetrically after recording that diagnostic.",
+        "limitation": "The save branch uses an intentionally unregistered hostile owner; capture is exercised by Hostiles.round -> Combat.attack -> Stacks.capture, because Actions.apply cannot submit an order for the wilderness owner. A separate same-run branch covers registered-player declareWar followed by the next-round legal settler capture through Actions.apply. Surprise War remains untested. M0 fixes captured-civilian hostile accounting; the active-hostile continuation must now succeed, and save/reload retains hostile processing. Historical pre-fix results remain in their original artifact.",
     }
     args.raw_output.parent.mkdir(parents=True, exist_ok=True)
     args.raw_output.write_text(json.dumps(raw_record, indent=2) + "\n")

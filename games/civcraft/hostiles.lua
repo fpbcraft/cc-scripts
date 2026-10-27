@@ -98,9 +98,13 @@ function H.round(state, systems)
 	local per = {}
 	local mobs = {}
 	for _, u in ipairs(state.units) do
-		if u.owner == H.owner then
+		local stats = systems.units[u.kind]
+		-- Captured civilians share wilderness ownership, but are not spawned mobs.
+		if u.owner == H.owner and stats and stats.hostile then
 			count = count + 1
-			per[u.spawner] = (per[u.spawner] or 0) + 1
+			if u.spawner ~= nil then
+				per[u.spawner] = (per[u.spawner] or 0) + 1
+			end
 			mobs[#mobs + 1] = u
 		end
 	end
