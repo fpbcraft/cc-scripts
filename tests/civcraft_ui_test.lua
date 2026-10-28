@@ -38,6 +38,8 @@ function m.getPaletteColor()
 	return 0, 0, 0
 end
 function m.setPaletteColor() end
+-- Match the installed program's shared internal module identities.
+dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local UI = oldDofile("games/civcraft/ui.lua")
 dofile = oldDofile
 local calls = {}
