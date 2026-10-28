@@ -31,10 +31,16 @@ function Queue.cancel(state, unit)
 		partner.moveQueue = nil
 	end
 end
-function Queue.preview(view, unit, x, y, append, systems)
-	if not Hex.inBounds(x, y, view) or not view.world.tiles[World.key(x, y)] then
-		return nil, "Explore the destination before assigning a route"
+function Queue.preview(view, unit, x, y, append, systems, options)
+	options = options or {}
+	if not Hex.inBounds(x, y, view) then
+		return nil, "Choose a destination on the map"
 	end
+	if not view.world then
+		return nil, "Route map is unavailable"
+	end
+	local knownTiles = view.world and view.world.tiles or {}
+	local unknownDestination = knownTiles[World.key(x, y)] == nil
 	local saved = Queue.get(view, unit)
 	local companion = Stacks.partner(view, unit)
 	local traveler = copy(unit)
@@ -56,11 +62,20 @@ function Queue.preview(view, unit, x, y, append, systems)
 	local routes = Routes.from(view, traveler, systems, {
 		maxCost = view.world.width * view.world.height * 6,
 		maxNodes = view.world.width * view.world.height,
+		allowUnknown = unknownDestination or options.allowUnknown == true,
+		targetKey = World.key(x, y),
 		canEnter = canEnter,
 		step = function(from, to)
-			local a = Hex.moveCost(to.x, to.y, view, traveler, systems, from.x, from.y)
-			local b = companion
-				and Hex.moveCost(to.x, to.y, view, companion, systems, from.x, from.y)
+			local fromKnown = knownTiles[World.key(from.x, from.y)] ~= nil
+			local toKnown = knownTiles[World.key(to.x, to.y)] ~= nil
+			if not toKnown then
+				-- Unknown terrain has a neutral estimate. The observer projection
+				-- deliberately contains no terrain, deposit, or unit data for it.
+				return 1
+			end
+			local fromX, fromY = fromKnown and from.x or nil, fromKnown and from.y or nil
+			local a = Hex.moveCost(to.x, to.y, view, traveler, systems, fromX, fromY)
+			local b = companion and Hex.moveCost(to.x, to.y, view, companion, systems, fromX, fromY)
 			if not a or companion and not b then
 				return nil
 			end

@@ -1,3 +1,4 @@
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
 local Content = dofile("/games/civcraft/content.lua")
 local Rails = dofile("/games/civcraft/railways.lua")
 local Landmarks = dofile("/games/civcraft/landmarks.lua")
@@ -8,13 +9,21 @@ local E = {}
 function E.effects(city, state, systems)
 	local result = { food = 0, industry = 0, science = 0, gold = 0 }
 	for id, built in pairs(city.buildings or {}) do
-		if built and not (ContentRules.hasBuilders(state) and (id == "farm" or id == "mine")) then
+		if
+			built
+			and Sites.effectiveBuilding(state, city, id)
+			and not (ContentRules.hasBuilders(state) and (id == "farm" or id == "mine"))
+		then
 			for k, v in pairs((Content.buildings[id] or {}).effects or {}) do
 				result[k] = (result[k] or 0) + v
 			end
 		end
 	end
 	if state then
+		local specialty = Sites.effects(state, city)
+		for _, field in ipairs({ "food", "industry", "science", "gold" }) do
+			result[field] = result[field] + specialty[field]
+		end
 		for k, v in pairs(Landmarks.effects(state, city, systems)) do
 			result[k] = result[k] + v
 		end
@@ -74,7 +83,7 @@ function E.rates(p, state, owned)
 	for _, city in ipairs(state.cities or {}) do
 		if
 			city.owner == p.id
-			and (city.buildings or {}).mixer
+			and Sites.effectiveBuilding(state, city, "mixer")
 			and p.techs.brassworking
 			and copper > 0
 			and zinc > 0

@@ -20,6 +20,10 @@ local includeRoutes = false
 local routeRecord
 local routeResumed = false
 for _, argument in ipairs({ ... }) do
+	if argument == "--specialization" then
+		includeDevelopment = true
+		developmentProfile = "balance5"
+	end
 	if argument == "--landwork" then
 		includeDevelopment = true
 		developmentProfile = "balance3"
@@ -473,7 +477,12 @@ dofile = function(path)
 				else
 					for _, unit in ipairs(state.units) do
 						if unit.id == routeUnit then
-							assert(unit.moveQueue and unit.movesLeft == 0)
+							assert(
+								unit.moveQueue
+									and unit.moveQueue.goals[1].x == routeGoal.x
+									and unit.moveQueue.goals[1].y == routeGoal.y
+									and #unit.moveQueue.path >= 2
+							)
 							routeRecord = { id = unit.id, x = unit.x, y = unit.y, goal = routeGoal }
 						end
 					end

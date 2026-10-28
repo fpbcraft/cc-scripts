@@ -47,7 +47,7 @@ function Banner.model(state, player, city, systems)
 				1,
 				math.ceil(
 					(
-						systems.projectCost(project.kind, project.id, player)
+						systems.projectCost(project.kind, project.id, player, city)
 						- (project.progress or 0)
 					) / math.max(1, yields.industry)
 				)

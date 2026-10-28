@@ -1,3 +1,4 @@
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
 -- Three independent local campaigns; legacy save is copied on first use.
 local Writer = dofile("/games/civcraft/state_writer.lua")
 local S = { count = 3, root = "/games/civcraft/data" }
@@ -56,6 +57,7 @@ function S.list()
 	return out
 end
 function S.writeFile(dest, state)
+	Sites.validate(state)
 	local folder = dest:match("^(.*)/[^/]+$") or "/"
 	if not fs.exists(folder) then
 		fs.makeDir(folder)

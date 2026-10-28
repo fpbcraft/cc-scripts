@@ -1,3 +1,4 @@
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
 -- Rail movement and freight networks are derived from current territory.
 local Hex = dofile("/games/civcraft/hex.lua")
 local World = dofile("/games/civcraft/world.lua")
@@ -67,7 +68,7 @@ function R.network(state, p)
 	local visited = {}
 	local stations = {}
 	for _, city in ipairs(state.cities) do
-		if city.owner == p.id and (city.buildings or {}).station then
+		if city.owner == p.id and Sites.effectiveBuilding(state, city, "station") then
 			stations[World.key(city.x, city.y)] = city
 		end
 	end

@@ -1,3 +1,4 @@
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
 local Works = dofile("/games/civcraft/tile_improvements.lua")
 -- Observation-only action candidates.
 --
@@ -20,6 +21,7 @@ local Proposals = {
 			"research",
 			"production",
 			"cityWork",
+			"specialtySites",
 			"unitMovement",
 			"unitModes",
 			"founding",
@@ -198,6 +200,46 @@ local function addProduction(result, view, player, playerId, cities)
 	table.sort(units)
 	table.sort(wonders)
 	for _, city in ipairs(cities) do
+		if Sites.enabled(view) then
+			local retained = {}
+			for id in pairs(city.siteProjects or {}) do
+				retained[#retained + 1] = id
+			end
+			table.sort(retained)
+			for _, id in ipairs(retained) do
+				add(result, { action = "resumeSite", city = city.id, projectId = id })
+				add(result, { action = "cancelSite", city = city.id, projectId = id })
+			end
+			for _, kind in ipairs(Sites.order) do
+				for _, tileKey in ipairs(worldTileKeys(view)) do
+					local x, y = tileKey:match("^(%d+):(%d+)$")
+					x, y = tonumber(x), tonumber(y)
+					if x and Sites.canPlace(view, player, city, kind, x, y) then
+						add(
+							result,
+							{ action = "placeSite", city = city.id, kind = kind, x = x, y = y }
+						)
+					end
+					for _, oldKind in ipairs(Sites.order) do
+						local site = (city.sites or {})[oldKind]
+						if
+							site
+							and x
+							and Sites.canPlace(view, player, city, kind, x, y, nil, site.id)
+						then
+							add(result, {
+								action = "redevelopSite",
+								city = city.id,
+								siteId = site.id,
+								kind = kind,
+								x = x,
+								y = y,
+							})
+						end
+					end
+				end
+			end
+		end
 		for _, id in ipairs({ "ponder", "tend", "trade" }) do
 			if Systems.canProject(player, city, id) then
 				add(

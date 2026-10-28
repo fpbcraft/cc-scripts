@@ -6,6 +6,7 @@ local Rules = {
 	development = "balance2",
 	landwork = "balance3",
 	opening = "balance4",
+	specialization = "balance5",
 }
 function Rules.isP1(context)
 	return context and context.contentRules == Rules.current
@@ -17,6 +18,7 @@ function Rules.isRedesign(context)
 			or context.contentRules == Rules.development
 			or context.contentRules == Rules.landwork
 			or context.contentRules == Rules.opening
+			or context.contentRules == Rules.specialization
 		)
 end
 function Rules.hasDevelopment(context)
@@ -25,14 +27,23 @@ function Rules.hasDevelopment(context)
 			context.contentRules == Rules.development
 			or context.contentRules == Rules.landwork
 			or context.contentRules == Rules.opening
+			or context.contentRules == Rules.specialization
 		)
 end
 function Rules.hasBuilders(context)
 	return context
-		and (context.contentRules == Rules.landwork or context.contentRules == Rules.opening)
+		and (
+			context.contentRules == Rules.landwork
+			or context.contentRules == Rules.opening
+			or context.contentRules == Rules.specialization
+		)
 end
 function Rules.startsWithSettler(context)
-	return context and context.contentRules == Rules.opening
+	return context
+		and (context.contentRules == Rules.opening or context.contentRules == Rules.specialization)
+end
+function Rules.hasSpecialties(context)
+	return context and context.contentRules == Rules.specialization
 end
 function Rules.available(record, context)
 	if record.tileDevelopment and not Rules.hasBuilders(context) then
@@ -47,7 +58,8 @@ function Rules.usesP1Economy(context)
 	return Rules.isP1(context) or Rules.isRedesign(context)
 end
 function Rules.label(context)
-	return Rules.startsWithSettler(context) and "FOUNDERS V4"
+	return Rules.hasSpecialties(context) and "SPECIALIZATION V5"
+		or Rules.startsWithSettler(context) and "FOUNDERS V4"
 		or Rules.hasBuilders(context) and "LANDWORK V3"
 		or Rules.hasDevelopment(context) and "DEVELOPMENT V2"
 		or Rules.isRedesign(context) and "REDESIGN V1"
@@ -68,7 +80,8 @@ function Rules.validate(id)
 			or id == Rules.redesign
 			or id == Rules.development
 			or id == Rules.landwork
-			or id == Rules.opening,
+			or id == Rules.opening
+			or id == Rules.specialization,
 		"Unsupported content economy"
 	)
 end

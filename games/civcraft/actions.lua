@@ -1,3 +1,4 @@
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
 -- Host-authoritative gameplay orders shared by humans, remote players and AI.
 -- Session orchestration (lobby, save, end turn) belongs to game.lua.
 local Combat = dofile("/games/civcraft/combat.lua")
@@ -168,6 +169,27 @@ local function apply(state, id, req, Systems)
 		local ok, why = Systems.exchange(state, p, req.resource)
 		if ok then
 			Events.notice(state, "order", nil, req.action, id)
+		end
+		return ok, why
+	end
+	if
+		req.action == "placeSite"
+		or req.action == "redevelopSite"
+		or req.action == "resumeSite"
+		or req.action == "cancelSite"
+	then
+		local city
+		for _, candidate in ipairs(state.cities or {}) do
+			if candidate.id == req.city then
+				city = candidate
+			end
+		end
+		if not city or city.owner ~= id then
+			return false, "Select an owned city"
+		end
+		local ok, why = Sites.request(state, p, city, req)
+		if ok then
+			Events.notice(state, "order", city, why, id)
 		end
 		return ok, why
 	end

@@ -1,3 +1,4 @@
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
 -- Persistent natural landmarks and world-unique constructed wonders.
 local Biomes = dofile("/games/civcraft/biomes.lua")
 local Content = dofile("/games/civcraft/content.lua")
@@ -105,7 +106,16 @@ function L.available(state, id)
 end
 function L.canPlace(state, city, id, x, y, systems)
 	local record = Content.wonders[id]
-	if not record or not state.world or not Hex.inBounds(x, y, state) then
+	if
+		not record
+		or not state.world
+		or type(x) ~= "number"
+		or type(y) ~= "number"
+		or x % 1 ~= 0
+		or y % 1 ~= 0
+		or not Hex.inBounds(x, y, state)
+		or Sites.at(state, x, y)
+	then
 		return false
 	end
 	local player

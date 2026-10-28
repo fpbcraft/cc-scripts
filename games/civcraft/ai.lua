@@ -200,7 +200,7 @@ function A.choose(state, player, city, systems)
 			or known.project.kind ~= choice.kind
 			or known.project.id ~= choice.id
 		then
-			local ok = Actions.apply(state, player.id, {
+			local ok = Actions.apply(state, player.id, choice.request or {
 				action = "queue",
 				cityX = city.x,
 				cityY = city.y,

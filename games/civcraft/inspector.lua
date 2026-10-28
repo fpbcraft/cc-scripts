@@ -1,3 +1,5 @@
+local Specialty = dofile("/games/civcraft/specialty_view.lua")
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Biomes = dofile("/games/civcraft/biomes.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
@@ -43,6 +45,10 @@ function I.draw(ui, state, player, rect, modal)
 	local unit = not ui.selected.empty
 		and Stacks.at(state.units, ui.selected.x, ui.selected.y, ui.selected.unitID)
 	local rows = {}
+	if not Sites.enabled(state) and ui.productionCategory == "site" then
+		ui.productionCategory = "unit"
+		ui.siteSource = nil
+	end
 	local function text(value, color)
 		for _, line in ipairs(Panels.wrap(r, value, w - 17)) do
 			rows[#rows + 1] = { text = line, color = color }
@@ -265,8 +271,7 @@ function I.draw(ui, state, player, rect, modal)
 				end
 			end
 			text(
-				project and ("MAKING " .. Systems.label(project.kind, project.id))
-					or "NO PRODUCTION",
+				project and ("MAKING " .. Specialty.projectName(city, project)) or "NO PRODUCTION",
 				8
 			)
 			rows[#rows + 1] = {
@@ -322,97 +327,120 @@ function I.draw(ui, state, player, rect, modal)
 					},
 				}
 			end
-			local kind = ui.productionCategory or "unit"
-			local source = kind == "wonder" and Systems.wonders
-				or kind == "project" and Systems.projects
-				or kind == "building" and Systems.buildings
-				or Systems.units
-			local list = {}
-			for id in pairs(source) do
-				local allowed
-				if kind == "wonder" then
-					allowed = player.techs[source[id].tech] and Landmarks.available(state, id)
-				elseif kind == "unit" then
-					allowed = Systems.canRecruit(player, id, state, Hex, city)
-				elseif kind == "project" then
-					allowed = Systems.canProject(player, city, id)
-				else
-					allowed = Systems.canBuild(player, city, id, state)
-				end
-				if allowed then
-					list[#list + 1] = { id = id, allowed = true }
-				end
-			end
-			table.sort(list, function(a, b)
-				if a.allowed ~= b.allowed then
-					return a.allowed
-				end
-				return a.id < b.id
-			end)
-			for _, item in ipairs(list) do
-				local id = item.id
-				local allowed = item.allowed
-				local active = city.project and city.project.kind == kind and city.project.id == id
-				local progress = active and city.project.progress
-					or (city.projectProgress or {})[kind .. ":" .. id]
-					or 0
-				local turns = math.max(
-					1,
-					math.ceil(
-						(Systems.projectCost(kind, id, player) - progress)
-							/ math.max(1, yields.industry)
-					)
-				)
-				local label = Systems.label(kind, id) .. " " .. turns .. "T"
-				if
-					kind == "building"
-					and ContentRules.hasDevelopment(state)
-					and (source[id].capacity or 0) > 0
-				then
-					text(Systems.label(kind, id) .. ": CAPACITY +" .. source[id].capacity)
-				end
-				if kind == "project" then
-					local output = Systems.projectPreview(player, city, id, state, yields)
-					label = Systems.label(kind, id) .. (output.active and " / ROUND" or " PAUSED")
-					text(source[id].description)
-					local record = source[id]
-					text("NEXT ROUND +" .. output[record.output] .. " " .. record.output:upper())
-					text(
-						"REMAINDER "
-							.. ((city.projectRemainders or {})[id] or 0)
-							.. "/"
-							.. record.divisor
-					)
-					if not output.active then
-						text("Select unfinished research to resume.")
-					end
-				end
+			if Sites.enabled(state) then
 				rows[#rows + 1] = {
-					project = {
-						label = label,
-						selected = active,
-						run = function()
-							if kind == "wonder" then
-								ui:armPlacement(kind, city, id)
-							else
-								ui:command(
-									"queue",
-									{ cityX = city.x, cityY = city.y, kind = kind, id = id }
-								)
-							end
-						end,
-						info = function()
-							ui:openCodex(
-								kind == "wonder" and "wonders"
-									or kind == "project" and "projects"
-									or kind == "unit" and "units"
-									or "buildings",
-								id
-							)
-						end,
-						id = id,
+					buttons = {
+						{
+							label = "SITES",
+							style = { selected = ui.productionCategory == "site" },
+							run = function()
+								ui.productionCategory = "site"
+								ui.inspectorOffset = 0
+							end,
+						},
 					},
 				}
+			end
+			if Sites.enabled(state) and ui.productionCategory == "site" then
+				Specialty.rows(ui, state, player, city, rows, text)
+			else
+				local kind = ui.productionCategory or "unit"
+				local source = kind == "wonder" and Systems.wonders
+					or kind == "project" and Systems.projects
+					or kind == "building" and Systems.buildings
+					or Systems.units
+				local list = {}
+				for id in pairs(source) do
+					local allowed
+					if kind == "wonder" then
+						allowed = player.techs[source[id].tech] and Landmarks.available(state, id)
+					elseif kind == "unit" then
+						allowed = Systems.canRecruit(player, id, state, Hex, city)
+					elseif kind == "project" then
+						allowed = Systems.canProject(player, city, id)
+					else
+						allowed = Systems.canBuild(player, city, id, state)
+					end
+					if allowed then
+						list[#list + 1] = { id = id, allowed = true }
+					end
+				end
+				table.sort(list, function(a, b)
+					if a.allowed ~= b.allowed then
+						return a.allowed
+					end
+					return a.id < b.id
+				end)
+				for _, item in ipairs(list) do
+					local id = item.id
+					local allowed = item.allowed
+					local active = city.project
+						and city.project.kind == kind
+						and city.project.id == id
+					local progress = active and city.project.progress
+						or (city.projectProgress or {})[kind .. ":" .. id]
+						or 0
+					local turns = math.max(
+						1,
+						math.ceil(
+							(Systems.projectCost(kind, id, player, city) - progress)
+								/ math.max(1, yields.industry)
+						)
+					)
+					local label = Systems.label(kind, id) .. " " .. turns .. "T"
+					if
+						kind == "building"
+						and ContentRules.hasDevelopment(state)
+						and (source[id].capacity or 0) > 0
+					then
+						text(Systems.label(kind, id) .. ": CAPACITY +" .. source[id].capacity)
+					end
+					if kind == "project" then
+						local output = Systems.projectPreview(player, city, id, state, yields)
+						label = Systems.label(kind, id)
+							.. (output.active and " / ROUND" or " PAUSED")
+						text(source[id].description)
+						local record = source[id]
+						text(
+							"NEXT ROUND +" .. output[record.output] .. " " .. record.output:upper()
+						)
+						text(
+							"REMAINDER "
+								.. ((city.projectRemainders or {})[id] or 0)
+								.. "/"
+								.. record.divisor
+						)
+						if not output.active then
+							text("Select unfinished research to resume.")
+						end
+					end
+					rows[#rows + 1] = {
+						project = {
+							label = label,
+							selected = active,
+							run = function()
+								if kind == "wonder" then
+									ui:armPlacement(kind, city, id)
+								else
+									ui:command(
+										"queue",
+										{ cityX = city.x, cityY = city.y, kind = kind, id = id }
+									)
+								end
+							end,
+							info = function()
+								ui:openCodex(
+									kind == "wonder" and "wonders"
+										or kind == "project" and "projects"
+										or kind == "unit" and "units"
+										or "buildings",
+									id
+								)
+							end,
+							id = id,
+						},
+					}
+				end
 			end
 		elseif ui.cityPanel == "tiles" then
 			local count = 0
@@ -885,6 +913,31 @@ function I.draw(ui, state, player, rect, modal)
 			local yields = World.yields(state.world, ui.selected.x, ui.selected.y, state)
 			rows[#rows + 1] = { yields = yields }
 			text(World.deposit(state.world, ui.selected.x, ui.selected.y) or "NO DEPOSIT")
+		end
+	end
+	if Sites.enabled(state) and not ui.selected.empty then
+		local site = (state.world.specialtySites or {})[World.key(ui.selected.x, ui.selected.y)]
+		if site then
+			text(Sites.definitions[site.kind].name .. (site.inactive and " (INACTIVE)" or ""), 13)
+			text("Assigned city #" .. site.city .. "; W Works / K Knowledge / F Freight")
+			for _, owned in ipairs(state.cities) do
+				if owned.id == site.city and owned.owner == ui.playerID then
+					rows[#rows + 1] = {
+						buttons = {
+							{
+								label = "MANAGE SITES",
+								run = function()
+									ui:focus("city", owned)
+									ui.panel = "inspector"
+									ui.cityPanel = "production"
+									ui.productionCategory = "site"
+									ui.inspectorOffset = 0
+								end,
+							},
+						},
+					}
+				end
+			end
 		end
 	end
 	if not ui.selected.empty and World.known(player, ui.selected.x, ui.selected.y) ~= "hidden" then

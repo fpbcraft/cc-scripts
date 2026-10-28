@@ -1,3 +1,5 @@
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
+local Specialty = dofile("/games/civcraft/specialty_view.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Works = dofile("/games/civcraft/tile_improvements.lua")
 local Details = {}
@@ -76,6 +78,14 @@ function Details.unlocks(systems, id, context)
 			end
 		end
 	end
+	if Sites.enabled(context) then
+		for _, kind in ipairs(Sites.order) do
+			local record = Sites.definitions[kind]
+			if record.tech == id then
+				entries[#entries + 1] = { category = "specialties", id = kind, record = record }
+			end
+		end
+	end
 	return entries
 end
 
@@ -112,6 +122,20 @@ function Details.paragraphs(systems, id, player)
 		local record = entry.record
 		if not (ContentRules.isRedesign(player) and entry.id == "councilhall") then
 			local benefit = record.description or record.ability or ""
+			if entry.category == "specialties" then
+				benefit = "Placed site: one focus slot; +1 "
+					.. record.output
+					.. ". "
+					.. Specialty.bonuses[entry.id]
+			elseif entry.category == "buildings" and Sites.enabled(player) then
+				local family = Sites.families[entry.id]
+				if family then
+					benefit = benefit
+						.. " Requires active "
+						.. Sites.definitions[family].name
+						.. "."
+				end
+			end
 			if entry.category == "units" then
 				benefit = record.description or ContentRules.ability(record, player) or ""
 				benefit = benefit
@@ -123,6 +147,10 @@ function Details.paragraphs(systems, id, player)
 			end
 			paragraphs[#paragraphs + 1] = record.name .. ": " .. benefit
 		end
+	end
+	if Sites.enabled(player) and id == "astronomy" then
+		paragraphs[#paragraphs + 1] =
+			"END BRIDGE: End Staging requires Nether Portal only, without Enchanting Room or a specialty site."
 	end
 	return paragraphs
 end

@@ -90,6 +90,23 @@ function Events.notice(state, kind, entity, content, recipient)
 	})
 end
 
+function Events.site(state, city, record)
+	Events.emit(state, {
+		type = "site",
+		actor = VisibilityEvents.actor({ id = record.id, kind = record.kind, owner = city.owner }),
+		target = VisibilityEvents.frame(state, { x = record.x, y = record.y, owner = city.owner }),
+		content = record.kind,
+		specialty = {
+			cityId = city.id,
+			siteId = record.id,
+			sourceSiteId = record.sourceSiteId,
+			kind = record.kind,
+			x = record.x,
+			y = record.y,
+		},
+	})
+end
+
 function Events.prune(state)
 	for _, stream in pairs(state.eventJournal and state.eventJournal.streams or {}) do
 		trim(stream.entries, state.round or 1)

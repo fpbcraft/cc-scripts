@@ -1,3 +1,4 @@
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
 -- CIVCRAFT 4X data & deterministic mechanics, no dependencies on UI/peripherals.
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local Queue = dofile("/games/civcraft/queued_routes.lua")
@@ -306,6 +307,7 @@ function M.migrate(state)
 	Combat.migrate(state)
 	Stacks.migrate(state)
 	Queue.migrate(state)
+	Sites.validate(state)
 	state.version = 6
 	return state
 end
@@ -408,8 +410,16 @@ function M.canBuild(p, c, id, state)
 	then
 		return false
 	end
-	for _, need in ipairs(b.requires or {}) do
-		if not c.buildings[need] then
+	if Sites.enabled(state or p) then
+		local family = Sites.families[id]
+		if
+			family and (not (c.sites or {})[family] or not Sites.active(state, c, c.sites[family]))
+		then
+			return false
+		end
+	end
+	for _, need in ipairs(Sites.prerequisites(state or p, id)) do
+		if not Sites.effectiveBuilding(state or p, c, need) then
 			return false
 		end
 	end
@@ -439,7 +449,7 @@ function M.canRecruit(p, id, state, hex, city)
 		u.building
 		and (
 			not city
-			or not (city.buildings or {})[u.building]
+			or not Sites.effectiveBuilding(state or p, city, u.building)
 			or u.naval and not M.coastal(state, city)
 		)
 	then
@@ -460,7 +470,8 @@ end
 -- Retain familiar action names as pure queue selection (no purchases).
 function M.queue(p, c, kind, id, state, hex, x, y)
 	if kind == "none" then
-		if c.project and c.project.kind ~= "project" then
+		Sites.pause(c)
+		if c.project and c.project.kind ~= "project" and c.project.kind ~= "site" then
 			c.projectProgress = c.projectProgress or {}
 			c.projectProgress[c.project.kind .. ":" .. c.project.id] = c.project.progress
 		end
@@ -495,10 +506,11 @@ function M.queue(p, c, kind, id, state, hex, x, y)
 	else
 		return false, "Unknown project category"
 	end
-	if c.project and c.project.kind ~= "project" then
+	if c.project and c.project.kind ~= "project" and c.project.kind ~= "site" then
 		c.projectProgress = c.projectProgress or {}
 		c.projectProgress[c.project.kind .. ":" .. c.project.id] = c.project.progress
 	end
+	Sites.pause(c)
 	c.productionIdle = false
 	c.project = {
 		kind = kind,
@@ -568,7 +580,11 @@ function M.techCost(id, player)
 	local tech = M.techs[id]
 	return tech and CampaignRules.cost(tech.cost, player) or nil
 end
-function M.projectCost(kind, id, player)
+function M.projectCost(kind, id, player, city)
+	if kind == "site" then
+		local retained = city and (city.siteProjects or {})[id]
+		return retained and Sites.cost(player, retained) or nil
+	end
 	if kind == "project" then
 		return M.projects[id] and M.projects[id].divisor or nil
 	end
@@ -611,7 +627,7 @@ function M.centerYields(p, c, state)
 		science = science
 			+ (ContentRules.usesP1Economy(p) and (c.capitalOf == p.id and 1 or 0) or 2)
 	end
-	if civ == "forge" and buildings.workshop then
+	if civ == "forge" and Sites.effectiveBuilding(state or p, c, "workshop") then
 		industry = industry + 2
 	end
 	if civ == "merchant" and buildings.market then
@@ -938,7 +954,13 @@ function M.production(state, hex)
 				if state.world then
 					World.expandCity(state, hex, c)
 				end
-				if c.project and c.project.kind ~= "project" then
+				if c.project and c.project.kind == "site" then
+					local complete, record = Sites.advance(state, p, c, yield.industry)
+					if complete then
+						Events.site(state, c, record)
+					end
+				end
+				if c.project and c.project.kind ~= "project" and c.project.kind ~= "site" then
 					local pr = c.project
 					local valid = pr.kind == "wonder"
 							and Landmarks.canPlace(state, c, pr.id, pr.x, pr.y, M)
