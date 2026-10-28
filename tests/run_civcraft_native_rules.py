@@ -23,6 +23,9 @@ for helper_dir in ('helpers', 'support'):
     source = root/'tests'/helper_dir
     if source.is_dir():
         shutil.copytree(source, computer/'tests'/helper_dir)
+# Installed-save fixtures execute the real installer against local source files.
+for source_dir in ('installers', 'lib'):
+    shutil.copytree(root/source_dir, computer/source_dir)
 for name in args.tests:
     shutil.copyfile(root/'tests'/name,computer/name)
 files='{'+','.join(json.dumps('/'+name) for name in args.tests)+'}'
