@@ -98,6 +98,10 @@ for _, graphics in ipairs({ false, true }) do
 			shifted.x == initialX and shifted.y == initialY,
 			"City banners must stay anchored when units enter or leave their tile"
 		)
+		-- The larger zoom levels can place the moved hex outside the viewport.
+		-- Center the moved unit before checking its selectable callout.
+		ui:focus("unit", state.units[1])
+		draw()
 		local movedBadge
 		for _, badge in ipairs(ui.unitBadgeTargets) do
 			if badge.unit.id == 2 then
