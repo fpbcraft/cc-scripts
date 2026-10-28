@@ -331,7 +331,6 @@ local function drawUnitBubble(r, badge, color, selected)
 	)
 end
 
-
 -- Search normal callout offsets first, then use a compact grid only when
 -- crowded/edge tiles leave no room at the preferred offsets. Collision checks
 -- use the entire hitbox so icons and city labels remain independently clickable.
@@ -349,10 +348,12 @@ local function findUnitCallout(rect, occupied, cx, cy, diameter, tileSize)
 			return false
 		end
 		for _, other in ipairs(occupied) do
-			if x < other.x + other.w
+			if
+				x < other.x + other.w
 				and x + diameter > other.x
 				and y < other.y + other.h
-				and y + diameter > other.y then
+				and y + diameter > other.y
+			then
 				return false
 			end
 		end
@@ -1003,8 +1004,14 @@ function V.draw(ui, state, player, rect)
 				end
 				if not chosen then
 					chosen = {
-						x = math.max(rect.x, math.min(rect.x + rect.w - badge.w, round(centerX - badge.w / 2))),
-						y = math.max(rect.y, math.min(rect.y + rect.h - badge.h, round(centerY - badge.h / 2))),
+						x = math.max(
+							rect.x,
+							math.min(rect.x + rect.w - badge.w, round(centerX - badge.w / 2))
+						),
+						y = math.max(
+							rect.y,
+							math.min(rect.y + rect.h - badge.h, round(centerY - badge.h / 2))
+						),
 					}
 				end
 				badge.x, badge.y = chosen.x, chosen.y
