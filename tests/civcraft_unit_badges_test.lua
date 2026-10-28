@@ -133,7 +133,10 @@ for _, graphics in ipairs({ false, true }) do
 				end
 			end
 			assert(found, "Each visible stacked/adjacent formation has a target")
-			assert(found.w == found.h and found.w >= 11 and found.w % 2 == 1, "Unit badge is circular")
+			assert(
+				found.w == found.h and found.w >= 11 and found.w % 2 == 1,
+				"Unit badge is circular"
+			)
 			local hexAnchor
 			for _, hex in ipairs(ui.hexTargets) do
 				if hex.tx == actor.x and hex.ty == actor.y then
@@ -154,8 +157,7 @@ for _, graphics in ipairs({ false, true }) do
 			local distance = math.sqrt(dx * dx + dy * dy)
 			assert(distance > 0, "Callout cannot obscure the unit's original tile")
 			assert(
-				dx * px + dy * py > 0
-					and math.abs(dx * py - dy * px) <= 2 + distance * 0.1,
+				dx * px + dy * py > 0 and math.abs(dx * py - dy * px) <= 2 + distance * 0.1,
 				"Bubble tail must point toward the true unit position, not its banner"
 			)
 			assert(

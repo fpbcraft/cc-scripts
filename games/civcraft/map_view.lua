@@ -254,7 +254,6 @@ local function drawPendingPath(r, path, player, center)
 	end
 end
 
-
 -- Offset unit callouts never change the unit's world position. Their pointer
 -- always faces the rendered center of the unit's actual hex, not the city label.
 local bubbleDirections = {
@@ -322,7 +321,14 @@ local function drawUnitBubble(r, badge, color, selected)
 		r:fill(cx - half, cy + dy, half * 2 + 1, 1, 0)
 	end
 	local glyph = math.max(5, badge.w - 4)
-	Icons.draw(r, badge.unit.kind, cx - math.floor(glyph / 2), cy - math.floor(glyph / 2), glyph, color)
+	Icons.draw(
+		r,
+		badge.unit.kind,
+		cx - math.floor(glyph / 2),
+		cy - math.floor(glyph / 2),
+		glyph,
+		color
+	)
 end
 
 function V.draw(ui, state, player, rect)
@@ -928,11 +934,15 @@ function V.draw(ui, state, player, rect)
 				-- search clockwise and farther out until both banner and other
 				-- unit hit targets are clear. Never clamp a candidate into a banner.
 				for ring = 1, 7 do
-					local distance = badgeSize / 2 + size * 0.5 + 3
+					local distance = badgeSize / 2
+						+ size * 0.5
+						+ 3
 						+ (ring - 1) * (badgeSize + 2) * 0.7
 					for _, direction in ipairs(bubbleDirections) do
-						local bx = round(centerX + direction[1] * distance - math.floor(badgeSize / 2))
-						local by = round(centerY + direction[2] * distance - math.floor(badgeSize / 2))
+						local bx =
+							round(centerX + direction[1] * distance - math.floor(badgeSize / 2))
+						local by =
+							round(centerY + direction[2] * distance - math.floor(badgeSize / 2))
 						local box = { x = bx, y = by, w = badgeSize, h = badgeSize }
 						if
 							bx >= rect.x
@@ -942,10 +952,16 @@ function V.draw(ui, state, player, rect)
 						then
 							local overlap = 0
 							for _, other in ipairs(occupied) do
-								local w = math.max(0, math.min(box.x + box.w + 1, other.x + other.w + 1)
-									- math.max(box.x - 1, other.x - 1))
-								local h = math.max(0, math.min(box.y + box.h + 1, other.y + other.h + 1)
-									- math.max(box.y - 1, other.y - 1))
+								local w = math.max(
+									0,
+									math.min(box.x + box.w + 1, other.x + other.w + 1)
+										- math.max(box.x - 1, other.x - 1)
+								)
+								local h = math.max(
+									0,
+									math.min(box.y + box.h + 1, other.y + other.h + 1)
+										- math.max(box.y - 1, other.y - 1)
+								)
 								overlap = overlap + w * h
 							end
 							if overlap == 0 then
@@ -962,10 +978,23 @@ function V.draw(ui, state, player, rect)
 					end
 				end
 				if not chosen then
-					chosen = fallback or {
-						x = math.max(rect.x, math.min(rect.x + rect.w - badgeSize, round(centerX - badgeSize / 2))),
-						y = math.max(rect.y, math.min(rect.y + rect.h - badgeSize, round(centerY - badgeSize / 2))),
-					}
+					chosen = fallback
+						or {
+							x = math.max(
+								rect.x,
+								math.min(
+									rect.x + rect.w - badgeSize,
+									round(centerX - badgeSize / 2)
+								)
+							),
+							y = math.max(
+								rect.y,
+								math.min(
+									rect.y + rect.h - badgeSize,
+									round(centerY - badgeSize / 2)
+								)
+							),
+						}
 				end
 				badge.x, badge.y = chosen.x, chosen.y
 				placePointer(badge)
