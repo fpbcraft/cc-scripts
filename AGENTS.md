@@ -2,6 +2,60 @@
 
 These instructions apply to work in this repository. Follow task-specific instructions as well; do not relax existing code quality, safety, or validation requirements.
 
+## Tooling and validation
+
+This is a Lua/CC:Tweaked repository, not a Bun/Node project. Use the existing tools and the commands in the root `Makefile` and `README.md`:
+
+| Task | Command |
+| --- | --- |
+| Format Lua | `make format` |
+| Check formatting | `make format-check` |
+| Lint | `make lint` |
+| Check formatting and lint | `make style-check` |
+| Run a focused standalone regression | `lua5.3 tests/<relevant>_test.lua` |
+| Validate the Lua test selector | `python3 -m unittest discover -s scripts -p 'test_ci_lua_select.py' -v` |
+| Run a native CivCraft session (requires CraftOS-PC) | `python3 tests/run_civcraft_native_session.py` |
+
+CI also syntax-checks Lua with `luac5.3 -p`, chooses affected `tests/*_test.lua` regressions, and runs application-specific workflows. The Lua formatter is **StyLua 2.6.0** and the linter is **Selene 0.32.0**.
+
+### Validation is mandatory
+
+- After Lua changes, run `make style-check`, a Lua syntax check, and the relevant regression tests before claiming the work is complete. Fix failures or report them clearly.
+- For broad or shared-library changes, expand testing to affected games, installers, and integration paths; use the full suite when practical. Do not treat an automatically selected subset as evidence of exhaustive validation.
+- For changes to UI/input, loading, installation, saves, networking, or runtime-specific behavior, exercise the appropriate CraftOS-PC or in-game scenarios when available. Describe remaining gaps explicitly.
+- Do not claim a test passed solely because code was written or a CI job is expected to run. Distinguish **not run**, **failed**, and **passed** in the PR description.
+- If a dependency or emulator is unavailable, say what was blocked and what alternative verification was performed. Do not silently skip required checks.
+
+## Repository architecture
+
+- `games/` — independent CC:Tweaked games such as CivCraft, Cogworks, Railbreak, Shattered, Ironspire, and Wormfront. Follow the individual game's README and existing architecture.
+- `apps/` — programs including FPB Store, airship navigation, factory controls, and remote nodes.
+- `lib/fpb/` — shared runtime, displays, loader, authentication, and installation infrastructure. **`lib/fpb/packages.lua` is the authoritative manifest** for packaged files, entrypoints, install roots, dependencies, and persistent paths.
+- `installers/` — user-facing bootstraps for installing/updating each program from a Git ref.
+- `tests/` — standalone Lua regressions, support fixtures, and native CraftOS-PC test drivers. `scripts/` contains the CI Lua test selector and runner.
+- `.github/workflows/` — formatting/lint enforcement and Lua or game-specific CI.
+
+Prefer one canonical source for shared functionality, with small adapters where an existing program needs a different interface. When adding, moving, or removing a runtime module, check the package manifest, loader paths, installer, and relevant tests. Treat packaging changes as part of the feature, not as unrelated generated noise.
+
+## Coding and runtime conventions
+
+- Use ordinary CC:Tweaked-compatible Lua (project formatting parses Lua 5.3); do not introduce Luau-only syntax or unsupported runtime APIs.
+- Follow `.stylua.toml`: tabs, a 100-column target, Unix line endings, and double-quoted strings where applicable. Use StyLua rather than manually imposing another style.
+- Keep changes focused and maintain clear module boundaries. Prefer small, testable functions and reuse established libraries rather than duplicating UI, persistence, or input infrastructure.
+- Respect CC:Tweaked constraints: limited terminal/monitor space, event-driven input, peripheral availability, and cooperative execution. Avoid busy loops, unnecessary redraws, and blocking operations that risk `Too long without yielding`.
+- For a temporary workaround, place an actionable `TODO:` at the relevant code location and explain any consequential limitation in the PR.
+- Commit messages should normally use Conventional Commits (for example, `fix(civcraft): preserve unit selection` or `test(cogworks): cover touch drag`). PR titles remain short, descriptive, and human-readable; do not assume a conventional-title rule is enforced here.
+
+## User-facing behavior and regression coverage
+
+- Test behavior and player workflows, not just implementation internals. Include relevant positive, negative, and regression cases.
+- For interface changes, consider small and large screens, text and graphics modes, terminal versus advanced monitor, text scale, coordinate transforms, mouse/keyboard input, and touch-only operation as applicable. Restore altered monitor, terminal, palette, or graphics state after use.
+- For networked games or remotely controlled apps, preserve authoritative state and ownership/visibility boundaries; do not expose hidden multiplayer information through UI or prediction helpers.
+- For installers and updates, preserve saves, configuration, unknown user files, and prior installations unless a specifically designed and tested migration says otherwise. Test rollback and repeat installation when modifying installation logic.
+- For saved-game or protocol changes, consider older versions and migration/compatibility tests. Never silently delete or overwrite user data.
+- For factory/machinery control, preserve physical/manual override and fail-safe behavior; do not treat software-only control as a safety mechanism.
+- When describing results, distinguish standalone Lua tests, headless CraftOS-PC, simulated monitor tests, actual Minecraft/CC:Tweaked interaction, and physical hardware measurements.
+
 ## Pull requests
 
 Write PR titles and descriptions for a human reviewer, not as an agent activity log. The goal is to explain **why the change matters, what it does, and how it was validated**. A reviewer unfamiliar with the task should grasp the purpose and review readiness within about 30 seconds.
