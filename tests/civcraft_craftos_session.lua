@@ -7,6 +7,8 @@ local includeAI, includeSettings, includeResearch, includeCampaign = false, fals
 local includeWar = false
 local touchMonitor = false
 local includeHost = false
+local includeDevelopment = false
+local developmentProfile = "balance2"
 local includeConversation = false
 local includeHistory = false
 local includeDifficulty = false
@@ -18,6 +20,13 @@ local includeRoutes = false
 local routeRecord
 local routeResumed = false
 for _, argument in ipairs({ ... }) do
+	if argument == "--landwork" then
+		includeDevelopment = true
+		developmentProfile = "balance3"
+	end
+	if argument == "--development" then
+		includeDevelopment = true
+	end
 	if argument == "--civilization" then
 		includeCivilization = true
 	end
@@ -239,6 +248,7 @@ dofile = function(path)
 		local difficultyStep = 0
 		local researchStep = 0
 		local campaignStep = 0
+		local openingFocus = {}
 		local warStep, responseStep = 0, 0
 		local historyStep, historySeq = 0, nil
 		local councilStep = 0
@@ -276,6 +286,16 @@ dofile = function(path)
 				else
 					tap(self, "NEXT")
 				end
+				return
+			end
+			if
+				includeDevelopment
+				and stage == 1
+				and state.phase == "lobby"
+				and state.contentRules ~= developmentProfile
+			then
+				self:command("contentRules")
+				os.queueEvent("term_resize")
 				return
 			end
 			if includeAI and not aiConfigured and stage == 1 and state.phase == "lobby" then
@@ -325,7 +345,9 @@ dofile = function(path)
 					"CAMPAIGN OPTIONS",
 					"LENGTH STANDARD",
 					"LENGTH EPIC",
-					state.contentRules == "balance1" and "SCORE DEADLINE" or "SCORE ON",
+					dofile("/games/civcraft/content_rules.lua").isRedesign(state)
+							and "SCORE DEADLINE"
+						or "SCORE ON",
 					"CLOSE",
 				}
 				if tap(self, labels[campaignStep + 1]) then
@@ -347,6 +369,57 @@ dofile = function(path)
 			then
 				tap(self, "CLOSE")
 				return
+			end
+			if
+				state.phase == "game"
+				and not options.handoff
+				and not options.paused
+				and (stage == 2 or stage == 5)
+				and dofile("/games/civcraft/content_rules.lua").startsWithSettler(state)
+			then
+				local me
+				for _, player in ipairs(state.players) do
+					if player.id == self.playerID then
+						me = player
+					end
+				end
+				if me and not me.capitalFounded then
+					local traveler
+					for _, unit in ipairs(state.units) do
+						if unit.owner == me.id and unit.kind == "settler" then
+							traveler = unit
+							break
+						end
+					end
+					assert(traveler, "Native opening must retain its initial Settler")
+					local settlement = dofile("/games/civcraft/ai_settlement.lua")
+					if not settlement.value(state, me, traveler.x, traveler.y, traveler) then
+						local request = settlement.order(
+							state,
+							me,
+							traveler,
+							dofile("/games/civcraft/systems.lua")
+						)
+						assert(
+							request and request.action == "move",
+							"Contact fixture needs a legal first-city location within starting movement"
+						)
+						self:command(request.action, request)
+						return
+					end
+					if not openingFocus[me.id] then
+						self:focus("unit", traveler)
+						self.panel = "inspector"
+						openingFocus[me.id] = true
+						return
+					end
+					if tap(self, "FOUND CAPITAL") then
+						self.panel = "context"
+					else
+						tap(self, "NEXT")
+					end
+					return
+				end
 			end
 			if includeRoutes and stage == 2 and not options.handoff and routeStep < 5 then
 				if routeStep == 0 then
@@ -429,7 +502,9 @@ dofile = function(path)
 				local labels = {
 					"TECH TREE",
 					"agriculture",
-					"CODEX WHEAT FARM",
+					dofile("/games/civcraft/content_rules.lua").hasBuilders(state)
+							and "CODEX WHEAT FIELD"
+						or "CODEX WHEAT FARM",
 					"CLOSE",
 					"TECH TREE",
 					"RESEARCH",
@@ -684,12 +759,18 @@ if includeWar then
 		"The defending group's starting player rotates at the global boundary"
 	)
 end
+if includeDevelopment then
+	assert(
+		state.contentRules == developmentProfile,
+		"Development profile must survive native save/reload"
+	)
+end
 if includeCampaign then
 	assert(
 		state.gameSpeed == "quick"
-			and state.roundLimit == (state.contentRules == "balance1" and 167 or 120)
+			and state.roundLimit == (dofile("/games/civcraft/content_rules.lua").isRedesign(state) and 167 or 120)
 			and (
-				state.contentRules == "balance1"
+				dofile("/games/civcraft/content_rules.lua").isRedesign(state)
 					and dofile("/games/civcraft/campaign_rules.lua").enabled(state, "score")
 				or state.victories.score == false
 			),

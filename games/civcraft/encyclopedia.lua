@@ -4,8 +4,20 @@ local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
 local ResearchDetails = dofile("/games/civcraft/research_details.lua")
+local Works = dofile("/games/civcraft/tile_improvements.lua")
+local Projects = dofile("/games/civcraft/civilian_projects.lua")
 local E = {}
 local mechanics = {
+	{
+		id = "citybanners",
+		name = "CITY MAP BANNERS",
+		text = "The number beside a city name is its population. A crown marks an original capital. D is defense strength; green and blue bars show city health and walls. Owned cities show G (turns to population growth), -P (turns to starvation loss), and P (turns to production completion). IDLE needs a production choice; PAUSE is deliberate idle; REPEAT runs a civilian project; WAIT needs Settler population. An exclamation mark warns that Settlement Capacity limits growth. Click the banner to select its city. Small maps simplify indicators; the inspector retains details. Remembered cities use only last-observed public information and show no private growth or production.",
+	},
+	{
+		id = "builders",
+		name = "BUILDERS AND TILE WORK",
+		text = "Landwork V3 Builders cost 22 industry, have two movement and three charges with no upkeep. Wheat Fields require Wheat Farming and fertile open flat land (+2 food); Quarries require Stone Tools and clear hills or stone (+2 industry); Lumber Camps require Crafting and woods or jungle (+1 industry). Only worked tiles produce yields. Oak fields add one food and Iron quarries add one industry. One successful improvement spends one charge and remaining movement; the final charge removes the Builder. Plan work from its inspector, choose a cyan tile, review yields and charges, then confirm. Append adds tasks up to remaining charges. Queued work pauses on visible threats, lost ownership, occupied or invalid routes. Resume or cancel in the inspector. Manual movement replaces work. Capture preserves charges and clears orders. Harvesting and feature removal are not included. City Farm/Quarry bonuses are retired; Homesteads unlock Tend Crops. Older profiles keep their original rules.",
+	},
 	{
 		id = "turns",
 		name = "TURNS AND VICTORY",
@@ -175,11 +187,12 @@ mechanics[#mechanics + 1] = {
 local function title(id)
 	return id:gsub("_", " "):upper()
 end
-function E.entries(category)
+function E.entries(category, context)
 	if category == "mechanics" then
 		return mechanics
 	end
-	local source = category == "wonders" and Systems.wonders
+	local source = category == "improvements" and Works.definitions
+		or category == "wonders" and Systems.wonders
 		or category == "projects" and Systems.projects
 		or category == "sites" and Systems.naturalWonders
 		or category == "units" and Systems.units
@@ -187,7 +200,9 @@ function E.entries(category)
 		or Systems.techs
 	local result = {}
 	for id, record in pairs(source) do
-		result[#result + 1] = { id = id, name = record.name or title(id), record = record }
+		if ContentRules.available(record, context) then
+			result[#result + 1] = { id = id, name = record.name or title(id), record = record }
+		end
 	end
 	table.sort(result, function(a, b)
 		return a.name < b.name
@@ -204,6 +219,29 @@ function E.describe(category, entry, player, state)
 		player = context
 	end
 	if entry.text then
+		if ContentRules.startsWithSettler(state or player) and entry.id == "territory" then
+			return {
+				"You start with one Settler and one Stone Guard. No city or borders are pre-founded. Explore with either unit, move your Settler if desired, then choose FOUND CAPITAL on a legal land tile with movement remaining. Your first founded city becomes your original capital. The starting Settler is free and does not count as a trained Settler. New cities use the current population and growth rules. Later Settlers consume population when trained. "
+					.. entry.text,
+			}
+		end
+		if ContentRules.hasDevelopment(state or player) then
+			if entry.id == "population" then
+				return {
+					entry.text,
+					"Settlement Capacity starts at 4, gains 1 beside water, 2 from Homesteads, 2 from Water Services and 1 from a Trading Hall. Positive growth food is 100% at least two citizens below capacity, 50% one below, 25% at capacity or one above, and 12.5% two or more above. Minimum growth time increases by the same factor. Food consumption and starvation remain unchanged. Completing a Settler consumes one citizen after growth resolves; a city needs at least two citizens.",
+				}
+			elseif entry.id == "yields" then
+				return {
+					entry.text,
+					"Development V2: Settlement Capacity scales positive growth food and the minimum growth time. The city inspector shows the effective food gain and forecast. Food consumption and starvation are unchanged. See POPULATION AND JOBS for the capacity curve.",
+				}
+			elseif entry.id == "production" then
+				return {
+					"Scouts cost 15 industry; Guards cost 20. Settlers start at 28 industry, adding 8 for each previously completed Settler. Completion consumes one citizen and requires at least two population. Growth and starvation resolve before recruitment. A queued Settler waits without new progress below two population; blocked placement spends no citizen. Switching retains construction progress. Civilian projects convert industry to research, food or gold each round. Homesteads and Water Services increase Settlement Capacity without creating food or citizens.",
+				}
+			end
+		end
 		if ContentRules.isRedesign(state or player) then
 			if entry.id == "turns" then
 				return {
@@ -244,10 +282,27 @@ function E.describe(category, entry, player, state)
 	end
 	local record = entry.record
 	local lines = {}
+	if category == "improvements" then
+		local placement = entry.id == "farm" and "Fertile open flat land"
+			or entry.id == "quarry" and "Clear hill or stone deposit"
+			or "Woods or jungle; feature retained"
+		return {
+			"Builder charge cost: 1; spends remaining movement.",
+			placement,
+			"Worked tile: +"
+				.. record.food
+				.. " food / +"
+				.. record.industry
+				.. " industry. Oak fields and Iron quarries add one matching yield.",
+			"Requires "
+				.. Systems.techs[record.tech].name
+				.. ". Owned land outside city centers and landmarks. Tile ownership transfers benefits. No yield without a worker.",
+		}
+	end
 	if category == "projects" then
 		return {
 			record.description,
-			"Requires " .. Systems.label("building", record.building),
+			"Requires " .. Systems.label("building", Projects.building(player, entry.id)),
 			"Runs until changed. Conversion remainders are retained separately for each project. Uses this city's industry instead of construction.",
 		}
 	end
@@ -262,7 +317,7 @@ function E.describe(category, entry, player, state)
 			"Industry cost: " .. Systems.projectCost("wonder", entry.id, player),
 			record.description,
 			"Research: " .. Systems.techs[record.tech].name,
-			"Unique across the world. Choose an empty owned land hex. Benefits follow tile ownership. Capturing a wonder transfers its benefits.",
+			"Unique across the world. Choose an owned land hex outside a city center. Completion replaces any tile improvement. Benefits follow tile ownership. Capturing a wonder transfers its benefits.",
 		}
 	end
 	if category == "units" then
@@ -299,6 +354,11 @@ function E.describe(category, entry, player, state)
 			record.description or "",
 			"One of this building per city.",
 		}
+		if ContentRules.hasDevelopment(state or player) and (record.capacity or 0) > 0 then
+			lines[#lines + 1] = "Settlement Capacity +"
+				.. record.capacity
+				.. "; no automatic citizens."
+		end
 		if entry.id == "councilhall" and ContentRules.isRedesign(state or player) then
 			lines[2] =
 				"Retired in Redesign V1. Council leadership and resolutions do not require this building. Original and P1 campaigns retain its diplomatic-victory role."
@@ -326,8 +386,16 @@ function E.describe(category, entry, player, state)
 			.. (#needs > 0 and table.concat(needs, ", ") or "none")
 	end
 	if category == "units" and entry.id == "settler" then
-		lines[#lines + 1] =
-			"Starts at 12 industry; +5 for each settler trained by your empire. Counts completed settlers, including those later lost or settled."
+		local base, step = ContentRules.unitCost("settler", record, player)
+		lines[#lines + 1] = "Starts at "
+			.. base
+			.. " industry; +"
+			.. step
+			.. " for each Settler trained by your empire, including those later lost or settled. Game speed scales these costs."
+		if ContentRules.hasDevelopment(state or player) then
+			lines[#lines + 1] =
+				"Requires at least two population. Completion consumes one citizen after growth resolves; blocked placement consumes none."
+		end
 	end
 	if record.age then
 		lines[#lines + 1] = "Age: " .. Systems.ages[record.age].name
@@ -388,9 +456,26 @@ function E.draw(ui, rect)
 			model.offset = 0
 		end, { selected = model.category == category })
 	end
+	if ContentRules.hasBuilders(ui.state) then
+		r:button(
+			x + math.floor(w / 2) + 1,
+			y + 24,
+			math.floor((w - 6) / 2),
+			10,
+			"TILE WORK",
+			function()
+				model.category = "improvements"
+				model.entry = nil
+				model.offset = 0
+			end,
+			{ selected = model.category == "improvements" }
+		)
+	end
 	local projectRow = ContentRules.usesP1Economy(ui.state) and 11 or 0
 	if projectRow > 0 then
-		r:button(x + 2, y + 24, w - 4, 10, "PROJECTS", function()
+		local projectsWidth = ContentRules.hasBuilders(ui.state) and math.floor((w - 6) / 2)
+			or w - 4
+		r:button(x + 2, y + 24, projectsWidth, 10, "PROJECTS", function()
 			model.category = "projects"
 			model.entry = nil
 			model.offset = 0
@@ -419,7 +504,7 @@ function E.draw(ui, rect)
 			end
 		end
 	else
-		for _, entry in ipairs(E.entries(model.category)) do
+		for _, entry in ipairs(E.entries(model.category, ui.state)) do
 			rows[#rows + 1] = {
 				buttons = {
 					{

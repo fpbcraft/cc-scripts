@@ -1,3 +1,4 @@
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local Personalities = dofile("/games/civcraft/ai_personalities.lua")
@@ -51,7 +52,7 @@ local function support(view, player, unit, x, y, systems)
 		if
 			other.id ~= unit.id
 			and other.owner == player.id
-			and (view.contentRules ~= "balance1" or not other.actedThisRound)
+			and (not ContentRules.isRedesign(view) or not other.actedThisRound)
 			and Hex.distance(x, y, other.x, other.y) <= 1
 		then
 			value = value + math.min(10, 100 - (other.hp or 100)) * 2
@@ -147,7 +148,7 @@ function Tactics.ranked(view, player, unit, systems)
 	local owned = World.territory(view, Hex)
 	local held = Threats.at(map, unit.x, unit.y, unit)
 	local resting = owned[World.key(unit.x, unit.y)] == player.id
-	local recovery = view.contentRules == "balance1"
+	local recovery = ContentRules.isRedesign(view)
 			and Combat.restRecovery(view, unit, systems).total
 		or nil
 	if recovery then
@@ -183,7 +184,7 @@ function Tactics.ranked(view, player, unit, systems)
 				defender
 				and not (defender.village and defender.owner == defender.villageOwner)
 				and (
-					defender.kind == "settler" or Threats.opponent(view, player, defender, systems)
+					Stacks.isCivilian(defender) or Threats.opponent(view, player, defender, systems)
 				)
 			then
 				forecast = Combat.predictOrder(view, unit, choice, systems)

@@ -348,6 +348,10 @@ end
 
 local function hostDraw(ui, state)
 	if state.phase == "lobby" then
+		if state.contentRules ~= "balance3" then
+			issue(ui, "contentRules", { version = "balance3" })
+			return
+		end
 		if not created then
 			created = true
 			assert(emulator.create("1", "computer"))
@@ -783,6 +787,12 @@ if id == 0 then
 else
 	if not ok then
 		sendControl(0, "clientFailed", { reason = tostring(why) })
+	end
+	-- Keep modem Lua states alive until the host has exited and written its result.
+	-- CraftOS-PC may still deliver the host's final disconnect packets; shutting
+	-- these computers down first can crash its native modem receive handler.
+	while true do
+		os.pullEventRaw()
 	end
 end
 os.shutdown()

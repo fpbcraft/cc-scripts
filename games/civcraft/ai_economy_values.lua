@@ -8,10 +8,13 @@ function Values.context(view, player, city, systems)
 	local plan = player.aiPlan or {}
 	local specialization = (plan.citySpecializations or {})[city.id]
 	local surplus = yields.food - 2 * (city.population or 2)
+	local growth = ContentRules.hasDevelopment(view) and systems.growth(player, city, view, yields)
+		or nil
 	return {
 		yields = yields,
 		treasury = treasury,
 		surplus = surplus,
+		growthFactor = growth and growth.growthFactor,
 		goal = plan.primary or (ContentRules.isRedesign(view) and "expedition" or "industrial"),
 		specialization = specialization,
 		emergency = plan.emergency,

@@ -13,6 +13,7 @@ local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
 local DiplomaticPerception = dofile("/games/civcraft/diplomatic_perception.lua")
 local Reports = dofile("/games/civcraft/reports.lua")
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Lifecycle = {}
 
 local function player(state, id)
@@ -67,25 +68,50 @@ local function addUnit(state, owner, x, y, kind)
 end
 
 function Lifecycle.initialize(state)
-	state.world = World.generate(state.mapSeed, state.mapSize, #state.players, state.mapType)
+	state.world = World.generate(state.mapSeed, state.mapSize, #state.players, state.mapType, state)
 	state.name = "EMPIRE " .. state.world.seed
 	for i, p in ipairs(state.players) do
 		local pos = state.world.starts[i]
 		local x, y = pos.x, pos.y
-		table.insert(state.cities, {
-			id = state.nextId,
-			x = x,
-			y = y,
-			owner = p.id,
-			capitalOf = p.id,
-			level = 1,
-			population = 2,
-			foodStore = 0,
-			jobs = { food = 1, wood = 1, science = 0 },
-			buildings = {},
-		})
-		state.nextId = state.nextId + 1
-		addUnit(state, p.id, x + ((x < state.world.width / 2) and 1 or -1), y, "warrior")
+		p.techs = p.techs or {}
+		p.civ = p.civ or Systems.civs[i].id
+		if ContentRules.startsWithSettler(state) then
+			local settler = addUnit(state, p.id, x, y, "settler")
+			settler.initialSettler = true
+			p.settlersTrained = 0
+			p.capitalFounded = false
+			local gx, gy = x, y
+			for _, point in ipairs(Hex.neighbours(x, y, state)) do
+				if
+					Hex.passable(
+						point.x,
+						point.y,
+						state,
+						{ owner = p.id, kind = "warrior" },
+						Systems
+					)
+				then
+					gx, gy = point.x, point.y
+					break
+				end
+			end
+			addUnit(state, p.id, gx, gy, "warrior")
+		else
+			table.insert(state.cities, {
+				id = state.nextId,
+				x = x,
+				y = y,
+				owner = p.id,
+				capitalOf = p.id,
+				level = 1,
+				population = 2,
+				foodStore = 0,
+				jobs = { food = 1, wood = 1, science = 0 },
+				buildings = {},
+			})
+			state.nextId = state.nextId + 1
+			addUnit(state, p.id, x + ((x < state.world.width / 2) and 1 or -1), y, "warrior")
+		end
 		p.food = 12
 		p.wood = 12
 		p.science = 0

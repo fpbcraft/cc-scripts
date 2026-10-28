@@ -1,0 +1,134 @@
+# M2 land development — implementation record
+
+M2 implements Settlement Capacity, population-consuming Settlers and charged
+Builder tile development in **Landwork V3** (`balance3`), the new-game default.
+Original, P1, Redesign V1 and the interim Development V2 (`balance2`) saves retain
+their economies. This record separates mechanics verification from the opening
+balance calibration that remains paused by the user's instruction.
+
+## M2a rules
+
+Capacity starts at 4. Any adjacent water adds 1; CivCraft currently has no
+freshwater/river classification. Homesteads (Crafting, 24 industry) and Water
+Services (Masonry, 28) each add 2. A Trading Hall adds 1. These basics do not
+consume a future specialty focus slot. Capacity is derived from map/buildings,
+not stored as a separate population currency.
+
+| Population relative to capacity | Positive growth food | Minimum growth time |
+|---|---:|---:|
+| Two or more below | 100% | 1x |
+| One below | 50% | 2x |
+| At capacity or one above | 25% | 4x |
+| Two or more above | 12.5% | 8x |
+
+Food consumption and starvation are unchanged. Fractional growth food accumulates
+in city storage. The longer minimum time prevents banked food bypassing capacity;
+food threshold and minimum age are concurrent constraints. The inspector shows
+capacity sources, the rate, raw surplus and effective food gain.
+
+Settlers cost 28 industry plus 8 for every previously completed Settler, scaled
+by game speed. They require at least two population and consume one citizen
+only when successfully placed. Failed placement never spends a citizen or
+increments the trained count. Growth/starvation resolves before recruitment.
+A queued Settler below two population keeps its progress and waits; growth can
+make it eligible in the same round. Departing citizens stop working tiles and
+reset the city's growth age; stored food is retained. Current-round production
+was collected before departure; subsequent rounds use the smaller workforce.
+
+Research and Codex entries filter Development V2 infrastructure out of older
+profiles. Production help explains the citizen cost and pause reason. AI
+production values capacity infrastructure when positive growth is constrained.
+Redesign victory/recovery logic applies to both balance1 and balance2.
+
+## Verification
+
+`tests/civcraft_m2_growth_test.lua` covers source totals, growth tiers, banked
+food, unchanged starvation, cost escalation, blocked/successful recruitment,
+paused/resumed completion, actual worked-tile trimming, legacy profile behavior,
+research/Codex filtering, capacity AI valuation and inspector row generation.
+Its native-only branch checks actual save/load, fractional storage, capacity
+reconstruction and no repeated citizen debit. It passed on CraftOS-PC 2.8.3 /
+ComputerCraft 1.112.0. Inspector assertions verify row generation, not visual
+readability or multiplayer delivery.
+
+All 61 Lua regression scripts pass. The final capacity-preview/Codex additions
+were then rechecked through focused native rules and a native hotseat/war flow.
+[Validation record](validation/m2a-source-validation.json).
+
+M1 and P1 focused native rule scripts also pass. Lua lifecycle conformance and
+technology-canvas tests pass. All 41 Python laboratory contracts pass, including Development V2 Lua 5.3 /
+LuaJIT checkpoint and round-boundary equality. Native host/AI and hotseat/war
+sessions select Development V2, process round two and reload its saved campaign.
+The published f1d1b8d installer also passes a native host session with the existing
+Redesign V1 default, confirming the new runtime module is packaged. These are
+scripted text-terminal input flows; physical monitor/rednet remains unverified.
+Selene reports
+zero errors/warnings for changed rules/UI and the new test.
+
+## Remaining release and calibration work
+
+- Joint opening calibration remains deferred while balance studies are paused.
+- Physical-monitor and target-server observations remain M11 release work.
+- Broader native latency/menu-load observations from M0 remain open.
+
+## M2b: charged land development
+
+Landwork V3 (`balance3`) adds Builders and inherits M2a's capacity and Settler
+rules. It is a separate selectable profile so saved M2a campaigns retain their
+city Farm/Quarry economy. Landwork V3 becomes the default with this delivery; earlier profiles remain selectable.
+
+A Builder costs 22 industry, moves two, has three charges and no upkeep. It
+spends one charge and remaining movement to improve its current tile; its final
+charge removes it and detaches its escort. Capture preserves remaining charges,
+spends movement and clears the previous owner's orders. Builders share the
+civilian stacking/protection rules with Settlers.
+
+| Improvement | Research | Placement | Worked-tile effect |
+|---|---|---|---|
+| Wheat Field | Wheat Farming | Fertile open flat land | +2 food; Oak Villagers add 1 |
+| Quarry | Stone Tools | Clear hill or stone deposit | +2 industry; Iron Villagers add 1 |
+| Lumber Camp | Crafting | Woods or jungle | +1 industry; feature retained |
+
+Improvements belong to the tile, so territory changes transfer their benefits.
+They do not produce without a citizen working the tile. Fields and quarries
+replace city Farm/Quarry buildings in this profile; their city yield bonuses are
+ignored even if a manually supplied state contains them. Homesteads unlock Tend
+Crops. No harvesting/removing features is included in this first catalog.
+
+The Builder inspector offers improvement planning and replace/append modes.
+Map selection previews tile food/industry before and after and the Builder's
+charge count before confirmation. Work tasks persist and spend ordinary
+movement through shared actions. Each task rechecks terrain, prerequisites,
+ownership, occupancy and route eligibility. Visible enemy units within at least
+two tiles (or their ranged reach), and enemy cities within two, pause work.
+Hidden enemy changes do not reveal themselves through safety checks. A wonder
+project reserves its target against new Builder work. Wonder completion and city
+founding replace existing tile improvements rather than duplicating their yields. Manual
+movement replaces work; paused work offers resume/cancel. Appended tasks cannot
+exceed remaining charges and duplicate queued tile targets are rejected.
+
+AI recruitment accounts for existing/queued Builders and undeveloped eligible
+city tiles. Operational AI values worked tiles and city food/industry needs,
+checks observed route safety and issues the same queue action as human players.
+Player observations retain last-seen improvements and copy records rather than
+exposing mutable authoritative tables. Save/load retains charges, tasks, pauses,
+improvements and fractional city food. Installer manifests include the three new
+modules. New shared-rule proposal actions use observer knowledge.
+
+Focused Lua and native CraftOS rule/UI/save checks pass. The native branch uses
+the real renderer and inspector button coordinates to plan and confirm a field.
+The default Landwork host/AI and hotseat/war sessions pass. A controlled Builder
+action, round processing and restored observations match between Lua 5.3 and
+LuaJIT; all 42 Python laboratory contracts pass. The full Lua batch passed 61
+scripts and timed out its graphics-heavy controls script at 240 seconds; that
+script passed when rerun alone. This is not a calibrated-price claim.
+
+The native three-computer normal and reversed-race campaigns pass with the new default.
+Its first run reached successful gameplay assertions but crashed in CraftOS's
+native modem receive handler during teardown. The test now keeps clients' Lua
+states alive until the host has processed their acknowledgements, exited and
+written its result, then lets the host shut them down. No production networking
+rule was changed for that emulator teardown repair. The published `d5aef7a` installer passes a native host/AI session with Landwork
+V3, retaining original and migrated save fixtures.
+
+[Detailed M2b verification record](validation/m2b-source-validation.json).

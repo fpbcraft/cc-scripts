@@ -8,6 +8,8 @@ local Icons = dofile("/games/civcraft/icons.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local Terrain = dofile("/games/civcraft/terrain_view.lua")
 local World = dofile("/games/civcraft/world.lua")
+local Stacks = dofile("/games/civcraft/unit_stacks.lua")
+local CityBanner = dofile("/games/civcraft/city_banner.lua")
 local V = {}
 local function at(list, x, y)
 	for _, item in ipairs(list or {}) do
@@ -46,7 +48,12 @@ function V.draw(ui, state, player, rect)
 		end
 		for _, c in ipairs(focus) do
 			if c.owner == ui.playerID then
-				ui.selected = { x = c.x, y = c.y, kind = c.kind and "unit" or "city" }
+				ui.selected = {
+					x = c.x,
+					y = c.y,
+					kind = c.kind and "unit" or "city",
+					unitID = c.kind and c.id or nil,
+				}
 				ui.panX = (c.x - 0.5) * size - rect.w / 2
 				ui.panY = (c.y - 0.5) * step - rect.h / 2
 				break
@@ -60,7 +67,7 @@ function V.draw(ui, state, player, rect)
 		{ x = rect.x, y = rect.y, w = rect.w, h = rect.h, tile = size, maxX = maxX, maxY = maxY }
 	local citySignature = {}
 	local cityIndex, unitIndex, civilianIndex = {}, {}, {}
-	local hidden = ui.animationFrame and ui.animationFrame.hidden or {}
+	local hiddenActors = ui.animationFrame and ui.animationFrame.hidden or {}
 	local campIndex = {}
 	for _, camp in ipairs(World.observedCamps(state, player)) do
 		campIndex[World.key(camp.x, camp.y)] = camp
@@ -72,10 +79,10 @@ function V.draw(ui, state, player, rect)
 	end
 	for _, unit in ipairs(state.units or {}) do
 		local key = World.key(unit.x, unit.y)
-		if not unitIndex[key] or unitIndex[key].kind == "settler" then
+		if not unitIndex[key] or Stacks.isCivilian(unitIndex[key]) then
 			unitIndex[key] = unit
 		end
-		if unit.kind == "settler" then
+		if Stacks.isCivilian(unit) then
 			civilianIndex[key] = unit
 		end
 	end
@@ -134,7 +141,7 @@ function V.draw(ui, state, player, rect)
 					local claim = claims[World.key(x, y)]
 					local owner = World.observedOwner(state, player, x, y)
 					local deposit = not hidden and World.deposit(world, x, y)
-					local yields = not hidden and World.yields(world, x, y)
+					local yields = not hidden and World.yields(world, x, y, state)
 					local city = cityIndex[World.key(x, y)]
 					if city and (city.owner == ui.playerID or visibility == "visible") then
 						for _, owner in ipairs(state.players or {}) do
@@ -151,7 +158,8 @@ function V.draw(ui, state, player, rect)
 							base = owner and ownerColor(state, owner) or base
 						end
 					end
-					if r.buffer and r.blit then
+					-- Preserve hit targets without rasterizing terrain in layout-only tests.
+					if not canvas.layoutOnly and r.buffer and r.blit then
 						r:blit(
 							Terrain.sprite(
 								geography,
@@ -165,7 +173,7 @@ function V.draw(ui, state, player, rect)
 							px,
 							py
 						)
-					else
+					elseif not canvas.layoutOnly then
 						for dy = 0, size - 1 do
 							local inset = dy < size / 4 and size / 2 - 2 * dy
 								or dy >= size * 3 / 4 and 2 * (dy + 1) - size * 1.5
@@ -195,6 +203,28 @@ function V.draw(ui, state, player, rect)
 					}
 					ui.hexTargets[#ui.hexTargets + 1] =
 						{ x = px, y = py, w = size, h = size, tx = x, ty = y }
+					-- Banners are interactive hit targets, not just painted pixels.
+					-- Collect them even when the visual-only tile pass is skipped.
+					if canvas.layoutOnly then
+						local city = visibility ~= "hidden"
+							and World.observedCity(state, player, x, y)
+						if
+							city
+							and not hiddenActors["city:" .. tostring(city.id)]
+							and (
+								city.remembered
+								or city.owner == ui.playerID
+								or visibility == "visible"
+							)
+						then
+							cityLabels[#cityLabels + 1] = {
+								city = city,
+								x = px + size / 2,
+								y = py - 6,
+								remembered = visibility == "explored",
+							}
+						end
+					end
 				end
 			end
 		end
@@ -214,8 +244,9 @@ function V.draw(ui, state, player, rect)
 				r:line(ax, ay, bx, by, 18)
 			end
 		end
-		-- Paint borders after all terrain, so neighbouring fills cannot erase them.
-		for _, t in ipairs(tiles) do
+		-- All map hitboxes were collected above. Skip this visual-only pass
+		-- for geometry tests; full renderers still paint every tile.
+		for _, t in ipairs(canvas.layoutOnly and {} or tiles) do
 			local x, y, px, py = t.x, t.y, t.px, t.py
 			r = t.visibility == "explored" and rememberedRenderer or canvas
 			if t.owner and t.visibility ~= "hidden" then
@@ -248,6 +279,14 @@ function V.draw(ui, state, player, rect)
 			end
 			local k = World.key(x, y)
 			if t.visibility ~= "hidden" then
+				local improvement = (world.improvements or {})[k]
+				if improvement then
+					local color = improvement.damaged and 31
+						or improvement.kind == "farm" and 5
+						or improvement.kind == "lumber" and 13
+						or 7
+					r:fill(px + math.floor(size / 2) - 2, py + size - 5, 5, 2, color)
+				end
 				local landmark, rail = World.observedFeatures(state, player, x, y)
 				if rail then
 					r:line(
@@ -295,7 +334,7 @@ function V.draw(ui, state, player, rect)
 			local city = t.visibility ~= "hidden" and World.observedCity(state, player, x, y)
 			if
 				city
-				and not hidden["city:" .. tostring(city.id)]
+				and not hiddenActors["city:" .. tostring(city.id)]
 				and (city.remembered or city.owner == ui.playerID or t.visibility == "visible")
 			then
 				cityLabels[#cityLabels + 1] = {
@@ -324,11 +363,11 @@ function V.draw(ui, state, player, rect)
 					)
 				end
 			end
-			if city and hidden["city:" .. tostring(city.id)] then
+			if city and hiddenActors["city:" .. tostring(city.id)] then
 				city = nil
 			end
 			local unit = t.visibility == "visible" and unitIndex[World.key(x, y)]
-			if unit and hidden[Animations.identity(unit)] then
+			if unit and hiddenActors[Animations.identity(unit)] then
 				unit = nil
 			end
 			if unit then
@@ -352,12 +391,12 @@ function V.draw(ui, state, player, rect)
 				and settler
 				and unit ~= settler
 				and t.visibility == "visible"
-				and not hidden[Animations.identity(settler)]
+				and not hiddenActors[Animations.identity(settler)]
 			then
 				if size >= 16 then
 					Icons.faction(
 						r,
-						"settler",
+						settler.kind,
 						px + size * 0.65,
 						py + size * 0.6,
 						math.min(7, size / 2),
@@ -501,16 +540,22 @@ function V.draw(ui, state, player, rect)
 			end
 		end
 		r = canvas
-		for _, label in ipairs(cityLabels) do
-			local name = label.city.name or "CITY"
-			local width = r:textWidth(name)
-			if width + 4 <= rect.w then
-				local xx =
-					math.max(rect.x + 2, math.min(rect.x + rect.w - width - 2, label.x - width / 2))
-				r:fill(xx - 2, label.y - 1, width + 4, 7, 0)
-				local labelRenderer = label.remembered and rememberedRenderer or canvas
-				labelRenderer:text(xx, label.y, name, ownerColor(state, label.city.owner), 1, width)
+		local occupied = {}
+		ui.cityBannerTargets = {}
+		table.sort(cityLabels, function(a, b)
+			if (a.city.owner == ui.playerID) ~= (b.city.owner == ui.playerID) then
+				return a.city.owner == ui.playerID
 			end
+			return (a.city.id or 0) < (b.city.id or 0)
+		end)
+		for _, label in ipairs(cityLabels) do
+			local model = CityBanner.model(state, player, label.city, Systems)
+			local box = CityBanner.layout(r, model, label, rect, occupied)
+			occupied[#occupied + 1] = box
+			local targetRenderer = label.remembered and rememberedRenderer or canvas
+			CityBanner.draw(targetRenderer, model, box, ownerColor(state, label.city.owner))
+			ui.cityBannerTargets[#ui.cityBannerTargets + 1] =
+				{ x = box.x, y = box.y, w = box.w, h = box.h, city = label.city }
 		end
 		AnimationView.draw(ui, state, rect, size)
 	end)

@@ -1,0 +1,452 @@
+{
+  "balanceCalibration": "paused by user",
+  "lua": {
+    "aggregatePassingScripts": 62,
+    "batch": [
+      {
+        "exitCode": 0,
+        "seconds": 5.709,
+        "test": "civcraft_actions_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 83.512,
+        "test": "civcraft_animation_ui_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.119,
+        "test": "civcraft_animations_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.005,
+        "test": "civcraft_audio_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 28.167,
+        "test": "civcraft_biomes_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.023,
+        "test": "civcraft_builder_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 4.491,
+        "test": "civcraft_campaign_rules_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 4.598,
+        "test": "civcraft_campaign_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.193,
+        "test": "civcraft_civilization_picker_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 1.86,
+        "test": "civcraft_command_fuzz_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.192,
+        "test": "civcraft_compact_toolbar_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 4.39,
+        "test": "civcraft_contacts_test.lua"
+      },
+      {
+        "exitCode": 124,
+        "seconds": 241.594,
+        "test": "civcraft_controls_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 89.88,
+        "test": "civcraft_conversation_ui_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.021,
+        "test": "civcraft_council_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.791,
+        "test": "civcraft_council_ui_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.038,
+        "test": "civcraft_difficulty_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.062,
+        "test": "civcraft_difficulty_ui_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 11.509,
+        "test": "civcraft_diplomacy_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 12.801,
+        "test": "civcraft_economic_ai_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 7.669,
+        "test": "civcraft_embarkation_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.071,
+        "test": "civcraft_escorts_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.21,
+        "test": "civcraft_event_history_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 8.121,
+        "test": "civcraft_events_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 17.258,
+        "test": "civcraft_expansion_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 127.681,
+        "test": "civcraft_expansion_ui_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.126,
+        "test": "civcraft_fog_memory_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.013,
+        "test": "civcraft_hex_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.015,
+        "test": "civcraft_hostile_capture_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.145,
+        "test": "civcraft_hotseat_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 108.246,
+        "test": "civcraft_hud_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.115,
+        "test": "civcraft_installer_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 25.377,
+        "test": "civcraft_lifecycle_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.024,
+        "test": "civcraft_m1_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.015,
+        "test": "civcraft_m1_ui_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.012,
+        "test": "civcraft_m2_growth_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.003,
+        "test": "civcraft_module_cache_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 5.86,
+        "test": "civcraft_movement_range_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 86.607,
+        "test": "civcraft_observer_ui_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.018,
+        "test": "civcraft_p1_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 71.197,
+        "test": "civcraft_presentation_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 35.178,
+        "test": "civcraft_progression_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.14,
+        "test": "civcraft_queued_routes_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.008,
+        "test": "civcraft_render_batch_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.007,
+        "test": "civcraft_reports_determinism_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 75.13,
+        "test": "civcraft_rules_ui_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.105,
+        "test": "civcraft_save_resume_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.004,
+        "test": "civcraft_saves_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 5.729,
+        "test": "civcraft_scheduler_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 64.703,
+        "test": "civcraft_settings_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 7.729,
+        "test": "civcraft_strategy_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 5.402,
+        "test": "civcraft_systems_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 86.996,
+        "test": "civcraft_tactics_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 4.437,
+        "test": "civcraft_tech_canvas_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.124,
+        "test": "civcraft_title_menu_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 80.974,
+        "test": "civcraft_turn_tasks_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 64.049,
+        "test": "civcraft_ui_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.06,
+        "test": "civcraft_unit_stacks_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 4.812,
+        "test": "civcraft_v06_integration_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 0.03,
+        "test": "civcraft_watchdog_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 6.077,
+        "test": "civcraft_world_test.lua"
+      },
+      {
+        "exitCode": 0,
+        "seconds": 6.778,
+        "test": "civcraft_zone_control_test.lua"
+      }
+    ],
+    "batchPassed": 61,
+    "batchTimeouts": 1,
+    "isolatedControlsOutput": "CIVCRAFT: 18 monitor/mode layouts, zoom, modal isolation, production, sleep, handoff and reports passed.\n",
+    "isolatedControlsPassed": true,
+    "scope": "Final preview, research, wonder/founding replacement and native-harness changes received targeted follow-ups after this batch."
+  },
+  "native": {
+    "builderRulesUiSave": true,
+    "expansionRules": true,
+    "expansionWatchdog": "Native expansion test initially loaded uncached modules repeatedly; it now uses the same module cache as the real installed program and cooperative checkpoints, and passes.",
+    "host": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+    "hostDefault": true,
+    "hotseatWarDefault": true,
+    "normalNetworkRaceAllThreePassed": true,
+    "publishedInstaller": true,
+    "reverseNetworkRaceAllThreePassed": true,
+    "shutdownCrash": "First network run completed gameplay assertions but crashed in CraftOS modem receive during teardown; clients now wait for host shutdown. Both race orders then passed."
+  },
+  "notVerified": [
+    "physical monitors",
+    "target-server performance",
+    "opening balance calibration"
+  ],
+  "profile": "balance3",
+  "python": {
+    "builderQueueRestorationAndSpending": "Lua 5.3 and LuaJIT canonical state equality before and after next-round work",
+    "failed": 0,
+    "total": 42
+  },
+  "runtimeFileSha256": {
+    "games/civcraft/actions.lua": "9c18b8d2caa0cca312b46158d2a236e8b898767f3de334e724b777953de9612d",
+    "games/civcraft/actor_lifecycle.lua": "952c715916404c237d0380df3faeaae36b9f75c8fcdf431a35020c90e06536df",
+    "games/civcraft/ai.lua": "fbcb0316b96f375329fc2945d2faf0f4c09c5c5ecbd96f4aee1c94e855d7727c",
+    "games/civcraft/ai_builders.lua": "048c5ef34fa0a68e026c6550713e6fa7b28533e0f89245e3219158bf784451a2",
+    "games/civcraft/ai_campaigns.lua": "237255c04151915841da7988b0ec24cbc9eab6df431eda30f93623af6aa49eda",
+    "games/civcraft/ai_city_roles.lua": "0ce5f76aebb0712789336cda476bd2ec7cc54e943d14f495f3fc4f23ef236ddd",
+    "games/civcraft/ai_coordination.lua": "0e0872ded6909af6717a7754d0a8a5cfd87454f63f0663a66b3a73ca1efcdbca",
+    "games/civcraft/ai_difficulty.lua": "724ed7c12df38479fb06ae52cdcf9ef19786131726be28be41eb51790eac0f8b",
+    "games/civcraft/ai_economy_values.lua": "73c0801b322e2a100aa05a5ef0d6d0ace86a95cb08f46457b2c151b81c2cc2c9",
+    "games/civcraft/ai_infrastructure.lua": "75716378d1a3d5b0cd1b84437c9e0f58759aab72f3ec6cb85dbca25d9038947e",
+    "games/civcraft/ai_materials.lua": "c3ee2a03e330354f0541030c083b5c9b942cd85fc8976d71538eb2aa069f24ac",
+    "games/civcraft/ai_personalities.lua": "f02ef9fc707d625b768b33aa89289c582c8868b5c532a4a4bda9c18aaf7834ac",
+    "games/civcraft/ai_production.lua": "6dbfde84a6de408dbe771d792dffa7e6acd8312ef7d3aecd7bbf280511c54cdd",
+    "games/civcraft/ai_research.lua": "2733f60dccebe93a19c04edfc75ba76a2d900d1dbd72d670b19094a699636a45",
+    "games/civcraft/ai_routes.lua": "27ffafd6ae076f95b0e2f6b338f7d78130cd60ed7d6c32e0cac59d1548cbf81b",
+    "games/civcraft/ai_settlement.lua": "7653f8c7318e2ece97c216ee7b92139f0e98cdd41ddd349c1d3fc11d2d0728d2",
+    "games/civcraft/ai_strategy.lua": "cd3f6170482512a6b0537abd43b168c75a905f0ec4da7e5393d56c0bd2265ef2",
+    "games/civcraft/ai_tactics.lua": "93c2face6691f4fd39d0c644092b6a1c52f3171d936b1067223041a20335b66a",
+    "games/civcraft/ai_workers.lua": "49c953c9d8b95b71ec551377ef2150fef6f0312a87abaa2be019824aa7527453",
+    "games/civcraft/animation_frame.lua": "5fb2a768a4cc2f66bce96c6a8cb9cae6bfe3e77218850b4225498eb741cad999",
+    "games/civcraft/animation_preferences.lua": "102083435fb8a6b55a914988ab0c1cd4e5f7e16ffbdb7e04e90e9d0f58276da5",
+    "games/civcraft/animation_view.lua": "2797876b0d28920b5b75c3b30cee21cd04f96221203e472a3126b931c31354ee",
+    "games/civcraft/animations.lua": "6490786b7e967b7d00c47f0cce9d5367390fb4dacbfea1f64431642e2dc9b427",
+    "games/civcraft/audio.lua": "c32c82d7121449af105a14d75f0da72ea1a4cdf5e497753a1a4a67344af3a6ef",
+    "games/civcraft/basalt_surface.lua": "01568076a5b35d44a9c798bfc93598119bf25a2a4bb4cb58bb7b492baac2392f",
+    "games/civcraft/biomes.lua": "c76b413ba9286f877e9f91a0af07634b7d12c1b8db0e0cef8480d5182474c6d5",
+    "games/civcraft/campaign_options.lua": "fdc5d3b88f89d57428bebbe4aae52d1682d1694ffa358266a82f80df8847707a",
+    "games/civcraft/campaign_rules.lua": "ba0b119676eb7830839dc0244bf48c66be37a866b957eb7546aff36558a3cb6c",
+    "games/civcraft/civilian_projects.lua": "d35384fc523760df45afdd51bea9f27a9b978ad72d225424012c08b33d8cfe67",
+    "games/civcraft/civilization_picker.lua": "7452274cacf6aea75b15f962f67591793b2d619392660751895ee26fe911ebee",
+    "games/civcraft/combat.lua": "8f9a5b1cd961c353e433d219741aec4ed61412773244e49a219fa466bc7c6f55",
+    "games/civcraft/combat_strength.lua": "0cd5aaa7fc47d4a1c0787cd439751d96187a56a672d682e350d0865ecf697f8d",
+    "games/civcraft/command_queue.lua": "279685ba60250cd661f67db2b65891b489332bf711246e2a0ab8332266bb9457",
+    "games/civcraft/contacts.lua": "561049e7dc91ce6c5dbf0043a207dacd896721331817bbb3a4229ea01f34e5fa",
+    "games/civcraft/content.lua": "6595836430a052a8f8ca05c7fed5756b69c8f8e785b96361fdbf9aff1cb97230",
+    "games/civcraft/content_rules.lua": "832be604d4f650816a72d8c76e04c913b2dc0dbff1bd4889fa06027f0bec1f94",
+    "games/civcraft/conversation_view.lua": "2e72a8a6a83efcbda593bf855d9b9dd5ceed23e6d3f7b119fb7bc5535e4ff8cf",
+    "games/civcraft/cooperative.lua": "efb687356a1af9339f35c2b74cb8868432984a4c4d4e6fa40e5f45ac5f24c94c",
+    "games/civcraft/council.lua": "c6f4a98e2bb0056f5dceadfd19085871d544efb9ffb9a1c0ed9ee2ff30e7a6c6",
+    "games/civcraft/council_ai.lua": "d50a71dafab66e8481c5ecd87ba19c34ae4f6811f9df9585edf42f682c612a66",
+    "games/civcraft/council_rules.lua": "67588ae51121534116c3525e95b58f4e4a6d2848929f5255c36a9c5e1da68eb8",
+    "games/civcraft/council_view.lua": "ffa38ff57631d6d6c43fa65f93d0fdab3e50977ae9be59fefcbcd4e59265d8a2",
+    "games/civcraft/danger_view.lua": "005aa1cfdc9b8d2601c0503bf968b7d3277ec3b9ddbf6c8b9b479dfdcdebabb5",
+    "games/civcraft/diplomacy.lua": "423e8981039863641869a49f35d9d6bce3feb840fef0725753a9f42a4643f64d",
+    "games/civcraft/diplomatic_ai.lua": "c67fa12cc09465d902f8ee5d211f88501ab889cb1791978ba869d2ab91da7577",
+    "games/civcraft/diplomatic_memory.lua": "53f15ad2a57835bc04ef7080fb3b8cb09f37d80f6e749997fe128561e180ed89",
+    "games/civcraft/diplomatic_offers.lua": "37d789212fb7a13838489c30d45f040e320ef28a11c87f9f342b3b7d1c3c5d91",
+    "games/civcraft/diplomatic_perception.lua": "db32e6a02a24665af78ea3031a9de9ed55d6aa023cbf6da78a374d9a4a7d4e35",
+    "games/civcraft/economy.lua": "72be50ba06ef167d72e9a82873ecfef838fe7fb1b18b9314cdc4560aa94a797f",
+    "games/civcraft/empire_menu.lua": "2104bf5404e4c28a755535462297fc50f32c3a7c5054c3c7513539afbcf48b3c",
+    "games/civcraft/encyclopedia.lua": "e8839a7dd82c83dd1491916952abd06ba551edad41f0241f598b5828aa3a8063",
+    "games/civcraft/escort_paths.lua": "25b8eb3df6d0825577c6995fac02efef7568b201e6df29300c973dbfe3f3968d",
+    "games/civcraft/event_feed.lua": "58d36dc711e7e048eaa9c09876909afb6e1de37fc8550d0499bc4d1bfbe0f279",
+    "games/civcraft/event_summary.lua": "ebaddda78f20e093bbe8c3df7f33a8cb327642cf53cd9f8077512b31ebe1bf91",
+    "games/civcraft/events.lua": "7f38e038c5d266b00c6a0e95783f366221bcdde66b848b29df50651d2a17659c",
+    "games/civcraft/faction_colors.lua": "dec51dd8f1c7c447d284b427b3ef114177c95b51c2b613d2542743d58357bc35",
+    "games/civcraft/faction_view.lua": "e990658e58f6a28454ea7950ec496de5bf59731dfa45a3fa9a45f7b4677b2982",
+    "games/civcraft/fog_view.lua": "f953ccd02f9343cc6eabdc359466d8f5df327de3bd201cd30a51d98513017690",
+    "games/civcraft/game.lua": "3c4b7b4016add534a691a1ccff18731e7d8fdde97437cb294c3878822ebad713",
+    "games/civcraft/game_view.lua": "be835e55c49c63f65525324071e32747bcd780a220d2195a62ae5bbaa7490262",
+    "games/civcraft/hex.lua": "079a16f25d24c7077fae8d8b4f889fe38ecfea98b3775827f81795709a926888",
+    "games/civcraft/hostiles.lua": "a63745df1af296a9ed55193b858e76fa6ed3039a9830017c9c5dc294c26789f3",
+    "games/civcraft/hostility.lua": "4cb6161c78d137cb58e1b4473c00d3a67094a562258b5d64dd0abc736531d103",
+    "games/civcraft/hud.lua": "4c997d123abcfac44882fa37e87d063a75db5e1576f84b663eaa50a0a59e4e1b",
+    "games/civcraft/icons.lua": "4a963e1702c49fd0b47b6a493e421933244661b9fd6209975b5bd39cb3c2366f",
+    "games/civcraft/inspector.lua": "92b53d30b6d08d36cf1e86cf688efde2529a861c36b8a2488bac9870402c5a82",
+    "games/civcraft/landmarks.lua": "152703dd8e6ba5d3ad085544da9545691dce1744dada7ae3639ce5650fdb746e",
+    "games/civcraft/map_view.lua": "38f76c9b6462c2ff241f7033a0e7f3366fd10e70720c7ef2009658b719115c98",
+    "games/civcraft/match_lifecycle.lua": "5181c5f9f110eb652533a247ce20345c99cbb7ad58a0288aa3c992afcf149ed9",
+    "games/civcraft/minimap.lua": "b0d315ab89c7b5cf2e2ada526f8d6c9a6b7e51596036d75924807d2d0a1f4f97",
+    "games/civcraft/module_cache.lua": "cee9e0c4fdad3fe38cc4d57f56fd719ffcfe49682fe4c847133ba5c6b7a69da3",
+    "games/civcraft/movement_budget.lua": "bcc710c64cd901d30a8ba23f8f7faf54aba706751c9930c7e0ad6df12e6b0007",
+    "games/civcraft/panels.lua": "616cf6853c3a484502d360d77ec1f8af81316b9ceb0c5252884e6f8ca2414006",
+    "games/civcraft/playback_ui.lua": "1d757784bec636a6633bfe362dba2e44bd69a4aeecb32961e525fdfb04c58aee",
+    "games/civcraft/presentation.lua": "0322142e0dedaf712b8b4cb5da5190e45822fdc2d5493d86b3fefc62761dee14",
+    "games/civcraft/queued_routes.lua": "4445d6acc2db355ed60aeacf5f3622f510e64fac2fad226229ff3f2364d90437",
+    "games/civcraft/queued_work.lua": "1fddeaf8f55421266671bee41b0c0009f68bbf188bf443f5f85eb72fe4e0ac5f",
+    "games/civcraft/railways.lua": "eaa3e973f18052a0b94f66525379651e2616fe985c035547f42e30ad968f7fdb",
+    "games/civcraft/render.lua": "e28cdcdaf71365e0652946afeca699788b906c75538c0c8c76a019b9a5422101",
+    "games/civcraft/reports.lua": "f4f3f6a49b1f605a569e7c0ce176a57e3397da107e306800cfaa1a094dda4c60",
+    "games/civcraft/research_details.lua": "a598b6d91808bccfbf21a387333b07f5005f3ff2a1b1ea060dab1b9acc7875f5",
+    "games/civcraft/saves.lua": "ca4083c162d5e39e207dfe9a963186ea8e597ed60cedb042feab082bf280c6ae",
+    "games/civcraft/settings_view.lua": "a5a2ff29a338f91fbbb2cdcc7c8517522ccc290cde9ee1db69f30bad1d8aa1a3",
+    "games/civcraft/settlement_capacity.lua": "16a22736f568a247f9e61aa3e962f835a21149b5a2ca7fac60fc81e09344da54",
+    "games/civcraft/snapshots.lua": "3c9181cf3083b786f10eda984ea6ac2f20f45bcde05a564ea3ba9a93c1f41c43",
+    "games/civcraft/state_writer.lua": "a7f4b14d287b76fdfa344f83a8f5f209ecdfda4eaf111791ccc3ce31aed3ba3f",
+    "games/civcraft/systems.lua": "999f2814e52ac09934f9e9ba43448428c174382a34fe28ae95087315c1b94614",
+    "games/civcraft/tech_tree.lua": "e991e8ca9026080fe9f52df88c81be55de5c5a4ff777af5cc728c78eac27c445",
+    "games/civcraft/terrain_view.lua": "984d63b64cbe72023cca5ff8c035d4ee449ce79df1d956d1df029433263ce463",
+    "games/civcraft/threats.lua": "eeb153b2079f3bdcf1eb834cdbe73926b90d836f14a167418da0fb3894bd6ca7",
+    "games/civcraft/tile_improvements.lua": "3df88782cc758354904df579e88c89685a72bbaffa4c5c23d8c19bd5bb893da3",
+    "games/civcraft/turn_scheduler.lua": "fb11587722a6ac3c4c68d32ee0085e5821a907691b455a32b6a05eb30f50d916",
+    "games/civcraft/turn_tasks.lua": "a5c47e14fcedbcdb3246e224cfac2189da48f213076b00da786ce385ec3841fb",
+    "games/civcraft/ui.lua": "9e5499151e16f33a9a7bddb45a42a9ffbb9ece8cd4e00c5ab44acb676ceb338d",
+    "games/civcraft/unit_movement.lua": "b0993a34af1e68f1ac989089d9f2b0637d00a6792a32baaf08337831dbc6413d",
+    "games/civcraft/unit_stacks.lua": "1e2e12794f97da7eb1b011d0e6c008ac4a74ebb362c119f7015a782a4cf593b6",
+    "games/civcraft/victory.lua": "20a7d3d6ee3d3b0a970925a3b1696fa856bc05a99033f9437821c6f3d498f175",
+    "games/civcraft/villages.lua": "c0ed4ea372d3be9b71cf922a9838a190b818eb5f2963535632f8fc2599237b89",
+    "games/civcraft/visibility_events.lua": "ef129e3357e023d1c8d67f4d39c77b1e7b4287c17822851ee24c81981aebe25a",
+    "games/civcraft/world.lua": "9168daf2b8a8ca8b5eee55e24550438d45d3ff0ca7389e307cea7dd931bbf851",
+    "games/civcraft/world_random.lua": "f2d147270b24f54f23661f8b7c16b9498ed1e25797680ac996e7dc35f386851a",
+    "games/civcraft/worldgen.lua": "796e05f8a7b4a63c4123060bd209b8ab2b1a7d87a063c3232417b4a086f32cc3",
+    "games/civcraft/zone_control.lua": "feebd6c5233aa9da32c8034227eafa4d821c7c55ef202d853bd013b2a10d5bde"
+  },
+  "testedGameplayCommit": "d5aef7a1a02c28230dd3b65c81cf85eb19819ee0"
+}

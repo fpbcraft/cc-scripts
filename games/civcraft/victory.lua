@@ -64,6 +64,23 @@ function V.check(state, advance)
 	if state.ruleset ~= "create" or state.phase ~= "game" then
 		return
 	end
+	local awaitingCapital = false
+	if ContentRules.startsWithSettler(state) then
+		for _, player in ipairs(state.players) do
+			if not player.capitalFounded then
+				for _, unit in ipairs(state.units or {}) do
+					if unit.owner == player.id and unit.kind == "settler" then
+						awaitingCapital = true
+					end
+				end
+				for _, city in ipairs(state.cities or {}) do
+					if city.owner == player.id then
+						awaitingCapital = true
+					end
+				end
+			end
+		end
+	end
 	local qualifiers = {}
 	local reasons = {}
 	for _, p in ipairs(state.players) do
@@ -86,7 +103,8 @@ function V.check(state, advance)
 			end
 		end
 		local reason = Rules.enabled(state, "conquest")
-				and capitals >= 2
+				and not awaitingCapital
+				and capitals >= (ContentRules.startsWithSettler(state) and 1 or 2)
 				and own == capitals
 				and "CONQUEST"
 			or Rules.enabled(state, "expedition") and status.dragon and "END EXPEDITION"

@@ -2,12 +2,15 @@ local Hex = dofile("/games/civcraft/hex.lua")
 local Landmarks = dofile("/games/civcraft/landmarks.lua")
 local Values = dofile("/games/civcraft/ai_economy_values.lua")
 local CouncilRules = dofile("/games/civcraft/council_rules.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local Works = dofile("/games/civcraft/tile_improvements.lua")
 local Production = {}
 
 local function inventory(view, player, systems, currentCity)
 	local result = {
 		cities = 0,
 		settlers = 0,
+		builders = 0,
 		soldiers = 0,
 		engineers = 0,
 		scouts = 0,
@@ -28,6 +31,7 @@ local function inventory(view, player, systems, currentCity)
 			result.healers = result.healers + 1
 		end
 		local key = id == "settler" and "settlers"
+			or stats.builder and "builders"
 			or stats.engineer and "engineers"
 			or (id == "scout" or id == "explorer") and "scouts"
 			or "soldiers"
@@ -56,6 +60,12 @@ local function unitValue(id, stats, counts, context, player, canExpand)
 			target = 4
 		end
 		return canExpand and math.max(0, target - counts.cities - counts.settlers) * 65 or 0
+	end
+	if stats.builder then
+		return context.builderDemand
+				and counts.builders < math.max(1, math.ceil(counts.cities / 2))
+				and 90
+			or 0
 	end
 	if stats.engineer then
 		return player.techs.railways
@@ -98,6 +108,19 @@ end
 function Production.ranked(view, player, city, systems, canExpand)
 	local context = Values.context(view, player, city, systems)
 	local counts = inventory(view, player, systems, city.id)
+	if ContentRules.hasBuilders(view) then
+		for _, tile in ipairs(systems.workable(view, city)) do
+			for _, kind in ipairs(Works.order) do
+				if Works.canPlace(view, player, kind, tile.x, tile.y, systems) then
+					context.builderDemand = true
+					break
+				end
+			end
+			if context.builderDemand then
+				break
+			end
+		end
+	end
 	local dependencies = {}
 	local target = context.goal == "expedition" and "dragon"
 		or context.goal == "diplomatic" and not CouncilRules.eligible(view, player.id) and "councilhall"
@@ -131,6 +154,14 @@ function Production.ranked(view, player, city, systems, canExpand)
 	for id, building in pairs(systems.buildings) do
 		if systems.canBuild(player, city, id, view) then
 			local value = Values.effects(building.effects, context) * 12 + (dependencies[id] or 0)
+			if
+				(building.capacity or 0) > 0
+				and context.growthFactor
+				and context.growthFactor < 1
+				and context.surplus > 0
+			then
+				value = value + building.capacity * 60 * (1 - context.growthFactor)
+			end
 			if id == "councilhall" then
 				local exists = false
 				for _, owned in ipairs(view.cities) do

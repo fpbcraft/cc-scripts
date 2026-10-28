@@ -11,6 +11,7 @@ local Actions = dofile("/games/civcraft/actions.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
 local Content = dofile("/games/civcraft/content.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local Capacity = dofile("/games/civcraft/settlement_capacity.lua")
 local Projects = dofile("/games/civcraft/civilian_projects.lua")
 local Economy = dofile("/games/civcraft/economy.lua")
 local Events = dofile("/games/civcraft/events.lua")
@@ -64,7 +65,7 @@ function M.workable(state, city)
 				and Hex.distance(xx, yy, city.x, city.y) <= 3
 				and World.territoryCity(state, Hex, xx, yy) == city
 			then
-				local yield = World.yields(state.world, xx, yy)
+				local yield = World.yields(state.world, xx, yy, state)
 				tiles[#tiles + 1] = { x = xx, y = yy, key = World.key(xx, yy), yield = yield }
 			end
 		end
@@ -248,11 +249,24 @@ function M.migrate(state)
 				end
 			end
 			for _, u in ipairs(state.units or {}) do
-				if u.owner == p.id and u.kind == "settler" then
+				if
+					u.owner == p.id
+					and u.kind == "settler"
+					and not (ContentRules.startsWithSettler(state) and u.initialSettler)
+				then
 					settlers = settlers + 1
 				end
 			end
 			p.settlersTrained = math.max(0, cities - 1) + settlers
+		end
+		if ContentRules.startsWithSettler(state) and p.capitalFounded == nil then
+			p.capitalFounded = false
+			for _, city in ipairs(state.cities or {}) do
+				if city.capitalOf == p.id then
+					p.capitalFounded = true
+					break
+				end
+			end
 		end
 		p.ai = p.ai or false
 		p.explored = p.explored or {}
@@ -383,6 +397,9 @@ function M.canBuild(p, c, id, state)
 		return false
 	end
 	local b = M.buildings[id]
+	if b and not ContentRules.available(b, state or p) then
+		return false
+	end
 	if
 		not b
 		or b.tech and not p.techs[b.tech] and not (id == "farm" and ContentRules.usesP1Economy(p))
@@ -400,7 +417,19 @@ function M.canBuild(p, c, id, state)
 end
 function M.canRecruit(p, id, state, hex, city)
 	local u = M.units[id]
-	if not u or u.hostile or (u.tech and not p.techs[u.tech]) then
+	if
+		not u
+		or u.hostile
+		or not ContentRules.available(u, state or p)
+		or (u.tech and not p.techs[u.tech])
+	then
+		return false
+	end
+	if
+		id == "settler"
+		and ContentRules.hasDevelopment(state or p)
+		and (not city or (city.population or 2) < 2)
+	then
 		return false
 	end
 	if u.unique and p.civ ~= u.unique then
@@ -449,6 +478,14 @@ function M.queue(p, c, kind, id, state, hex, x, y)
 		end
 	elseif kind == "unit" then
 		if not M.canRecruit(p, id, state, hex, c) then
+			if
+				id == "settler"
+				and ContentRules.hasDevelopment(state or p)
+				and (c.population or 2) < 2
+			then
+				return false,
+					"Settlers require at least two population; completion consumes one citizen"
+			end
 			return false, "Unit locked or missing strategic resource"
 		end
 	elseif kind == "project" then
@@ -556,14 +593,18 @@ function M.centerYields(p, c, state)
 	local food, industry, science = 2 + e.food, 1 + e.industry, 1 + e.science
 	if ContentRules.usesP1Economy(p) then
 		science = science + 1
-		if buildings.farm and not (p.techs or {}).agriculture then
+		if
+			buildings.farm
+			and not ContentRules.hasBuilders(p)
+			and not (p.techs or {}).agriculture
+		then
 			food = food - 1
 		end
 	end
-	if civ == "verdant" and buildings.farm then
+	if civ == "verdant" and buildings.farm and not ContentRules.hasBuilders(p) then
 		food = food + 1
 	end
-	if civ == "iron" and buildings.mine then
+	if civ == "iron" and buildings.mine and not ContentRules.hasBuilders(p) then
 		industry = industry + 1
 	end
 	if civ == "scholar" then
@@ -619,6 +660,9 @@ local function spawn(state, p, c, id, hex)
 	if not stats then
 		return false
 	end
+	if id == "settler" and ContentRules.hasDevelopment(state) and (c.population or 2) < 2 then
+		return false
+	end
 	local function available(x, y)
 		for _, u in ipairs(state.units) do
 			if u.x == x and u.y == y then
@@ -649,10 +693,29 @@ local function spawn(state, p, c, id, hex)
 	end
 	state.units[#state.units + 1] =
 		{ id = state.nextId, owner = p.id, x = x, y = y, kind = id, moved = true, movesLeft = 0 }
+	if stats.builder then
+		state.units[#state.units].charges = stats.charges
+	end
 	Events.notice(state, "spawn", state.units[#state.units])
 	state.nextId = state.nextId + 1
 	if id == "settler" then
 		p.settlersTrained = (p.settlersTrained or 0) + 1
+		if ContentRules.hasDevelopment(state) then
+			c.population = c.population - 1
+			c.growthAge = 0
+			if state.world then
+				M.ensureWorkers(state, c)
+			else
+				local excess = (c.jobs.food or 0)
+					+ (c.jobs.wood or 0)
+					+ (c.jobs.science or 0)
+					- c.population
+				for _, job in ipairs({ "science", "wood", "food" }) do
+					local remove = math.min(math.max(0, excess), c.jobs[job] or 0)
+					c.jobs[job], excess = (c.jobs[job] or 0) - remove, excess - remove
+				end
+			end
+		end
 	end
 	return true
 end
@@ -664,8 +727,14 @@ function M.projectPreview(p, c, id, state, yield)
 	yield = yield or M.yields(p, c, state, Hex, nil, true)
 	return Projects.preview(p, c, yield.industry, M, id)
 end
-function M.growth(p, c, state)
-	local yield = M.yields(p, c, state, Hex)
+function M.tileYields(state, x, y)
+	return World.yields(state.world, x, y, state)
+end
+function M.settlementCapacity(state, city)
+	return Capacity.details(state, city, M.buildings)
+end
+function M.growth(p, c, state, yield)
+	yield = yield or M.yields(p, c, state, Hex, nil, true)
 	local surplus = yield.food - 2 * (c.population or 2) + M.projectOutput(p, c, state, yield).food
 	local threshold = CampaignRules.cost(20 + 8 * (c.population or 2), p)
 	local result = {
@@ -673,13 +742,21 @@ function M.growth(p, c, state)
 		threshold = threshold,
 		minimumTurns = CampaignRules.cost(4, p),
 		stored = c.foodStore or 0,
+		foodGain = surplus,
 	}
+	if ContentRules.hasDevelopment(state or p) then
+		result.capacitySources = M.settlementCapacity(state, c)
+		result.capacity = result.capacitySources.total
+		result.growthFactor = Capacity.factor(c.population or 2, result.capacity)
+		result.foodGain = surplus > 0 and surplus * result.growthFactor or surplus
+		result.minimumTurns = math.ceil(result.minimumTurns / result.growthFactor)
+	end
 	if surplus > 0 then
 		result.status = "GROWING"
 		result.turns = math.max(
 			1,
 			result.minimumTurns - (c.growthAge or 0),
-			math.ceil((threshold - result.stored) / surplus)
+			math.ceil((threshold - result.stored) / result.foodGain)
 		)
 	elseif surplus == 0 then
 		result.status = "STAGNANT"
@@ -823,10 +900,10 @@ function M.production(state, hex)
 				projectGold = projectGold + output.gold
 				p.food = math.max(0, (p.food or 0) + yield.food - 2 * (c.population or 2))
 				p.wood = (p.wood or 0) + yield.industry
-				local growth = M.growth(p, c, state)
+				local growth = M.growth(p, c, state, yield)
 				Projects.commit(c, output)
 				c.growthAge = (c.growthAge or 0) + 1
-				c.foodStore = math.max(0, (c.foodStore or 0) + growth.surplus)
+				c.foodStore = math.max(0, (c.foodStore or 0) + growth.foodGain)
 				if growth.surplus < 0 then
 					c.hungryTurns = (c.hungryTurns or 0) + 1
 					if c.foodStore <= 0 and c.hungryTurns >= 3 and c.population > 1 then
@@ -1001,6 +1078,8 @@ function M.aiTurn(state, p, hex)
 		if present and not unit.moved then
 			if unit.kind == "settler" then
 				AI.settle(state, p, unit, M)
+			elseif (M.units[unit.kind] or {}).builder then
+				AI.builder(state, p, unit, M)
 			elseif (M.units[unit.kind] or {}).engineer then
 				AI.engineer(state, p, unit, M)
 			else

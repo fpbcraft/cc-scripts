@@ -79,6 +79,7 @@ local function projectCombat(event, observer)
 				ranged = result.ranged,
 				captured = result.captured,
 				capturedSettler = result.capturedSettler,
+				capturedCivilianKind = result.capturedCivilianKind,
 				attackerDied = result.attackerDied,
 				defenderDied = result.defenderDied,
 			},
@@ -96,6 +97,7 @@ local function projectCombat(event, observer)
 				defenderDied = result.defenderDied,
 				captured = result.captured,
 				capturedSettler = result.capturedSettler,
+				capturedCivilianKind = result.capturedCivilianKind,
 			},
 		}
 	end

@@ -304,6 +304,14 @@ local function unit(id, name, tech, production, move, attack, defense, range, ex
 	end
 	C.units[id] = u
 end
+unit("builder", "Builder", nil, 22, 2, 0, 1, 0, {
+	tileDevelopment = true,
+	builder = true,
+	charges = 3,
+	upkeep = 0,
+	vision = 2,
+	ability = "Spend three charges on owned tile improvements; disappears after the final charge",
+})
 unit("warrior", "Stone Guard", nil, 13, 2, 2, 2, 1, { ability = "Inexpensive early defense" })
 unit(
 	"settler",
@@ -544,10 +552,20 @@ local function building(id, name, tech, cost, effects, needs, extra)
 	b.description = b.description or table.concat(description, ", ")
 	C.buildings[id] = b
 end
-building("farm", "Wheat Farm", "agriculture", 15, { food = 2 })
-building("mine", "Quarry", "mining", 18, { industry = 2 })
+building("farm", "Wheat Farm", "agriculture", 15, { food = 2 }, nil, { retiredByBuilders = true })
+building("mine", "Quarry", "mining", 18, { industry = 2 }, nil, { retiredByBuilders = true })
 building("craftinghall", "Crafting Hall", "crafting", 15, { industry = 1 })
 building("pens", "Animal Pens", "husbandry", 22, { food = 2 })
+building("housing", "Homesteads", "crafting", 24, {}, nil, {
+	development = true,
+	capacity = 2,
+	description = "Settlement Capacity +2; no extra food or automatic citizens",
+})
+building("well", "Water Services", "masonry", 28, {}, nil, {
+	development = true,
+	capacity = 2,
+	description = "Settlement Capacity +2; retains food consumption",
+})
 building(
 	"shipyard",
 	"Dock",
@@ -570,6 +588,7 @@ building(
 	{ description = "100 wall HP; enables ranged city strikes" }
 )
 building("market", "Trading Hall", "currency", 30, { food = 2, gold = 3 })
+C.buildings.market.capacity = 1
 building("councilhall", "Council Hall", "commerce", 90, {}, { "market" }, {
 	description = "Qualifies your civilization for diplomatic victory through Council elections. Requires two-thirds of all allocated delegates and another civilization's support. Does not create extra delegates.",
 })

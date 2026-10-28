@@ -121,7 +121,7 @@ local W, H = Hex.width, Hex.height
 local state
 local turnProgress = function() end
 local function newGame()
-	return Lifecycle.newLobby(newCampaignID(), "balance1")
+	return Lifecycle.newLobby(newCampaignID(), "balance4")
 end
 state = newGame()
 local hasHumanSave = false

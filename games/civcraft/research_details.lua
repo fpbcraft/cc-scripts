@@ -1,4 +1,5 @@
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local Works = dofile("/games/civcraft/tile_improvements.lua")
 local Details = {}
 local purposes = {
 	agriculture = "Secure a food surplus so cities can grow and staff more worked tiles.",
@@ -48,12 +49,16 @@ local purposes = {
 	navalwarfare = "Field steam flagships for late-game naval operations.",
 }
 
-function Details.unlocks(systems, id)
+function Details.unlocks(systems, id, context)
 	local entries = {}
 	for _, category in ipairs({ "buildings", "units", "wonders" }) do
 		local keys = {}
 		for key, record in pairs(systems[category] or {}) do
-			if record.tech == id and not record.hostile then
+			if
+				record.tech == id
+				and not record.hostile
+				and ContentRules.available(record, context)
+			then
 				keys[#keys + 1] = key
 			end
 		end
@@ -61,6 +66,14 @@ function Details.unlocks(systems, id)
 		for _, key in ipairs(keys) do
 			entries[#entries + 1] =
 				{ category = category, id = key, record = systems[category][key] }
+		end
+	end
+	if ContentRules.hasBuilders(context) then
+		for _, kind in ipairs(Works.order) do
+			local record = Works.definitions[kind]
+			if record.tech == id then
+				entries[#entries + 1] = { category = "improvements", id = kind, record = record }
+			end
 		end
 	end
 	return entries
@@ -74,13 +87,28 @@ function Details.paragraphs(systems, id, player)
 		paragraphs[1] =
 			"Develop Industrial Complexes to support productive cities and your remaining victory races."
 	end
-	if id == "agriculture" and player and ContentRules.usesP1Economy(player) then
+	if id == "agriculture" and ContentRules.hasBuilders(player) then
+		paragraphs[#paragraphs + 1] =
+			"UNLOCKS: Builder Wheat Fields (+2 food on a staffed fertile flat tile). City Farms are retired."
+	elseif id == "agriculture" and player and ContentRules.usesP1Economy(player) then
 		paragraphs[#paragraphs + 1] =
 			"IMPROVES: Wheat Farms from +1 to +2 food. Farms are already available."
 	else
 		paragraphs[#paragraphs + 1] = "UNLOCKS: " .. tech.unlock .. "."
 	end
-	for _, entry in ipairs(Details.unlocks(systems, id)) do
+	if ContentRules.hasBuilders(player) then
+		for _, kind in ipairs(Works.order) do
+			local definition = Works.definitions[kind]
+			if definition.tech == id and kind ~= "farm" then
+				paragraphs[#paragraphs + 1] = "BUILDER WORK: "
+					.. definition.name
+					.. " (+"
+					.. definition.industry
+					.. " industry on a worked eligible tile)."
+			end
+		end
+	end
+	for _, entry in ipairs(Details.unlocks(systems, id, player)) do
 		local record = entry.record
 		if not (ContentRules.isRedesign(player) and entry.id == "councilhall") then
 			local benefit = record.description or record.ability or ""

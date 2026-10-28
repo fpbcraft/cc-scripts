@@ -389,6 +389,41 @@ function G.draw(ui, state, player)
 		}
 		r:text(8, 8, "CHANGE PRODUCTION?", 8)
 		Panels.rows(r, { x = 8, y = 22, w = w - 16, h = h - 30 }, rows, ui, "productionOffset")
+	elseif ui.pendingMove and ui.pendingMove.workPreview then
+		modal(ui, rect)
+		local preview = ui.pendingMove.workPreview
+		local works = dofile("/games/civcraft/tile_improvements.lua")
+		local free = preview.chargesBefore - (preview.reservedCharges or 0)
+		r:text(8, 8, "PLAN " .. works.definitions[preview.kind].name, 8, 1, w - 16)
+		r:text(8, 18, "FREE CHARGES " .. free .. " > " .. (free - 1), 13, 1, w - 16)
+		r:text(
+			8,
+			26,
+			"FOOD "
+				.. preview.before.food
+				.. " > "
+				.. preview.after.food
+				.. " / SCI "
+				.. preview.before.science,
+			7,
+			1,
+			w - 16
+		)
+		r:text(
+			8,
+			34,
+			"INDUSTRY " .. preview.before.industry .. " > " .. preview.after.industry,
+			7,
+			1,
+			w - 16
+		)
+		local width = math.floor((w - 18) / 2)
+		r:button(7, h - 15, width, 11, "CANCEL", function()
+			ui.pendingMove = nil
+		end)
+		r:button(math.floor(w / 2) + 2, h - 15, width, 11, "CONFIRM", function()
+			ui:confirmMove()
+		end, { primary = true })
 	elseif ui.pendingMove then
 		local v = ui.mapViewport
 		r:button(v.x + 2, v.y + 2, 12, 12, nil, function()

@@ -1,6 +1,6 @@
 # CivCraft balance implementation roadmap
 
-Date: 2026-10-27. Mode: implementation. Current position: **M1 delivered; M2 next**. This document plans the accepted [38 ADRs](adr/README.md); it
+Date: 2026-10-27. Mode: implementation. Current position: **M2 mechanics delivered; M3 next; balance calibration deferred**. This document plans the accepted [38 ADRs](adr/README.md); it
 does not mark the redesign implemented. All 16 follow-up answers were A.
 
 ## Product and delivery target
@@ -148,20 +148,54 @@ calibration remains deferred while mechanics implementation continues.
 
 Goal: population, production and Builder work create distinct opening investments.
 
-- [ ] Define Settlement Capacity sources and a visible growth slowdown curve;
+- [x] Define Settlement Capacity sources and a visible growth slowdown curve;
   retain food consumption and avoid an independent amenities meter.
-- [ ] Implement population-consuming Settlers with minimum-population validation;
+- [x] Implement population-consuming Settlers with minimum-population validation;
   prevent invalid completions and specify growth/production ordering.
-- [ ] Add Builder charges and a small initial improvement catalog. Audit existing
+- [x] Add Builder charges and a small initial improvement catalog. Audit existing
   Farm/Quarry city bonuses to prevent duplicate yields from the new tile model.
-- [ ] Implement queued work, safe interruption, capture and route invalidation.
-- [ ] Show before/after tile yields, charges and capacity effects before spending.
-- [ ] Adapt settlement and worker AI; compare candidate Settler prices/growth
-  jointly against P1 using matched seeds and explicit Builder investment.
+- [x] Implement queued work, safe interruption, capture and route invalidation.
+- [x] Show before/after tile yields, charges and capacity effects before spending.
+- [x] Adapt settlement and worker AI to population validation and tile development.
+- [ ] Compare candidate Settler prices/growth jointly against P1 using matched
+  seeds and explicit Builder investment. Deferred while balance studies are
+  paused; this is a later calibration gate, not evidence supplied by rule tests.
 
 Done when: a human can choose a competitive development or expansion opening;
 AI uses Builders, and population/charge/yield invariants survive save/load.
 P1 Settler costs are a comparison baseline, not a mandated final result.
+
+M2 implementation: [capacity, Settler and charged Builder record](M2-LAND-DEVELOPMENT.md).
+Landwork V3 becomes the new-game default. Earlier profiles retain their semantics.
+Rule, native UI/save, host/hotseat and both three-computer race checks pass; prices
+and competitive opening outcomes remain uncalibrated.
+
+## Additional requested player controls
+
+Added by the user after the M2 mechanics delivery. These are explicit roadmap
+requirements, not claims that the current queued-work/AI features deliver them.
+
+- [ ] Human Builder auto mode: an opt-in persistent order chooses useful legal
+  improvements from observed owned land, reusing the shared valuation and work
+  actions. Respect charges, escorts and movement; pause safely on threats or
+  invalidated targets; offer clear stop/resume controls. Retain manual queued
+  work. Verify saved auto mode, charge exhaustion and native/multiplayer input.
+- [ ] City-founding suggestions: when a Settler is selected, mark promising
+  explored legal locations and explain food/industry, water/capacity, resources,
+  spacing and eventual specialty opportunities. Reuse authoritative legality and
+  observer-only evaluation; do not reveal hidden tiles or auto-found a city.
+  Integrate with M3's site placement previews and test fog and compact-map UI.
+- [ ] Gold tile purchases: allow a city to buy eligible adjacent unclaimed land
+  within its supported working range. Specify visible pricing and speed scaling;
+  validate ownership, adjacency, range, availability and treasury atomically.
+  Preview tile yields, strategic access and the gold cost before confirmation;
+  debit only after successful acquisition. Preserve purchase/border state through
+  save/load and capture, update public observations, and adapt city AI. Integrate
+  with M3's geographic specialization and M5 resource access.
+
+These follow-ups remain in the implementation scope. Starting-unit choice,
+manual first-city founding, city banners and larger new-game maps are the
+immediate user-requested slice before this subsequent work.
 
 ## M3 — Make cities specialize
 

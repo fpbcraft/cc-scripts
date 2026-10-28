@@ -17,6 +17,8 @@ colors = {
 	brown = 4096,
 }
 local UI = dofile("games/civcraft/ui.lua")
+local newRasterUI = UI.new
+dofile("tests/helpers/civcraft_layout_only.lua")(UI)
 dofile("tests/helpers/civcraft_layout_only.lua")(UI)
 local S = dofile("games/civcraft/systems.lua")
 local W = dofile("games/civcraft/world.lua")
@@ -204,8 +206,14 @@ for _, graphics in ipairs({ false, true }) do
 		ui:draw(state, 2, { handoff = true })
 		assert(not ui.placement and #ui.reachable == 0, "Handoff clears construction previews")
 		if graphics and cw == 100 then
+			-- Capture one actual raster frame; button and gameplay checks above
+			-- use layout-only rendering instead of repainting on every step.
+			local rasterUI = newRasterUI(monitor, function() end)
+			rasterUI:draw(state, 1, { screen = "game" })
+			assert(frames.rows and frames.w and frames.h, "Native graphics frame produced")
 			_G.civcraftPreview =
-				{ rows = frames.rows, w = frames.w, h = frames.h, palette = ui.r.palette }
+				{ rows = frames.rows, w = frames.w, h = frames.h, palette = rasterUI.r.palette }
+			rasterUI:close()
 		end
 	end
 end
