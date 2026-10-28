@@ -381,13 +381,13 @@ model.game = running
 model.result = E.evaluate(running)
 model.selected = "G"
 model.settings.animations = true
+r.motionOverride = 1
 r:draw(model)
 local beforeAnimated = gfx.batches
+r.motionOverride = 1.125
 r:draw(model)
-assert(
-	gfx.batches == beforeAnimated + 1,
-	"Two consecutive animated frames upload distinct cog pixels"
-)
+r.motionOverride = nil
+assert(gfx.batches == beforeAnimated + 1, "Advancing animation time uploads distinct cog pixels")
 model.scene = "title"
 model.dev = true
 r:draw(model)
