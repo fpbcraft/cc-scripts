@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "fixtures": {
+    "observer": "conformance_extension_fixture.lua:hideRival",
+    "surpriseWar": "conformance_extension_fixture.lua:setupSurprise"
+  },
+  "config": {
+    "seed": 75123,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "players": [
+      {
+        "civilization": "forge",
+        "ai": false
+      },
+      {
+        "civilization": "scholar",
+        "ai": false
+      }
+    ],
+    "maxRounds": 4
+  },
+  "observerAdversarial": {
+    "hiddenTile": {
+      "y": 2,
+      "x": 9
+    },
+    "observationEqual": true,
+    "proposalEqual": true,
+    "beforeSha256": {
+      "observation": "cf39dac1714a676fa88f515811c4bc9fea44aae204c27ccc995f8fcd218ed412",
+      "proposals": "318c751e6f73674b75cf850ab1ae64156c4a3e311d3f74017710e3b18b51d120"
+    },
+    "afterSha256": {
+      "observation": "cf39dac1714a676fa88f515811c4bc9fea44aae204c27ccc995f8fcd218ed412",
+      "proposals": "318c751e6f73674b75cf850ab1ae64156c4a3e311d3f74017710e3b18b51d120"
+    }
+  },
+  "deterministicHashSeeds": {
+    "records": {
+      "0": {
+        "hashes": [
+          "08da23dedf0295be7fa1d75e8ea8d0a46650e54bb69635d550fb10876d031273",
+          "08da23dedf0295be7fa1d75e8ea8d0a46650e54bb69635d550fb10876d031273",
+          "08da23dedf0295be7fa1d75e8ea8d0a46650e54bb69635d550fb10876d031273"
+        ]
+      },
+      "1": {
+        "hashes": [
+          "08da23dedf0295be7fa1d75e8ea8d0a46650e54bb69635d550fb10876d031273",
+          "08da23dedf0295be7fa1d75e8ea8d0a46650e54bb69635d550fb10876d031273",
+          "08da23dedf0295be7fa1d75e8ea8d0a46650e54bb69635d550fb10876d031273"
+        ]
+      },
+      "42": {
+        "hashes": [
+          "08da23dedf0295be7fa1d75e8ea8d0a46650e54bb69635d550fb10876d031273",
+          "08da23dedf0295be7fa1d75e8ea8d0a46650e54bb69635d550fb10876d031273",
+          "08da23dedf0295be7fa1d75e8ea8d0a46650e54bb69635d550fb10876d031273"
+        ]
+      },
+      "123": {
+        "hashes": [
+          "08da23dedf0295be7fa1d75e8ea8d0a46650e54bb69635d550fb10876d031273",
+          "08da23dedf0295be7fa1d75e8ea8d0a46650e54bb69635d550fb10876d031273",
+          "08da23dedf0295be7fa1d75e8ea8d0a46650e54bb69635d550fb10876d031273"
+        ]
+      }
+    },
+    "allEqual": true
+  },
+  "surpriseWarReplay": {
+    "positionsEqual": true,
+    "outcomes": [
+      {
+        "kind": "action",
+        "left": {
+          "ok": true,
+          "message": "Surprise War started immediately",
+          "detail": null
+        },
+        "right": {
+          "ok": true,
+          "message": "Surprise War started immediately",
+          "detail": null
+        },
+        "equal": true
+      },
+      {
+        "kind": "endTurn",
+        "left": {
+          "ok": true,
+          "message": null,
+          "detail": null
+        },
+        "right": {
+          "ok": true,
+          "message": null,
+          "detail": null
+        },
+        "equal": true
+      },
+      {
+        "kind": "action",
+        "left": {
+          "ok": true,
+          "message": null,
+          "detail": null
+        },
+        "right": {
+          "ok": true,
+          "message": null,
+          "detail": null
+        },
+        "equal": true
+      },
+      {
+        "kind": "endTurn",
+        "left": {
+          "ok": true,
+          "message": null,
+          "detail": null
+        },
+        "right": {
+          "ok": true,
+          "message": null,
+          "detail": null
+        },
+        "equal": true
+      }
+    ],
+    "checkpointEqual": [
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "leftHash": "b4440519af3d6449e3f6e27e6652d4010a85d098c74d51846aad5e502e859e10",
+    "rightHash": "b4440519af3d6449e3f6e27e6652d4010a85d098c74d51846aad5e502e859e10",
+    "traceEqual": true,
+    "replayOutcomeEqual": true,
+    "replayStateEqual": true,
+    "replayTraceEqual": true,
+    "_trace": {
+      "attempted": 2,
+      "reasons": {},
+      "trace": [
+        {
+          "actor": 0,
+          "round": 20,
+          "request": {
+            "action": "declareWar",
+            "target": 1,
+            "kind": "surprise"
+          },
+          "reason": "Surprise War started immediately",
+          "accepted": true
+        },
+        {
+          "actor": 1,
+          "round": 20,
+          "request": {
+            "action": "move",
+            "y": 1,
+            "sy": 2,
+            "x": 7,
+            "sx": 7
+          },
+          "accepted": true
+        }
+      ],
+      "rejected": 0,
+      "accepted": 2
+    },
+    "reactionChecks": {
+      "warActive": true,
+      "reactionGrantedBeforeHandoff": true,
+      "responseMovementMarkedAfterPump": true,
+      "defenderMoveAccepted": true,
+      "reactionConsumedAfterDefenderFinish": true,
+      "reactionPathBlocked": false
+    },
+    "traceActionCount": 2
+  },
+  "limitations": [
+    "Lupa-only fast checks; no native/full-game launch was performed.",
+    "The observer test mutates a hidden rival plan, stockpiles, city, unit and recipient-only event; it does not prove every future field is private.",
+    "The replay is a two-player Surprise War reaction fixture, not a balance sample or complete network/save replay."
+  ]
+}

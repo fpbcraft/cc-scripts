@@ -47,7 +47,7 @@ local mechanics = {
 	{
 		id = "combat",
 		name = "COMBAT AND RANGE",
-		text = "Only highlighted enemy hexes can be attacked. Strength, defense, city defenses, terrain and unit abilities affect deterministic combat. Ranged attacks do not move the attacker into the target hex and consume its remaining movement. Units have 100 HP. Melee exchanges damage; ranged strikes do not take immediate retaliation and cannot capture cities. Damage depends on effective strength, terrain, health and levels. A unit at zero HP is removed.",
+		text = "Only highlighted enemy hexes can be attacked. Strength, defense, city defenses, terrain and unit abilities affect deterministic combat. Ranged attacks do not move the attacker into the target hex and consume its remaining movement. Units have 100 HP. Melee exchanges damage; ranged strikes do not take immediate retaliation and cannot capture cities. Damage depends on effective strength, terrain, health and levels. A unit at zero HP is removed. Resting or fortifying restores 20 HP per round only inside owned territory. Healer support restores 10 HP to adjacent owned units in any territory, including neutral or enemy land.",
 	},
 	{
 		id = "naval",
@@ -113,7 +113,7 @@ mechanics[#mechanics + 1] = {
 mechanics[#mechanics + 1] = {
 	id = "health",
 	name = "HEALTH LEVELS AND HEALING",
-	text = "Units have 100 HP. Combat grants XP: attacks give three, defending gives two, defeating a unit adds five, and city attacks give four. Each ten total XP per level increases level and adds two strength. Injuries reduce effective strength. FORTIFY / HEAL skips orders and restores 20 HP per round only in owned territory. Units that did not act also recover only on owned land. Support healing also requires the receiving unit to be inside its own territory. A valid movement or attack order wakes a sleeping unit.",
+	text = "Units have 100 HP. Combat grants XP: attacks give three, defending gives two, defeating a unit adds five, and city attacks give four. Each ten total XP per level increases level and adds two strength. Injuries reduce effective strength. FORTIFY / HEAL skips orders and restores 20 HP per round only in owned territory. Units that did not act also recover only on owned land. Healers restore 10 HP per round to adjacent owned units even outside owned territory. A valid movement or attack order wakes a sleeping unit.",
 }
 mechanics[#mechanics + 1] = {
 	id = "citycombat",
@@ -178,6 +178,7 @@ function E.entries(category)
 		return mechanics
 	end
 	local source = category == "wonders" and Systems.wonders
+		or category == "projects" and Systems.projects
 		or category == "sites" and Systems.naturalWonders
 		or category == "units" and Systems.units
 		or category == "buildings" and Systems.buildings
@@ -191,12 +192,39 @@ function E.entries(category)
 	end)
 	return result
 end
-function E.describe(category, entry, player)
+function E.describe(category, entry, player, state)
+	if player and state and state.contentRules ~= player.contentRules then
+		local context = {}
+		for key, value in pairs(player) do
+			context[key] = value
+		end
+		context.contentRules = state.contentRules
+		player = context
+	end
 	if entry.text then
+		if entry.id == "production" and player and player.contentRules == "p1" then
+			return {
+				entry.text
+					:gsub("UNITS or BUILDS", "UNITS, BUILDS, WONDER or PROJECTS")
+					:gsub("Scouts cost five industry%.", "Scouts cost fifteen industry.")
+					:gsub(
+						"Settlers start at twelve industry and cost five more",
+						"Settlers start at forty industry and cost twelve more"
+					),
+				"Civilian projects use industry each round instead of construction. Ponder Research converts 4:1 to current research; Tend Crops and Trade Contract convert 2:1 to city food and gold. Each project retains only its own conversion remainder. Ponder pauses without unfinished research.",
+			}
+		end
 		return { entry.text }
 	end
 	local record = entry.record
 	local lines = {}
+	if category == "projects" then
+		return {
+			record.description,
+			"Requires " .. Systems.label("building", record.building),
+			"Runs until changed. Conversion remainders are retained separately for each project. Uses this city's industry instead of construction.",
+		}
+	end
 	if category == "sites" then
 		return {
 			record.description,
@@ -245,12 +273,19 @@ function E.describe(category, entry, player)
 			record.description or "",
 			"One of this building per city.",
 		}
+		if entry.id == "farm" and player and player.contentRules == "p1" then
+			lines[2] = (player.techs or {}).agriculture and "+2 food"
+				or "+1 food until Wheat Farming"
+			lines[#lines + 1] = "Available immediately: +1 food. Wheat Farming adds a second food."
+		end
 	else
 		lines = {
 			"Science cost: " .. Systems.techCost(entry.id, player),
-			"Unlock: " .. title(record.unlock or "none"),
+			(entry.id == "agriculture" and player and player.contentRules == "p1")
+					and "Improves: Wheat Farm +1 food"
+				or ("Unlock: " .. title(record.unlock or "none")),
 		}
-		for _, paragraph in ipairs(ResearchDetails.paragraphs(Systems, entry.id)) do
+		for _, paragraph in ipairs(ResearchDetails.paragraphs(Systems, entry.id, player)) do
 			lines[#lines + 1] = paragraph
 		end
 		local needs = {}
@@ -270,7 +305,15 @@ function E.describe(category, entry, player)
 	for _, need in ipairs(category == "buildings" and record.requires or {}) do
 		lines[#lines + 1] = "Required building: " .. Systems.label("building", need)
 	end
-	if record.tech then
+	if
+		record.tech
+		and not (
+			category == "buildings"
+			and entry.id == "farm"
+			and player
+			and player.contentRules == "p1"
+		)
+	then
 		lines[#lines + 1] = "Research: " .. Systems.techs[record.tech].name
 	end
 	if record.resource then
@@ -315,7 +358,15 @@ function E.draw(ui, rect)
 			model.offset = 0
 		end, { selected = model.category == category })
 	end
-	local body = { x = x + 3, y = y + 24, w = w - 6, h = h - 26 }
+	local projectRow = ui.state.contentRules == "p1" and 11 or 0
+	if projectRow > 0 then
+		r:button(x + 2, y + 24, w - 4, 10, "PROJECTS", function()
+			model.category = "projects"
+			model.entry = nil
+			model.offset = 0
+		end, { selected = model.category == "projects" })
+	end
+	local body = { x = x + 3, y = y + 24 + projectRow, w = w - 6, h = h - 26 - projectRow }
 	local rows = {}
 	if model.entry then
 		rows[#rows + 1] = {
@@ -332,7 +383,7 @@ function E.draw(ui, rect)
 		for _, line in ipairs(Panels.wrap(r, model.entry.name, body.w - 4)) do
 			rows[#rows + 1] = { text = line, color = 8 }
 		end
-		for _, paragraph in ipairs(E.describe(model.category, model.entry, player)) do
+		for _, paragraph in ipairs(E.describe(model.category, model.entry, player, ui.state)) do
 			for _, line in ipairs(Panels.wrap(r, paragraph, body.w - 4)) do
 				rows[#rows + 1] = { text = line }
 			end

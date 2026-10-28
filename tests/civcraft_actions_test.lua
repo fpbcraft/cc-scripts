@@ -179,7 +179,7 @@ local geography = copy(state.world)
 S.migrate(state)
 assert(u.movesLeft == 2 and city.productionIdle and city.projectProgress["unit:scout"] == 3)
 assert(equal(geography, state.world), "Rules migration rerolled the saved world")
--- Both passive and support healing require the recipient's owned territory.
+-- Passive healing requires owned territory; healer support does not.
 state, u = fixture()
 u.hp = 40
 u.healing = true
@@ -203,12 +203,49 @@ end
 assert(healerKind)
 state.units[2] = { id = 4, owner = 1, kind = healerKind, x = 14, y = 9, hp = 100 }
 C.round(state, S)
-assert(u.hp == 60)
+assert(u.hp == 70, "Support healing works outside owned territory")
 u.x, u.y = 3, 4
 state.units[2].x, state.units[2].y = 4, 4
 u.actedThisRound, u.healing = true, false
 C.round(state, S)
-assert(u.hp == 70, "Support healing works for a friendly recipient inside owned land")
+assert(u.hp == 80, "Support healing also works inside owned land")
+for kind, stats in pairs(S.units) do
+	if stats.healer then
+		for _, position in ipairs({ { 7, 4 }, { 15, 9 }, { 3, 4 } }) do
+			state, u = fixture()
+			u.kind, u.hp, u.actedThisRound, u.healing = "warrior", 40, true, false
+			u.x, u.y = position[1], position[2]
+			state.units[2] = {
+				id = 4,
+				owner = 1,
+				kind = kind,
+				x = u.x - 1,
+				y = u.y,
+				hp = 100,
+				actedThisRound = true,
+			}
+			state.units[3] = {
+				id = 5,
+				owner = 2,
+				kind = "warrior",
+				x = u.x,
+				y = u.y,
+				hp = 40,
+				actedThisRound = true,
+			}
+			C.round(state, S)
+			assert(u.hp == 50, kind .. " heals an adjacent ally in any territory")
+			assert(state.units[3].hp == 40, "Support never heals an enemy")
+			u.hp, u.actedThisRound = 98, true
+			C.round(state, S)
+			assert(u.hp == 100, "Support healing is capped at full health")
+			u.hp, u.actedThisRound = 40, true
+			state.units[2].x, state.units[2].y = 1, 1
+			C.round(state, S)
+			assert(u.hp == 40, "A distant healer supplies no healing")
+		end
+	end
+end
 -- Forecast is pure even on unmigrated HP/XP/walls, and matches actual resolution.
 local combinations = 0
 for _, kind in ipairs({ "warrior", "archer", "spearman", "diamondguard", "creeper" }) do

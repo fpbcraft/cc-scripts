@@ -1,0 +1,375 @@
+{
+  "head": "97944b8bc85e011d00abbdf45bf9aecdb82050ae",
+  "fixture": "Prince mirror; Compact/Pangaea; hostiles off; one deterministic match",
+  "seed": 75123,
+  "victoryRound": 149,
+  "victoryReason": "INDUSTRIAL",
+  "measurement": "Post-AI-turn snapshots. Legal building count does not measure strategic value. Correlated city-rounds from one match are not independent trials.",
+  "periods": [
+    {
+      "rounds": [
+        1,
+        30
+      ],
+      "city_rounds": 152,
+      "zero_legal_buildings": 112,
+      "one_legal_building": 40,
+      "at_most_one_fraction": 1.0,
+      "unit_project_fraction": 0.1908,
+      "idle_fraction": 0.5526
+    },
+    {
+      "rounds": [
+        31,
+        60
+      ],
+      "city_rounds": 180,
+      "zero_legal_buildings": 120,
+      "one_legal_building": 60,
+      "at_most_one_fraction": 1.0,
+      "unit_project_fraction": 0.0,
+      "idle_fraction": 0.6667
+    },
+    {
+      "rounds": [
+        61,
+        100
+      ],
+      "city_rounds": 240,
+      "zero_legal_buildings": 119,
+      "one_legal_building": 121,
+      "at_most_one_fraction": 1.0,
+      "unit_project_fraction": 0.0,
+      "idle_fraction": 0.3958
+    },
+    {
+      "rounds": [
+        101,
+        149
+      ],
+      "city_rounds": 294,
+      "zero_legal_buildings": 65,
+      "one_legal_building": 125,
+      "at_most_one_fraction": 0.6463,
+      "unit_project_fraction": 0.0068,
+      "idle_fraction": 0.398
+    }
+  ],
+  "snapshots": [
+    {
+      "round": 1,
+      "unitCount": 1,
+      "unitKinds": {
+        "warrior": 1
+      },
+      "gold": 20,
+      "treasury": {
+        "net": 3,
+        "income": 4,
+        "upkeep": 1
+      },
+      "cities": [
+        {
+          "id": 1,
+          "buildings": 0,
+          "legalBuildingCount": 0,
+          "project": {
+            "id": "settler",
+            "progress": 0,
+            "kind": "unit"
+          },
+          "industry": 5
+        }
+      ]
+    },
+    {
+      "round": 10,
+      "unitCount": 3,
+      "unitKinds": {
+        "warrior": 2,
+        "scout": 1
+      },
+      "gold": 58,
+      "treasury": {
+        "net": 9,
+        "income": 12,
+        "upkeep": 3
+      },
+      "cities": [
+        {
+          "id": 1,
+          "buildings": 0,
+          "legalBuildingCount": 0,
+          "project": {
+            "id": "warrior",
+            "progress": 10,
+            "kind": "unit"
+          },
+          "industry": 5
+        },
+        {
+          "id": 14,
+          "buildings": 0,
+          "legalBuildingCount": 0,
+          "project": {
+            "id": "warrior",
+            "progress": 0,
+            "kind": "unit"
+          },
+          "industry": 9
+        },
+        {
+          "id": 20,
+          "buildings": 0,
+          "legalBuildingCount": 0,
+          "project": null,
+          "industry": 3
+        }
+      ]
+    },
+    {
+      "round": 20,
+      "unitCount": 5,
+      "unitKinds": {
+        "warrior": 4,
+        "scout": 1
+      },
+      "gold": 141,
+      "treasury": {
+        "net": 9,
+        "income": 14,
+        "upkeep": 5
+      },
+      "cities": [
+        {
+          "id": 1,
+          "buildings": 1,
+          "legalBuildingCount": 0,
+          "project": null,
+          "industry": 9
+        },
+        {
+          "id": 14,
+          "buildings": 1,
+          "legalBuildingCount": 0,
+          "project": null,
+          "industry": 11
+        },
+        {
+          "id": 20,
+          "buildings": 1,
+          "legalBuildingCount": 0,
+          "project": null,
+          "industry": 6
+        }
+      ]
+    },
+    {
+      "round": 30,
+      "unitCount": 5,
+      "unitKinds": {
+        "warrior": 4,
+        "scout": 1
+      },
+      "gold": 245,
+      "treasury": {
+        "net": 11,
+        "income": 16,
+        "upkeep": 5
+      },
+      "cities": [
+        {
+          "id": 1,
+          "buildings": 2,
+          "legalBuildingCount": 0,
+          "project": null,
+          "industry": 11
+        },
+        {
+          "id": 14,
+          "buildings": 2,
+          "legalBuildingCount": 0,
+          "project": null,
+          "industry": 17
+        },
+        {
+          "id": 20,
+          "buildings": 2,
+          "legalBuildingCount": 0,
+          "project": null,
+          "industry": 9
+        }
+      ]
+    },
+    {
+      "round": 60,
+      "unitCount": 5,
+      "unitKinds": {
+        "warrior": 4,
+        "scout": 1
+      },
+      "gold": 800,
+      "treasury": {
+        "net": 29,
+        "income": 34,
+        "upkeep": 5
+      },
+      "cities": [
+        {
+          "id": 1,
+          "buildings": 6,
+          "legalBuildingCount": 1,
+          "project": {
+            "id": "deepmine",
+            "progress": 26,
+            "kind": "building"
+          },
+          "industry": 13
+        },
+        {
+          "id": 14,
+          "buildings": 7,
+          "legalBuildingCount": 0,
+          "project": null,
+          "industry": 25
+        },
+        {
+          "id": 20,
+          "buildings": 6,
+          "legalBuildingCount": 1,
+          "project": {
+            "id": "deepmine",
+            "progress": 26,
+            "kind": "building"
+          },
+          "industry": 13
+        }
+      ]
+    },
+    {
+      "round": 100,
+      "unitCount": 5,
+      "unitKinds": {
+        "warrior": 4,
+        "scout": 1
+      },
+      "gold": 2078,
+      "treasury": {
+        "net": 41,
+        "income": 46,
+        "upkeep": 5
+      },
+      "cities": [
+        {
+          "id": 1,
+          "buildings": 15,
+          "legalBuildingCount": 0,
+          "project": null,
+          "industry": 31
+        },
+        {
+          "id": 14,
+          "buildings": 15,
+          "legalBuildingCount": 0,
+          "project": null,
+          "industry": 45
+        },
+        {
+          "id": 20,
+          "buildings": 15,
+          "legalBuildingCount": 0,
+          "project": null,
+          "industry": 36
+        }
+      ]
+    },
+    {
+      "round": 140,
+      "unitCount": 6,
+      "unitKinds": {
+        "brassengineer": 1,
+        "scout": 1,
+        "warrior": 4
+      },
+      "gold": 3206,
+      "treasury": {
+        "net": 97,
+        "income": 105,
+        "upkeep": 8
+      },
+      "cities": [
+        {
+          "id": 1,
+          "buildings": 23,
+          "legalBuildingCount": 2,
+          "project": {
+            "id": "academy",
+            "progress": 0,
+            "kind": "building"
+          },
+          "industry": 60
+        },
+        {
+          "id": 14,
+          "buildings": 25,
+          "legalBuildingCount": 0,
+          "project": {
+            "id": "vault",
+            "progress": 0,
+            "kind": "wonder"
+          },
+          "industry": 86
+        },
+        {
+          "id": 20,
+          "buildings": 23,
+          "legalBuildingCount": 2,
+          "project": {
+            "id": "academy",
+            "progress": 0,
+            "kind": "building"
+          },
+          "industry": 64
+        }
+      ]
+    },
+    {
+      "round": 149,
+      "unitCount": 6,
+      "unitKinds": {
+        "brassengineer": 1,
+        "scout": 1,
+        "warrior": 4
+      },
+      "gold": 3839,
+      "treasury": {
+        "net": 97,
+        "income": 105,
+        "upkeep": 8
+      },
+      "cities": [
+        {
+          "id": 1,
+          "buildings": 29,
+          "legalBuildingCount": 1,
+          "project": null,
+          "industry": 66
+        },
+        {
+          "id": 14,
+          "buildings": 30,
+          "legalBuildingCount": 0,
+          "project": null,
+          "industry": 92
+        },
+        {
+          "id": 20,
+          "buildings": 29,
+          "legalBuildingCount": 1,
+          "project": null,
+          "industry": 70
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CivCraft observer-safe teacher decision record",
+  "type": "object",
+  "required": ["schema_version", "sample_id", "feature_names", "features", "legal_actions", "teacher_action", "teacher_policy_id", "source_kind"],
+  "properties": {
+    "schema_version": {"const": "observer-strategic-v1"},
+    "sample_id": {"type": "integer", "minimum": 0},
+    "feature_names": {"type": "array", "items": {"type": "string"}},
+    "features": {"type": "array", "minItems": 15, "maxItems": 15, "items": {"type": "number"}},
+    "legal_actions": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "teacher_action": {"type": "string"},
+    "teacher_policy_id": {"type": "string"},
+    "intended_goal": {"type": "string"},
+    "missing_optional_fields": {"type": "array", "items": {"type": "string"}},
+    "source_kind": {"enum": ["fixture_observer_projection", "archived_decision_trace"]},
+    "teacher_label_source": {"type": "string"}
+  },
+  "additionalProperties": true
+}

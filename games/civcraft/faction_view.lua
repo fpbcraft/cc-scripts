@@ -24,7 +24,7 @@ function Factions.draw(ui, state, observer, rect)
 	for index, player in ipairs(state.players or {}) do
 		local own = player.id == observer.id
 		if Contacts.knows(state, observer.id, player.id) then
-			local civilization = Systems.civ(player.civ)
+			local civilization = Systems.civ(player.civ, state)
 			text(player.name .. (own and " (YOU)" or ""), Colors.players[index] or 8)
 			text(civilization.name .. " / " .. (player.ai and "AI" or "HUMAN"))
 			text("BONUS: " .. civilization.bonus)

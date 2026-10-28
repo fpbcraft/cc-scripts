@@ -1,0 +1,132 @@
+{
+  "claim_limits": [
+    "Fixture agreement is not full-game retention.",
+    "No native game or costly training was launched.",
+    "Teacher labels are fixture-ranked until imported from archived decision traces."
+  ],
+  "dataset": {
+    "actions": {
+      "production:bank": 5,
+      "production:library": 5,
+      "production:mine": 5,
+      "production:settler": 5,
+      "production:station": 11,
+      "production:warrior": 5,
+      "research:agriculture": 6,
+      "research:mining": 6,
+      "research:sailing": 6,
+      "research:writing": 10
+    },
+    "records": 64,
+    "sha256": "c895530da38953fae21b6f4a39f16aaaae4fc6c5d0499f8b7d47dde8eeebcb41",
+    "source_kind": "fixture_observer_projection"
+  },
+  "feature_schema": {
+    "features": [
+      "round_fraction",
+      "age_fraction",
+      "cities",
+      "population",
+      "industry",
+      "science",
+      "gold",
+      "treasury_net",
+      "technologies",
+      "buildings",
+      "unit_count",
+      "combat_power",
+      "idle_cities",
+      "research_progress",
+      "legal_action_count"
+    ],
+    "version": "observer-strategic-v1"
+  },
+  "formats": {
+    "rule_tree": {
+      "bytes": 2045,
+      "fixture_score": {
+        "distinct_predictions": 3,
+        "fallback_rate": 0.0,
+        "fallbacks": 0,
+        "prediction_histogram": {
+          "production:station": 25,
+          "research:agriculture": 33,
+          "research:sailing": 6
+        },
+        "records": 64,
+        "teacher_agreement": 0.296875
+      },
+      "path": "formats/rule_tree.lua"
+    },
+    "tiny_quantized_mlp": {
+      "bytes": 2464,
+      "fixture_score": {
+        "distinct_predictions": 5,
+        "fallback_rate": 0.203125,
+        "fallbacks": 13,
+        "prediction_histogram": {
+          "production:bank": 13,
+          "production:library": 16,
+          "production:settler": 1,
+          "production:warrior": 24,
+          "research:agriculture": 10
+        },
+        "records": 64,
+        "teacher_agreement": 0.125
+      },
+      "path": "formats/tiny_quantized_mlp.lua"
+    },
+    "weights": {
+      "bytes": 5099,
+      "fixture_score": {
+        "distinct_predictions": 9,
+        "fallback_rate": 0.03125,
+        "fallbacks": 2,
+        "prediction_histogram": {
+          "production:bank": 3,
+          "production:mine": 7,
+          "production:settler": 2,
+          "production:station": 32,
+          "production:warrior": 1,
+          "research:agriculture": 3,
+          "research:mining": 8,
+          "research:sailing": 2,
+          "research:writing": 6
+        },
+        "records": 64,
+        "teacher_agreement": 0.328125
+      },
+      "path": "formats/weights.lua"
+    }
+  },
+  "full_game_retention_status": "pending_parent_signal",
+  "isolated_python_benchmark": {
+    "formats": {
+      "rule_tree": {
+        "fallback_rate": 0.0,
+        "fallbacks": 0,
+        "p50_ns": 2208,
+        "p95_ns": 2708,
+        "peak_traced_bytes": 97824
+      },
+      "tiny_quantized_mlp": {
+        "fallback_rate": 0.2036,
+        "fallbacks": 509,
+        "p50_ns": 30625,
+        "p95_ns": 36084,
+        "peak_traced_bytes": 98656
+      },
+      "weights": {
+        "fallback_rate": 0.0312,
+        "fallbacks": 78,
+        "p50_ns": 17292,
+        "p95_ns": 20291,
+        "peak_traced_bytes": 101056
+      }
+    },
+    "iterations": 2500,
+    "status": "fixture_only"
+  },
+  "native_benchmark_status": "pending_parent_signal",
+  "status": "prepared_fixture_only"
+}

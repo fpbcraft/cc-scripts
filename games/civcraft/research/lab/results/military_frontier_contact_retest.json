@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Matched causal retest for the seed95117 contact bottleneck",
+  "sourceHead": "97944b8bc85e011d00abbdf45bf9aecdb82050ae",
+  "raw": "/tmp/civcraft-frontier-hook-retest4.json",
+  "rawSha256": "5776fc940e4ce26a0512994e284d2832446e16095415ee2e67e763360af22d84",
+  "config": {"seed": 95117, "conquestSeat": 0, "hostileMode": "off", "maxRounds": 180},
+  "baseline": {"status": "finished", "round": 135, "reason": "INDUSTRIAL", "winnerIds": [1], "firstAcceptedDeclarationRound": null, "scoutMoves": [[13, 4, 5]], "peakCities": [3, 3]},
+  "frontierHook": {"status": "finished", "round": 128, "reason": "INDUSTRIAL", "winnerIds": [1], "firstAcceptedDeclarationRound": 25, "scoutMovesThroughRound26": [[13, 7, 6], [14, 6, 2], [15, 6, 4], [15, 7, 4], [15, 8, 4], [16, 11, 4], [17, 11, 5], [17, 12, 5], [17, 11, 6], [17, 11, 7], [18, 8, 10], [19, 5, 11], [20, 2, 13], [21, 5, 11], [22, 7, 10], [22, 8, 10], [23, 11, 12], [24, 15, 13], [25, 12, 10], [26, 12, 9]], "peakCities": [3, 3], "attempted": 2875, "accepted": 2648, "rejected": 227},
+  "finding": "The observer-safe frontier hook converts a stuck scout and no-contact state into legal exploration and a declaration at round25. It still does not capture a city; both arms retain three cities each at terminal checkpoints. The raw trace contains the complete action sequence and declaration event."
+}

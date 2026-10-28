@@ -30,6 +30,16 @@ function Options.draw(ui, state)
 			},
 		},
 		{ text = (state.roundLimit or 180) .. " ROUND LIMIT" },
+		{
+			buttons = {
+				{
+					label = state.contentRules == "p1" and "ECONOMY P1" or "ECONOMY ORIGINAL",
+					run = function()
+						ui:command("contentRules")
+					end,
+				},
+			},
+		},
 	}
 	for _, line in
 		ipairs(

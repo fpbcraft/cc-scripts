@@ -738,7 +738,11 @@ function UI:draw(state, playerID, opts)
 			}
 			for i, p in ipairs(state.players) do
 				rows[#rows + 1] = { text = i .. ". " .. p.name .. " / " .. Systems.civ(p.civ).name }
-				for _, line in ipairs(Panels.wrap(r, "BONUS: " .. Systems.civ(p.civ).bonus, w - 20)) do
+				for _, line in
+					ipairs(
+						Panels.wrap(r, "BONUS: " .. Systems.civ(p.civ, self.state).bonus, w - 20)
+					)
+				do
 					rows[#rows + 1] = { text = line, color = P[i] or 8 }
 				end
 				if p.ai then
@@ -962,7 +966,7 @@ function UI:draw(state, playerID, opts)
 			r:text(
 				12,
 				h - 15,
-				"BONUS: " .. Systems.civ(choosing.civ).bonus,
+				"BONUS: " .. Systems.civ(choosing.civ, self.state).bonus,
 				P[self.lobbyPlayer or 1] or 8,
 				1,
 				w - 24

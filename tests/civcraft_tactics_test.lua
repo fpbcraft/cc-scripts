@@ -224,6 +224,14 @@ assert(
 	chosen.request.action == "move" and Hex.distance(chosen.request.x, chosen.request.y, 7, 5) <= 1
 )
 assert(#Threats.build(AI.knowledge(state, player), player, Systems).entries == 0)
+-- Supporting an injured ally remains useful when the recipient is on enemy land.
+state.cities[2].owner = 2
+assert(World.territoryCity(state, Hex, 7, 5).owner == 2)
+chosen = Tactics.ranked(AI.knowledge(state, player), player, state.units[1], Systems)[1]
+assert(
+	chosen.request.action == "move" and Hex.distance(chosen.request.x, chosen.request.y, 7, 5) <= 1,
+	"Healer planning values support outside owned territory"
+)
 for _, graphics in ipairs({ false, true }) do
 	state, player = fixture()
 	state.units = {

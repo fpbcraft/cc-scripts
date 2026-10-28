@@ -1,0 +1,33 @@
+name: CivCraft balance laboratory
+on:
+  pull_request:
+    paths:
+      - 'games/civcraft/**'
+      - 'tools/civcraft_lab/**'
+      - 'tests/test_civcraft_lab.py'
+      - 'tests/test_civcraft_p1.py'
+      - 'tests/test_civcraft_luajit.py'
+      - 'tests/test_civcraft_pacing_probe.py'
+      - 'tests/test_civcraft_opening_adaptation.py'
+      - '.github/workflows/civcraft-lab.yml'
+  workflow_dispatch:
+jobs:
+  deterministic-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install -r tools/civcraft_lab/requirements.txt
+      - name: Shared-rules laboratory behavior
+        run: >-
+          python -m unittest -v
+          tests/test_civcraft_lab.py
+          tests/test_civcraft_p1.py
+          tests/test_civcraft_luajit.py
+          tests/test_civcraft_pacing_probe.py
+          tests/test_civcraft_opening_adaptation.py
+          games/civcraft/research/lab/test_proposal_interface.py
+          games/civcraft/research/lab/test_coordinated_siege_policy.py

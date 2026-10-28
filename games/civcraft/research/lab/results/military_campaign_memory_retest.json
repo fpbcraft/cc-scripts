@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Research-only causal retest of post-contact conquest target retention",
+  "sourceHead": "97944b8bc85e011d00abbdf45bf9aecdb82050ae",
+  "driver": "games/civcraft/research/lab/military_competence_benchmark.py",
+  "driverSha256": "fe2aabfb30e589985c532df62c7003a6144900618862aa691940162f61db5683",
+  "config": {
+    "seed": 95117,
+    "mapSize": "compact",
+    "mapType": "pangaea",
+    "hostileMode": "off",
+    "maxRounds": 180,
+    "conquestSeat": 0,
+    "players": ["forge/conquest", "forge/industrial"]
+  },
+  "baseline": {
+    "raw": "/tmp/civcraft-campaign-memory-retest.json",
+    "rawSha256": "2a92e9b7ab8a5e5331120474fbe4b93bad9f7ed008734646b9a2ce2505517d92",
+    "status": "finished",
+    "round": 135,
+    "reason": "INDUSTRIAL",
+    "winnerIds": [1],
+    "accepted": 2018,
+    "attempted": 2024,
+    "rejected": 6,
+    "conquestSeatTerminal": {
+      "age": 5,
+      "technologies": 16,
+      "cities": 3,
+      "combatPower": 135,
+      "units": {"scout": 1, "warrior": 6},
+      "gold": 2422,
+      "science": 16,
+      "industry": 111
+    },
+    "traceFindings": {
+      "acceptedDeclarations": 0,
+      "acceptedCityStrikes": 0,
+      "acceptedHeal": 0,
+      "acceptedMove": 12,
+      "terminalCities": [3, 3]
+    }
+  },
+  "campaignMemoryHook": {
+    "raw": "/tmp/civcraft-campaign-memory-retest2-hook.json",
+    "rawSha256": "6f53178aa7ee0920cd1d6d5229f9ffb1eb952d9f693bcdb9757b2944cb5de40e",
+    "diagnosticRaw": "/tmp/civcraft-campaign-memory-diagnostic.json",
+    "diagnosticRawSha256": "d5a5cc5be3548a52117d1b4b123cb63f341e1a13ebab1cd0d6326caa7e4aed4e",
+    "status": "finished",
+    "round": 131,
+    "reason": "INDUSTRIAL",
+    "winnerIds": [1],
+    "accepted": 3694,
+    "attempted": 3908,
+    "rejected": 214,
+    "memoryRounds": 40,
+    "conquestSeatTerminal": {
+      "age": 4,
+      "technologies": 15,
+      "cities": 3,
+      "combatPower": 843,
+      "units": {"catapult": 1, "scout": 1, "swordsman": 15, "warrior": 6},
+      "gold": 11,
+      "science": 16,
+      "industry": 111
+    },
+    "traceFindings": {
+      "acceptedDeclarations": [25, 52, 72, 92, 112],
+      "acceptedCityStrikes": [94, 95],
+      "acceptedHeal": 3,
+      "acceptedMove": 832,
+      "terminalCities": [3, 3]
+    },
+    "checkpoints": {
+      "round40": {"campaign": "city", "target": 3, "targetOwner": 1, "targetXY": [20, 13], "phase": "siege", "wallHP": 0, "needsSiege": false, "unitKinds": {"warrior": 6, "swordsman": 3, "scout": 1}, "techs": ["archery", "bronze", "metallurgy", "mining"], "canRecruit": {"swordsman": true, "catapult": false}},
+      "round50": {"campaign": "city", "target": 3, "targetOwner": 1, "targetXY": [20, 13], "phase": "approach", "wallHP": 0, "needsSiege": false, "unitKinds": {"warrior": 6, "swordsman": 10, "scout": 1}, "techs": ["archery", "bronze", "masonry", "metallurgy", "mining"], "canRecruit": {"swordsman": true, "catapult": false}},
+      "round60": {"campaign": "defense", "target": 25, "targetOwner": 0, "targetXY": [2, 10], "phase": "defend", "wallHP": 100, "unitKinds": {"warrior": 6, "swordsman": 10, "scout": 1}, "visibleEnemyCities": 0, "canRecruit": {"swordsman": true, "catapult": false}},
+      "round70": {"campaign": "city", "target": 12, "targetOwner": 1, "targetXY": [18, 15], "phase": "approach", "wallHP": 100, "needsSiege": true, "unitKinds": {"warrior": 6, "swordsman": 9, "scout": 1}, "techs": ["archery", "bronze", "deepmining", "masonry", "metallurgy", "mining"], "canRecruit": {"swordsman": true, "catapult": false}},
+      "round110": {"campaign": "explore", "target": 1, "targetOwner": 0, "targetXY": [4, 4], "phase": "approach", "wallHP": 100, "needsSiege": false, "unitKinds": {"warrior": 6, "swordsman": 9, "scout": 1}, "techsInclude": ["engineering"], "canRecruit": {"swordsman": true, "catapult": true}}
+    }
+  },
+  "finding": "Retaining the last observed enemy-city target across one defensive interruption restores a city campaign by round70 and produces legal military commitment (15 swordsmen plus a catapult at terminal state), but still no conquest victory or city capture. The remaining observed bottleneck is siege timing/target continuity: walls are restored to 100 while no catapult is legal until Engineering, and after the bounded memory expires the campaign returns to home exploration. This is policy evidence, not a gameplay balance change.",
+  "limitations": [
+    "The baseline and hook were not independent map draws; this is one deterministic seed/seat matched case.",
+    "The full-game runner trace records legal requests but not the internal move.attack flag; accepted cityStrike is counted separately, and no city capture occurred.",
+    "No claim of conquest elimination or generalization follows from this single full run."
+  ]
+}

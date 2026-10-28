@@ -1,0 +1,113 @@
+[
+  {
+    "seed": 75123,
+    "mapType": "pangaea",
+    "mapSize": "compact",
+    "hostileMode": "standard",
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge"
+      },
+      {
+        "civilization": "forge"
+      }
+    ]
+  },
+  {
+    "seed": 75123,
+    "mapType": "pangaea",
+    "mapSize": "compact",
+    "hostileMode": "standard",
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "scholar"
+      },
+      {
+        "civilization": "iron"
+      }
+    ]
+  },
+  {
+    "seed": 75123,
+    "mapType": "pangaea",
+    "mapSize": "compact",
+    "hostileMode": "standard",
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "iron"
+      },
+      {
+        "civilization": "scholar"
+      }
+    ]
+  },
+  {
+    "seed": 95117,
+    "mapType": "pangaea",
+    "mapSize": "compact",
+    "hostileMode": "standard",
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge"
+      },
+      {
+        "civilization": "forge"
+      }
+    ]
+  },
+  {
+    "seed": 95117,
+    "mapType": "pangaea",
+    "mapSize": "compact",
+    "hostileMode": "standard",
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "scholar"
+      },
+      {
+        "civilization": "iron"
+      }
+    ]
+  },
+  {
+    "seed": 95117,
+    "mapType": "pangaea",
+    "mapSize": "compact",
+    "hostileMode": "standard",
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "iron"
+      },
+      {
+        "civilization": "scholar"
+      }
+    ]
+  },
+  {
+    "seed": 18731,
+    "mapType": "continents",
+    "mapSize": "compact",
+    "hostileMode": "standard",
+    "maxRounds": 180,
+    "players": [
+      {
+        "civilization": "forge"
+      },
+      {
+        "civilization": "scholar"
+      },
+      {
+        "civilization": "iron"
+      },
+      {
+        "civilization": "merchant"
+      }
+    ]
+  }
+]

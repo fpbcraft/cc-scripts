@@ -1,0 +1,262 @@
+{
+  "purpose": "Bounded economic-weight search; no demonstrated improvement",
+  "method": "elitist bounded log-normal weight mutation; fixed opponent mixture",
+  "configuration": {
+    "output_dir": "/tmp/civcraft-evolution-pilot",
+    "train_seeds": "75123",
+    "eval_seeds": "95117,18731",
+    "population": 3,
+    "generations": 2,
+    "workers": 2,
+    "rounds": 180,
+    "seed": 20261026,
+    "goal": null
+  },
+  "trainingIntegrity": "Two first-generation candidates were invalidated by transient source-manifest changes as reproduction files were created and moved; do not treat this as a clean training comparison.",
+  "trainingFitnessByGeneration": [
+    [
+      {
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 0.944251,
+            "industry": 0.984638,
+            "science": 0.710641,
+            "gold": 1.279385
+          }
+        },
+        "fitness": 0.25,
+        "valid": true
+      },
+      {
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.0,
+            "industry": 1.0,
+            "science": 1.0,
+            "gold": 1.0
+          }
+        },
+        "fitness": null,
+        "valid": false
+      },
+      {
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 1.277163,
+            "industry": 1.235594,
+            "science": 1.416576,
+            "gold": 1.469771
+          }
+        },
+        "fitness": null,
+        "valid": false
+      }
+    ],
+    [
+      {
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 0.944251,
+            "industry": 0.984638,
+            "science": 0.710641,
+            "gold": 1.279385
+          }
+        },
+        "fitness": 0.25,
+        "valid": true
+      },
+      {
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 0.663201,
+            "industry": 1.697796,
+            "science": 0.662817,
+            "gold": 2.16011
+          }
+        },
+        "fitness": 0.25,
+        "valid": true
+      },
+      {
+        "policy": {
+          "version": 1,
+          "weights": {
+            "food": 0.567097,
+            "industry": 2.160175,
+            "science": 0.818504,
+            "gold": 1.222834
+          }
+        },
+        "fitness": 0.25,
+        "valid": true
+      }
+    ]
+  ],
+  "baselineHoldout": {
+    "valid": true,
+    "fitness": 0.25,
+    "games": 8,
+    "outcomes": [
+      {
+        "seat": 0,
+        "status": "finished",
+        "winners": [
+          1
+        ],
+        "round": 135,
+        "reason": "INDUSTRIAL"
+      },
+      {
+        "seat": 1,
+        "status": "finished",
+        "winners": [
+          1
+        ],
+        "round": 135,
+        "reason": "INDUSTRIAL"
+      },
+      {
+        "seat": 0,
+        "status": "finished",
+        "winners": [
+          1
+        ],
+        "round": 113,
+        "reason": "END EXPEDITION"
+      },
+      {
+        "seat": 1,
+        "status": "finished",
+        "winners": [
+          0
+        ],
+        "round": 129,
+        "reason": "END EXPEDITION"
+      },
+      {
+        "seat": 0,
+        "status": "finished",
+        "winners": [
+          0
+        ],
+        "round": 138,
+        "reason": "INDUSTRIAL"
+      },
+      {
+        "seat": 1,
+        "status": "finished",
+        "winners": [
+          0
+        ],
+        "round": 138,
+        "reason": "INDUSTRIAL"
+      },
+      {
+        "seat": 0,
+        "status": "finished",
+        "winners": [
+          1
+        ],
+        "round": 129,
+        "reason": "END EXPEDITION"
+      },
+      {
+        "seat": 1,
+        "status": "finished",
+        "winners": [
+          0
+        ],
+        "round": 125,
+        "reason": "END EXPEDITION"
+      }
+    ],
+    "source": "7b8171c72f655a2293dce0f87c207056bef400fa1fc4f01858f181ed7a0643cb"
+  },
+  "championHoldout": {
+    "valid": true,
+    "fitness": 0.25,
+    "games": 8,
+    "outcomes": [
+      {
+        "seat": 0,
+        "status": "finished",
+        "winners": [
+          1
+        ],
+        "round": 135,
+        "reason": "INDUSTRIAL"
+      },
+      {
+        "seat": 1,
+        "status": "finished",
+        "winners": [
+          1
+        ],
+        "round": 135,
+        "reason": "INDUSTRIAL"
+      },
+      {
+        "seat": 0,
+        "status": "finished",
+        "winners": [
+          1
+        ],
+        "round": 113,
+        "reason": "END EXPEDITION"
+      },
+      {
+        "seat": 1,
+        "status": "finished",
+        "winners": [
+          0
+        ],
+        "round": 129,
+        "reason": "END EXPEDITION"
+      },
+      {
+        "seat": 0,
+        "status": "finished",
+        "winners": [
+          0
+        ],
+        "round": 138,
+        "reason": "INDUSTRIAL"
+      },
+      {
+        "seat": 1,
+        "status": "finished",
+        "winners": [
+          0
+        ],
+        "round": 138,
+        "reason": "INDUSTRIAL"
+      },
+      {
+        "seat": 0,
+        "status": "finished",
+        "winners": [
+          1
+        ],
+        "round": 129,
+        "reason": "END EXPEDITION"
+      },
+      {
+        "seat": 1,
+        "status": "finished",
+        "winners": [
+          0
+        ],
+        "round": 125,
+        "reason": "END EXPEDITION"
+      }
+    ],
+    "source": "7b8171c72f655a2293dce0f87c207056bef400fa1fc4f01858f181ed7a0643cb"
+  },
+  "rawArtifact": "/tmp/civcraft-evolution-pilot/evolution_summary.json",
+  "interpretation": "Held-out results are equal on two seed blocks. No evidence of improved full-game strength; tactical and strategic competence remains bounded by the original controller."
+}

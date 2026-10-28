@@ -525,6 +525,7 @@ function W.forPlayer(state, id, afterSeq)
 		ruleset = state.ruleset,
 		roundLimit = state.roundLimit,
 		gameSpeed = state.gameSpeed,
+		contentRules = state.contentRules,
 		victoryRulesVersion = state.victoryRulesVersion,
 		council = Council.public(state, id),
 		diplomacy = Diplomacy.public(state, id, Hex, Content.units),

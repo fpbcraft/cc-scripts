@@ -1,0 +1,50 @@
+{
+  "metadata": {
+    "repository_head": "c5d7e4dfb7538b1f164d36fcb08946f250179c6e",
+    "runtime": "CraftOS-PC 2.8.3 / ComputerCraft 1.112.0",
+    "source": "civcraft_full180_prince.lua (adapted from tests/civcraft_ai_tournament.lua)",
+    "reproduction": "Copy games/civcraft and civcraft_full180_prince.lua into an isolated profile, then run shell.run(\"/full180.lua\", \"180\", \"75123\", \"forge\", \"forge\").",
+    "fixture": "Compact/Pangaea, two AI players, hostileMode=off; Prince order only; no gameplay changes.",
+    "interpretation": "Seat 1 and seat 2 are deterministic seat swaps of the same matchup, not independent samples.",
+    "metric_caveat": "The temporary wrapper's Actions.apply order counter remained zero; order counts are excluded from interpretation."
+  },
+  "rounds": 180,
+  "seed": 75123,
+  "civilization": "forge",
+  "opponent": "forge",
+  "level": "prince",
+  "matches": [
+    {
+      "seat": 1,
+      "round": 149,
+      "score": 648,
+      "opponentScore": 585,
+      "cities": 3,
+      "techs": 30,
+      "victoryReason": "INDUSTRIAL",
+      "winner": true,
+      "ageTurnsByPlayerId": {
+        "0": [1, 24, 58, 78, 97, 121],
+        "1": [1, 26, 60, 80, 102, 127]
+      },
+      "worstActorMs": 439
+    },
+    {
+      "seat": 2,
+      "round": 149,
+      "score": 585,
+      "opponentScore": 648,
+      "cities": 3,
+      "techs": 27,
+      "victoryReason": "INDUSTRIAL",
+      "winner": false,
+      "ageTurnsByPlayerId": {
+        "0": [1, 24, 58, 78, 97, 121],
+        "1": [1, 26, 60, 80, 102, 127]
+      },
+      "worstActorMs": 493
+    }
+  ],
+  "gcCycles": 787,
+  "gcMaxMillis": 429
+}

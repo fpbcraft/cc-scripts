@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Observer-safe frontier-route hook matched matrix; baseline comparison is in military_competence_benchmark.json",
+  "sourceHead": "97944b8bc85e011d00abbdf45bf9aecdb82050ae",
+  "raw": "/tmp/civcraft-frontier-hook-matrix.json",
+  "rawSha256": "acaeee8b472e7ab8dd0406be7420b352c00bd54935b4b9e0f8bb744892033261",
+  "matches": [
+    {"seed": 75123, "conquestSeat": 0, "status": "finished", "round": 143, "reason": "INDUSTRIAL", "winnerIds": [1], "firstAcceptedDeclarationRound": 31, "attempted": 2950, "accepted": 2702, "rejected": 248, "peakConquestSeatCities": 3, "peakOpponentCities": 3, "peakCombatPower": 135},
+    {"seed": 75123, "conquestSeat": 1, "status": "finished", "round": 135, "reason": "INDUSTRIAL", "winnerIds": [0], "firstAcceptedDeclarationRound": null, "attempted": 1980, "accepted": 1886, "rejected": 94, "peakConquestSeatCities": 2, "peakOpponentCities": 3, "peakCombatPower": 115},
+    {"seed": 95117, "conquestSeat": 0, "status": "finished", "round": 128, "reason": "INDUSTRIAL", "winnerIds": [1], "firstAcceptedDeclarationRound": 25, "attempted": 2875, "accepted": 2648, "rejected": 227, "peakConquestSeatCities": 3, "peakOpponentCities": 3, "peakCombatPower": 403},
+    {"seed": 95117, "conquestSeat": 1, "status": "finished", "round": 144, "reason": "INDUSTRIAL", "winnerIds": [0], "firstAcceptedDeclarationRound": 26, "attempted": 3295, "accepted": 3144, "rejected": 151, "peakConquestSeatCities": 3, "peakOpponentCities": 3, "peakCombatPower": 620},
+    {"seed": 18731, "conquestSeat": 0, "status": "finished", "round": 136, "reason": "INDUSTRIAL", "winnerIds": [1], "firstAcceptedDeclarationRound": 26, "attempted": 3311, "accepted": 3130, "rejected": 181, "peakConquestSeatCities": 3, "peakOpponentCities": 3, "peakCombatPower": 628},
+    {"seed": 18731, "conquestSeat": 1, "status": "finished", "round": 128, "reason": "INDUSTRIAL", "winnerIds": [0], "firstAcceptedDeclarationRound": 20, "attempted": 2777, "accepted": 2463, "rejected": 314, "peakConquestSeatCities": 3, "peakOpponentCities": 3, "peakCombatPower": 135}
+  ],
+  "finding": "The frontier hook converted the no-contact bottleneck into a reachable declaration in four of six arms, including round 25 on seed95117 seat0. It did not produce a conquest victory or any observed city capture: all six terminal routes were INDUSTRIAL and each side retained its peak city count. Seed75123 seat1 still had no accepted declaration.",
+  "scope": "These are hook-arm results only; baseline matched outcomes are preserved in military_competence_benchmark.json and raw traces are not claimed to prove elimination or conquest impossibility."
+}

@@ -1,0 +1,55 @@
+{
+  "schema_version": "observer-strategic-v1",
+  "teachers": [
+    {
+      "id": "selected-archived-expedition",
+      "artifact": "selected_policy.lua",
+      "source": "results/strategy_search_pilot.json",
+      "goal": "expedition",
+      "kind": "archived_policy",
+      "source_hash": "9b12a1a22939d9e06834dff3743756f7b864eb3e12f40aaa109917ab1f0af38f"
+    },
+    {
+      "id": "adapted-expedition-b4f3d28b1297",
+      "artifact": "results/adversarial_archive_adaptation_pilot.json",
+      "goal": "expedition",
+      "kind": "archived_policy",
+      "source_hash": "9b12a1a22939d9e06834dff3743756f7b864eb3e12f40aaa109917ab1f0af38f"
+    },
+    {
+      "id": "archived-industrial",
+      "artifact": "results/strategy_search_pilot.json:baseline",
+      "goal": "industrial",
+      "kind": "archived_policy",
+      "source_hash": "9b12a1a22939d9e06834dff3743756f7b864eb3e12f40aaa109917ab1f0af38f"
+    },
+    {
+      "id": "archived-conquest",
+      "artifact": "results/strategy_search_pilot.json:conquest-candidate",
+      "goal": "conquest",
+      "kind": "archived_policy",
+      "source_hash": "9b12a1a22939d9e06834dff3743756f7b864eb3e12f40aaa109917ab1f0af38f"
+    }
+  ],
+  "label_ingestion": {
+    "required": [
+      "observation",
+      "legal_actions",
+      "teacher_action",
+      "teacher_policy_id"
+    ],
+    "reject_privileged": [
+      "all_players",
+      "authoritative",
+      "debug",
+      "diagnostics",
+      "hidden_map",
+      "metrics",
+      "opponent_totals",
+      "raw_state",
+      "state",
+      "world_state"
+    ],
+    "fixture_is_not_game_trace": true
+  }
+}

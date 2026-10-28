@@ -1,0 +1,54 @@
+[
+  {
+    "id": "industrial-specialist",
+    "policy": {
+      "version": 1,
+      "goal": "industrial",
+      "weights": {
+        "food": 1.0,
+        "industry": 1.0,
+        "science": 1.0,
+        "gold": 1.0
+      }
+    }
+  },
+  {
+    "id": "selected-expedition",
+    "policy": {
+      "version": 1,
+      "weights": {
+        "food": 1.277163,
+        "industry": 1.235594,
+        "science": 1.416576,
+        "gold": 1.469771
+      },
+      "goal": "expedition"
+    }
+  },
+  {
+    "id": "conquest-specialist",
+    "policy": {
+      "version": 1,
+      "goal": "conquest",
+      "weights": {
+        "food": 1.0,
+        "industry": 1.0,
+        "science": 1.0,
+        "gold": 1.0
+      }
+    }
+  },
+  {
+    "id": "diplomatic-specialist",
+    "policy": {
+      "version": 1,
+      "goal": "diplomatic",
+      "weights": {
+        "food": 1.0,
+        "industry": 1.0,
+        "science": 1.0,
+        "gold": 1.0
+      }
+    }
+  }
+]

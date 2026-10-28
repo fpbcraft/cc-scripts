@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Research-only military competence fixtures; setup may inject a controlled authoritative state, but every controller order must use Engine.applyAction.",
+  "sourceRule": "No gameplay or live-AI files are modified by these fixtures.",
+  "scenarios": [
+    {
+      "id": "siege_breach",
+      "setup": "Two capitals on a compact Pangaea; Forge attacker has engineering/tactics, one catapult and three melee units; Iron defender has a walled capital and one defender; target is visible and reachable.",
+      "objective": "Reduce wallHP with siege, preserve the catapult, then capture with melee after walls fall.",
+      "metrics": ["first_contact_round", "first_siege_round", "wall_damage_per_round", "capture_round", "attacker_losses", "rejected_orders"],
+      "passCriteria": ["siege is recruited only when affordable", "no melee suicide into intact walls when a legal siege action exists", "capture follows a valid wall-breach path"]
+    },
+    {
+      "id": "capture_breach",
+      "setup": "The same controlled wartime layout, but the visible enemy city starts with wallHP zero and no walls; Forge attacker has a catapult, swordsman and warrior adjacent to the city.",
+      "objective": "Positive control for the final legal melee capture and ownership-transfer step after the siege requirement has already been removed.",
+      "metrics": ["capture_round", "captured_city_owner", "attacker_losses", "defender_losses", "rejected_orders"],
+      "passCriteria": ["a validated attack can transfer the city", "capture is distinguished from merely moving or city striking", "no setup mutation is counted as an AI action"]
+    },
+    {
+      "id": "fortified_capture",
+      "setup": "Controlled visible wartime state with three catapults, two swordsmen and one warrior adjacent to a 100-wall-HP enemy city; one defender remains. All units are ordinary content units and every order is still validated by the live action engine.",
+      "objective": "Test whether a reasonable multi-siege force can breach and capture a fortified city when siege attacks are actually selected.",
+      "metrics": ["siege_attack_rounds", "wallHP_by_round", "city_strikes", "catapult_losses", "capture_round", "melee_losses", "wasted_turns"],
+      "passCriteria": ["wallHP reaches zero through legal siege actions", "the city can then transfer by a legal melee capture", "defensive city strikes and unit losses are recorded separately"]
+    },
+    {
+      "id": "capital_defense",
+      "setup": "Forge walled capital with a warrior and city-strike capability; opposing Iron force approaches through visible land with two melee units; no hostile mobs.",
+      "objective": "Prioritize capital defense, city strike or safe attack, and retreat damaged units instead of abandoning the capital.",
+      "metrics": ["threat_contact_round", "city_strikes", "capital_wallHP", "capital_owner", "defender_losses", "retreats", "rejected_orders"],
+      "passCriteria": ["capital remains owned through the defense horizon", "damaged units seek safe owned territory", "attacks are forecast/legal and do not knowingly sacrifice the last defender"]
+    },
+    {
+      "id": "settler_protection",
+      "setup": "Forge has one city, a settler and one escort on a legal expansion corridor; an opposing raider is visible but not yet adjacent; settlement tile is valid and outside the spacing rule.",
+      "objective": "Attach/maintain an escort, move the settler through the corridor, and found before capture.",
+      "metrics": ["escort_attached_round", "settler_path_length", "found_round", "settler_captured", "escort_losses", "rejected_orders"],
+      "passCriteria": ["escort is attached through a validated action", "settler does not take an avoidable exposed route", "founding succeeds or an explicit threat-driven retreat is recorded"]
+    }
+  ],
+  "fullGameComparison": {
+    "baseline": "Live Systems.aiTurn through ActorLifecycle.pump with conquest policy",
+    "replacement": "Observation-only research controller using actual Engine.applyAction, real production/research costs and the same opponent",
+    "controls": ["same seed/map/config", "seat rotation", "hostile off first", "then hostile standard holdout", "source manifest and driver hash", "finished/censored/error/timeout separation"],
+    "primaryMetrics": ["conquest_wins", "actual_victory_route", "first_contact_round", "first_declaration_round", "siege_produced", "cities_captured", "military_losses", "settler_losses", "rejected_orders", "victory_round"]
+  }
+}

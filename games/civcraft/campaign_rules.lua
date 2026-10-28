@@ -52,6 +52,17 @@ function Rules.configure(state, id, request)
 	if not state.players[1] or state.players[1].id ~= id then
 		return false, "Host only"
 	end
+	if request.action == "contentRules" then
+		local version = request.version
+		if version == nil then
+			version = state.contentRules == "p1" and "baseline" or "p1"
+		end
+		if version ~= "baseline" and version ~= "p1" then
+			return false, "Unknown content economy"
+		end
+		state.contentRules = version == "p1" and "p1" or nil
+		return true, version == "p1" and "P1 opening and civilian projects" or "Original economy"
+	end
 	if request.action == "gameSpeed" then
 		local nextSpeed = request.speed
 		if nextSpeed == nil then

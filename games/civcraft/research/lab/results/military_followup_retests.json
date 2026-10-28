@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Bounded research-only follow-up: timely siege prerequisites, positive capture control, and symmetric difficulty",
+  "sourceHead": "97944b8bc85e011d00abbdf45bf9aecdb82050ae",
+  "driver": "games/civcraft/research/lab/military_competence_benchmark.py",
+  "driverSha256Current": "5d47fdd05d942e4f625d6c2e6aac16528ccaf04264ad29991b28658e9337b5c2",
+  "driverSha256AtFullRun": "ee220490c267d61eaaae037f0c03f97a9bcf02313b192c8605bfb89999aa6ee5",
+  "timelySiegeMatchedCase": {
+    "raw": "/tmp/civcraft-frontier-memory-siege-retest2.json",
+    "rawSha256": "92e1d3e0e1e7c38243a0c9c4c71a0b4bed6b7f51a7f9661335c473a23d3d8480",
+    "config": {"seed": 95117, "conquestSeat": 0, "mapSize": "compact", "mapType": "pangaea", "hostileMode": "off", "maxRounds": 180, "bothPlayers": "Forge", "hookBase": "frontier+campaign-memory+production-quality"},
+    "control": {
+      "researchHook": false,
+      "status": "finished",
+      "round": 131,
+      "reason": "INDUSTRIAL",
+      "winnerIds": [1],
+      "conquestResearch": [[1, "mining"], [18, "bronze"], [26, "metallurgy"], [34, "archery"], [40, "masonry"], [48, "deepmining"], [61, "diamondworking"], [74, "redstone"], [87, "engineering"]],
+      "firstCatapultQueueRound": 99,
+      "acceptedCityStrikes": [94, 95],
+      "conquestTerminal": {"age": 4, "technologies": 15, "combatPower": 843, "units": {"catapult": 1, "scout": 1, "swordsman": 15, "warrior": 6}, "cities": 3},
+      "citiesCaptured": 0
+    },
+    "timelyResearchHook": {
+      "researchHook": true,
+      "status": "finished",
+      "round": 130,
+      "reason": "INDUSTRIAL",
+      "winnerIds": [1],
+      "conquestResearch": [[1, "mining"], [18, "bronze"], [26, "metallurgy"], [34, "archery"], [40, "masonry"], [48, "deepmining"], [61, "redstone"], [74, "engineering"]],
+      "firstCatapultQueueRound": 86,
+      "acceptedCityStrikes": [94, 95],
+      "conquestTerminal": {"age": 5, "technologies": 16, "combatPower": 798, "units": {"catapult": 1, "scout": 1, "swordsman": 14, "warrior": 6}, "cities": 3},
+      "citiesCaptured": 0
+    },
+    "finding": "Prioritising the already-legal dependency chain after a recorded fortified target moves redstone 74->61, engineering 87->74, and catapult queue 99->86. It does not produce a capture or conquest victory; the rival still wins Industrial one round earlier. This supports late siege access as a real bottleneck without claiming it is the sole cause."
+  },
+  "capturePositiveControl": {
+    "raw": "/tmp/civcraft-capture-breach-positive.json",
+    "rawSha256": "6d336623043be0b4389779d978ef2b0f5c3ede92f41ba909d60ebba855bcd226",
+    "driverSha256AtRun": "5d47fdd05d942e4f625d6c2e6aac16528ccaf04264ad29991b28658e9337b5c2",
+    "scenario": "capture_breach",
+    "horizon": 8,
+    "bothArms": {"status": "finished", "captureRound": 3, "attackType": "melee move into city with ownership transfer", "targetWallHPStart": 0, "targetWallHPEnd": 0, "capturedCityID": 3, "capturedOwner": 0, "attackerActions": {"move": 8, "heal": 1}, "finalAttackerHP": {"catapult": 100, "swordsman": 47, "warrior": 100}, "attackerLosses": 0, "survivingDefenderHP": 49},
+    "finding": "With the visible target wall already at zero but one defender present, the ordinary AI uses the shared legal action/combat path and captures on round 3. This is a positive ownership-transfer gate, not evidence that the fortified siege path works."
+  },
+  "fortifiedSiegeNegativeControl": {
+    "raw": "/tmp/civcraft-siege-fixture-current.json",
+    "rawSha256": "db4be50bfe45bd3468eaf7ac8b631a97e9abba7a65f9d21a86ef930fd4b5b99c",
+    "driverSha256AtRun": "5d47fdd05d942e4f625d6c2e6aac16528ccaf04264ad29991b28658e9337b5c2",
+    "scenario": "siege_breach",
+    "horizon": 8,
+    "baseline": {"acceptedMove": 20, "acceptedCityStrikes": 0, "targetWallHPStart": 100, "targetWallHPEnd": 100, "captures": 0, "wastedTurns": 8},
+    "productionHook": {"acceptedMove": 21, "acceptedCityStrikes": 0, "targetWallHPStart": 100, "targetWallHPEnd": 100, "captures": 0, "wastedTurns": 8},
+    "finding": "The existing fortified fixture still produces no wall damage in eight actual turns; this is a negative diagnostic of the current scenario/controller path, not a claim that Combat.damage or city capture is broken."
+  },
+  "symmetricDifficulty": {
+    "raw": "/tmp/civcraft-prince-deity-symmetric.json",
+    "rawSha256": "0bc4911cbf56ec3508d152d625c55d7a95407c899168cb1785f22f544541d0d0",
+    "driverSha256AtRun": "ee220490c267d61eaaae037f0c03f97a9bcf02313b192c8605bfb89999aa6ee5",
+    "cases": [
+      {"seed": 75123, "conquestSeat": 0, "prince": {"round": 180, "reason": "SCORE", "winnerIds": [1], "conquestTechCount": 19, "conquestCombatPower": 135, "conquestCities": 3, "rejected": 131}, "deity": {"round": 180, "reason": "SCORE", "winnerIds": [1], "conquestTechCount": 19, "conquestCombatPower": 135, "conquestCities": 3, "rejected": 131}},
+      {"seed": 95117, "conquestSeat": 1, "prince": {"round": 151, "reason": "INDUSTRIAL", "winnerIds": [0], "conquestTechCount": 18, "conquestCombatPower": 135, "conquestCities": 3, "rejected": 8}, "deity": {"round": 152, "reason": "INDUSTRIAL", "winnerIds": [0], "conquestTechCount": 18, "conquestCombatPower": 135, "conquestCities": 3, "rejected": 113}}
+    ],
+    "finding": "Both-player Deity does not grant visible economy/combat bonuses and, in these two matched cases, does not improve the conquest seat's research or city count. The 75123 case is exactly identical on conquest progress; 95117 differs only slightly in terminal timing and opponent actions. This is evidence about these deterministic cells, not a global difficulty ranking."
+  },
+  "limitations": [
+    "The timely-siege comparison is one deterministic seed/seat with the same live opponent and research-only score changes.",
+    "The positive control starts after the wall-breach requirement and therefore cannot validate fortified siege timing.",
+    "The symmetric difficulty sample contains two matched seed/seat cases; it should not be generalized to all maps, civilizations or victory goals.",
+    "No gameplay costs, stats, movement, visibility or victory rules were changed."
+  ]
+}

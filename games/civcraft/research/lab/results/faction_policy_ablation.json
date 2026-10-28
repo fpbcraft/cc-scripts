@@ -1,0 +1,103 @@
+{
+  "ablation": {
+    "assetsOrActionsChanged": false,
+    "gameplaySourcesModified": false,
+    "hook": "Personalities.forCivilization always returns a copy of the original Forge profile",
+    "policyGoal": "expedition",
+    "weightsHeldConstant": true
+  },
+  "civilizationComparisons": {
+    "highland": {
+      "matches": 4,
+      "medianRound": 126.0,
+      "rate": 0.5,
+      "wins": 2
+    },
+    "iron": {
+      "matches": 4,
+      "medianRound": 126.0,
+      "rate": 0.5,
+      "wins": 2
+    },
+    "mariner": {
+      "matches": 4,
+      "medianRound": 126.0,
+      "rate": 0.25,
+      "wins": 1
+    },
+    "merchant": {
+      "matches": 4,
+      "medianRound": 126.0,
+      "rate": 0.5,
+      "wins": 2
+    },
+    "nomad": {
+      "matches": 4,
+      "medianRound": 126.0,
+      "rate": 0.5,
+      "wins": 2
+    },
+    "scholar": {
+      "matches": 4,
+      "medianRound": 100.0,
+      "rate": 1.0,
+      "wins": 4
+    },
+    "sentinel": {
+      "matches": 4,
+      "medianRound": 126.0,
+      "rate": 0.5,
+      "wins": 2
+    },
+    "verdant": {
+      "matches": 4,
+      "medianRound": 126.0,
+      "rate": 0.5,
+      "wins": 2
+    },
+    "wild": {
+      "matches": 4,
+      "medianRound": 125.5,
+      "rate": 0.5,
+      "wins": 2
+    }
+  },
+  "fixture": {
+    "matches": 36,
+    "meanRound": 122.97222222222223,
+    "medianRound": 124.0,
+    "seatWins": {
+      "seat0": 33,
+      "seat1": 3
+    },
+    "statusCounts": {
+      "finished": 36
+    },
+    "victoryReasons": {
+      "END EXPEDITION": 36
+    }
+  },
+  "comparisonAgainstOriginal": {
+    "winsOriginalToFixedForgePersonality": {
+      "mariner": "3/4 -> 1/4",
+      "nomad": "4/4 -> 2/4",
+      "wild": "4/4 -> 2/4",
+      "scholar": "4/4 -> 4/4",
+      "highland": "2/4 -> 2/4",
+      "iron": "2/4 -> 2/4",
+      "merchant": "2/4 -> 2/4",
+      "sentinel": "2/4 -> 2/4",
+      "verdant": "2/4 -> 2/4"
+    },
+    "interpretation": "Holding the Forge personality removes much of the original Nomad/Wild/Mariner advantage while Scholar remains 4/4, consistent with a material expansionist-personality confound; seat-0 association remains (33/36) and is not itself causal evidence."
+  },
+  "interpretation": "This controls the civilization-specific AI personality, but seat/start-position association remains a separate factor; compare independent map starts and paired seat rotations against faction_policy_pilot.json.",
+  "rawArtifact": "/tmp/civcraft-faction-policy-ablation.raw.json",
+  "schemaVersion": 1,
+  "scriptSha256": "b93141939a766f486c5d3cee44f1a44c4e1322810f89e0b8dc0aeeae1499fe6d",
+  "source": {
+    "head": "97944b8bc85e011d00abbdf45bf9aecdb82050ae",
+    "luaSourceHash": "9b12a1a22939d9e06834dff3743756f7b864eb3e12f40aaa109917ab1f0af38f",
+    "sourceChangedDuringRun": false
+  }
+}
