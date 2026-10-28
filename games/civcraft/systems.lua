@@ -63,6 +63,7 @@ function M.workable(state, city)
 		for xx = math.max(1, city.x - 3), math.min(state.world.width, city.x + 3) do
 			if
 				not (xx == city.x and yy == city.y)
+				and World.terrain(state.world, xx, yy) ~= "mountain"
 				and Hex.distance(xx, yy, city.x, city.y) <= 3
 				and World.territoryCity(state, Hex, xx, yy) == city
 			then
