@@ -8,17 +8,68 @@ on:
 permissions:
   contents: read
 
+# Do not let older runs overwrite formatting from a newer PR commit.
+concurrency:
+  group: lua-style-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   style:
     runs-on: ubuntu-latest
+    permissions:
+      # Required only for formatting commits on branches in this repository.
+      # Fork PR tokens remain read-only under GitHub's normal permissions.
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # A PR's default checkout is a detached merge commit. Only check out
+          # the writable head branch when the PR originates in this repository.
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || github.sha }}
+          # Optional PAT/GitHub App token enables CI to retrigger on autofix.
+          # GITHUB_TOKEN can push fixes but its pushes do not retrigger CI.
+          token: ${{ secrets.STYLE_AUTOFIX_TOKEN || github.token }}
+
+      - name: Auto-format Lua on same-repository PRs
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: JohnnyMorganz/stylua-action@v5
+        with:
+          token: ${{ github.token }}
+          version: 2.6.0
+          args: .
+
+      - name: Commit formatting fixes to PR branch
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          HAS_AUTOFIX_TOKEN: ${{ secrets.STYLE_AUTOFIX_TOKEN != '' }}
+        run: |
+          set -euo pipefail
+          if [[ "$(git rev-parse HEAD)" != "$EXPECTED_HEAD" ]]; then
+            echo "::error::PR branch changed since this workflow started; refusing to push a stale formatting commit."
+            exit 1
+          fi
+          git add -u -- '*.lua'
+          if git diff --cached --quiet; then
+            echo "All Lua files are already formatted."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "style: autoformat Lua with StyLua"
+          git push origin "HEAD:refs/heads/$HEAD_REF"
+          if [[ "$HAS_AUTOFIX_TOKEN" != "true" ]]; then
+            echo "::warning::Formatting was pushed with GITHUB_TOKEN, which does not trigger fresh CI. Configure STYLE_AUTOFIX_TOKEN (a repo-scoped PAT or GitHub App token with contents:write) for automatic rechecks."
+          fi
+
       - name: Enforce StyLua formatting
         uses: JohnnyMorganz/stylua-action@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
           version: 2.6.0
           args: --check .
+
       - name: Install Selene 0.32.0
         run: |
           curl --fail --location --silent --show-error \
