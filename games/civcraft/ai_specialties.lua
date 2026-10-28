@@ -56,6 +56,11 @@ function Specialties.roles(view, player, systems)
 				if (city.sites or {})[kind] then
 					value = value + 8
 				end
+				for _, project in pairs(city.siteProjects or {}) do
+					if project.kind == kind then
+						value = value + 8
+					end
+				end
 				for id, built in pairs(city.buildings or {}) do
 					if built and Sites.families[id] == kind then
 						value = value + 2
