@@ -2,6 +2,8 @@ local native = dofile
 dofile = function(path)
 	return native(path:gsub("^/games/civcraft/", "games/civcraft/"))
 end
+-- Match the installed program: share internal modules across UI dependencies.
+native("games/civcraft/module_cache.lua").install(_G)
 colors = {
 	black = 32768,
 	white = 1,
