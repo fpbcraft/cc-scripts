@@ -331,6 +331,69 @@ local function drawUnitBubble(r, badge, color, selected)
 	)
 end
 
+
+-- Search normal callout offsets first, then use a compact grid only when
+-- crowded/edge tiles leave no room at the preferred offsets. Collision checks
+-- use the entire hitbox so icons and city labels remain independently clickable.
+local function findUnitCallout(rect, occupied, cx, cy, diameter, tileSize)
+	local half = math.floor(diameter / 2)
+	local lastX, lastY = rect.x + rect.w - diameter, rect.y + rect.h - diameter
+	if lastX < rect.x or lastY < rect.y then
+		return nil
+	end
+	local function clear(x, y)
+		if x < rect.x or y < rect.y or x > lastX or y > lastY then
+			return false
+		end
+		if (cx - x - half) ^ 2 + (cy - y - half) ^ 2 <= (half + 3) ^ 2 then
+			return false
+		end
+		for _, other in ipairs(occupied) do
+			if x < other.x + other.w
+				and x + diameter > other.x
+				and y < other.y + other.h
+				and y + diameter > other.y then
+				return false
+			end
+		end
+		return true
+	end
+	for ring = 1, 7 do
+		local distance = half + tileSize * 0.5 + 3 + (ring - 1) * (diameter + 2) * 0.7
+		for _, direction in ipairs(bubbleDirections) do
+			local x = round(cx + direction[1] * distance - half)
+			local y = round(cy + direction[2] * distance - half)
+			if clear(x, y) then
+				return { x = x, y = y }
+			end
+		end
+	end
+	-- The eight preferred directions can miss a narrow free corridor between
+	-- a city nameplate and the map edge, particularly at high zoom levels.
+	local best, bestDistance
+	local function consider(x, y)
+		if not clear(x, y) then
+			return
+		end
+		local distance = (cx - x - half) ^ 2 + (cy - y - half) ^ 2
+		if not bestDistance or distance < bestDistance then
+			best, bestDistance = { x = x, y = y }, distance
+		end
+	end
+	local stride = math.max(1, math.floor(diameter / 3))
+	for y = rect.y, lastY, stride do
+		for x = rect.x, lastX, stride do
+			consider(x, y)
+		end
+		consider(lastX, y)
+	end
+	for x = rect.x, lastX, stride do
+		consider(x, lastY)
+	end
+	consider(lastX, lastY)
+	return best
+end
+
 function V.draw(ui, state, player, rect)
 	local frame = rect
 	rect = { x = frame.x + 4, y = frame.y + 4, w = frame.w - 8, h = frame.h - 8 }
@@ -929,72 +992,20 @@ function V.draw(ui, state, player, rect)
 					anchorY = round(centerY),
 				}
 				local chosen
-				local fallback, fallbackOverlap
-				-- Prefer a bubble above the unit, as in the Civ-style marker, then
-				-- search clockwise and farther out until both banner and other
-				-- unit hit targets are clear. Never clamp a candidate into a banner.
-				for ring = 1, 7 do
-					local distance = badgeSize / 2
-						+ size * 0.5
-						+ 3
-						+ (ring - 1) * (badgeSize + 2) * 0.7
-					for _, direction in ipairs(bubbleDirections) do
-						local bx =
-							round(centerX + direction[1] * distance - math.floor(badgeSize / 2))
-						local by =
-							round(centerY + direction[2] * distance - math.floor(badgeSize / 2))
-						local box = { x = bx, y = by, w = badgeSize, h = badgeSize }
-						if
-							bx >= rect.x
-							and by >= rect.y
-							and bx + badgeSize <= rect.x + rect.w
-							and by + badgeSize <= rect.y + rect.h
-						then
-							local overlap = 0
-							for _, other in ipairs(occupied) do
-								local w = math.max(
-									0,
-									math.min(box.x + box.w + 1, other.x + other.w + 1)
-										- math.max(box.x - 1, other.x - 1)
-								)
-								local h = math.max(
-									0,
-									math.min(box.y + box.h + 1, other.y + other.h + 1)
-										- math.max(box.y - 1, other.y - 1)
-								)
-								overlap = overlap + w * h
-							end
-							if overlap == 0 then
-								chosen = box
-								break
-							end
-							if not fallbackOverlap or overlap < fallbackOverlap then
-								fallback, fallbackOverlap = box, overlap
-							end
-						end
-					end
+				-- Keep the circle large when possible, but allow it to shrink to
+				-- preserve separate hit targets on narrow terminal viewports.
+				for diameter = badgeSize, 9, -2 do
+					chosen = findUnitCallout(rect, occupied, centerX, centerY, diameter, size)
 					if chosen then
+						badge.w, badge.h = diameter, diameter
 						break
 					end
 				end
 				if not chosen then
-					chosen = fallback
-						or {
-							x = math.max(
-								rect.x,
-								math.min(
-									rect.x + rect.w - badgeSize,
-									round(centerX - badgeSize / 2)
-								)
-							),
-							y = math.max(
-								rect.y,
-								math.min(
-									rect.y + rect.h - badgeSize,
-									round(centerY - badgeSize / 2)
-								)
-							),
-						}
+					chosen = {
+						x = math.max(rect.x, math.min(rect.x + rect.w - badge.w, round(centerX - badge.w / 2))),
+						y = math.max(rect.y, math.min(rect.y + rect.h - badge.h, round(centerY - badge.h / 2))),
+					}
 				end
 				badge.x, badge.y = chosen.x, chosen.y
 				placePointer(badge)
