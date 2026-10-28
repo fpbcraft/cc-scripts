@@ -195,12 +195,29 @@ for _, graphics in ipairs({ false, true }) do
 						.. " unit="
 						.. actor.id
 						.. " badge="
-						.. found.x .. "," .. found.y .. "," .. found.w .. "," .. found.h
+						.. found.x
+						.. ","
+						.. found.y
+						.. ","
+						.. found.w
+						.. ","
+						.. found.h
 						.. " banner="
-						.. banner.x .. "," .. banner.y .. "," .. banner.w .. "," .. banner.h
+						.. banner.x
+						.. ","
+						.. banner.y
+						.. ","
+						.. banner.w
+						.. ","
+						.. banner.h
 						.. " viewport="
-						.. ui.mapViewport.x .. "," .. ui.mapViewport.y .. ","
-						.. ui.mapViewport.w .. "," .. ui.mapViewport.h
+						.. ui.mapViewport.x
+						.. ","
+						.. ui.mapViewport.y
+						.. ","
+						.. ui.mapViewport.w
+						.. ","
+						.. ui.mapViewport.h
 				)
 			end
 			tap(found)
