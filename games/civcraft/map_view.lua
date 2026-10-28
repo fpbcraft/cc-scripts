@@ -158,7 +158,9 @@ function V.draw(ui, state, player, rect)
 							base = owner and ownerColor(state, owner) or base
 						end
 					end
-					if r.buffer and r.blit then
+					if canvas.layoutOnly then
+						-- Preserve hex targets and layout while skipping raster-only work.
+					elseif r.buffer and r.blit then
 						r:blit(
 							Terrain.sprite(
 								geography,
