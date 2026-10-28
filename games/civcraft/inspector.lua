@@ -195,7 +195,7 @@ function I.draw(ui, state, player, rect, modal)
 		if (ui.cityPanel or "overview") == "overview" then
 			text("POP " .. (city.population or 2) .. "  IDLE " .. Systems.idle(city), 7)
 			rows[#rows + 1] = { yields = yields }
-			local growth = Systems.growth(player, city, state)
+			local growth = Systems.growth(player, city, state, yields)
 			if growth.capacity then
 				text(
 					"CAPACITY "
@@ -633,6 +633,9 @@ function I.draw(ui, state, player, rect, modal)
 		end
 		if stats.builder then
 			text("BUILDER CHARGES " .. (unit.charges or 0) .. " / 3", 13)
+			if at(state.cities, unit.x, unit.y) then
+				text("CITY CENTER: move onto an owned land tile to improve it.", 8)
+			end
 			local queue = unit.workQueue
 			if queue then
 				text(
@@ -691,6 +694,20 @@ function I.draw(ui, state, player, rect, modal)
 			for _, kind in ipairs(Works.order) do
 				local definition = Works.definitions[kind]
 				if player.techs[definition.tech] then
+					local here = Works.preview(state, player, unit, kind, unit.x, unit.y, Systems)
+					if here then
+						rows[#rows + 1] = {
+							buttons = {
+								{
+									label = definition.name .. " HERE",
+									run = function()
+										ui:armPlacement("work", unit, kind)
+										ui:tile(unit.x, unit.y)
+									end,
+								},
+							},
+						}
+					end
 					rows[#rows + 1] = {
 						buttons = {
 							{
@@ -789,7 +806,10 @@ function I.draw(ui, state, player, rect, modal)
 			rows[#rows + 1] = {
 				buttons = {
 					{
-						label = "FOUND CITY",
+						label = ContentRules.startsWithSettler(state)
+								and not player.capitalFounded
+								and "FOUND CAPITAL"
+							or "FOUND CITY",
 						run = function()
 							ui:command("found", { x = unit.x, y = unit.y, unitID = unit.id })
 						end,

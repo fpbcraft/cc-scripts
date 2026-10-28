@@ -25,7 +25,8 @@ local UI = {}
 UI.__index = UI
 local function mapLabel(state)
 	local size = state.mapSize or "standard"
-	local dims = World.sizes[size] or World.sizes.standard
+	local dims = state.world and { state.world.width, state.world.height }
+		or World.dimensions(size, state)
 	return size:upper() .. " " .. dims[1] .. "X" .. dims[2]
 end
 local P = FactionColors.players
@@ -1591,6 +1592,24 @@ function UI:tap(x, y)
 	local v = self.mapViewport
 	if not v or rx < v.x or rx >= v.x + v.w or ry < v.y or ry >= v.y + v.h then
 		return false
+	end
+	if
+		not self.source
+		and not self.placement
+		and not self.pendingMove
+		and not self.cityStrikeSource
+	then
+		for _, banner in ipairs(self.cityBannerTargets or {}) do
+			if
+				rx >= banner.x
+				and rx < banner.x + banner.w
+				and ry >= banner.y
+				and ry < banner.y + banner.h
+			then
+				self:focus("city", banner.city)
+				return true
+			end
+		end
 	end
 	local best, distance
 	for _, hex in ipairs(self.hexTargets or {}) do

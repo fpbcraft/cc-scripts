@@ -12,7 +12,8 @@ function Tasks.idle(state, unit, owner)
 	local queue = unit.moveQueue or partner and partner.moveQueue
 	return not (Stacks.isCivilian(unit) and Stacks.partner(state, unit))
 		and not (queue and not queue.paused)
-		and not (unit.workQueue and not unit.workQueue.paused)
+		and not unit.workQueue
+		and not (partner and partner.workQueue)
 		and unit.owner == owner
 		and not unit.standby
 		and not unit.autoExplore

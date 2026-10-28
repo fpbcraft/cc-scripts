@@ -248,6 +248,7 @@ dofile = function(path)
 		local difficultyStep = 0
 		local researchStep = 0
 		local campaignStep = 0
+		local openingFocus = {}
 		local warStep, responseStep = 0, 0
 		local historyStep, historySeq = 0, nil
 		local councilStep = 0
@@ -368,6 +369,57 @@ dofile = function(path)
 			then
 				tap(self, "CLOSE")
 				return
+			end
+			if
+				state.phase == "game"
+				and not options.handoff
+				and not options.paused
+				and (stage == 2 or stage == 5)
+				and dofile("/games/civcraft/content_rules.lua").startsWithSettler(state)
+			then
+				local me
+				for _, player in ipairs(state.players) do
+					if player.id == self.playerID then
+						me = player
+					end
+				end
+				if me and not me.capitalFounded then
+					local traveler
+					for _, unit in ipairs(state.units) do
+						if unit.owner == me.id and unit.kind == "settler" then
+							traveler = unit
+							break
+						end
+					end
+					assert(traveler, "Native opening must retain its initial Settler")
+					local settlement = dofile("/games/civcraft/ai_settlement.lua")
+					if not settlement.value(state, me, traveler.x, traveler.y, traveler) then
+						local request = settlement.order(
+							state,
+							me,
+							traveler,
+							dofile("/games/civcraft/systems.lua")
+						)
+						assert(
+							request and request.action == "move",
+							"Contact fixture needs a legal first-city location within starting movement"
+						)
+						self:command(request.action, request)
+						return
+					end
+					if not openingFocus[me.id] then
+						self:focus("unit", traveler)
+						self.panel = "inspector"
+						openingFocus[me.id] = true
+						return
+					end
+					if tap(self, "FOUND CAPITAL") then
+						self.panel = "context"
+					else
+						tap(self, "NEXT")
+					end
+					return
+				end
 			end
 			if includeRoutes and stage == 2 and not options.handoff and routeStep < 5 then
 				if routeStep == 0 then

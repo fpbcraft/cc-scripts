@@ -170,6 +170,33 @@ Landwork V3 becomes the new-game default. Earlier profiles retain their semantic
 Rule, native UI/save, host/hotseat and both three-computer race checks pass; prices
 and competitive opening outcomes remain uncalibrated.
 
+## Additional requested player controls
+
+Added by the user after the M2 mechanics delivery. These are explicit roadmap
+requirements, not claims that the current queued-work/AI features deliver them.
+
+- [ ] Human Builder auto mode: an opt-in persistent order chooses useful legal
+  improvements from observed owned land, reusing the shared valuation and work
+  actions. Respect charges, escorts and movement; pause safely on threats or
+  invalidated targets; offer clear stop/resume controls. Retain manual queued
+  work. Verify saved auto mode, charge exhaustion and native/multiplayer input.
+- [ ] City-founding suggestions: when a Settler is selected, mark promising
+  explored legal locations and explain food/industry, water/capacity, resources,
+  spacing and eventual specialty opportunities. Reuse authoritative legality and
+  observer-only evaluation; do not reveal hidden tiles or auto-found a city.
+  Integrate with M3's site placement previews and test fog and compact-map UI.
+- [ ] Gold tile purchases: allow a city to buy eligible adjacent unclaimed land
+  within its supported working range. Specify visible pricing and speed scaling;
+  validate ownership, adjacency, range, availability and treasury atomically.
+  Preview tile yields, strategic access and the gold cost before confirmation;
+  debit only after successful acquisition. Preserve purchase/border state through
+  save/load and capture, update public observations, and adapt city AI. Integrate
+  with M3's geographic specialization and M5 resource access.
+
+These follow-ups remain in the implementation scope. Starting-unit choice,
+manual first-city founding, city banners and larger new-game maps are the
+immediate user-requested slice before this subsequent work.
+
 ## M3 — Make cities specialize
 
 Goal: location and specialty investments give cities different useful roles.

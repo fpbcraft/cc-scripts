@@ -99,7 +99,12 @@ function Work.run(state, owner, systems, apply, force)
 				if companion and (companion.moved or (companion.movesLeft or 0) <= 0) then
 					break
 				end
-				if unit.moved or (unit.movesLeft or 0) <= 0 or not unit.workQueue then
+				if
+					unit.skippedTurn == stamp
+					or unit.moved
+					or (unit.movesLeft or 0) <= 0
+					or not unit.workQueue
+				then
 					break
 				end
 				local task = queue.tasks[1]

@@ -348,6 +348,10 @@ end
 
 local function hostDraw(ui, state)
 	if state.phase == "lobby" then
+		if state.contentRules ~= "balance3" then
+			issue(ui, "contentRules", { version = "balance3" })
+			return
+		end
 		if not created then
 			created = true
 			assert(emulator.create("1", "computer"))

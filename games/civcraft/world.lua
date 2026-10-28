@@ -12,6 +12,7 @@ local Generator = dofile("/games/civcraft/worldgen.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local Council = dofile("/games/civcraft/council.lua")
 local Works = dofile("/games/civcraft/tile_improvements.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local W = {}
 W.sizes = {
 	compact = { 24, 16 },
@@ -20,6 +21,20 @@ W.sizes = {
 	huge = { 72, 46 },
 	vast = { 96, 60 },
 }
+W.expandedSizes = {
+	compact = { 32, 22 },
+	standard = { 56, 36 },
+	large = { 72, 46 },
+	huge = { 96, 60 },
+	vast = {
+		120,
+		76,
+	},
+}
+function W.dimensions(size, context)
+	local sizes = ContentRules.startsWithSettler(context) and W.expandedSizes or W.sizes
+	return sizes[size] or sizes.standard
+end
 W.sizeOrder = { "compact", "standard", "large", "huge", "vast" }
 W.types = { "continents", "archipelago", "pangaea", "highlands" }
 local function key(x, y)
@@ -93,7 +108,7 @@ local function mapMemory(player, world)
 end
 
 W.generationVersion = Generator.version
-function W.generate(seed, size, count, mapType)
+function W.generate(seed, size, count, mapType, context)
 	size = W.sizes[size] and size or "standard"
 	seed = math.floor(tonumber(seed) or 12345) % 1000000
 	count = math.max(1, math.min(4, math.floor(tonumber(count) or 4)))
@@ -102,7 +117,12 @@ function W.generate(seed, size, count, mapType)
 	then
 		mapType = "continents"
 	end
-	return Generator.generate(seed, size, count, mapType, W.sizes[size], W.checkpoint)
+	local world =
+		Generator.generate(seed, size, count, mapType, W.dimensions(size, context), W.checkpoint)
+	if ContentRules.startsWithSettler(context) then
+		world.mapScaleVersion = "founders-v1"
+	end
+	return world
 end
 W.tile = Biomes.tile
 function W.terrain(world, x, y)
@@ -601,6 +621,7 @@ function W.forPlayer(state, id, afterSeq)
 			observedOwners = {},
 			contentVersion = world.contentVersion,
 			generationVersion = world.generationVersion,
+			mapScaleVersion = world.mapScaleVersion,
 		}
 		for y = 1, world.height do
 			if W.checkpoint then

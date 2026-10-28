@@ -15,6 +15,12 @@ function V.generate(state)
 				return
 			end
 			local safe = true
+			for _, start in ipairs(state.world.starts or {}) do
+				if Hex.distance(x, y, start.x, start.y) < 5 then
+					safe = false
+					break
+				end
+			end
 			for _, s in ipairs(state.cities) do
 				if Hex.distance(x, y, s.x, s.y) < 5 then
 					safe = false

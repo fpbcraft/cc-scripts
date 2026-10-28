@@ -17,6 +17,7 @@ local TurnTasks = dofile("/games/civcraft/turn_tasks.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local Queue = dofile("/games/civcraft/queued_routes.lua")
 local Council = dofile("/games/civcraft/council.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Works = dofile("/games/civcraft/tile_improvements.lua")
 local WorkQueue = dofile("/games/civcraft/queued_work.lua")
 local A = {}
@@ -253,6 +254,7 @@ local function apply(state, id, req, Systems)
 				return false, "No saved Builder work"
 			end
 			u.workQueue.paused = nil
+			u.skippedTurn = nil
 			WorkQueue.run(state, id, Systems, A.apply, u)
 			return true, "Builder work resumed"
 		end
@@ -538,6 +540,14 @@ local function apply(state, id, req, Systems)
 			state.improvementRevision = (state.improvementRevision or 0) + 1
 		end
 		local founded = state.cities[#state.cities]
+		if ContentRules.startsWithSettler(state) and not p.capitalFounded then
+			founded.capitalOf = p.id
+			p.capitalFounded = true
+			Council.afterFounding(state)
+		end
+		if ContentRules.startsWithSettler(state) then
+			Combat.city(founded)
+		end
 		Systems.nameCity(state, founded)
 		state.nextId = state.nextId + 1
 		World.ensureTerritories(state, Hex, false)
@@ -586,8 +596,12 @@ function A.apply(state, id, request, systems)
 	end
 	if ok and unit and replacesRoute[request.action] and not unit.executingQueue then
 		Queue.cancel(state, unit)
-		if not unit.executingWork then
+		if not unit.executingWork and request.action ~= "skipTurn" then
 			unit.workQueue = nil
+			local partner = Stacks.partner(state, unit)
+			if partner then
+				partner.workQueue = nil
+			end
 		end
 	end
 	return ok, why, result

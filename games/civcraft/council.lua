@@ -260,6 +260,17 @@ function Council.advance(state)
 		opening(state, council)
 	end
 end
+-- A cityless opening may gain its first eligible electorate after this round's advance.
+function Council.afterFounding(state)
+	if state.phase ~= "game" then
+		return
+	end
+	local council = Council.ensure(state)
+	local session = council.session
+	if (not session or session.status == "closed") and state.round >= (council.nextRound or 1) then
+		opening(state, council)
+	end
+end
 local function voting(state, actor, sessionID)
 	local session = state.council and state.council.session
 	if

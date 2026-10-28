@@ -9,6 +9,7 @@ local Systems = dofile("/games/civcraft/systems.lua")
 local Terrain = dofile("/games/civcraft/terrain_view.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
+local CityBanner = dofile("/games/civcraft/city_banner.lua")
 local V = {}
 local function at(list, x, y)
 	for _, item in ipairs(list or {}) do
@@ -47,7 +48,12 @@ function V.draw(ui, state, player, rect)
 		end
 		for _, c in ipairs(focus) do
 			if c.owner == ui.playerID then
-				ui.selected = { x = c.x, y = c.y, kind = c.kind and "unit" or "city" }
+				ui.selected = {
+					x = c.x,
+					y = c.y,
+					kind = c.kind and "unit" or "city",
+					unitID = c.kind and c.id or nil,
+				}
 				ui.panX = (c.x - 0.5) * size - rect.w / 2
 				ui.panY = (c.y - 0.5) * step - rect.h / 2
 				break
@@ -510,16 +516,22 @@ function V.draw(ui, state, player, rect)
 			end
 		end
 		r = canvas
-		for _, label in ipairs(cityLabels) do
-			local name = label.city.name or "CITY"
-			local width = r:textWidth(name)
-			if width + 4 <= rect.w then
-				local xx =
-					math.max(rect.x + 2, math.min(rect.x + rect.w - width - 2, label.x - width / 2))
-				r:fill(xx - 2, label.y - 1, width + 4, 7, 0)
-				local labelRenderer = label.remembered and rememberedRenderer or canvas
-				labelRenderer:text(xx, label.y, name, ownerColor(state, label.city.owner), 1, width)
+		local occupied = {}
+		ui.cityBannerTargets = {}
+		table.sort(cityLabels, function(a, b)
+			if (a.city.owner == ui.playerID) ~= (b.city.owner == ui.playerID) then
+				return a.city.owner == ui.playerID
 			end
+			return (a.city.id or 0) < (b.city.id or 0)
+		end)
+		for _, label in ipairs(cityLabels) do
+			local model = CityBanner.model(state, player, label.city, Systems)
+			local box = CityBanner.layout(r, model, label, rect, occupied)
+			occupied[#occupied + 1] = box
+			local targetRenderer = label.remembered and rememberedRenderer or canvas
+			CityBanner.draw(targetRenderer, model, box, ownerColor(state, label.city.owner))
+			ui.cityBannerTargets[#ui.cityBannerTargets + 1] =
+				{ x = box.x, y = box.y, w = box.w, h = box.h, city = label.city }
 		end
 		AnimationView.draw(ui, state, rect, size)
 	end)

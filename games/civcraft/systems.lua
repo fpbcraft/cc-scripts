@@ -249,11 +249,24 @@ function M.migrate(state)
 				end
 			end
 			for _, u in ipairs(state.units or {}) do
-				if u.owner == p.id and u.kind == "settler" then
+				if
+					u.owner == p.id
+					and u.kind == "settler"
+					and not (ContentRules.startsWithSettler(state) and u.initialSettler)
+				then
 					settlers = settlers + 1
 				end
 			end
 			p.settlersTrained = math.max(0, cities - 1) + settlers
+		end
+		if ContentRules.startsWithSettler(state) and p.capitalFounded == nil then
+			p.capitalFounded = false
+			for _, city in ipairs(state.cities or {}) do
+				if city.capitalOf == p.id then
+					p.capitalFounded = true
+					break
+				end
+			end
 		end
 		p.ai = p.ai or false
 		p.explored = p.explored or {}
@@ -720,8 +733,8 @@ end
 function M.settlementCapacity(state, city)
 	return Capacity.details(state, city, M.buildings)
 end
-function M.growth(p, c, state)
-	local yield = M.yields(p, c, state, Hex)
+function M.growth(p, c, state, yield)
+	yield = yield or M.yields(p, c, state, Hex, nil, true)
 	local surplus = yield.food - 2 * (c.population or 2) + M.projectOutput(p, c, state, yield).food
 	local threshold = CampaignRules.cost(20 + 8 * (c.population or 2), p)
 	local result = {
@@ -887,7 +900,7 @@ function M.production(state, hex)
 				projectGold = projectGold + output.gold
 				p.food = math.max(0, (p.food or 0) + yield.food - 2 * (c.population or 2))
 				p.wood = (p.wood or 0) + yield.industry
-				local growth = M.growth(p, c, state)
+				local growth = M.growth(p, c, state, yield)
 				Projects.commit(c, output)
 				c.growthAge = (c.growthAge or 0) + 1
 				c.foodStore = math.max(0, (c.foodStore or 0) + growth.foodGain)

@@ -218,6 +218,7 @@ P.packages.civcraft = {
 		"content_rules.lua",
 		"civilian_projects.lua",
 		"settlement_capacity.lua",
+		"city_banner.lua",
 		"tile_improvements.lua",
 		"queued_work.lua",
 		"ai_builders.lua",

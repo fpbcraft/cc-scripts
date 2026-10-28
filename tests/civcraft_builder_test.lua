@@ -17,6 +17,7 @@ local function fixture()
 		ruleset = "create",
 		contentRules = "balance3",
 		phase = "game",
+		logs = {},
 		round = 1,
 		nextId = 20,
 		players = {
@@ -215,6 +216,23 @@ for _, choice in ipairs(Production.ranked(aiView, p, aiView.cities[1], S, false)
 	end
 end
 assert(recruits, "AI must value recruiting a Builder for undeveloped city tiles")
+-- Saved work, including a safety pause, does not trap END TURN behind unit orders.
+local Tasks = dofile("/games/civcraft/turn_tasks.lua")
+state, p, u, c = fixture()
+c.productionIdle = true
+p.researchTarget = "writing"
+u.workQueue =
+	{ version = 1, tasks = { { kind = "farm", x = 5, y = 4 } }, paused = "Visible threat nearby" }
+assert(#Tasks.pending(state, 0, S) == 0)
+local guard2 = { id = 9, owner = 0, kind = "warrior", x = u.x, y = u.y, movesLeft = 2 }
+state.units[#state.units + 1] = guard2
+assert(Stacks.link(state, u, guard2, S))
+assert(
+	#Tasks.pending(state, 0, S) == 0,
+	"A queued Builder's escort should not block end turn either"
+)
+assert(A.apply(state, 0, { action = "skipTurn", unitID = u.id, x = u.x, y = u.y }, S))
+assert(u.workQueue and u.workQueue.paused, "Waiting one turn retains saved Builder work")
 -- Actual UI placement/confirmation delegates the selected preview to shared actions.
 state, p, u, c = fixture()
 local UI = dofile("/games/civcraft/ui.lua")
@@ -261,7 +279,11 @@ function renderer:textWidth(value)
 end
 ui.r = renderer
 Inspector.draw(ui, ui.state, ui.state.players[1], { x = 1, y = 1, w = 240, h = 200 }, true)
-assert(table.concat(texts, " "):find("WORK PREVIEW", 1, true) and buttons["PLAN WHEAT FIELD"])
+assert(
+	table.concat(texts, " "):find("WORK PREVIEW", 1, true)
+		and buttons["PLAN WHEAT FIELD"]
+		and buttons["WHEAT FIELD HERE"]
+)
 Panels.rows = originalRows
 assert(ui:confirmMove())
 assert(u.charges == 2 and state.world.improvements["5:4"].kind == "farm")
@@ -288,9 +310,15 @@ if fs and textutils then
 end
 if term and fs and textutils then
 	state, p, u, c = fixture()
+	local ended = false
 	local actual = UI.new(term.current(), function(action, request)
 		request.action = action
-		assert(A.apply(state, 0, request, S))
+		if action == "end" then
+			assert(dofile("/games/civcraft/match_lifecycle.lua").finish(state, 0))
+			ended = true
+		else
+			assert(A.apply(state, 0, request, S))
+		end
 	end)
 	local function draw()
 		actual:draw(W.forPlayer(state, 0), 0, {})
@@ -303,7 +331,7 @@ if term and fs and textutils then
 		actual.inspectorOffset = offset
 		draw()
 		for _, button in ipairs(actual.r.buttons) do
-			if button.label == "PLAN WHEAT FIELD" then
+			if button.label == "WHEAT FIELD HERE" then
 				local px, py = button.x + button.w / 2, button.y + button.h / 2
 				if actual.r.mode == "graphics" then
 					px, py = actual.r.ox + px * actual.r.sx, actual.r.oy + py * actual.r.sy
@@ -323,7 +351,6 @@ if term and fs and textutils then
 		chosen and actual.placement and actual.placement.kind == "work",
 		"Native inspector must expose Builder planning"
 	)
-	actual:tile(5, 4)
 	draw()
 	assert(actual.pendingMove and actual.pendingMove.workPreview and u.charges == 3)
 	local confirm
@@ -341,6 +368,37 @@ if term and fs and textutils then
 	end
 	actual:tap(math.floor(px), math.floor(py))
 	assert(u.charges == 2 and state.world.improvements["5:4"])
+	c.productionIdle = true
+	p.researchTarget = "writing"
+	state.world.tiles["4:5"] = "forest"
+	W.reveal(state, H, S)
+	assert(A.apply(state, 0, {
+		action = "queueWork",
+		unitID = u.id,
+		x = u.x,
+		y = u.y,
+		tileX = 4,
+		tileY = 5,
+		kind = "lumber",
+	}, S))
+	assert(u.workQueue and u.movesLeft == 0)
+	draw()
+	assert(actual:turnAction() == "END TURN", "Queued work must permit the normal end-turn control")
+	local endButton
+	for _, button in ipairs(actual.r.buttons) do
+		if button.label == "END TURN" then
+			endButton = button
+		end
+	end
+	assert(endButton)
+	local ex, ey = endButton.x + endButton.w / 2, endButton.y + endButton.h / 2
+	if actual.r.mode == "graphics" then
+		ex, ey = actual.r.ox + ex * actual.r.sx, actual.r.oy + ey * actual.r.sy
+	else
+		ex, ey = ex / 2 + 1, ey / 3 + 1
+	end
+	actual:tap(math.floor(ex), math.floor(ey))
+	assert(ended and p.ready and u.workQueue, "Native END TURN preserves unfinished Builder work")
 	actual:close()
 end
 print(

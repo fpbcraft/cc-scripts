@@ -1,10 +1,13 @@
 # CIVCRAFT — v0.9 development branch
 
-New campaigns default to **Landwork V3**: charge-based Builders, worked-tile
+New campaigns default to **Founders V4**: one Settler and one Stone Guard,
+player-chosen first-city placement, larger maps and city population/status banners.
+It includes Landwork V3's charge-based Builders, worked-tile
 fields/quarries/lumber camps, Settlement Capacity and population-consuming
 Settlers, alongside Conquest/End Expedition, a 250-round Standard deadline with
 Score fallback and territory-based recovery. Earlier campaign saves retain their
-rules. See [M2's implementation record](docs/M2-LAND-DEVELOPMENT.md) and
+rules. See [the opening and banner contract](docs/FOUNDERS-OPENING.md),
+[M2's implementation record](docs/M2-LAND-DEVELOPMENT.md) and
 [M1's campaign contract](docs/M1-CAMPAIGN-SCOPE.md). City specialty sites and
 later redesign systems remain upcoming. Prototype prices are not calibrated
 balance guarantees.

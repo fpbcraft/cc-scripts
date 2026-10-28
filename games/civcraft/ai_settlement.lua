@@ -2,6 +2,7 @@ local Hex = dofile("/games/civcraft/hex.lua")
 local Routes = dofile("/games/civcraft/ai_routes.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Settlement = {}
 
 function Settlement.value(view, player, x, y, unit)
@@ -83,8 +84,10 @@ function Settlement.value(view, player, x, y, unit)
 end
 
 function Settlement.select(view, player, unit, systems)
-	local routes =
-		Routes.from(view, unit, systems, { maxCost = Difficulty.profile(player).routeCost })
+	local routes = Routes.from(view, unit, systems, {
+		maxCost = ContentRules.startsWithSettler(view) and not player.capitalFounded and 2
+			or Difficulty.profile(player).routeCost,
+	})
 	local saved = unit.aiSettlement
 	if saved and Settlement.value(view, player, saved.x, saved.y, unit) then
 		local path = routes.pathTo(saved.x, saved.y)

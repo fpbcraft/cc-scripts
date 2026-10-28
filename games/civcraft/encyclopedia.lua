@@ -9,6 +9,11 @@ local Projects = dofile("/games/civcraft/civilian_projects.lua")
 local E = {}
 local mechanics = {
 	{
+		id = "citybanners",
+		name = "CITY MAP BANNERS",
+		text = "The number beside a city name is its population. A crown marks an original capital. D is defense strength; green and blue bars show city health and walls. Owned cities show G (turns to population growth), -P (turns to starvation loss), and P (turns to production completion). IDLE needs a production choice; PAUSE is deliberate idle; REPEAT runs a civilian project; WAIT needs Settler population. An exclamation mark warns that Settlement Capacity limits growth. Click the banner to select its city. Small maps simplify indicators; the inspector retains details. Remembered cities use only last-observed public information and show no private growth or production.",
+	},
+	{
 		id = "builders",
 		name = "BUILDERS AND TILE WORK",
 		text = "Landwork V3 Builders cost 22 industry, have two movement and three charges with no upkeep. Wheat Fields require Wheat Farming and fertile open flat land (+2 food); Quarries require Stone Tools and clear hills or stone (+2 industry); Lumber Camps require Crafting and woods or jungle (+1 industry). Only worked tiles produce yields. Oak fields add one food and Iron quarries add one industry. One successful improvement spends one charge and remaining movement; the final charge removes the Builder. Plan work from its inspector, choose a cyan tile, review yields and charges, then confirm. Append adds tasks up to remaining charges. Queued work pauses on visible threats, lost ownership, occupied or invalid routes. Resume or cancel in the inspector. Manual movement replaces work. Capture preserves charges and clears orders. Harvesting and feature removal are not included. City Farm/Quarry bonuses are retired; Homesteads unlock Tend Crops. Older profiles keep their original rules.",
@@ -214,6 +219,12 @@ function E.describe(category, entry, player, state)
 		player = context
 	end
 	if entry.text then
+		if ContentRules.startsWithSettler(state or player) and entry.id == "territory" then
+			return {
+				"You start with one Settler and one Stone Guard. No city or borders are pre-founded. Explore with either unit, move your Settler if desired, then choose FOUND CAPITAL on a legal land tile with movement remaining. Your first founded city becomes your original capital. The starting Settler is free and does not count as a trained Settler. New cities use the current population and growth rules. Later Settlers consume population when trained. "
+					.. entry.text,
+			}
+		end
 		if ContentRules.hasDevelopment(state or player) then
 			if entry.id == "population" then
 				return {
