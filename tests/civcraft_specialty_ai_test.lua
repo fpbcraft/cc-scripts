@@ -12,6 +12,7 @@ local Production = dofile("/games/civcraft/ai_production.lua")
 local CityRoles = dofile("/games/civcraft/ai_city_roles.lua")
 local AI = dofile("/games/civcraft/ai.lua")
 local Values = dofile("/games/civcraft/ai_economy_values.lua")
+local Materials = dofile("/games/civcraft/ai_materials.lua")
 local Content = dofile("/games/civcraft/content.lua")
 local function fixture(profile)
 	local p = {
@@ -230,6 +231,48 @@ for _, choice in ipairs(exposed) do
 		)
 	end
 end
+-- Reserved production remains part of a city's role even when focus is full.
+state, p = fixture()
+assert(
+	Actions.apply(
+		state,
+		0,
+		{ action = "placeSite", city = 2, kind = "knowledge", x = 12, y = 3 },
+		S
+	)
+)
+assert(S.queue(p, state.cities[2], "none", nil, state, H))
+view, known = snapshot(state, p)
+assert(
+	CityRoles.choose(view, known, S)[2] == "science",
+	"Retained Knowledge investment preserves its city role"
+)
+-- Retained machinery without effective Works must not trigger material purchases.
+state, p = fixture()
+p.techs.brassworking, p.techs.heatedmixing, p.techs.deepmining = true, true, true
+state.cities[1].buildings.mixer = true
+view, known = snapshot(state, p)
+assert(not Sites.effectiveBuilding(view, view.cities[1], "mixer"))
+local orders, targets = Materials.orders(view, known, S)
+assert(
+	#orders == 0 and not targets.copper and not targets.zinc,
+	"Inactive mixer creates no brass material demand"
+)
+assert(Actions.apply(state, 0, { action = "placeSite", city = 1, kind = "works", x = 5, y = 4 }, S))
+assert(Sites.advance(state, p, state.cities[1], 30))
+view, known = snapshot(state, p)
+orders, targets = Materials.orders(view, known, S)
+assert(
+	#orders == 2 and targets.copper == 1 and targets.zinc == 1,
+	"Effective mixer keeps normal material demand"
+)
+state.contentRules = "balance4"
+view, known = snapshot(state, p)
+orders, targets = Materials.orders(view, known, S)
+assert(
+	#orders == 2 and targets.copper == 1 and targets.zinc == 1,
+	"Legacy mixer retains material demand"
+)
 -- Native save/load preserves deterministic ranked requests and retained progress.
 if fs and textutils then
 	state, p = fixture()
