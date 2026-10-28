@@ -152,9 +152,8 @@ function V.draw(ui, state, player, rect)
 							base = owner and ownerColor(state, owner) or base
 						end
 					end
-					if canvas.layoutOnly then
-						-- Preserve hex targets and layout while skipping raster-only work.
-					elseif r.buffer and r.blit then
+					-- Preserve hit targets without rasterizing terrain in layout-only tests.
+					if not canvas.layoutOnly and r.buffer and r.blit then
 						r:blit(
 							Terrain.sprite(
 								geography,
@@ -168,7 +167,7 @@ function V.draw(ui, state, player, rect)
 							px,
 							py
 						)
-					else
+					elseif not canvas.layoutOnly then
 						for dy = 0, size - 1 do
 							local inset = dy < size / 4 and size / 2 - 2 * dy
 								or dy >= size * 3 / 4 and 2 * (dy + 1) - size * 1.5
