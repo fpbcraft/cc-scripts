@@ -31,6 +31,8 @@ dofile = function(path)
 	end
 	return module
 end
+-- Match the installed program's shared internal module identities.
+dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local Actions = dofile("/games/civcraft/actions.lua")
 local AI = dofile("/games/civcraft/ai.lua")
 local Hex = dofile("/games/civcraft/hex.lua")

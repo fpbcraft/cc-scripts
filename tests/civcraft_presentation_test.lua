@@ -2,6 +2,8 @@ local native = dofile
 dofile = function(path)
 	return native(path:gsub("^/games/civcraft/", "games/civcraft/"))
 end
+-- Match the installed program's shared internal module identities.
+dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local Icons = dofile("games/civcraft/icons.lua")
 local Systems = dofile("games/civcraft/systems.lua")
 local Content = dofile("games/civcraft/content.lua")

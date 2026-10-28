@@ -16,6 +16,8 @@ colors = {
 	red = 16384,
 	brown = 4096,
 }
+-- Match the installed program's shared internal module identities.
+dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local UI = dofile("games/civcraft/ui.lua")
 local newRasterUI = UI.new
 dofile("tests/helpers/civcraft_layout_only.lua")(UI)
