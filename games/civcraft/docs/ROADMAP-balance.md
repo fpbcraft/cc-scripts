@@ -1,6 +1,6 @@
 # CivCraft balance implementation roadmap
 
-Date: 2026-10-27. Mode: implementation. Current position: **M2 mechanics delivered; M3 next; balance calibration deferred**. This document plans the accepted [38 ADRs](adr/README.md); it
+Date: 2026-10-27. Mode: implementation. Current position: **M3 specification complete; rules/UI/AI delivery in progress; balance calibration deferred**. This document plans the accepted [38 ADRs](adr/README.md); it
 does not mark the redesign implemented. All 16 follow-up answers were A.
 
 ## Product and delivery target
@@ -198,6 +198,11 @@ manual first-city founding, city banners and larger new-game maps are the
 immediate user-requested slice before this subsequent work.
 
 ## M3 — Make cities specialize
+
+Reviewed implementation contract: [M3 specialty sites](M3-SPECIALIZATION.md),
+tracked by #84 and PR #98. Rules are opt-in in PR #99; UI/AI and combined native
+validation remain #86–#88. Specification completion does not mark the playable
+milestone complete or establish balance evidence.
 
 Goal: location and specialty investments give cities different useful roles.
 
