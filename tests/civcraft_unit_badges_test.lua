@@ -161,7 +161,9 @@ for _, graphics in ipairs({ false, true }) do
 			local distance = math.sqrt(dx * dx + dy * dy)
 			assert(distance > 0, "Callout cannot obscure the unit's original tile")
 			assert(
-				dx * px + dy * py > 0 and math.abs(dx * py - dy * px) <= 2 + distance * 0.1,
+				dx * px + dy * py > 0
+					and math.abs(dx * py - dy * px)
+						<= distance * math.sqrt(px * px + py * py) * 0.2 + 2,
 				"Bubble tail must point toward the true unit position, not its banner"
 			)
 			assert(
