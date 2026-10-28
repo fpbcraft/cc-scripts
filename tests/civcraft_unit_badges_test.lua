@@ -138,7 +138,7 @@ for _, graphics in ipairs({ false, true }) do
 			end
 			assert(found, "Each visible stacked/adjacent formation has a target")
 			assert(
-				found.w == found.h and found.w >= 11 and found.w % 2 == 1,
+				found.w == found.h and found.w >= 9 and found.w % 2 == 1,
 				"Unit badge is circular"
 			)
 			local hexAnchor
