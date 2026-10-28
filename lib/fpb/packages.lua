@@ -221,6 +221,7 @@ P.packages.civcraft = {
 		"city_banner.lua",
 		"tile_improvements.lua",
 		"specialty_sites.lua",
+		"specialty_view.lua",
 		"queued_work.lua",
 		"ai_builders.lua",
 		"campaign_options.lua",

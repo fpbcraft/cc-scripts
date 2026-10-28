@@ -319,7 +319,7 @@ function View.confirmation(ui, state, player, rect)
 	r:text(8, 6, cancel and "CANCEL SITE PROJECT?" or "CONFIRM SPECIALTY", 8, 1, w - 16)
 	if not valid then
 		text("Order no longer available. Reselect an owned city/project.", 31)
-		text("Nothing will be sent. Cached private details have been cleared.")
+		text("No order was sent. Select an owned city to review a new order.")
 	elseif cancel then
 		text(Sites.definitions[cancel.kind].name, 8)
 		text("Forfeit " .. cancel.progress .. " invested industry. No refund.", 31)
