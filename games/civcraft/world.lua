@@ -1,3 +1,4 @@
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
 -- Seeded hex geography, strategic deposits, private discovery and territory.
 -- World state is authoritative and saved; map presets never reroll on reload.
 local Biomes = dofile("/games/civcraft/biomes.lua")
@@ -101,6 +102,9 @@ local function mapMemory(player, world)
 				player.mapMemory.landmarks[tileKey] = landmarkView(landmark)
 			end
 		end
+	end
+	if Sites.enabled(player) then
+		player.mapMemory.sites = player.mapMemory.sites or {}
 	end
 	player.mapMemory.observations = player.mapMemory.observations or {}
 	player.mapMemory.cities = player.mapMemory.cities or {}
@@ -437,6 +441,23 @@ function W.reveal(state, hex, systems, pendingNotices)
 				or nil
 			memory.landmarks[tileKey] = landmarkView((world.landmarks or {})[tileKey])
 			memory.rails[tileKey] = (world.rails or {})[tileKey] and true or nil
+			if Sites.enabled(state) then
+				memory.sites[tileKey] = nil
+				for _, c in ipairs(state.cities or {}) do
+					for _, site in pairs(c.sites or {}) do
+						if site.x == x and site.y == y then
+							memory.sites[tileKey] = {
+								id = site.id,
+								kind = site.kind,
+								x = x,
+								y = y,
+								city = c.id,
+								owner = c.owner,
+							}
+						end
+					end
+				end
+			end
 			memory.spawners[tileKey] = camps[tileKey] and campView(camps[tileKey]) or nil
 		end
 		p.knownLandmarks = p.knownLandmarks or {}
@@ -575,6 +596,7 @@ function W.forPlayer(state, id, afterSeq)
 		roundLimit = state.roundLimit,
 		gameSpeed = state.gameSpeed,
 		contentRules = state.contentRules,
+		specialtySchema = state.specialtySchema,
 		victoryRulesVersion = state.victoryRulesVersion,
 		council = Council.public(state, id),
 		diplomacy = Diplomacy.public(state, id, Hex, Content.units),
@@ -619,6 +641,7 @@ function W.forPlayer(state, id, afterSeq)
 			improvements = {},
 			rails = {},
 			observedOwners = {},
+			specialtySites = Sites.enabled(state) and {} or nil,
 			contentVersion = world.contentVersion,
 			generationVersion = world.generationVersion,
 			mapScaleVersion = world.mapScaleVersion,
@@ -649,6 +672,30 @@ function W.forPlayer(state, id, afterSeq)
 						view.world.improvements[k] = copy((world.improvements or {})[k])
 					elseif record then
 						view.world.improvements[k] = copy(record.improvement) or nil
+					end
+					if Sites.enabled(state) then
+						if visible then
+							for _, c in ipairs(state.cities or {}) do
+								for _, site in pairs(c.sites or {}) do
+									if site.x == x and site.y == y then
+										view.world.specialtySites[k] = {
+											id = site.id,
+											kind = site.kind,
+											x = x,
+											y = y,
+											city = c.id,
+											owner = c.owner,
+										}
+									end
+								end
+							end
+						else
+							view.world.specialtySites[k] = copy(
+								observer.mapMemory
+									and observer.mapMemory.sites
+									and observer.mapMemory.sites[k]
+							)
+						end
 					end
 					view.world.observedOwners[k] = W.observedOwner(state, observer, x, y)
 					view.world.landmarks[k], view.world.rails[k] =
@@ -762,6 +809,9 @@ function W.forPlayer(state, id, afterSeq)
 		end
 	end
 	view.spawners = W.observedCamps(state, observer)
+	if Sites.enabled(state) then
+		return copy(view)
+	end
 	return view
 end
 function W.known(player, x, y)
