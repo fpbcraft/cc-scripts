@@ -82,6 +82,8 @@ end
 assert(zoom)
 zoom.fn()
 assert(model.zoom > 1, "Technology canvas supports zoom")
+-- Match the installed program's shared internal module identities.
+dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local Details = dofile("/games/civcraft/research_details.lua")
 for _, id in ipairs(S.techOrder) do
 	local paragraphs = Details.paragraphs(S, id)

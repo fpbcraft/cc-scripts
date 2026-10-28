@@ -1,3 +1,4 @@
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
 -- Charge-based land development. No hidden routing or alternate economy model.
 local Rules = dofile("/games/civcraft/content_rules.lua")
 local Biomes = dofile("/games/civcraft/biomes.lua")
@@ -36,6 +37,9 @@ function Works.canPlace(state, player, kind, x, y, systems)
 		return false, "Research " .. definition.tech .. " first"
 	end
 	local key = x .. ":" .. y
+	if Sites.at(state, x, y) then
+		return false, "Specialty reserves this tile"
+	end
 	if not state.world.tiles[key] then
 		return false, "Explore the tile before assigning work"
 	end

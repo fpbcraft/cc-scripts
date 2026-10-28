@@ -359,7 +359,7 @@ function I.draw(ui, state, player, rect, modal)
 				local turns = math.max(
 					1,
 					math.ceil(
-						(Systems.projectCost(kind, id, player) - progress)
+						(Systems.projectCost(kind, id, player, city) - progress)
 							/ math.max(1, yields.industry)
 					)
 				)

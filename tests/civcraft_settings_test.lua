@@ -11,6 +11,8 @@ end
 dofile = function(path)
 	return assert(loadfile(path:gsub("^/games/civcraft/", "games/civcraft/"), "t", _ENV))()
 end
+-- Match the installed program's shared internal module identities.
+dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local Audio = dofile("/games/civcraft/audio.lua")
 local UI = dofile("/games/civcraft/ui.lua")
 dofile("tests/helpers/civcraft_layout_only.lua")(UI)
