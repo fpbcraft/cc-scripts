@@ -94,7 +94,17 @@ all losses and costs. If only moving the same kind, retain that family's buildin
 and progress. End exceptions below remain retained in both cases.
 
 Canceling redevelopment forfeits its invested industry, releases the destination,
-and retains the unchanged source site/family. No separate free demolition action
+and retains the unchanged source site/family. A source site may have at most one retained redevelopment, active or paused.
+Reject another project referencing that sourceSiteId, and reject chains that
+target a reserved source or destination. For the current redevelopment only,
+exclude its own source record from destination-kind uniqueness during same-kind
+relocation, and from occupied-hex validation for a different-kind replacement
+on the same source hex. All other placement constraints still apply; identical
+kind and hex remains a no-op rejection. Load-time uniqueness recognizes only
+this exact source/project alias, never a second site or project. Count this
+source plus its single redevelopment once, including after save/load.
+
+No separate free demolition action
 or conversion of progress between sites/buildings/units. Repeated switching,
 canceling or save/reload cannot earn output, industry, refunds or spare slots.
 No overflow change is introduced in M3; inherit existing construction behavior.
@@ -264,7 +274,7 @@ no tournament or parameter search is authorized.
 |---|---|
 | Focus 1/3/4/6/7 population; Settler and starvation shrink | #85: exact allowance, overage retains output, no duplicate reservation, existing work can finish |
 | Invalid ownership/fog/terrain/hex/research/phase; stale preview | #85: rejection is full-state/RNG/ID unchanged; no hidden information leak |
-| Place/pause/switch/resume/cancel/redevelop/move | #85: single spend/output, unique target/kind, explicit losses, no shared-progress exploit |
+| Place/pause/switch/resume/cancel/redevelop/move | #85: single spend/output, unique target/kind/source, same-kind relocation and same-hex replacement succeed, duplicate-source/chain attacks reject, explicit losses, no shared-progress exploit |
 | Capture, invalidated claim, occupied site, removed city | #85: deterministic transfer/inactivity/recovery and reservation cleanup; no orphan yield |
 | All 41 building IDs and faction/economy exceptions | #85: table-driven family and dependency checks, no retired Farm/Quarry or retired victories resurfacing |
 | End from one population / one slot, every chosen site role | #85: legal full bridge and positive victory control; no need to grow for another focus |
