@@ -635,7 +635,7 @@ function M.centerYields(p, c, state)
 	if civ == "merchant" and buildings.market then
 		food = food + 2
 	end
-	return { food = food, industry = industry, science = science }
+	return { food = food, industry = industry, science = science, gold = 0 }
 end
 function M.yields(p, c, state, hex, owned, readOnly)
 	local center = M.centerYields(p, c, state)
