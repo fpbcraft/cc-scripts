@@ -1,5 +1,6 @@
 local Hex = dofile("/games/civcraft/hex.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
 local Values = {}
 
 function Values.context(view, player, city, systems)
@@ -36,7 +37,7 @@ function Values.effects(effects, context)
 	return score
 end
 
-function Values.dependencies(records, target, completed, weight, result)
+function Values.dependencies(records, target, completed, weight, result, view)
 	result = result or {}
 	if completed[target] or not records[target] or weight < 0.5 then
 		return result
@@ -46,8 +47,14 @@ function Values.dependencies(records, target, completed, weight, result)
 		return result
 	end
 	result[target] = weight
-	for _, need in ipairs(records[target].requires or {}) do
-		Values.dependencies(records, need, completed, weight * 0.78, result)
+	for _, need in
+		ipairs(
+			view and Sites.enabled(view) and Sites.prerequisites(view, target)
+				or records[target].requires
+				or {}
+		)
+	do
+		Values.dependencies(records, need, completed, weight * 0.78, result, view)
 	end
 	return result
 end
