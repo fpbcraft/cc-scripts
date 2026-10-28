@@ -105,6 +105,8 @@ assert(
 	pixel(4, 4) == 2 and pixel(5, 4) == 8 and pixel(6, 4) == 8 and pixel(5, 5) == 13,
 	"Cached sprites respect transparency and viewport clipping"
 )
+-- Match the installed program's shared internal module identities.
+dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local Icons = dofile("games/civcraft/icons.lua")
 local function strip(x, y)
 	r:begin()
