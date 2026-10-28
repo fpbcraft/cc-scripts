@@ -61,7 +61,7 @@ function V.draw(ui, state, player, rect)
 		{ x = rect.x, y = rect.y, w = rect.w, h = rect.h, tile = size, maxX = maxX, maxY = maxY }
 	local citySignature = {}
 	local cityIndex, unitIndex, civilianIndex = {}, {}, {}
-	local hidden = ui.animationFrame and ui.animationFrame.hidden or {}
+	local hiddenActors = ui.animationFrame and ui.animationFrame.hidden or {}
 	local campIndex = {}
 	for _, camp in ipairs(World.observedCamps(state, player)) do
 		campIndex[World.key(camp.x, camp.y)] = camp
@@ -204,7 +204,7 @@ function V.draw(ui, state, player, rect)
 							and World.observedCity(state, player, x, y)
 						if
 							city
-							and not hidden["city:" .. tostring(city.id)]
+							and not hiddenActors["city:" .. tostring(city.id)]
 							and (
 								city.remembered
 								or city.owner == ui.playerID
@@ -328,7 +328,7 @@ function V.draw(ui, state, player, rect)
 			local city = t.visibility ~= "hidden" and World.observedCity(state, player, x, y)
 			if
 				city
-				and not hidden["city:" .. tostring(city.id)]
+				and not hiddenActors["city:" .. tostring(city.id)]
 				and (city.remembered or city.owner == ui.playerID or t.visibility == "visible")
 			then
 				cityLabels[#cityLabels + 1] = {
@@ -357,11 +357,11 @@ function V.draw(ui, state, player, rect)
 					)
 				end
 			end
-			if city and hidden["city:" .. tostring(city.id)] then
+			if city and hiddenActors["city:" .. tostring(city.id)] then
 				city = nil
 			end
 			local unit = t.visibility == "visible" and unitIndex[World.key(x, y)]
-			if unit and hidden[Animations.identity(unit)] then
+			if unit and hiddenActors[Animations.identity(unit)] then
 				unit = nil
 			end
 			if unit then
@@ -385,7 +385,7 @@ function V.draw(ui, state, player, rect)
 				and settler
 				and unit ~= settler
 				and t.visibility == "visible"
-				and not hidden[Animations.identity(settler)]
+				and not hiddenActors[Animations.identity(settler)]
 			then
 				if size >= 16 then
 					Icons.faction(
