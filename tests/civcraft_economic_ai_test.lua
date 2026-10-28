@@ -103,13 +103,16 @@ assert(
 )
 assert(#orders > 0)
 AI.staff(state, player, city, Systems)
-assert(city.worked["3:4"] and city.worked["4:5"] and not city.worked["3:6"])
+assert(
+	city.worked["4:5"] and city.worked["3:6"] and not city.worked["3:4"],
+	"Science specialization now prefers worked Iron science alongside food-secure Niter"
+)
 assert(Systems.growth(player, city, state).surplus >= 0)
 player.aiPlan.citySpecializations[1] = "industry"
 AI.staff(state, player, city, Systems)
 assert(
-	city.worked["3:4"] and city.worked["3:6"],
-	"Industry specialists secure food and choose productive tiles"
+	city.worked["4:5"] and city.worked["3:6"],
+	"Industry specialists keep the productive Niter tile without sacrificing food"
 )
 
 state, player, city = fixture()
