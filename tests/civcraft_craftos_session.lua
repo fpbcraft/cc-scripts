@@ -10,6 +10,8 @@ local includeHost = false
 local includeDevelopment = false
 local developmentProfile = "balance2"
 local includeConversation = false
+local includeContactHUD, contactBadgeStep, contactBadgeVerified = false, 0, false
+local contactFactionPages = 0
 local includeHistory = false
 local includeDifficulty = false
 local includeCivilization, civilizationStep = false, 0
@@ -72,6 +74,9 @@ for _, argument in ipairs({ ... }) do
 	end
 	if argument == "--conversation" then
 		includeConversation, includeAI = true, true
+	end
+	if argument == "--contact-hud" then
+		includeContactHUD, includeConversation, includeAI = true, true, true
 	end
 end
 assert(
@@ -528,6 +533,60 @@ dofile = function(path)
 				return
 			end
 			if
+				includeContactHUD
+				and stage == 2
+				and not options.handoff
+				and contactBadgeStep < 3
+			then
+				local target = state.players[includeHost and 2 or 3]
+				assert(target, "Native contact HUD scenario needs its conversation target")
+				assert(
+					self.playerID == observer,
+					"Contact navigation begins under the current human observer"
+				)
+				if contactBadgeStep == 0 then
+					local label
+					for _, candidate in ipairs(self.r.buttons) do
+						if
+							candidate.label == "KNOWN CIVILIZATIONS"
+							or candidate.label
+								and candidate.label:find("^MORE KNOWN CIVILIZATIONS")
+						then
+							label = candidate.label
+							break
+						end
+					end
+					assert(
+						label and tap(self, label),
+						"Native compact HUD shows a known-civilization contact entry"
+					)
+					contactBadgeStep = 1
+				elseif contactBadgeStep == 1 then
+					assert(self.panel == "factions", "The queued HUD event opens known Factions")
+					local talk = "TALK " .. target.name
+					if tap(self, talk) then
+						contactBadgeStep = 2
+					else
+						assert(
+							tap(self, "NEXT") and contactFactionPages < 64,
+							"The known contact stays reachable through Factions pagination"
+						)
+						contactFactionPages = contactFactionPages + 1
+					end
+				else
+					assert(
+						self.panel == "conversation"
+							and self.conversationTarget == target.id
+							and self.playerID == observer,
+						"Queued mouse events open the known contact under the active human"
+					)
+					contactBadgeVerified = true
+					contactBadgeStep = 3
+					conversationStep = 2
+				end
+				return
+			end
+			if
 				includeConversation
 				and stage == 2
 				and not options.handoff
@@ -813,6 +872,10 @@ if includeConversation then
 		"Native conversations must execute their actual trade and commerce terms"
 	)
 end
+assert(
+	not includeContactHUD or contactBadgeVerified,
+	"Native compact contact entry uses queued input and continues the conversation flow"
+)
 if includeSettings then
 	local preferences = native("/games/civcraft/animation_preferences.lua").load()
 	assert(
@@ -923,6 +986,7 @@ output.write(textutils.serialize({
 	responseSaved = responseSaved,
 	hostModeAI = includeHost,
 	conversationFlow = includeConversation,
+	contactHUDFlow = contactBadgeVerified,
 	queuedRouteFlow = includeRoutes,
 	eventHistoryFlow = historyVerified,
 	councilFlow = councilVerified,
