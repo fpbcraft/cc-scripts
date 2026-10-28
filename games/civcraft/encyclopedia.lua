@@ -210,6 +210,18 @@ function E.entries(category, context)
 	return result
 end
 function E.describe(category, entry, player, state)
+	local function terrainYieldDetails(lines)
+		if
+			state
+			and state.world
+			and state.world.terrainYieldVersion == "sparse1"
+			and entry.id == "yields"
+		then
+			lines[#lines + 1] =
+				"Sparse terrain: flat desert yields 0 food / 0 industry; elevated desert yields 0 / 1. Bare flat taiga yields 0 / 0; wooded, dense or elevated taiga yields 0 / 1. Deposits, improvements and natural landmarks still add their own yields."
+		end
+		return lines
+	end
 	if player and state and state.contentRules ~= player.contentRules then
 		local context = {}
 		for key, value in pairs(player) do
@@ -232,10 +244,10 @@ function E.describe(category, entry, player, state)
 					"Settlement Capacity starts at 4, gains 1 beside water, 2 from Homesteads, 2 from Water Services and 1 from a Trading Hall. Positive growth food is 100% at least two citizens below capacity, 50% one below, 25% at capacity or one above, and 12.5% two or more above. Minimum growth time increases by the same factor. Food consumption and starvation remain unchanged. Completing a Settler consumes one citizen after growth resolves; a city needs at least two citizens.",
 				}
 			elseif entry.id == "yields" then
-				return {
+				return terrainYieldDetails({
 					entry.text,
 					"Development V2: Settlement Capacity scales positive growth food and the minimum growth time. The city inspector shows the effective food gain and forecast. Food consumption and starvation are unchanged. See POPULATION AND JOBS for the capacity curve.",
-				}
+				})
 			elseif entry.id == "production" then
 				return {
 					"Scouts cost 15 industry; Guards cost 20. Settlers start at 28 industry, adding 8 for each previously completed Settler. Completion consumes one citizen and requires at least two population. Growth and starvation resolve before recruitment. A queued Settler waits without new progress below two population; blocked placement spends no citizen. Switching retains construction progress. Civilian projects convert industry to research, food or gold each round. Homesteads and Water Services increase Settlement Capacity without creating food or citizens.",
@@ -278,7 +290,7 @@ function E.describe(category, entry, player, state)
 				"Civilian projects use industry each round instead of construction. Ponder Research converts 4:1 to current research; Tend Crops and Trade Contract convert 2:1 to city food and gold. Each project retains only its own conversion remainder. Ponder pauses without unfinished research.",
 			}
 		end
-		return { entry.text }
+		return terrainYieldDetails({ entry.text })
 	end
 	local record = entry.record
 	local lines = {}
