@@ -77,7 +77,8 @@ function Rules.configure(state, id, request)
 				or state.contentRules == "balance1" and "balance2"
 				or state.contentRules == "balance2" and "balance3"
 				or state.contentRules == "balance3" and "balance4"
-				or state.contentRules == "balance4" and "baseline"
+				or state.contentRules == "balance4" and "balance5"
+				or state.contentRules == "balance5" and "baseline"
 				or "p1"
 		end
 		if
@@ -87,6 +88,7 @@ function Rules.configure(state, id, request)
 			and version ~= "balance2"
 			and version ~= "balance3"
 			and version ~= "balance4"
+			and version ~= "balance5"
 		then
 			return false, "Unknown content economy"
 		end

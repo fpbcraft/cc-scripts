@@ -72,7 +72,18 @@ function Biomes.label(tile)
 	return label
 end
 
-function Biomes.yields(tile)
+function Biomes.yields(tile, terrainYieldVersion)
+	if terrainYieldVersion == "sparse1" then
+		if tile.biome == "desert" then
+			return 0, tile.elevation == "flat" and 0 or 1
+		end
+		if tile.biome == "taiga" then
+			local supported = tile.elevation ~= "flat"
+				or tile.feature == "woods"
+				or tile.feature == "dense"
+			return 0, supported and 1 or 0
+		end
+	end
 	local food, industry = 2, 1
 	if tile.biome == "ocean" or tile.biome == "coast" then
 		return 2, 0

@@ -112,6 +112,7 @@ local function mapMemory(player, world)
 end
 
 W.generationVersion = Generator.version
+W.currentTerrainYieldVersion = "sparse1"
 function W.generate(seed, size, count, mapType, context)
 	size = W.sizes[size] and size or "standard"
 	seed = math.floor(tonumber(seed) or 12345) % 1000000
@@ -121,8 +122,15 @@ function W.generate(seed, size, count, mapType, context)
 	then
 		mapType = "continents"
 	end
-	local world =
-		Generator.generate(seed, size, count, mapType, W.dimensions(size, context), W.checkpoint)
+	local world = Generator.generate(
+		seed,
+		size,
+		count,
+		mapType,
+		W.dimensions(size, context),
+		W.checkpoint,
+		context and context.terrainYieldVersion or W.currentTerrainYieldVersion
+	)
 	if ContentRules.startsWithSettler(context) then
 		world.mapScaleVersion = "founders-v1"
 	end
@@ -285,7 +293,8 @@ function W.expandCity(state, hex, city)
 	return true, tile
 end
 function W.yields(world, x, y, context)
-	local food, industry = Biomes.yields(Biomes.tile(world, x, y))
+	local food, industry =
+		Biomes.yields(Biomes.tile(world, x, y), world and world.terrainYieldVersion)
 	local science = 0
 	local deposit = W.deposit(world, x, y)
 	if deposit == "grain" or deposit == "fish" then
@@ -640,6 +649,7 @@ function W.forPlayer(state, id, afterSeq)
 			contentVersion = world.contentVersion,
 			generationVersion = world.generationVersion,
 			mapScaleVersion = world.mapScaleVersion,
+			terrainYieldVersion = world.terrainYieldVersion,
 		}
 		for y = 1, world.height do
 			if W.checkpoint then
