@@ -217,8 +217,9 @@ function V.draw(ui, state, player, rect)
 				r:line(ax, ay, bx, by, 18)
 			end
 		end
-		-- Paint borders after all terrain, so neighbouring fills cannot erase them.
-		for _, t in ipairs(tiles) do
+		-- All map hitboxes were collected above. Skip this visual-only pass
+		-- for geometry tests; full renderers still paint every tile.
+		for _, t in ipairs(canvas.layoutOnly and {} or tiles) do
 			local x, y, px, py = t.x, t.y, t.px, t.py
 			r = t.visibility == "explored" and rememberedRenderer or canvas
 			if t.owner and t.visibility ~= "hidden" then
