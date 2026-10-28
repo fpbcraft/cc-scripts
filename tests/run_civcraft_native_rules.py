@@ -39,6 +39,7 @@ script='''local function run(path)
 end
 local results={}
 for _,path in ipairs(%s) do
+ os.queueEvent("native_rule_boundary");os.pullEvent("native_rule_boundary")
  local ok,why=pcall(run,path)
  results[#results+1]={test=path,ok=ok,error=tostring(why)}
 end
