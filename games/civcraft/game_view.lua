@@ -13,6 +13,7 @@ local Panels = dofile("/games/civcraft/panels.lua")
 local Reports = dofile("/games/civcraft/reports.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
+local QuickResearch = dofile("/games/civcraft/quick_research.lua")
 local TechTree = dofile("/games/civcraft/tech_tree.lua")
 local CouncilView = dofile("/games/civcraft/council_view.lua")
 local G = {}
@@ -72,23 +73,34 @@ function G.draw(ui, state, player)
 	end
 	local actionStep = w < 140 and 11 or 13
 	local actionStart = w - 8 * actionStep + 1
-	local infoX = compactHeader and (w < 120 and 1 or 4) or 12 + r:textWidth("CIVCRAFT")
-	r:text(
-		infoX,
-		3,
-		"R"
-			.. state.round
-			.. (
-				compactHeader and ""
-				or " "
-					.. (player and player.name or "")
-					.. " / "
-					.. (player and Systems.ages[Systems.age(player)].name or "")
-			),
-		7,
-		1,
-		actionStart - infoX - 2
-	)
+	local tightHeader = compactHeader and w < 120
+	local infoX = tightHeader and 0 or compactHeader and 4 or 12 + r:textWidth("CIVCRAFT")
+	local infoRight = actionStart - 2
+	local headerLabel = "R"
+		.. state.round
+		.. (
+			compactHeader and ""
+			or " "
+				.. (player and player.name or "")
+				.. " / "
+				.. (player and Systems.ages[Systems.age(player)].name or "")
+		)
+	local headerAvailable = math.max(0, infoRight - infoX + 1)
+	local contactCount = HUD.contactCount(state, player)
+	local contactGap = contactCount > 0 and (tightHeader and 0 or 3) or 0
+	local contactReserve = 0
+	if contactCount > 0 then
+		local minimumHeaderWidth = r:textWidth("R" .. state.round)
+		if headerAvailable >= minimumHeaderWidth + contactGap + 26 then
+			contactReserve = 26
+		elseif headerAvailable >= minimumHeaderWidth + contactGap + 10 then
+			contactReserve = 10
+		end
+	end
+	local headerWidth = math.max(0, headerAvailable - contactReserve - contactGap)
+	r:text(infoX, 3, headerLabel, 7, 1, headerWidth)
+	local infoWidth = math.min(r:textWidth(headerLabel), headerWidth)
+	HUD.contacts(ui, state, player, infoX + infoWidth + contactGap, infoRight)
 	HUD.resources(ui, state, player)
 	local turnStatus
 	local group = Scheduler.group(state, player.id)
@@ -350,7 +362,7 @@ function G.draw(ui, state, player)
 						run = function()
 							ui.endConfirm = nil
 							if entry.kind == "research" then
-								ui.panel = "tech"
+								ui.panel = "quickResearch"
 							else
 								ui:focus(entry.kind, entry.item)
 								if entry.kind == "city" then
@@ -549,6 +561,13 @@ function G.draw(ui, state, player)
 			ui,
 			"reportOffset"
 		)
+	elseif ui.panel == "quickResearch" then
+		local box = rect
+		if w >= 220 and h >= 110 then
+			box = { x = 4, y = 24, w = math.min(160, w - 8), h = math.min(140, h - 40) }
+		end
+		modal(ui, box, true)
+		QuickResearch.draw(ui, player, box, Systems)
 	elseif ui.panel == "tech" then
 		modal(ui, rect)
 		ui.techModel = ui.techModel or {}

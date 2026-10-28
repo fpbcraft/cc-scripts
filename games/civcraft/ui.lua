@@ -213,7 +213,7 @@ function UI:advanceTurn()
 	elseif action == "city" then
 		self:nextIdleCity()
 	elseif action == "research" then
-		self.panel = "tech"
+		self.panel = "quickResearch"
 		self.techModel = self.techModel or {}
 		self:feedback("CHOOSE A RESEARCH PROJECT")
 	else

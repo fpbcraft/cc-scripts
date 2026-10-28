@@ -7,9 +7,12 @@ local includeAI, includeSettings, includeResearch, includeCampaign = false, fals
 local includeWar = false
 local touchMonitor = false
 local includeHost = false
+local includeQuickResearch, quickResearchVerified = false, false
 local includeDevelopment = false
 local developmentProfile = "balance2"
 local includeConversation = false
+local includeContactHUD, contactBadgeStep, contactBadgeVerified = false, 0, false
+local contactFactionPages = 0
 local includeHistory = false
 local includeDifficulty = false
 local includeCivilization, civilizationStep = false, 0
@@ -58,6 +61,9 @@ for _, argument in ipairs({ ... }) do
 	if argument == "--settings" then
 		includeSettings = true
 	end
+	if argument == "--quick-research" then
+		includeQuickResearch = true
+	end
 	if argument == "--research" then
 		includeResearch = true
 	end
@@ -72,6 +78,9 @@ for _, argument in ipairs({ ... }) do
 	end
 	if argument == "--conversation" then
 		includeConversation, includeAI = true, true
+	end
+	if argument == "--contact-hud" then
+		includeContactHUD, includeConversation, includeAI = true, true, true
 	end
 end
 assert(
@@ -176,6 +185,24 @@ local function completeDecisions(view)
 				tap(view, "NEXT")
 			end
 		end
+	elseif view.panel == "quickResearch" then
+		local researching
+		for _, player in ipairs(view.state.players) do
+			if player.id == view.playerID then
+				researching = player.researchTarget
+			end
+		end
+		if researching then
+			tap(view, "CLOSE")
+		else
+			for _, button in ipairs(view.r.buttons) do
+				if button.label and button.label:find("^RESEARCH ") then
+					tap(view, button.label)
+					return false
+				end
+			end
+			tap(view, "NEXT")
+		end
 	elseif view.panel == "tech" then
 		local researching = false
 		for _, player in ipairs(view.state.players) do
@@ -251,6 +278,8 @@ dofile = function(path)
 		local settingsStep = 0
 		local difficultyStep = 0
 		local researchStep = 0
+		local quickResearchStep, quickPages = 0, 0
+		local researchNavigation = 0
 		local campaignStep = 0
 		local openingFocus = {}
 		local warStep, responseStep = 0, 0
@@ -481,7 +510,8 @@ dofile = function(path)
 								unit.moveQueue
 									and unit.moveQueue.goals[1].x == routeGoal.x
 									and unit.moveQueue.goals[1].y == routeGoal.y
-									and #unit.moveQueue.path >= 2
+									and #unit.moveQueue.path >= 2,
+								"Queued route retains its future goal, including a higher-cost step wait"
 							)
 							routeRecord = { id = unit.id, x = unit.x, y = unit.y, goal = routeGoal }
 						end
@@ -507,6 +537,49 @@ dofile = function(path)
 					"Saved lobby choices must require overwrite confirmation later"
 				)
 			end
+			if
+				includeQuickResearch
+				and stage == 2
+				and not options.handoff
+				and quickResearchStep < 4
+			then
+				if quickResearchStep == 0 then
+					assert(tap(self, "QUICK RESEARCH"), "Science strip opens quick selection")
+					quickResearchStep = 1
+				elseif quickResearchStep == 1 then
+					assert(self.panel == "quickResearch", "Queued input opens eligible research")
+					if tap(self, "RESEARCH mining") then
+						quickResearchStep = 2
+					else
+						assert(
+							quickPages < 64 and tap(self, "NEXT"),
+							"Available technology remains reachable"
+						)
+						quickPages = quickPages + 1
+					end
+				elseif quickResearchStep == 2 then
+					local target
+					for _, candidate in ipairs(state.players) do
+						if candidate.id == observer then
+							target = candidate
+						end
+					end
+					assert(
+						target and target.researchTarget == "mining",
+						"Queued quick choice reaches research authority"
+					)
+					assert(tap(self, "TECH TREE"), "Full tree remains available")
+					quickResearchStep = 3
+				else
+					assert(
+						self.panel == "tech" and tap(self, "CLOSE"),
+						"Quick selection retains full-tree navigation"
+					)
+					quickResearchStep = 4
+					quickResearchVerified = true
+				end
+				return
+			end
 			if includeResearch and stage == 2 and not options.handoff and researchStep < 7 then
 				local labels = {
 					"TECH TREE",
@@ -523,7 +596,70 @@ dofile = function(path)
 				if tap(self, label) or label == "DETAILS" and tap(self, "DETAILS / CODEX") then
 					researchStep = researchStep + 1
 				else
-					tap(self, label == "RESEARCH" and "PREV" or "NEXT")
+					if label == "agriculture" then
+						researchNavigation = researchNavigation + 1
+						assert(
+							researchNavigation <= 64,
+							"Full tree must retain access to Agriculture after switching research"
+						)
+						tap(self, researchNavigation % 2 == 0 and "LEFT" or "UP")
+					else
+						tap(self, label == "RESEARCH" and "PREV" or "NEXT")
+					end
+				end
+				return
+			end
+			if
+				includeContactHUD
+				and stage == 2
+				and not options.handoff
+				and contactBadgeStep < 3
+			then
+				local target = state.players[includeHost and 2 or 3]
+				assert(target, "Native contact HUD scenario needs its conversation target")
+				assert(
+					self.playerID == observer,
+					"Contact navigation begins under the current human observer"
+				)
+				if contactBadgeStep == 0 then
+					local label
+					for _, candidate in ipairs(self.r.buttons) do
+						if
+							candidate.label == "KNOWN CIVILIZATIONS"
+							or candidate.label
+								and candidate.label:find("^MORE KNOWN CIVILIZATIONS")
+						then
+							label = candidate.label
+							break
+						end
+					end
+					assert(
+						label and tap(self, label),
+						"Native compact HUD shows a known-civilization contact entry"
+					)
+					contactBadgeStep = 1
+				elseif contactBadgeStep == 1 then
+					assert(self.panel == "factions", "The queued HUD event opens known Factions")
+					local talk = "TALK " .. target.name
+					if tap(self, talk) then
+						contactBadgeStep = 2
+					else
+						assert(
+							tap(self, "NEXT") and contactFactionPages < 64,
+							"The known contact stays reachable through Factions pagination"
+						)
+						contactFactionPages = contactFactionPages + 1
+					end
+				else
+					assert(
+						self.panel == "conversation"
+							and self.conversationTarget == target.id
+							and self.playerID == observer,
+						"Queued mouse events open the known contact under the active human"
+					)
+					contactBadgeVerified = true
+					contactBadgeStep = 3
+					conversationStep = 2
 				end
 				return
 			end
@@ -813,6 +949,10 @@ if includeConversation then
 		"Native conversations must execute their actual trade and commerce terms"
 	)
 end
+assert(
+	not includeContactHUD or contactBadgeVerified,
+	"Native compact contact entry uses queued input and continues the conversation flow"
+)
 if includeSettings then
 	local preferences = native("/games/civcraft/animation_preferences.lua").load()
 	assert(
@@ -902,6 +1042,7 @@ if includeCivilization then
 end
 assert(Events.forPlayer(state, state.players[1].id).lastSeq > 0)
 assert(Events.forPlayer(state, state.players[2].id).lastSeq > 0)
+assert(not includeQuickResearch or quickResearchVerified, "Requested quick research input must run")
 local output = assert(fs.open("/civcraft-native-session.txt", "w"))
 output.write(textutils.serialize({
 	host = _G._HOST,
@@ -918,11 +1059,13 @@ output.write(textutils.serialize({
 	aiPlanReload = includeAI,
 	settingsReload = includeSettings,
 	researchFlow = includeResearch,
+	quickResearchFlow = quickResearchVerified,
 	campaignOptions = includeCampaign,
 	warResponse = includeWar,
 	responseSaved = responseSaved,
 	hostModeAI = includeHost,
 	conversationFlow = includeConversation,
+	contactHUDFlow = contactBadgeVerified,
 	queuedRouteFlow = includeRoutes,
 	eventHistoryFlow = historyVerified,
 	councilFlow = councilVerified,

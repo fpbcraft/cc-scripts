@@ -4,6 +4,8 @@ local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Icons = dofile("/games/civcraft/icons.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
 local CouncilRules = dofile("/games/civcraft/council_rules.lua")
+local Contacts = dofile("/games/civcraft/contacts.lua")
+local FactionColors = dofile("/games/civcraft/faction_colors.lua")
 local H = {}
 local function compact(value)
 	value = math.floor(value or 0)
@@ -28,14 +30,16 @@ function H.resources(ui, state, player)
 	local economy = Systems.economy(player, state)
 	ui.economy = economy
 	local x = 4
+	local researchTarget
 	r:withClip({ x = 4, y = 14, w = r.w - 8, h = 7 }, function()
 		for _, entry in ipairs({
 			{ "gold", stock(player.gold or 20, economy.net) },
 			{ "science", rate(economy.science) },
-			{ "food", rate(economy.food) },
-			{ "wood", rate(economy.industry) },
 		}) do
 			local width = Icons.yieldValue(r, entry[1], entry[2], x, 15)
+			if entry[1] == "science" then
+				researchTarget = { x = x, y = 14, w = width, h = 7 }
+			end
 			x = x + width + 3
 		end
 		for _, kind in ipairs(Systems.resourceOrder) do
@@ -58,7 +62,154 @@ function H.resources(ui, state, player)
 			ui.resourceOffset = 0
 		end,
 	}
+	if researchTarget then
+		local ledger = r.buttons[#r.buttons]
+		researchTarget.w = math.max(0, math.min(researchTarget.w, r.w - 4 - researchTarget.x))
+		ledger.w = math.max(0, researchTarget.x - ledger.x)
+		local right = researchTarget.x + researchTarget.w
+		if right < r.w - 4 then
+			r.buttons[#r.buttons + 1] = {
+				x = right,
+				y = 14,
+				w = r.w - 4 - right,
+				h = 7,
+				label = "RESOURCE LEDGER",
+				fn = ledger.fn,
+			}
+		end
+		researchTarget.label = "QUICK RESEARCH"
+		researchTarget.fn = function()
+			ui.panel = "quickResearch"
+			ui.quickResearchOffset = 0
+		end
+		r.buttons[#r.buttons + 1] = researchTarget
+	end
 end
+
+local function contactLabel(state, player)
+	local civ = Systems.civ(player.civ, state)
+	local name = civ and civ.name or player.name or ("CIV " .. tostring(player.id))
+	local label = name:upper():gsub("%s+", ""):sub(1, 3)
+	return label, name
+end
+
+local function openFactions(ui)
+	ui.panel, ui.factionOffset = "factions", 0
+end
+
+local function openConversation(ui, player)
+	-- Match the existing FACTIONS > TALK transition.
+	ui.conversationTarget, ui.conversationOffset, ui.panel = player.id, 0, "conversation"
+end
+
+local function knownContacts(state, observer)
+	local contacts = {}
+	if observer and observer.id ~= nil then
+		for index, player in ipairs(state.players or {}) do
+			if player.id ~= observer.id and Contacts.knows(state, observer.id, player.id) then
+				local label, name = contactLabel(state, player)
+				contacts[#contacts + 1] = {
+					player = player,
+					label = label,
+					name = name,
+					color = FactionColors.players[index] or 32,
+				}
+			end
+		end
+	end
+	return contacts
+end
+
+function H.contactCount(state, observer)
+	if not observer or observer.id == nil then
+		return 0
+	end
+	local count = 0
+	for _, player in ipairs(state.players or {}) do
+		if player.id ~= observer.id and Contacts.knows(state, observer.id, player.id) then
+			count = count + 1
+		end
+	end
+	return count
+end
+
+function H.contacts(ui, state, observer, left, right)
+	local r = ui.r
+	local contacts = knownContacts(state, observer)
+	if #contacts == 0 then
+		return { count = 0, shown = 0 }
+	end
+
+	local minimumWidth, buttonHeight, gap = 26, 12, 2
+	left, right = math.floor(left or 1), math.floor(right or r.w)
+	local available = math.max(0, right - left + 1)
+	local fullWidth = #contacts * minimumWidth + (#contacts - 1) * gap
+	local shown = #contacts
+	local overflow = false
+	local overflowWidth
+	if fullWidth > available then
+		overflow = true
+		local overflowLabel = "+" .. #contacts
+		overflowWidth = math.max(16, r:textWidth(overflowLabel) + 6)
+		shown = math.min(
+			#contacts,
+			math.max(0, math.floor((available - overflowWidth) / (minimumWidth + gap)))
+		)
+		if available < overflowWidth and available >= 10 then
+			local width = math.min(available, 14)
+			r:button(left, 1, width, buttonHeight, "C", function()
+				openFactions(ui)
+			end)
+			r.buttons[#r.buttons].label = "KNOWN CIVILIZATIONS"
+			return { count = #contacts, shown = 0, overflow = #contacts }
+		end
+	end
+	local reserved = overflow and (overflowWidth + (shown > 0 and gap or 0)) or 0
+	local extra =
+		math.max(0, available - reserved - shown * minimumWidth - math.max(0, shown - 1) * gap)
+	local x = left
+	for index = 1, shown do
+		local contact = contacts[index]
+		local combined = contact.name .. " / " .. contact.player.name
+		local combinedWidth = r:textWidth(combined) + 8
+		local civWidth = r:textWidth(contact.name) + 8
+		local cap = minimumWidth + math.floor(extra / (shown - index + 1))
+		local label, width = contact.label, minimumWidth
+		if combinedWidth <= cap then
+			label, width = combined, combinedWidth
+		elseif civWidth <= cap then
+			label, width = contact.name, civWidth
+		end
+		r:button(
+			x,
+			1,
+			width,
+			buttonHeight,
+			label,
+			function()
+				openConversation(ui, contact.player)
+			end,
+			{ selected = ui.panel == "conversation" and ui.conversationTarget == contact.player.id }
+		)
+		r:fill(x + 2, 3, 2, 8, contact.color)
+		r.buttons[#r.buttons].label = "CONTACT " .. contact.player.name .. " / " .. contact.name
+		extra = math.max(0, extra - (width - minimumWidth))
+		x = x + width + gap
+	end
+	if overflow then
+		local hidden = #contacts - shown
+		local label = "+" .. hidden
+		local width = math.max(16, r:textWidth(label) + 6)
+		if x + width - 1 <= right then
+			r:button(x, 1, width, buttonHeight, label, function()
+				openFactions(ui)
+			end)
+			r.buttons[#r.buttons].label = "MORE KNOWN CIVILIZATIONS (" .. hidden .. ")"
+		end
+	end
+	return { count = #contacts, shown = shown, overflow = #contacts - shown }
+end
+
 function H.ledger(ui, rect, player)
 	local r = ui.r
 	local e = Systems.economy(player, ui.state)
