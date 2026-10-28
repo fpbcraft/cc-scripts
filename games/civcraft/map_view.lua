@@ -1,3 +1,5 @@
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
+local Specialty = dofile("/games/civcraft/specialty_view.lua")
 -- World geometry, painting and pointer targets use the same pointy hex polygons.
 local Fog = dofile("/games/civcraft/fog_view.lua")
 local FactionColors = dofile("/games/civcraft/faction_colors.lua")
@@ -279,6 +281,19 @@ function V.draw(ui, state, player, rect)
 			end
 			local k = World.key(x, y)
 			if t.visibility ~= "hidden" then
+				local site = Sites.enabled(state) and (world.specialtySites or {})[k]
+				if site then
+					local sx, sy = math.floor(px + 2), math.floor(py + size - 9)
+					r:fill(sx - 1, sy - 1, 7, 8, 1)
+					r:text(
+						sx,
+						sy,
+						Specialty.symbols[site.kind] or "?",
+						site.inactive and 31 or 13,
+						1,
+						6
+					)
+				end
 				local improvement = (world.improvements or {})[k]
 				if improvement then
 					local color = improvement.damaged and 31

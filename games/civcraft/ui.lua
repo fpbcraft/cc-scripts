@@ -1,3 +1,4 @@
+local Specialty = dofile("/games/civcraft/specialty_view.lua")
 -- CIVCRAFT local/network UI built on the RAILBREAK pixel canvas.
 -- Never mutate simulation here: all commands flow through dispatch().
 local FactionColors = dofile("/games/civcraft/faction_colors.lua")
@@ -124,8 +125,12 @@ function UI:command(action, params)
 		local city = where(self.state.cities, params.cityX, params.cityY)
 		local current = city and city.project
 		if current and (current.kind ~= params.kind or current.id ~= params.id) then
-			self.productionConfirm =
-				{ params = params, previous = current.id, progress = current.progress or 0 }
+			self.productionConfirm = {
+				params = params,
+				previous = current.kind == "site" and Specialty.projectName(city, current)
+					or current.id,
+				progress = current.progress or 0,
+			}
 			self.productionOffset = 0
 			return
 		end
@@ -287,6 +292,25 @@ function UI:armPlacement(kind, item, id)
 			or "NO ELIGIBLE HEXES / CHECK MATERIALS AND RESEARCH"
 	)
 end
+function UI:armSpecialty(city, kind, sourceId)
+	self.source = nil
+	self.workCity = nil
+	self.cityStrikeSource = nil
+	self.pendingMove = nil
+	self.panel = "context"
+	self.specialtyOffset = 0
+	self.placement = { kind = "specialty", item = city, id = kind, sourceSiteId = sourceId }
+	local player
+	for _, p in ipairs(self.state.players) do
+		if p.id == self.playerID then
+			player = p
+		end
+	end
+	self.reachable = Specialty.targets(self.state, player, city, kind, sourceId)
+	self:feedback(
+		#self.reachable > 0 and "CHOOSE A CYAN HEX FOR THE SPECIALTY" or "NO ELIGIBLE OWNED HEX"
+	)
+end
 function UI:tile(x, y)
 	if self.placement and not self.pendingMove then
 		for _, t in ipairs(self.reachable or {}) do
@@ -294,12 +318,20 @@ function UI:tile(x, y)
 				self.pendingMove = {
 					placement = self.placement,
 					workPreview = t.preview,
+					sitePreview = t.sitePreview,
+					siteRequest = t.request,
+					signature = t.signature,
+					siteCampaign = t.campaign,
+					siteIndustry = t.industry,
 					x = x,
 					y = y,
 					cost = t.cost,
 					player = self.playerID,
 				}
-				if t.preview then
+				if t.sitePreview then
+					self.specialtyOffset = 0
+					self:feedback("REVIEW COST, FOCUS AND LOSSES BEFORE CONFIRMING")
+				elseif t.preview then
 					t.preview.reservedCharges = self.placement.append
 							and self.placement.item.workQueue
 							and #self.placement.item.workQueue.tasks
@@ -497,6 +529,9 @@ function UI:draw(state, playerID, opts)
 		self.pendingMove = nil
 		self.cityStrikeSource = nil
 		self.productionConfirm = nil
+		self.specialtyCancel = nil
+		self.siteSource = nil
+		self.specialtyOffset = 0
 		self.disbandConfirm = nil
 		self.endConfirm = nil
 		self.panel = "context"
@@ -575,6 +610,9 @@ function UI:draw(state, playerID, opts)
 		self.reachable = {}
 		self.pendingMove = nil
 		self.productionConfirm = nil
+		self.specialtyCancel = nil
+		self.siteSource = nil
+		self.specialtyOffset = 0
 		self.disbandConfirm = nil
 		self.endConfirm = nil
 		self.lastDrag = nil
@@ -1192,11 +1230,19 @@ function UI:armCityStrike(city)
 end
 function UI:confirmMove()
 	local order = self.pendingMove
+	if order and order.sitePreview and not Specialty.ready(self, order) then
+		self:feedback("Site conditions changed. Review updated details before confirming.")
+		return false
+	end
 	self.pendingMove = nil
 	if order and order.placement and order.player == self.playerID then
 		local placement = order.placement
 		local item = placement.item
-		if placement.kind == "work" then
+		if placement.kind == "specialty" then
+			local request = order.siteRequest
+			self:command(request.action, request)
+			self.siteSource = nil
+		elseif placement.kind == "work" then
 			self:command("queueWork", {
 				unitID = item.id,
 				x = item.x,
@@ -1294,6 +1340,10 @@ function UI:back()
 		self.pendingMove = nil
 		return true
 	end
+	if self.specialtyCancel then
+		self.specialtyCancel = nil
+		return true
+	end
 	if self.disbandConfirm then
 		self.disbandConfirm = nil
 		return true
@@ -1332,6 +1382,7 @@ function UI:zoom(delta)
 	if
 		self.panel ~= "context"
 		or self.productionConfirm
+		or self.specialtyCancel
 		or self.disbandConfirm
 		or self.endConfirm
 	then
@@ -1352,6 +1403,7 @@ function UI:pan(dx, dy)
 	if
 		self.panel ~= "context"
 		or self.productionConfirm
+		or self.specialtyCancel
 		or self.disbandConfirm
 		or self.endConfirm
 		or self.inputMode ~= "map"
@@ -1407,6 +1459,7 @@ function UI:pointerDown(x, y)
 		and v
 		and self.panel == "context"
 		and not self.productionConfirm
+		and not self.specialtyCancel
 		and not self.disbandConfirm
 		and not self.endConfirm
 		and rx >= v.x
@@ -1494,6 +1547,7 @@ function UI:drag(x, y)
 		self.blockDrag
 		or self.panel ~= "context"
 		or self.productionConfirm
+		or self.specialtyCancel
 		or self.disbandConfirm
 		or self.endConfirm
 	then
@@ -1516,6 +1570,10 @@ function UI:drag(x, y)
 	return true
 end
 function UI:scroll(delta, x, y)
+	if self.specialtyCancel or self.pendingMove and self.pendingMove.sitePreview then
+		self.specialtyOffset = math.max(0, (self.specialtyOffset or 0) + delta)
+		return true
+	end
 	if self.panel == "conversation" and self.conversationSurface then
 		local px, py = self.r:touch(x, y)
 		if px then
@@ -1539,6 +1597,8 @@ function UI:scroll(delta, x, y)
 	end
 	if
 		self.productionConfirm
+		or self.specialtyCancel
+		or self.pendingMove and self.pendingMove.sitePreview
 		or self.disbandConfirm
 		or self.endConfirm
 		or self.panel ~= "context"
@@ -1584,6 +1644,7 @@ function UI:tap(x, y)
 		self.modalBounds
 		or self.panel ~= "context"
 		or self.productionConfirm
+		or self.specialtyCancel
 		or self.disbandConfirm
 		or self.endConfirm
 	then

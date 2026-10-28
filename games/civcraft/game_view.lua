@@ -1,3 +1,4 @@
+local Specialty = dofile("/games/civcraft/specialty_view.lua")
 local Empire = dofile("/games/civcraft/empire_menu.lua")
 local Codex = dofile("/games/civcraft/encyclopedia.lua")
 local Conversation = dofile("/games/civcraft/conversation_view.lua")
@@ -32,6 +33,22 @@ function G.draw(ui, state, player)
 	Danger.update(ui, state, player)
 	local r = ui.r
 	local w, h = r.w, r.h
+	if ui.placement and ui.placement.kind == "specialty" and not ui.pendingMove then
+		ui.inputMode = "map"
+		r:fill(0, 0, w, h, 0)
+		r:text(4, 3, "CHOOSE SPECIALTY HEX", 8, 1, w - 8)
+		Map.draw(ui, state, player, { x = 2, y = 13, w = w - 4, h = h - 28 })
+		r:button(3, h - 13, 38, 11, "BACK", function()
+			ui.placement = nil
+			ui.reachable = {}
+			ui.panel = "inspector"
+			ui.cityPanel = "production"
+			ui.productionCategory = "site"
+			ui.inspectorOffset = 0
+		end)
+		r:text(44, h - 10, "CYAN = LEGAL", 13, 1, w - 47)
+		return
+	end
 	local wide = w >= 220 and h >= 140
 	local header = 22
 	local bottom = h - 15
@@ -389,6 +406,9 @@ function G.draw(ui, state, player)
 		}
 		r:text(8, 8, "CHANGE PRODUCTION?", 8)
 		Panels.rows(r, { x = 8, y = 22, w = w - 16, h = h - 30 }, rows, ui, "productionOffset")
+	elseif ui.specialtyCancel or ui.pendingMove and ui.pendingMove.sitePreview then
+		modal(ui, rect)
+		Specialty.confirmation(ui, state, player, rect)
 	elseif ui.pendingMove and ui.pendingMove.workPreview then
 		modal(ui, rect)
 		local preview = ui.pendingMove.workPreview
