@@ -18,6 +18,11 @@ profile=Path(tempfile.mkdtemp(prefix='civcraft-native-rules-'))
 computer=profile/'computer/0'
 computer.mkdir(parents=True)
 shutil.copytree(root/'games/civcraft',computer/'games/civcraft',ignore=shutil.ignore_patterns('data','__pycache__'))
+# Focused UI/save fixtures use the same read-only helper modules as standalone Lua.
+for helper_dir in ('helpers', 'support'):
+    source = root/'tests'/helper_dir
+    if source.is_dir():
+        shutil.copytree(source, computer/'tests'/helper_dir)
 for name in args.tests:
     shutil.copyfile(root/'tests'/name,computer/name)
 files='{'+','.join(json.dumps('/'+name) for name in args.tests)+'}'
