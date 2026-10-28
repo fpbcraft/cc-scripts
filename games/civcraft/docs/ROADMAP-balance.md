@@ -1,7 +1,6 @@
 # CivCraft balance implementation roadmap
 
-Date: 2026-10-27. Mode: implementation planning. Current position: **M0 baseline
-verification**. This document plans the accepted [38 ADRs](adr/README.md); it
+Date: 2026-10-27. Mode: implementation. Current position: **M1 delivered; M2 next**. This document plans the accepted [38 ADRs](adr/README.md); it
 does not mark the redesign implemented. All 16 follow-up answers were A.
 
 ## Product and delivery target
@@ -126,19 +125,24 @@ paused by the user's execution instruction; continue with playable mechanics.
 
 Goal: a versioned playable campaign reflects the chosen victories and healing.
 
-- [ ] Add a new ruleset/content version without changing old save semantics.
-- [ ] Disable Industrial and Diplomatic victory evaluation in that version;
+- [x] Add a new ruleset/content version without changing old save semantics.
+- [x] Disable Industrial and Diplomatic victory evaluation in that version;
   update setup, objectives, AI goals, scoreboards, reports and encyclopedia.
-- [ ] Keep villages, treaties and useful Council gameplay; remove victory-only
+- [x] Keep villages, treaties and useful Council gameplay; remove victory-only
   requirements/rewards without deleting unrelated diplomatic features.
-- [ ] Set the prototype Standard deadline to 250 and label speed presets clearly.
-- [ ] Specify and implement territory-dependent passive healing abroad and healer
+- [x] Set the prototype Standard deadline to 250 and label speed presets clearly.
+- [x] Specify and implement territory-dependent passive healing abroad and healer
   enhancement. Cover rest/action conditions, caps and support stacking.
-- [ ] Update UI forecasts, healer tactics, rule manifests and replay fixtures.
+- [x] Update UI forecasts, healer tactics, rule manifests and replay fixtures.
 
 Done when: no removed victory can terminate a new campaign, old campaigns retain
 their configured behavior, and native healing observations match the chosen new
 rules. End remains reachable through its existing path until M9 replaces staging.
+
+M1 delivery record: [Redesign V1 campaign scope and recovery](M1-CAMPAIGN-SCOPE.md).
+New campaigns use the versioned scope; Original/P1 are retained. Native rule,
+UI, save/reload and published-installer checks pass. Full campaign balance
+calibration remains deferred while mechanics implementation continues.
 
 ## M2 — Make expansion and land development compete
 

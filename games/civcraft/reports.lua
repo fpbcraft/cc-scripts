@@ -3,6 +3,7 @@ local Content = dofile("/games/civcraft/content.lua")
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local R = {}
 local function sortedKeys(records)
 	local keys = {}
@@ -177,7 +178,7 @@ function R.build(state, p, before)
 	if now.age > (before.age or 1) then
 		lines[#lines + 1] = "New Age: " .. Content.ages[now.age].name
 	end
-	if now.industryTurns > 0 then
+	if now.industryTurns > 0 and not ContentRules.isRedesign(state) then
 		lines[#lines + 1] = "Industrial victory: "
 			.. now.industryTurns
 			.. "/"

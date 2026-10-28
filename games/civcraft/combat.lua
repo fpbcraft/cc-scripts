@@ -11,6 +11,8 @@ local World = dofile("/games/civcraft/world.lua")
 local Zone = dofile("/games/civcraft/zone_control.lua")
 local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local Offers = dofile("/games/civcraft/diplomatic_offers.lua")
 local C = {}
 local function at(list, x, y)
 	for _, v in ipairs(list or {}) do
@@ -93,23 +95,78 @@ function C.besieged(state, city, systems)
 	end
 	return checked > 0
 end
+function C.restRecovery(state, unit, systems)
+	local result = { base = 0, support = 0, total = 0, territory = "neutral" }
+	if unit.actedThisRound then
+		result.territory = "acted"
+		return result
+	end
+	local registered = false
+	for _, player in ipairs(state.players or {}) do
+		registered = registered or player.id == unit.owner
+	end
+	if not registered then
+		return result
+	end
+	local claim = World.territoryCity(state, Hex, unit.x, unit.y)
+	local owner = claim and claim.owner
+	if state.world and state.world.observedOwners then
+		owner = state.world.observedOwners[World.key(unit.x, unit.y)]
+	end
+	local war = owner ~= nil and Diplomacy.war(state, unit.owner, owner)
+	if owner == unit.owner then
+		result.base, result.territory = 20, "owned"
+	elseif war and war.active then
+		result.base, result.territory = 5, "enemy"
+	elseif owner ~= nil and Offers.treaty(state, unit.owner, owner, "openBorders") then
+		result.base, result.territory = 15, "friendly"
+	else
+		result.base = 10
+	end
+	for _, other in ipairs(state.units or {}) do
+		if
+			other.id ~= unit.id
+			and other.owner == unit.owner
+			and (other.hp or 100) > 0
+			and (systems.units[other.kind] or {}).healer
+			and Hex.distance(unit.x, unit.y, other.x, other.y) <= 1
+		then
+			result.support = 10
+			break
+		end
+	end
+	result.total = result.base + result.support
+	return result
+end
+
 function C.round(state, systems)
 	C.migrate(state)
-	for _, u in ipairs(state.units) do
-		if u.healing or not u.actedThisRound then
-			local claim = World.territoryCity(state, Hex, u.x, u.y)
-			if claim and claim.owner == u.owner then
-				u.hp = math.min(100, u.hp + 20)
-			end
+	if ContentRules.isRedesign(state) then
+		local recovery = {}
+		for _, unit in ipairs(state.units) do
+			recovery[unit] = C.restRecovery(state, unit, systems).total
 		end
-		if (systems.units[u.kind] or {}).healer then
-			for _, ally in ipairs(state.units) do
-				if ally.owner == u.owner and Hex.distance(u.x, u.y, ally.x, ally.y) <= 1 then
-					ally.hp = math.min(100, (ally.hp or 100) + 10)
+		for _, unit in ipairs(state.units) do
+			unit.hp = math.min(100, unit.hp + recovery[unit])
+			unit.actedThisRound = false
+		end
+	else
+		for _, u in ipairs(state.units) do
+			if u.healing or not u.actedThisRound then
+				local claim = World.territoryCity(state, Hex, u.x, u.y)
+				if claim and claim.owner == u.owner then
+					u.hp = math.min(100, u.hp + 20)
 				end
 			end
+			if (systems.units[u.kind] or {}).healer then
+				for _, ally in ipairs(state.units) do
+					if ally.owner == u.owner and Hex.distance(u.x, u.y, ally.x, ally.y) <= 1 then
+						ally.hp = math.min(100, (ally.hp or 100) + 10)
+					end
+				end
+			end
+			u.actedThisRound = false
 		end
-		u.actedThisRound = false
 	end
 	for _, city in ipairs(state.cities) do
 		if not C.besieged(state, city, systems) then

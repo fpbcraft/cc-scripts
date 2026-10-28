@@ -66,9 +66,9 @@ local function scores(view, player, personality, cities, seed)
 	if not (view.council and view.council.victoryEnabled) then
 		result.diplomatic = -math.huge
 	end
-	if view.victories then
+	if view.victories or view.contentRules == "balance1" then
 		for _, goal in ipairs(goals) do
-			if view.victories[goal] == false then
+			if not CampaignRules.enabled(view, goal) then
 				result[goal] = -math.huge
 			end
 		end
@@ -125,6 +125,9 @@ function Strategy.review(view, player, seed)
 	assert(not plan or plan.version == Strategy.version, "Unsupported AI strategy version")
 	local round = view.round or 1
 	local reason = not plan and "initial" or player.strategySignal
+	if plan and not CampaignRules.enabled(view, plan.primary) then
+		reason = "campaignRules"
+	end
 	local rivals = {}
 	for _, rival in ipairs(view.players or {}) do
 		if

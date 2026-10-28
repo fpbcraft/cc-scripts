@@ -1,3 +1,4 @@
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Biomes = dofile("/games/civcraft/biomes.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
@@ -270,7 +271,7 @@ function I.draw(ui, state, player, rect, modal)
 					},
 				},
 			}
-			if state.contentRules == "p1" then
+			if ContentRules.usesP1Economy(state) then
 				rows[#rows + 1] = {
 					buttons = {
 						{
@@ -476,7 +477,7 @@ function I.draw(ui, state, player, rect, modal)
 			text("AMBER !: VISIBLE THREAT", 18)
 			text("Threat damage estimates the next enemy turn.")
 		end
-		for _, line in ipairs(Panels.wrap(r, stats.ability or "", w - 10)) do
+		for _, line in ipairs(Panels.wrap(r, ContentRules.ability(stats, state) or "", w - 10)) do
 			text(line)
 		end
 		rows[#rows + 1] = {
@@ -574,6 +575,18 @@ function I.draw(ui, state, player, rect, modal)
 				},
 			},
 		}
+		if ContentRules.isRedesign(state) then
+			local recovery = Combat.restRecovery(state, unit, Systems)
+			local amount = math.min(100 - (unit.hp or 100), recovery.total)
+			local text = "REST FORECAST: +"
+				.. amount
+				.. " HP ("
+				.. recovery.territory
+				.. "). Acting prevents recovery."
+			for _, line in ipairs(Panels.wrap(r, text, w - 10)) do
+				rows[#rows + 1] = { text = line }
+			end
+		end
 		if stats.engineer then
 			rows[#rows + 1] = {
 				buttons = {
