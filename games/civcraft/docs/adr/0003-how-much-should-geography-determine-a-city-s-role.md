@@ -49,3 +49,26 @@ historical test results to changed rules without rerunning the appropriate check
 - [Recorded answers and verbatim user notes](../../research/lab/design_decision_answers.json)
 - [Follow-up question wording](../../research/lab/design_followup_questions.json)
 - [Design reconciliation](../../research/lab/DESIGN_RECONCILIATION.md)
+
+## Sparse terrain follow-up (2026-10-28)
+
+The owner's [issue #114](https://github.com/fpbcraft/cc-scripts/issues/114) requests
+little or no natural food/industry from desert and taiga. Newly generated worlds
+use the saved `world.terrainYieldVersion = "sparse1"` contract:
+
+| Natural terrain | Food | Industry |
+| --- | ---: | ---: |
+| Flat desert | 0 | 0 |
+| Elevated desert | 0 | 1 |
+| Bare flat taiga | 0 | 0 |
+| Wooded, dense, or elevated taiga | 0 | 1 |
+
+Other biome bases and resource, improvement, natural-landmark and city-center
+modifiers retain their existing rules. Start scoring and player projections use
+the same world version. Loaded worlds without the marker retain legacy yields;
+migration must not assign this marker to an existing world. This version is
+independent of campaign content profiles, including M3 specialization.
+
+Implementation and validation evidence is tracked in
+[PR #122](https://github.com/fpbcraft/cc-scripts/pull/122). This rule change does
+not resume balance experiments or establish campaign balance evidence.
