@@ -86,6 +86,42 @@ for _, graphics in ipairs({ false, true }) do
 			assert(ui:tap(x, y), "Badge pointer was not consumed")
 		end
 		draw()
+		local anchored = assert(ui.cityBannerTargets[1], "City banner is visible")
+		local initialX, initialY = anchored.x, anchored.y
+		-- A moving formation must not make the city's label jump to another row.
+		local previousX, previousY = state.units[1].x, state.units[1].y
+		state.units[1].x, state.units[1].y = 6, 4
+		World.reveal(state, Hex, Systems)
+		draw()
+		local shifted = assert(ui.cityBannerTargets[1])
+		assert(
+			shifted.x == initialX and shifted.y == initialY,
+			"City banners must stay anchored when units enter or leave their tile"
+		)
+		local movedBadge
+		for _, badge in ipairs(ui.unitBadgeTargets) do
+			if badge.unit.id == 2 then
+				movedBadge = badge
+				break
+			end
+		end
+		assert(movedBadge and movedBadge.unit.x == 6, "Moving unit has a floating marker")
+		local movedHex
+		for _, hex in ipairs(ui.hexTargets) do
+			if hex.tx == 6 and hex.ty == 4 then
+				movedHex = hex
+				break
+			end
+		end
+		assert(movedHex, "Moved unit's actual world tile is projected")
+		assert(
+			movedBadge.anchorX == math.floor(movedHex.x + movedHex.w / 2 + 0.5)
+				and movedBadge.anchorY == math.floor(movedHex.y + movedHex.h / 2 + 0.5),
+			"Moving the unit must move its callout anchor to the real tile, not the old city"
+		)
+		state.units[1].x, state.units[1].y = previousX, previousY
+		World.reveal(state, Hex, Systems)
+		draw()
 		for _, actor in ipairs(state.units) do
 			ui:focus("unit", actor)
 			draw()
@@ -97,6 +133,36 @@ for _, graphics in ipairs({ false, true }) do
 				end
 			end
 			assert(found, "Each visible stacked/adjacent formation has a target")
+			assert(found.w == found.h and found.w >= 11 and found.w % 2 == 1, "Unit badge is circular")
+			local hexAnchor
+			for _, hex in ipairs(ui.hexTargets) do
+				if hex.tx == actor.x and hex.ty == actor.y then
+					hexAnchor = hex
+					break
+				end
+			end
+			assert(hexAnchor, "The unit's hex must be in the map viewport")
+			assert(
+				found.anchorX == math.floor(hexAnchor.x + hexAnchor.w / 2 + 0.5)
+					and found.anchorY == math.floor(hexAnchor.y + hexAnchor.h / 2 + 0.5),
+				"Unit callout pointer is anchored to the actual hex center at every zoom"
+			)
+			local cx = found.x + math.floor(found.w / 2)
+			local cy = found.y + math.floor(found.h / 2)
+			local dx, dy = found.anchorX - cx, found.anchorY - cy
+			local px, py = found.pointerX - cx, found.pointerY - cy
+			local distance = math.sqrt(dx * dx + dy * dy)
+			assert(distance > 0, "Callout cannot obscure the unit's original tile")
+			assert(
+				dx * px + dy * py > 0
+					and math.abs(dx * py - dy * px) <= 2 + distance * 0.1,
+				"Bubble tail must point toward the true unit position, not its banner"
+			)
+			assert(
+				(found.anchorX - found.pointerX) ^ 2 + (found.anchorY - found.pointerY) ^ 2
+					< dx * dx + dy * dy,
+				"The tail tip must be closer to the real unit than the badge center"
+			)
 			for _, other in ipairs(ui.unitBadgeTargets) do
 				if other ~= found then
 					assert(

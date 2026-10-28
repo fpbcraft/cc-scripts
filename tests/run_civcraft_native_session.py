@@ -20,6 +20,7 @@ parser.add_argument("--contact-hud", action="store_true", help="Click the known-
 parser.add_argument("--installed-ref", help="Download this published revision through the real GitHub installer before testing")
 parser.add_argument("--quick-research", action="store_true", help="Choose available research through native mouse events")
 parser.add_argument("--unit-badges", action="store_true", help="Select a map unit badge through native mouse events")
+parser.add_argument("--unit-actions", action="store_true", help="Exercise a unit action through queued native mouse input")
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
 profile = Path(tempfile.mkdtemp(prefix="civcraft-session-"))
@@ -52,6 +53,8 @@ if args.quick_research:
     flags.append("--quick-research")
 if args.unit_badges:
     flags.append("--unit-badges")
+if args.unit_actions:
+    flags.append("--unit-actions")
 if args.monitor:
     flags.append("--touch-monitor")
 arguments = ", ".join(json.dumps(flag) for flag in flags)

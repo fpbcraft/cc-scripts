@@ -234,6 +234,7 @@ From the repository root, run:
 python3 tests/run_civcraft_native_session.py
 python3 tests/run_civcraft_native_session.py --host
 python3 tests/run_civcraft_native_session.py --monitor
+python3 tests/run_civcraft_native_session.py --unit-actions
 python3 tests/run_civcraft_native_network.py
 ```
 
@@ -241,6 +242,9 @@ Use `--craftos /path/to/craftos` if the executable is not on PATH or installed i
 its usual macOS location. Each command creates a fresh temporary profile and copies
 only runtime sources and generated test data into it. Existing installed campaigns
 are not read or changed. The printed profile contains diagnostics and results.
+`--unit-actions` exercises the compact inspector fallback with a queued native
+mouse click, then asserts the action arms a legal move before the standard session
+continues.
 
 The monitor variant requires the GUI: headless CraftOS cannot create monitors.
 It creates an isolated `top` monitor through the real peripheral emulator and sends

@@ -251,8 +251,10 @@ Names appear above cities and in city navigation, and remain stable in saves.
 
 The map stays central with a permanent inspector. City **INFO**, **JOBS**,
 **TILES** and **PROD** views separate statistics from the task being edited;
-compact unit inspectors separate actions from secondary details. Extremely
-short sidebars open a full-screen inspector. **PREV/NEXT**, the scrollbar and
+compact unit inspectors separate actions from secondary details. Unit actions
+use a compact icon grid; wider inspectors pair icons with short labels, while
+narrow ones show the icons alone. Extremely short sidebars open a full-screen
+inspector. **PREV/NEXT**, the scrollbar and
 mouse wheel navigate long lists. Status messages appear below the map.
 
 One primary button occupies the inspector footer. It shows **UNIT ORDERS**,

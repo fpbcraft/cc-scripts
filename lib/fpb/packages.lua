@@ -232,6 +232,7 @@ P.packages.civcraft = {
 		"hud.lua",
 		"icons.lua",
 		"inspector.lua",
+		"unit_actions.lua",
 		"map_view.lua",
 		"minimap.lua",
 		"panels.lua",

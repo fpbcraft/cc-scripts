@@ -1,9 +1,12 @@
 -- Paged rows keep every control visible and clickable at small terminal sizes.
 local Icons = dofile("/games/civcraft/icons.lua")
+local UnitActions = dofile("/games/civcraft/unit_actions.lua")
 local P = {}
 function P.rows(r, rect, rows, model, key)
 	key = key or "offset"
-	local expanded = {}
+	local expanded = UnitActions.expand(rows, rect.w)
+	rows = expanded
+	expanded = {}
 	for _, row in ipairs(rows) do
 		local split = false
 		if row.yields then
@@ -36,7 +39,9 @@ function P.rows(r, rect, rows, model, key)
 		local row = rows[model[key] + i]
 		if row then
 			local y = rect.y + (i - 1) * rowHeight
-			if row.adjust then
+			if row.actionButtons then
+				UnitActions.draw(r, rect, row, y)
+			elseif row.adjust then
 				if row.adjust.icon then
 					Icons.yield(r, row.adjust.icon, rect.x + 2, y + 3, 5)
 					r:text(rect.x + 10, y + 3, row.adjust.label, 7, 1, rect.w - 42)

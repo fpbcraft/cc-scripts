@@ -7,6 +7,7 @@ local Hex = dofile("/games/civcraft/hex.lua")
 local Landmarks = dofile("/games/civcraft/landmarks.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
+local UnitActions = dofile("/games/civcraft/unit_actions.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local World = dofile("/games/civcraft/world.lua")
 local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
@@ -980,6 +981,14 @@ function I.draw(ui, state, player, rect, modal)
 		end
 	end
 	if unit and unit.owner == ui.playerID then
+		for _, row in ipairs(rows) do
+			if row.buttons then
+				row.unitActions = true
+				for _, button in ipairs(row.buttons) do
+					UnitActions.decorate(button)
+				end
+			end
+		end
 		local ordered = {}
 		local used = {}
 		for i, row in ipairs(rows) do

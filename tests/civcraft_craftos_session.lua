@@ -15,6 +15,7 @@ local includeConversation = false
 local includeContactHUD, contactBadgeStep, contactBadgeVerified = false, 0, false
 local contactFactionPages = 0
 local includeHistory = false
+local includeUnitActions, unitActionsVerified, unitActionUnitID = false, false, nil
 local includeDifficulty = false
 local includeCivilization, civilizationStep = false, 0
 local includeMapTools, mapToolsVerified = false, false
@@ -55,6 +56,9 @@ for _, argument in ipairs({ ... }) do
 	end
 	if argument == "--unit-badges" then
 		includeUnitBadges = true
+	end
+	if argument == "--unit-actions" then
+		includeUnitActions = true
 	end
 	if argument == "--routes" then
 		includeRoutes = true
@@ -291,6 +295,7 @@ dofile = function(path)
 		local councilStep = 0
 		local mapToolsStep = 0
 		local conversationStep = 0
+		local unitActionsStep = 0
 		local routeStep, routeUnit, routeGoal = 0, nil, nil
 		local badgeStep, badgeUnit = 0, nil
 		view.draw = function(self, state, observer, options)
@@ -506,6 +511,50 @@ dofile = function(path)
 					)
 					unitBadgesVerified = true
 					badgeStep = 3
+				end
+				return
+			end
+			if
+				includeUnitActions
+				and stage == 2
+				and not options.handoff
+				and unitActionsStep < 3
+			then
+				if self:animating() then
+					return
+				end
+				if unitActionsStep == 0 then
+					local actor
+					for _, unit in ipairs(state.units) do
+						if unit.owner == observer and unit.kind == "warrior" then
+							actor = unit
+							break
+						end
+					end
+					assert(actor, "Native unit-action scenario needs an owned warrior")
+					unitActionUnitID = actor.id
+					self:focus("unit", actor)
+					unitActionsStep = 1
+					os.queueEvent("term_resize")
+				elseif unitActionsStep == 1 then
+					if tap(self, "MOVE / ATTACK") then
+						unitActionsStep = 2
+					elseif not tap(self, "DETAILS") then
+						assert(
+							tap(self, "NEXT"),
+							"Native unit action is reachable through the inspector"
+						)
+					end
+				else
+					assert(
+						self.source
+							and self.source.unitID == unitActionUnitID
+							and #self.reachable > 0,
+						"Queued native action click arms legal movement"
+					)
+					assert(self.panel == "context", "Unit action returns to the normal game view")
+					unitActionsVerified = true
+					unitActionsStep = 3
 				end
 				return
 			end
@@ -1099,6 +1148,10 @@ assert(Events.forPlayer(state, state.players[1].id).lastSeq > 0)
 assert(Events.forPlayer(state, state.players[2].id).lastSeq > 0)
 assert(not includeQuickResearch or quickResearchVerified, "Requested quick research input must run")
 assert(not includeUnitBadges or unitBadgesVerified, "Requested normal-program badge input must run")
+assert(
+	not includeUnitActions or unitActionsVerified,
+	"Requested normal-program unit-action input must run"
+)
 local output = assert(fs.open("/civcraft-native-session.txt", "w"))
 output.write(textutils.serialize({
 	host = _G._HOST,
@@ -1124,6 +1177,7 @@ output.write(textutils.serialize({
 	contactHUDFlow = contactBadgeVerified,
 	queuedRouteFlow = includeRoutes,
 	unitBadgeFlow = unitBadgesVerified,
+	unitActionFlow = unitActionsVerified,
 	eventHistoryFlow = historyVerified,
 	councilFlow = councilVerified,
 	mapToolsFlow = mapToolsVerified,

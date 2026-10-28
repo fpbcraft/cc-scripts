@@ -389,6 +389,19 @@ function W.reveal(state, hex, systems, pendingNotices)
 	for _, camp in ipairs(state.spawners or {}) do
 		camps[key(camp.x, camp.y)] = camp
 	end
+	-- A per-reveal lookup avoids scanning every city's sites for each visible
+	-- tile of every player. Keep the same last-matching-site precedence.
+	local sitesEnabled = Sites.enabled(state)
+	local sites = {}
+	if sitesEnabled then
+		for _, city in ipairs(state.cities or {}) do
+			for _, site in pairs(city.sites or {}) do
+				if site.x and site.y then
+					sites[key(site.x, site.y)] = { city = city, site = site }
+				end
+			end
+		end
+	end
 	for _, p in ipairs(state.players or {}) do
 		if W.checkpoint then
 			W.checkpoint()
@@ -451,15 +464,10 @@ function W.reveal(state, hex, systems, pendingNotices)
 				or nil
 			memory.landmarks[tileKey] = landmarkView((world.landmarks or {})[tileKey])
 			memory.rails[tileKey] = (world.rails or {})[tileKey] and true or nil
-			if Sites.enabled(state) then
-				memory.sites[tileKey] = nil
-				for _, c in ipairs(state.cities or {}) do
-					for _, site in pairs(c.sites or {}) do
-						if site.x == x and site.y == y then
-							memory.sites[tileKey] = Sites.public(state, c, site)
-						end
-					end
-				end
+			if sitesEnabled then
+				local record = sites[tileKey]
+				memory.sites[tileKey] = record and Sites.public(state, record.city, record.site)
+					or nil
 			end
 			memory.spawners[tileKey] = camps[tileKey] and campView(camps[tileKey]) or nil
 		end
