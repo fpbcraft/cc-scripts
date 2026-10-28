@@ -188,7 +188,19 @@ for _, graphics in ipairs({ false, true }) do
 						or banner.x >= found.x + found.w
 						or found.y >= banner.y + banner.h
 						or banner.y >= found.y + found.h,
-					"City banner overlaps unit badge"
+					"City banner overlaps unit badge: graphics="
+						.. tostring(graphics)
+						.. " zoom="
+						.. zoom
+						.. " unit="
+						.. actor.id
+						.. " badge="
+						.. found.x .. "," .. found.y .. "," .. found.w .. "," .. found.h
+						.. " banner="
+						.. banner.x .. "," .. banner.y .. "," .. banner.w .. "," .. banner.h
+						.. " viewport="
+						.. ui.mapViewport.x .. "," .. ui.mapViewport.y .. ","
+						.. ui.mapViewport.w .. "," .. ui.mapViewport.h
 				)
 			end
 			tap(found)
