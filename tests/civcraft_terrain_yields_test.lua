@@ -20,7 +20,10 @@ local function check(biome, elevation, feature, version, food, industry)
 	local actualFood, actualIndustry = Biomes.yields(natural(biome, elevation, feature), version)
 	assert(
 		actualFood == food and actualIndustry == industry,
-		table.concat({ biome, elevation, feature, tostring(version), actualFood, actualIndustry }, " ")
+		table.concat(
+			{ biome, elevation, feature, tostring(version), actualFood, actualIndustry },
+			" "
+		)
 	)
 end
 

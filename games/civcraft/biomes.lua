@@ -78,7 +78,9 @@ function Biomes.yields(tile, terrainYieldVersion)
 			return 0, tile.elevation == "flat" and 0 or 1
 		end
 		if tile.biome == "taiga" then
-			local supported = tile.elevation ~= "flat" or tile.feature == "woods" or tile.feature == "dense"
+			local supported = tile.elevation ~= "flat"
+				or tile.feature == "woods"
+				or tile.feature == "dense"
 			return 0, supported and 1 or 0
 		end
 	end
