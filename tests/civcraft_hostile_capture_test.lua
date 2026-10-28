@@ -48,6 +48,11 @@ for _, unit in ipairs(state.units) do
 end
 assert(orphan, "Fixture must retain a real hostile mob")
 orphan.spawner = nil
+-- The capture-only attack can leave the zombie sharing the prisoner's tile.
+-- Move it back to its empty spawn site so the hostile loop can process it.
+local spawner = assert(state.spawners[1], "Fixture must retain its spawner")
+assert(spawner.x ~= x or spawner.y ~= y, "Orphan test needs a separate tile")
+orphan.x, orphan.y = spawner.x, spawner.y
 orphan.movesLeft, orphan.moved = -1, false
 state.round = 22
 Hostiles.round(state, Systems)
