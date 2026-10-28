@@ -221,17 +221,14 @@ World.migrate(unversioned)
 assert(unversioned.world.terrainYieldVersion == "civ6-1", "Unversioned maps auto-migrate")
 sameYield(World.yields(unversioned.world, 1, 1), 2, 1, 0, "Old forest migrated")
 
-local projected = World.forPlayer(
-	{
-		phase = "game",
-		round = 1,
-		world = generated,
-		players = { { id = 1, visible = {}, explored = {} } },
-		cities = {},
-		units = {},
-	},
-	1
-)
+local projected = World.forPlayer({
+	phase = "game",
+	round = 1,
+	world = generated,
+	players = { { id = 1, visible = {}, explored = {} } },
+	cities = {},
+	units = {},
+}, 1)
 assert(projected.world.terrainYieldVersion == "civ6-1", "Observer uses current rules")
 local yieldEntry
 for _, entry in ipairs(Encyclopedia.entries("mechanics")) do
