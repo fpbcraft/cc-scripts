@@ -133,3 +133,20 @@ end
 print(
 	"CIVCRAFT: duration scaling, authoritative campaign options, enabled victories, AI choices and legacy compatibility passed."
 )
+
+-- Specialization is an explicit host choice; running/legacy campaigns stay pinned.
+local specialization = fixture()
+assert(not Rules.configure(specialization, 2, { action = "contentRules", version = "balance5" }))
+assert(Rules.configure(specialization, 1, { action = "contentRules", version = "balance5" }))
+for _, player in ipairs(specialization.players) do
+	assert(player.contentRules == "balance5")
+end
+assert(Rules.configure(specialization, 1, { action = "contentRules" }))
+assert(specialization.contentRules == nil)
+assert(Rules.configure(specialization, 1, { action = "contentRules", version = "balance4" }))
+assert(Rules.configure(specialization, 1, { action = "contentRules" }))
+assert(specialization.contentRules == "balance5")
+specialization.phase = "game"
+assert(not Rules.configure(specialization, 1, { action = "contentRules", version = "balance4" }))
+assert(specialization.contentRules == "balance5")
+print("PASS: host-only specialization selection, full profile cycle and started-campaign pinning")

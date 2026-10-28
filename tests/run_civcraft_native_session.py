@@ -12,6 +12,7 @@ parser.add_argument(
     default=shutil.which("craftos") or "/Applications/CraftOS-PC.app/Contents/MacOS/craftos",
 )
 parser.add_argument("--monitor", action="store_true", help="Use a real emulated monitor and monitor_touch; requires GUI")
+parser.add_argument("--specialization", action="store_true", help="Select Specialization V5 in the native lobby")
 parser.add_argument("--landwork", action="store_true", help="Select Landwork V3 in the native lobby")
 parser.add_argument("--development", action="store_true", help="Select Development V2 in the native lobby")
 parser.add_argument("--host", action="store_true", help="Test a host/AI session instead of hotseat/AI")
@@ -36,7 +37,9 @@ flags = [
     "--history", "--council", "--map-tools", "--difficulty", "--civilization",
 ]
 flags += ["--host-ai"] if args.host else ["--ai", "--war"]
-if args.landwork:
+if args.specialization:
+    flags.append("--specialization")
+elif args.landwork:
     flags.append("--landwork")
 elif args.development:
     flags.append("--development")
