@@ -8,6 +8,7 @@ local includeWar = false
 local touchMonitor = false
 local includeHost = false
 local includeQuickResearch, quickResearchVerified = false, false
+local includeUnitBadges, unitBadgesVerified = false, false
 local includeDevelopment = false
 local developmentProfile = "balance2"
 local includeConversation = false
@@ -51,6 +52,9 @@ for _, argument in ipairs({ ... }) do
 	end
 	if argument == "--history" then
 		includeHistory = true
+	end
+	if argument == "--unit-badges" then
+		includeUnitBadges = true
 	end
 	if argument == "--routes" then
 		includeRoutes = true
@@ -288,6 +292,7 @@ dofile = function(path)
 		local mapToolsStep = 0
 		local conversationStep = 0
 		local routeStep, routeUnit, routeGoal = 0, nil, nil
+		local badgeStep, badgeUnit = 0, nil
 		view.draw = function(self, state, observer, options)
 			draw(self, state, observer, options)
 			renderer = self.r.mode
@@ -453,6 +458,56 @@ dofile = function(path)
 					end
 					return
 				end
+			end
+			if includeUnitBadges and stage == 2 and not options.handoff and badgeStep < 3 then
+				if self:animating() then
+					return
+				end
+				if badgeStep == 0 then
+					for _, actor in ipairs(state.units) do
+						if actor.owner == observer then
+							badgeUnit = actor
+							break
+						end
+					end
+					assert(badgeUnit, "Native badge scenario needs an owned formation")
+					self:focus("unit", badgeUnit)
+					badgeStep = 1
+					os.queueEvent("term_resize")
+				elseif badgeStep == 1 then
+					local target
+					for _, badge in ipairs(self.unitBadgeTargets or {}) do
+						if badge.unit.id == badgeUnit.id then
+							target = badge
+							break
+						end
+					end
+					assert(target, "Focused visible formation has a badge")
+					local x, y = target.x + target.w / 2, target.y + target.h / 2
+					if self.r.mode == "graphics" then
+						x, y = self.r.ox + x * self.r.sx, self.r.oy + y * self.r.sy
+					else
+						x, y = x / 2 + 1, y / 3 + 1
+					end
+					self:deselect()
+					queued = true
+					if touchMonitor then
+						os.queueEvent("monitor_touch", "top", math.floor(x), math.floor(y))
+					else
+						os.queueEvent("mouse_click", 1, math.floor(x), math.floor(y))
+						os.queueEvent("mouse_up", 1, math.floor(x), math.floor(y))
+					end
+					os.queueEvent("civcraft_test_input_complete")
+					badgeStep = 2
+				else
+					assert(
+						self.selected.kind == "unit" and self.selected.unitID == badgeUnit.id,
+						"Normal-program queued badge click selects exact formation"
+					)
+					unitBadgesVerified = true
+					badgeStep = 3
+				end
+				return
 			end
 			if includeRoutes and stage == 2 and not options.handoff and routeStep < 5 then
 				if routeStep == 0 then
@@ -1043,6 +1098,7 @@ end
 assert(Events.forPlayer(state, state.players[1].id).lastSeq > 0)
 assert(Events.forPlayer(state, state.players[2].id).lastSeq > 0)
 assert(not includeQuickResearch or quickResearchVerified, "Requested quick research input must run")
+assert(not includeUnitBadges or unitBadgesVerified, "Requested normal-program badge input must run")
 local output = assert(fs.open("/civcraft-native-session.txt", "w"))
 output.write(textutils.serialize({
 	host = _G._HOST,
@@ -1067,6 +1123,7 @@ output.write(textutils.serialize({
 	conversationFlow = includeConversation,
 	contactHUDFlow = contactBadgeVerified,
 	queuedRouteFlow = includeRoutes,
+	unitBadgeFlow = unitBadgesVerified,
 	eventHistoryFlow = historyVerified,
 	councilFlow = councilVerified,
 	mapToolsFlow = mapToolsVerified,

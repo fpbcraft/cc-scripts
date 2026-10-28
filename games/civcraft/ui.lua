@@ -78,6 +78,7 @@ function UI:turnProgress(title, detail)
 	local w, h = r.w, r.h
 	r:begin()
 	self.hexTargets = {}
+	self.unitBadgeTargets = {}
 	self.mapViewport = nil
 	self.inspectorBounds = nil
 	self.modalBounds = nil
@@ -567,8 +568,21 @@ function UI:draw(state, playerID, opts)
 	self.lastCampaign = state and state.campaignID
 	if self.selected.kind == "unit" and self.selected.unitID then
 		local selectedUnit
+		local observer
+		for _, candidate in ipairs(state.players or {}) do
+			if candidate.id == playerID then
+				observer = candidate
+				break
+			end
+		end
 		for _, u in ipairs(state.units or {}) do
-			if u.id == self.selected.unitID and u.owner == playerID then
+			if
+				u.id == self.selected.unitID
+				and (
+					u.owner == playerID
+					or observer and (observer.visible or {})[World.key(u.x, u.y)]
+				)
+			then
 				selectedUnit = u
 				break
 			end
@@ -627,6 +641,7 @@ function UI:draw(state, playerID, opts)
 	Playback.update(self, state, playerID, opts)
 	r:begin()
 	self.hexTargets = {}
+	self.unitBadgeTargets = {}
 	self.mapViewport = nil
 	self.inspectorBounds = nil
 	self.inputMode = nil
@@ -1670,6 +1685,17 @@ function UI:tap(x, y)
 		and not self.pendingMove
 		and not self.cityStrikeSource
 	then
+		for _, badge in ipairs(self.unitBadgeTargets or {}) do
+			if
+				rx >= badge.x
+				and rx < badge.x + badge.w
+				and ry >= badge.y
+				and ry < badge.y + badge.h
+			then
+				self:focus("unit", badge.unit)
+				return true
+			end
+		end
 		for _, banner in ipairs(self.cityBannerTargets or {}) do
 			if
 				rx >= banner.x

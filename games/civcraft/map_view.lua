@@ -301,7 +301,7 @@ function V.draw(ui, state, player, rect)
 	ui.mapViewport =
 		{ x = rect.x, y = rect.y, w = rect.w, h = rect.h, tile = size, maxX = maxX, maxY = maxY }
 	local citySignature = {}
-	local cityIndex, unitIndex, civilianIndex = {}, {}, {}
+	local cityIndex, unitIndex, civilianIndex, unitGroups = {}, {}, {}, {}
 	local hiddenActors = ui.animationFrame and ui.animationFrame.hidden or {}
 	local campIndex = {}
 	for _, camp in ipairs(World.observedCamps(state, player)) do
@@ -314,6 +314,8 @@ function V.draw(ui, state, player, rect)
 	end
 	for _, unit in ipairs(state.units or {}) do
 		local key = World.key(unit.x, unit.y)
+		unitGroups[key] = unitGroups[key] or {}
+		unitGroups[key][#unitGroups[key] + 1] = unit
 		if not unitIndex[key] or Stacks.isCivilian(unitIndex[key]) then
 			unitIndex[key] = unit
 		end
@@ -796,6 +798,95 @@ function V.draw(ui, state, player, rect)
 		end
 		r = canvas
 		local occupied = {}
+		ui.unitBadgeTargets = {}
+		-- Reserve visible formations before placing city labels. Each stacked actor
+		-- keeps its own identity and pointer target, including civilian escorts.
+		for _, tile in ipairs(tiles) do
+			local centerX, centerY = tile.px + size / 2, tile.py + size / 2
+			local onScreen = centerX >= rect.x
+				and centerX < rect.x + rect.w
+				and centerY >= rect.y
+				and centerY < rect.y + rect.h
+			local actors = onScreen
+					and tile.visibility == "visible"
+					and unitGroups[World.key(tile.x, tile.y)]
+				or {}
+			local visible = {}
+			for _, actor in ipairs(actors or {}) do
+				if not hiddenActors[Animations.identity(actor)] then
+					visible[#visible + 1] = actor
+				end
+			end
+			table.sort(visible, function(a, b)
+				return a.id < b.id
+			end)
+			local badgeSize = math.min(
+				11,
+				math.max(3, math.floor(size / 2) - 1),
+				math.max(3, math.floor(rect.h / 2)),
+				math.floor((rect.w - math.max(0, #visible - 1)) / math.max(1, #visible))
+			)
+			local width = #visible * (badgeSize + 1) - 1
+			local left = math.max(
+				rect.x,
+				math.min(rect.x + rect.w - width, math.floor(tile.px + size / 2 - width / 2))
+			)
+			local top = math.max(
+				rect.y,
+				math.min(
+					rect.y + rect.h - badgeSize,
+					math.floor(tile.py + size / 2 - badgeSize / 2)
+				)
+			)
+			for index, actor in ipairs(visible) do
+				local box = {
+					x = left + (index - 1) * (badgeSize + 1),
+					y = top,
+					w = badgeSize,
+					h = badgeSize,
+					unit = actor,
+				}
+				local originalX, originalY = box.x, box.y
+				local placed = false
+				for _, offset in ipairs({
+					{ 0, 0 },
+					{ 0, -badgeSize },
+					{ 0, badgeSize },
+					{ -badgeSize, 0 },
+					{ badgeSize, 0 },
+					{ -badgeSize, -badgeSize },
+					{ badgeSize, -badgeSize },
+					{ -badgeSize, badgeSize },
+					{ badgeSize, badgeSize },
+				}) do
+					box.x =
+						math.max(rect.x, math.min(rect.x + rect.w - box.w, originalX + offset[1]))
+					box.y =
+						math.max(rect.y, math.min(rect.y + rect.h - box.h, originalY + offset[2]))
+					local clear = true
+					for _, other in ipairs(occupied) do
+						if
+							box.x < other.x + other.w
+							and box.x + box.w > other.x
+							and box.y < other.y + other.h
+							and box.y + box.h > other.y
+						then
+							clear = false
+							break
+						end
+					end
+					if clear then
+						placed = true
+						break
+					end
+				end
+				if not placed then
+					box.x, box.y = originalX, originalY
+				end
+				ui.unitBadgeTargets[#ui.unitBadgeTargets + 1] = box
+				occupied[#occupied + 1] = box
+			end
+		end
 		ui.cityBannerTargets = {}
 		table.sort(cityLabels, function(a, b)
 			if (a.city.owner == ui.playerID) ~= (b.city.owner == ui.playerID) then
@@ -811,6 +902,18 @@ function V.draw(ui, state, player, rect)
 			CityBanner.draw(targetRenderer, model, box, ownerColor(state, label.city.owner))
 			ui.cityBannerTargets[#ui.cityBannerTargets + 1] =
 				{ x = box.x, y = box.y, w = box.w, h = box.h, city = label.city }
+		end
+		for _, badge in ipairs(ui.unitBadgeTargets) do
+			local color = ownerColor(state, badge.unit.owner)
+			r:fill(badge.x, badge.y, badge.w, badge.h, 0)
+			r:outline(
+				badge.x,
+				badge.y,
+				badge.w,
+				badge.h,
+				ui.selected.kind == "unit" and ui.selected.unitID == badge.unit.id and 7 or color
+			)
+			Icons.faction(r, badge.unit.kind, badge.x + 1, badge.y + 1, badge.w - 2, color)
 		end
 		AnimationView.draw(ui, state, rect, size)
 	end)
