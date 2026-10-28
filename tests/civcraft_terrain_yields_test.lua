@@ -77,8 +77,16 @@ for _, version in ipairs(scorerVersions) do
 end
 assert(generated.generationVersion == 2, "Yield changes do not regenerate the map")
 
-local world = { width = 12, height = 10, tiles = {}, geography = {}, resources = {},
-	landmarks = {}, improvements = {}, terrainYieldVersion = "civ6-1" }
+local world = {
+	width = 12,
+	height = 10,
+	tiles = {},
+	geography = {},
+	resources = {},
+	landmarks = {},
+	improvements = {},
+	terrainYieldVersion = "civ6-1",
+}
 for y = 1, world.height do
 	for x = 1, world.width do
 		local tile = natural("plains", "flat", "none")
@@ -104,10 +112,17 @@ setTile(10, "plains", "flat", "none")
 setTile(11, "plains", "flat", "none")
 setTile(12, "plains", "flat", "none")
 world.resources = {
-	["2:4"] = "grain", ["3:4"] = "timber", ["4:4"] = "stone",
-	["5:4"] = "fish", ["6:4"] = "fish", ["7:4"] = "copper",
-	["8:4"] = "diamond", ["9:4"] = "iron", ["10:4"] = "horses",
-	["11:4"] = "saltpeter", ["12:4"] = "zinc",
+	["2:4"] = "grain",
+	["3:4"] = "timber",
+	["4:4"] = "stone",
+	["5:4"] = "fish",
+	["6:4"] = "fish",
+	["7:4"] = "copper",
+	["8:4"] = "diamond",
+	["9:4"] = "iron",
+	["10:4"] = "horses",
+	["11:4"] = "saltpeter",
+	["12:4"] = "zinc",
 }
 sameYield(World.yields(world, 1, 4), 0, 0, 0, "Bare desert")
 sameYield(World.yields(world, 2, 4), 2, 1, 0, "Wheat adds 1 food")
@@ -134,17 +149,32 @@ world.improvements["4:4"].damaged = true
 sameYield(World.yields(world, 4, 4), 1, 3, 0, "Damaged improvements add nothing")
 assert(Works.definitions.farm.food == 1 and Works.definitions.quarry.industry == 1)
 local center = Systems.centerYields({}, { buildings = {} }, nil)
-assert(center.food == 2 and center.industry == 1 and center.science == 1 and center.gold == 0,
-	"City-center rules remain independent of tile yield migration")
+assert(
+	center.food == 2 and center.industry == 1 and center.science == 1 and center.gold == 0,
+	"City-center rules remain independent of tile yield migration"
+)
 
 -- Worked Gold must actually enter treasury once, not just show on the map.
-local city = { id = 1, owner = 1, x = 6, y = 5, population = 2,
-	buildings = {}, worked = { ["5:4"] = true, ["7:4"] = true },
-	claimed = { ["5:4"] = true, ["7:4"] = true, ["6:5"] = true } }
-local state = { version = 6, phase = "game", contentRules = "balance3",
-	round = 1, world = world,
+local city = {
+	id = 1,
+	owner = 1,
+	x = 6,
+	y = 5,
+	population = 2,
+	buildings = {},
+	worked = { ["5:4"] = true, ["7:4"] = true },
+	claimed = { ["5:4"] = true, ["7:4"] = true, ["6:5"] = true },
+}
+local state = {
+	version = 6,
+	phase = "game",
+	contentRules = "balance3",
+	round = 1,
+	world = world,
 	players = { { id = 1, civ = "iron", gold = 20, techs = {} } },
-	cities = { city }, units = {} }
+	cities = { city },
+	units = {},
+}
 Systems.migrate(state)
 local player = state.players[1]
 local cityYield = Systems.yields(player, city, state)
@@ -158,26 +188,50 @@ assert(Systems.yields(player, city, state).gold == 0, "Unworked tiles earn no go
 -- Every old save, including sparse1 maps, migrates without mutating terrain or cities.
 local oldState = {
 	phase = "game",
-	world = { width = 1, height = 1, tiles = { ["1:1"] = "desert" },
-		resources = {}, seed = 17, terrainYieldVersion = "sparse1" },
-	players = { { id = 1, visible = {}, explored = {} } }, cities = {}, units = {},
+	world = {
+		width = 1,
+		height = 1,
+		tiles = { ["1:1"] = "desert" },
+		resources = {},
+		seed = 17,
+		terrainYieldVersion = "sparse1",
+	},
+	players = { { id = 1, visible = {}, explored = {} } },
+	cities = {},
+	units = {},
 }
 local savedTiles = oldState.world.tiles
 World.migrate(oldState)
-assert(oldState.world.tiles == savedTiles and oldState.world.seed == 17,
-	"Migration preserves terrain and seed")
+assert(
+	oldState.world.tiles == savedTiles and oldState.world.seed == 17,
+	"Migration preserves terrain and seed"
+)
 assert(oldState.world.terrainYieldVersion == "civ6-1", "Sparse saves auto-migrate")
 sameYield(World.yields(oldState.world, 1, 1), 0, 0, 0, "Migrated desert")
 World.migrate(oldState)
 assert(oldState.world.tiles == savedTiles, "Migration is idempotent")
-local unversioned = { phase = "game", world = { width = 1, height = 1,
-	tiles = { ["1:1"] = "forest" }, resources = {} }, players = {}, cities = {}, units = {} }
+local unversioned = {
+	phase = "game",
+	world = { width = 1, height = 1, tiles = { ["1:1"] = "forest" }, resources = {} },
+	players = {},
+	cities = {},
+	units = {},
+}
 World.migrate(unversioned)
 assert(unversioned.world.terrainYieldVersion == "civ6-1", "Unversioned maps auto-migrate")
 sameYield(World.yields(unversioned.world, 1, 1), 2, 1, 0, "Old forest migrated")
 
-local projected = World.forPlayer({ phase = "game", round = 1, world = generated,
-	players = { { id = 1, visible = {}, explored = {} } }, cities = {}, units = {} }, 1)
+local projected = World.forPlayer(
+	{
+		phase = "game",
+		round = 1,
+		world = generated,
+		players = { { id = 1, visible = {}, explored = {} } },
+		cities = {},
+		units = {},
+	},
+	1
+)
 assert(projected.world.terrainYieldVersion == "civ6-1", "Observer uses current rules")
 local yieldEntry
 for _, entry in ipairs(Encyclopedia.entries("mechanics")) do
@@ -187,8 +241,15 @@ for _, entry in ipairs(Encyclopedia.entries("mechanics")) do
 	end
 end
 assert(yieldEntry)
-local help = table.concat(Encyclopedia.describe("mechanics", yieldEntry, nil,
-	{ world = { terrainYieldVersion = "civ6-1" } }), " ")
+local help = table.concat(
+	Encyclopedia.describe(
+		"mechanics",
+		yieldEntry,
+		nil,
+		{ world = { terrainYieldVersion = "civ6-1" } }
+	),
+	" "
+)
 assert(help:find("Civ VI tile yields", 1, true), "Codex documents current yields")
 
 -- Actual save writer round-trips the explicit new version and keeps nil old saves.
@@ -250,7 +311,10 @@ local sparseSave = {
 }
 Saves.save(1, sparseSave)
 local sparseLoaded = Saves.load(1)
-assert(sparseLoaded.world.terrainYieldVersion == "sparse1", "Disk contains old marker before migration")
+assert(
+	sparseLoaded.world.terrainYieldVersion == "sparse1",
+	"Disk contains old marker before migration"
+)
 World.migrate(sparseLoaded)
 assert(sparseLoaded.world.terrainYieldVersion == "civ6-1", "Loaded sparse save migrated")
 sameYield(World.yields(sparseLoaded.world, 1, 1), 0, 0, 0, "Loaded sparse yields migrate")

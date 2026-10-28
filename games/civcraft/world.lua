@@ -354,7 +354,12 @@ function W.yields(world, x, y, context)
 			end
 		end
 	end
-	return { food = food + extraFood, industry = industry + extraIndustry, science = science, gold = gold }
+	return {
+		food = food + extraFood,
+		industry = industry + extraIndustry,
+		science = science,
+		gold = gold,
+	}
 end
 -- Hex territory nearest owner; deterministic tie break by city ID.
 function W.territory(state, hex)
