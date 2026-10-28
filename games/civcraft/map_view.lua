@@ -201,11 +201,16 @@ function V.draw(ui, state, player, rect)
 					-- Banners are interactive hit targets, not just painted pixels.
 					-- Collect them even when the visual-only tile pass is skipped.
 					if canvas.layoutOnly then
-						local city = visibility ~= "hidden" and World.observedCity(state, player, x, y)
+						local city = visibility ~= "hidden"
+							and World.observedCity(state, player, x, y)
 						if
 							city
 							and not hidden["city:" .. tostring(city.id)]
-							and (city.remembered or city.owner == ui.playerID or visibility == "visible")
+							and (
+								city.remembered
+								or city.owner == ui.playerID
+								or visibility == "visible"
+							)
 						then
 							cityLabels[#cityLabels + 1] = {
 								city = city,
