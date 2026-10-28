@@ -4,6 +4,8 @@ local Values = dofile("/games/civcraft/ai_economy_values.lua")
 local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Works = dofile("/games/civcraft/tile_improvements.lua")
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
+local Specialties = dofile("/games/civcraft/ai_specialties.lua")
 local Production = {}
 
 local function inventory(view, player, systems, currentCity)
@@ -125,7 +127,14 @@ function Production.ranked(view, player, city, systems, canExpand)
 	local target = context.goal == "expedition" and "dragon"
 		or context.goal == "diplomatic" and not CouncilRules.eligible(view, player.id) and "councilhall"
 		or "bank"
-	Values.dependencies(systems.buildings, target, city.buildings, 400, dependencies)
+	Values.dependencies(
+		systems.buildings,
+		target,
+		(Sites.enabled(view) and city.effectiveBuildings or city.buildings) or {},
+		400,
+		dependencies,
+		view
+	)
 	local result = {}
 	local function add(kind, id, value, x, y)
 		if
@@ -139,7 +148,7 @@ function Production.ranked(view, player, city, systems, canExpand)
 		if city.project and city.project.kind == kind and city.project.id == id then
 			progress = city.project.progress
 		end
-		local cost = systems.projectCost(kind, id, player)
+		local cost = systems.projectCost(kind, id, player, city)
 		local turns =
 			math.max(1, math.ceil((cost - progress) / math.max(1, context.yields.industry)))
 		result[#result + 1] = {
@@ -224,9 +233,24 @@ function Production.ranked(view, player, city, systems, canExpand)
 			end
 		end
 	end
+	for _, choice in ipairs(Specialties.ranked(view, player, city, systems, context)) do
+		result[#result + 1] = choice
+	end
 	table.sort(result, function(a, b)
 		if a.score ~= b.score then
 			return a.score > b.score
+		end
+		if a.siteKind and b.siteKind then
+			local order = { works = 1, knowledge = 2, freight = 3 }
+			if a.siteKind ~= b.siteKind then
+				return order[a.siteKind] < order[b.siteKind]
+			end
+			if a.tileY ~= b.tileY then
+				return a.tileY < b.tileY
+			end
+			if a.tileX ~= b.tileX then
+				return a.tileX < b.tileX
+			end
 		end
 		return a.kind .. ":" .. a.id < b.kind .. ":" .. b.id
 	end)
