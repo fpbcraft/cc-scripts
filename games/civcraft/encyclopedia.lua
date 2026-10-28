@@ -17,7 +17,7 @@ local mechanics = {
 	{
 		id = "builders",
 		name = "BUILDERS AND TILE WORK",
-		text = "Landwork V3 Builders cost 22 industry, have two movement and three charges with no upkeep. Wheat Fields require Wheat Farming and fertile open flat land (+2 food); Quarries require Stone Tools and clear hills or stone (+2 industry); Lumber Camps require Crafting and woods or jungle (+1 industry). Only worked tiles produce yields. Oak fields add one food and Iron quarries add one industry. One successful improvement spends one charge and remaining movement; the final charge removes the Builder. Plan work from its inspector, choose a cyan tile, review yields and charges, then confirm. Append adds tasks up to remaining charges. Queued work pauses on visible threats, lost ownership, occupied or invalid routes. Resume or cancel in the inspector. Manual movement replaces work. Capture preserves charges and clears orders. Harvesting and feature removal are not included. City Farm/Quarry bonuses are retired; Homesteads unlock Tend Crops. Older profiles keep their original rules.",
+		text = "Landwork V3 Builders cost 22 industry, have two movement and three charges with no upkeep. Wheat Fields require Wheat Farming and fertile open flat land (+1 food); Quarries require Stone Tools and clear hills or stone (+1 industry); Lumber Camps require Crafting and woods or jungle (+1 industry). Only worked tiles produce yields. Oak fields add one food and Iron quarries add one industry. One successful improvement spends one charge and remaining movement; the final charge removes the Builder. Plan work from its inspector, choose a cyan tile, review yields and charges, then confirm. Append adds tasks up to remaining charges. Queued work pauses on visible threats, lost ownership, occupied or invalid routes. Resume or cancel in the inspector. Manual movement replaces work. Capture preserves charges and clears orders. Harvesting and feature removal are not included. City Farm/Quarry bonuses are retired; Homesteads unlock Tend Crops. Older profiles keep their original rules.",
 	},
 	{
 		id = "turns",
@@ -228,11 +228,11 @@ function E.describe(category, entry, player, state)
 		if
 			state
 			and state.world
-			and state.world.terrainYieldVersion == "sparse1"
+			and state.world.terrainYieldVersion == "civ6-1"
 			and entry.id == "yields"
 		then
 			lines[#lines + 1] =
-				"Sparse terrain: flat desert yields 0 food / 0 industry; elevated desert yields 0 / 1. Bare flat taiga yields 0 / 0; wooded, dense or elevated taiga yields 0 / 1. Deposits, improvements and natural landmarks still add their own yields."
+				"Civ VI tile yields: Plains 1 food / 1 production; Grassland 2 / 0; Desert, Badlands and Snow 0 / 0; Tundra 1 / 0. Hills add 1 production; Woods add 1 production; Rainforest and Marsh add 1 food. Coast gives 1 food / 1 gold; Ocean 1 food. Resources and Builder improvements add their yields. Existing saves migrate automatically."
 		end
 		return lines
 	end

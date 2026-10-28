@@ -359,6 +359,8 @@ function M.treasury(p, state, includeProjects)
 		if city.owner == p.id then
 			local effects = Economy.effects(city, state, M)
 			income = income + 2 + (city.population or 2) + effects.gold
+			-- Gold on worked coast/resource hexes enters the treasury once per turn.
+			income = income + M.yields(p, city, state, Hex, nil, true).gold
 			if
 				includeProjects ~= false
 				and ContentRules.usesP1Economy(p)
@@ -641,6 +643,7 @@ function M.yields(p, c, state, hex, owned, readOnly)
 	local food = center.food - 1 + jobs.food * 2
 	local industry = center.industry + jobs.wood * 2
 	local science = center.science - 1 + jobs.science * 2
+	local gold = 0
 	if state and state.world then
 		-- Replace abstract F/W/S worker counters with owned worked hexes.
 		local worked
@@ -657,10 +660,11 @@ function M.yields(p, c, state, hex, owned, readOnly)
 				food = food + tile.yield.food
 				industry = industry + tile.yield.industry
 				science = science + tile.yield.science
+				gold = gold + (tile.yield.gold or 0)
 			end
 		end
 	end
-	return { food = food, industry = industry, science = science }
+	return { food = food, industry = industry, science = science, gold = gold }
 end
 -- Stable city yield entry point for UI, AI and regression tests.
 function M.cityYield(state, city)

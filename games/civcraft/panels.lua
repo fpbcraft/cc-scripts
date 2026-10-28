@@ -7,15 +7,15 @@ function P.rows(r, rect, rows, model, key)
 	for _, row in ipairs(rows) do
 		local split = false
 		if row.yields then
-			local width = math.floor((rect.w - 11) / 3)
-			for _, kind in ipairs({ "food", "industry", "science" }) do
+			local width = math.floor((rect.w - 11) / 4)
+			for _, kind in ipairs({ "food", "industry", "science", "gold" }) do
 				if Icons.yieldWidth(r, row.yields[kind]) > width then
 					split = true
 				end
 			end
 		end
 		if split then
-			for _, kind in ipairs({ "food", "industry", "science" }) do
+			for _, kind in ipairs({ "food", "industry", "science", "gold" }) do
 				if (row.yields[kind] or 0) > 0 then
 					expanded[#expanded + 1] = { yieldKind = kind, value = row.yields[kind] }
 				end
@@ -48,8 +48,8 @@ function P.rows(r, rect, rows, model, key)
 			elseif row.yieldKind then
 				Icons.yieldValue(r, row.yieldKind, row.value, rect.x + 2, y + 3, rect.w - 4)
 			elseif row.yields then
-				local width = math.floor((rect.w - 4) / 3)
-				for n, kind in ipairs({ "food", "wood", "science" }) do
+				local width = math.floor((rect.w - 4) / 4)
+				for n, kind in ipairs({ "food", "wood", "science", "gold" }) do
 					Icons.yieldValue(
 						r,
 						kind,

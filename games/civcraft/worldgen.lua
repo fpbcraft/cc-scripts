@@ -372,7 +372,7 @@ function WorldGen.generate(seed, size, count, mapType, dimensions, checkpoint, t
 		size = size,
 		mapType = mapType,
 		generationVersion = WorldGen.version,
-		terrainYieldVersion = terrainYieldVersion or "sparse1",
+		terrainYieldVersion = terrainYieldVersion or "civ6-1",
 		contentVersion = 1,
 		tiles = {},
 		geography = {},

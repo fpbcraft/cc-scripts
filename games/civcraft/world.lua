@@ -112,7 +112,7 @@ local function mapMemory(player, world)
 end
 
 W.generationVersion = Generator.version
-W.currentTerrainYieldVersion = "sparse1"
+W.currentTerrainYieldVersion = "civ6-1"
 function W.generate(seed, size, count, mapType, context)
 	size = W.sizes[size] and size or "standard"
 	seed = math.floor(tonumber(seed) or 12345) % 1000000
@@ -181,6 +181,8 @@ function W.migrate(state)
 		world.mapType = world.mapType or "continents"
 		world.resources = world.resources or {}
 		world.generationVersion = world.generationVersion or 1
+		-- Upgrade all existing saves in place; no world regeneration or reset.
+		world.terrainYieldVersion = W.currentTerrainYieldVersion
 	end
 	state.mapType = state.mapType or state.world and state.world.mapType or "continents"
 	return state
@@ -293,31 +295,38 @@ function W.expandCity(state, hex, city)
 	return true, tile
 end
 function W.yields(world, x, y, context)
-	local food, industry =
-		Biomes.yields(Biomes.tile(world, x, y), world and world.terrainYieldVersion)
+	local food, industry, gold = Biomes.yields(Biomes.tile(world, x, y))
 	local science = 0
 	local deposit = W.deposit(world, x, y)
+	-- Match Civ VI where a resource has a direct counterpart. CivCraft-only
+	-- deposits (timber, zinc, redstone) retain their own modifiers.
 	if deposit == "grain" or deposit == "fish" then
-		food = food + 2
-	elseif deposit == "stone" or deposit == "timber" then
+		food = food + 1
+	elseif deposit == "stone" then
+		industry = industry + 1
+	elseif deposit == "timber" then
 		industry = industry + 2
 	elseif deposit == "iron" then
-		industry = industry + 1
+		science = science + 1
 	elseif deposit == "saltpeter" then
-		science = science + 2
+		food, industry = food + 1, industry + 1
 	elseif deposit == "horses" then
-		food = food + 1
+		food, industry = food + 1, industry + 1
 	end
+
 	local landmark = world and (world.landmarks or {})[key(x, y)]
 	local extra = landmark and landmark.natural and Content.naturalWonders[landmark.kind] or {}
 	food = food + (extra.food or 0)
 	industry = industry + (extra.industry or 0)
 	science = science + (extra.science or 0)
-	if deposit == "copper" or deposit == "zinc" then
+	if deposit == "copper" then
+		gold = gold + 2
+	elseif deposit == "zinc" then
 		industry = industry + 1
-	end
-	if deposit == "redstone" or deposit == "diamond" then
+	elseif deposit == "redstone" then
 		science = science + 1
+	elseif deposit == "diamond" then
+		gold = gold + 3
 	end
 	local extraFood, extraIndustry = Works.bonus(world, x, y)
 	local improvement = (world.improvements or {})[key(x, y)]
@@ -345,7 +354,7 @@ function W.yields(world, x, y, context)
 			end
 		end
 	end
-	return { food = food + extraFood, industry = industry + extraIndustry, science = science }
+	return { food = food + extraFood, industry = industry + extraIndustry, science = science, gold = gold }
 end
 -- Hex territory nearest owner; deterministic tie break by city ID.
 function W.territory(state, hex)

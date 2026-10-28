@@ -73,19 +73,19 @@ c.buildings.housing = true
 assert(S.canProject(p, c, "tend"))
 local before = S.yields(p, c, state, H)
 local preview = assert(Works.preview(state, p, u, "farm", 5, 4, S))
-assert(preview.chargesAfter == 2 and preview.after.food - preview.before.food == 3)
+assert(preview.chargesAfter == 2 and preview.after.food - preview.before.food == 2)
 assert(not state.world.improvements and u.charges == 3, "Preview cannot spend or initialize work")
 assert(A.apply(state, 0, { action = "improve", unitID = 2, x = 5, y = 4, kind = "farm" }, S))
 assert(u.charges == 2 and u.movesLeft == 0 and u.actedThisRound)
 assert(
-	S.yields(p, c, state, H).food - before.food == 3,
+	S.yields(p, c, state, H).food - before.food == 2,
 	"Only the staffed field, including faction bonus, adds food"
 )
 assert(not A.apply(state, 0, { action = "improve", unitID = 2, x = 5, y = 4, kind = "farm" }, S))
 assert(u.charges == 2)
 c.buildings.farm, c.buildings.mine = true, true
 assert(
-	S.yields(p, c, state, H).food - before.food == 3,
+	S.yields(p, c, state, H).food - before.food == 2,
 	"Retired city Farm cannot duplicate tile output"
 )
 assert(S.centerYields(p, c, state).industry == 1, "Retired city Quarry cannot duplicate industry")
@@ -250,7 +250,7 @@ function ui:command(action, request)
 end
 ui:armPlacement("work", ui.state.units[1], "farm")
 ui:tile(5, 4)
-assert(ui.pendingMove.workPreview.after.food - ui.pendingMove.workPreview.before.food == 3)
+assert(ui.pendingMove.workPreview.after.food - ui.pendingMove.workPreview.before.food == 2)
 assert(
 	u.charges == 3 and not state.world.improvements,
 	"Map selection previews instead of spending"
