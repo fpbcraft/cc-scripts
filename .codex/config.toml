@@ -1,0 +1,10 @@
+# Profile 6 adapted to the requested Sol low / Luna max policy.
+model = "gpt-6.1-sol"
+model_reasoning_effort = "low"
+
+[agents]
+enabled = true
+# Preserve the project limit: two implementation workers and one reviewer.
+max_concurrent_threads_per_session = 3
+default_subagent_model = "gpt-6-luna"
+default_subagent_reasoning_effort = "max"
