@@ -381,3 +381,19 @@ assert(not Sites.canPlace(state, p, c, "works", 5, 4))
 print(
 	"PASS: opponent public occupation stays private-safe and shared tile reservations reject conflicting development"
 )
+
+-- Redevelopment must disclose the current investment, not a stale paused copy.
+state, p, c = fixture()
+assert(A.apply(state, 0, { action = "placeSite", city = 1, kind = "works", x = 5, y = 4 }, S))
+assert(Sites.advance(state, p, c, 30))
+c.projectProgress = { ["building:press"] = 4 }
+c.project = { kind = "building", id = "press", progress = 17 }
+local request = { action = "redevelopSite", city = 1, siteId = 1, kind = "knowledge", x = 5, y = 4 }
+local losses = assert(Sites.preview(state, p, c, request)).lostProgress
+assert(#losses == 1 and losses[1].id == "press" and losses[1].progress == 17)
+assert(c.project.progress == 17 and c.projectProgress["building:press"] == 4)
+assert(A.apply(state, 0, request, S))
+assert(c.projectProgress["building:press"] == 17)
+assert(Sites.advance(state, p, c, 45))
+assert(c.projectProgress["building:press"] == nil)
+print("PASS: redevelopment discloses active family progress exactly once without mutating previews")

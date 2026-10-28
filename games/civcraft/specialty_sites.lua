@@ -447,11 +447,19 @@ function Sites.preview(state, p, city, request)
 		end
 	end
 	if original and original.kind ~= request.kind then
+		local amounts = {}
 		for progressKey, amount in pairs(city.projectProgress or {}) do
 			local id = progressKey:match("^building:(.+)$")
 			if id and Sites.families[id] == original.kind then
-				lostProgress[#lostProgress + 1] = { id = id, progress = amount }
+				amounts[id] = amount
 			end
+		end
+		local active = city.project
+		if active and active.kind == "building" and Sites.families[active.id] == original.kind then
+			amounts[active.id] = active.progress
+		end
+		for id, amount in pairs(amounts) do
+			lostProgress[#lostProgress + 1] = { id = id, progress = amount }
 		end
 	end
 	table.sort(lostProgress, function(a, b)
