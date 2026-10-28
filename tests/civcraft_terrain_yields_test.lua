@@ -185,6 +185,14 @@ city.worked["7:4"] = nil
 assert(Systems.treasury(player, state).income == income - 3, "Worked tile gold enters income")
 assert(Systems.yields(player, city, state).gold == 0, "Unworked tiles earn no gold")
 
+-- Mountains are not valid worked tiles, even when controlled by a city.
+world.tiles["6:6"] = "mountain"
+world.geography["6:6"] = natural("plains", "mountain", "none")
+city.claimed["6:6"] = true
+for _, tile in ipairs(Systems.workable(state, city)) do
+	assert(tile.key ~= "6:6", "Mountains cannot be worked")
+end
+
 -- Every old save, including sparse1 maps, migrates without mutating terrain or cities.
 local oldState = {
 	phase = "game",
