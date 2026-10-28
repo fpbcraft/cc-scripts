@@ -21,7 +21,7 @@ local World = dofile("games/civcraft/world.lua")
 local Systems = dofile("games/civcraft/systems.lua")
 local Reports = dofile("games/civcraft/reports.lua")
 local Hex = dofile("games/civcraft/hex.lua")
-local world = World.generate(75123, "compact", 2, "continents")
+local world = World.generate(75123, "standard", 2, "continents")
 local a, b = world.starts[1], world.starts[2]
 local state = {
 	phase = "game",
@@ -567,7 +567,7 @@ for _, graphics in ipairs({ false, true }) do
 			end
 			ui:close()
 			checks = checks + 1
-			print(string.format("CIVCRAFT controls: %s %dx%d completed in %.2fs", graphics and "graphics" or "text", cw, ch, os.clock() - started), flush)
+			print(string.format("CIVCRAFT controls: %s %dx%d completed in %.2fs", graphics and "graphics" or "text", cw, ch, os.clock() - started))
 		end
 	end
 end
