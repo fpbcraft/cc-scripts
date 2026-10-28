@@ -7,6 +7,12 @@ Each entry follows the required register: symptom, evidence, root cause, affecte
 
 ## BAL-00 — Standard-hostiles captured settler causes a deterministic runtime crash (CONFIRMED runtime integrity bug; P0 experiment blocker)
 
+**M0 resolution:** fixed in the roadmap implementation branch. Captured civilians
+are excluded from mob scheduling/spawn counts, and unassociated legacy mobs no
+longer index a nil spawn key. Current native/save evidence is in
+[M0 baseline verification](../../docs/M0-BASELINE.md). The original failure
+evidence below remains historical; no old experiment is relabeled as fixed.
+
 **Symptom.** A standard-hostiles match can abort on round 15 instead of producing a result. This is an engine error, not a civilization loss, and must be excluded from win-rate or pacing scoring.
 
 **Evidence.** The standalone native fixture [`reproduce_hostile_capture.py`](reproduce_hostile_capture.py) uses the shared `engine.newGame`, `Engine.pump` and `Engine.advance` path for seed 95117, compact Pangaea, standard hostiles and Forge-v-Forge. The raw result is [`hostile_capture_reproduction.json`](../../../../tools/civcraft_lab/results/hostile_capture_reproduction.json): CraftOS-PC 2.8.3 reports `games/civcraft/hostiles.lua:103: table index is nil` at `errorRound=15`, after `completedRounds=14`. Immediately before the error, unit 22 is `{kind="settler", owner=-2147483647, spawner=nil}`. The archived Lupa pilot independently reported the same line for seed 95117 Forge-v-Forge and Scholar-v-Iron; Lupa was not installed in this reproduction environment, so the fresh runtime proof is native only.

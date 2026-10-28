@@ -1,6 +1,10 @@
 # Scope and current evidence
 
-The research goal remains active. The current review/implementation sequence is
+Research/simulation testing is paused by the user's implementation request.
+The accepted [ADRs](../../docs/adr/README.md) and
+[roadmap](../../docs/ROADMAP-balance.md) govern the new mechanics; the
+[M0 record](../../docs/M0-BASELINE.md) covers current baseline verification.
+The table below retains the research evidence and its limits. The historical review sequence is
 [FIRST_CHANGE_PACKAGE.md](FIRST_CHANGE_PACKAGE.md). The user's specific H1
 request is implemented: healer support works outside owned territory, while
 ordinary rest/fortify healing remains territory-restricted. P1 has been approved and implemented as a versioned prototype; its validation
