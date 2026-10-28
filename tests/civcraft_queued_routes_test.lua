@@ -559,18 +559,20 @@ print(
 		clipWrites
 	)
 )
-local metrics = assert(fs.open("/civcraft-route-overlay-metrics.txt", "w"))
-metrics.write(
-	string.format(
-		"cold_seconds=%.3f\ncold_searches=%d\nwarm_seconds=%.3f\nwarm_searches=%d\nclipped_dotted_writes=%d\n",
-		coldSeconds,
-		coldSearches,
-		warmSeconds,
-		warmSearches,
-		clipWrites
+if fs and fs.open then
+	local metrics = assert(fs.open("/civcraft-route-overlay-metrics.txt", "w"))
+	metrics.write(
+		string.format(
+			"cold_seconds=%.3f\ncold_searches=%d\nwarm_seconds=%.3f\nwarm_searches=%d\nclipped_dotted_writes=%d\n",
+			coldSeconds,
+			coldSearches,
+			warmSeconds,
+			warmSearches,
+			clipWrites
+		)
 	)
-)
-metrics.close()
+	metrics.close()
+end
 
 state, unit = fixture()
 state.units = { unit }
