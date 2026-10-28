@@ -156,18 +156,22 @@ local function known(state, p, x, y)
 		if not tile or Biomes.terrain(tile) ~= memory.tile then
 			tile = Biomes.legacy(memory.tile)
 		end
-		return tile, memory.resource or nil, p.mapMemory.rails and p.mapMemory.rails[k]
+		return tile,
+			memory.resource or nil,
+			p.mapMemory.rails and p.mapMemory.rails[k],
+			memory.road == true
 	end
 	return Biomes.tile(state.world, x, y),
 		(state.world.resources or {})[k],
-		(state.world.rails or {})[k]
+		(state.world.rails or {})[k],
+		(state.world.roads or {})[k]
 end
 local function revealed(p, id)
 	local r = Content.resources[id]
 	return r and (not r.tech or (p.techs or {})[r.tech])
 end
 function Sites.bonus(state, p, kind, x, y)
-	local tile, resource, rail = known(state, p, x, y)
+	local tile, resource, rail, road = known(state, p, x, y)
 	if not tile then
 		return 0
 	end
@@ -181,7 +185,7 @@ function Sites.bonus(state, p, kind, x, y)
 	then
 		return 1
 	end
-	if kind == "freight" and (rail or (state.world.roads or {})[key(x, y)]) then
+	if kind == "freight" and (rail or road) then
 		return 1
 	end
 	for _, n in ipairs(Hex.neighbours(x, y, state)) do
@@ -296,6 +300,25 @@ function Sites.canPlace(state, p, city, kind, x, y, projectId, sourceId)
 	end
 	return true
 end
+function Sites.public(state, city, site)
+	local p = owner(state, city)
+	local tile = Biomes.tile(state.world, site.x, site.y)
+	local blocked = tile.elevation == "mountain"
+		or tile.biome == "coast"
+		or tile.biome == "ocean"
+		or world().territoryCity(state, Hex, site.x, site.y) ~= city
+		or (state.world.landmarks or {})[key(site.x, site.y)] ~= nil
+		or (state.world.improvements or {})[key(site.x, site.y)] ~= nil
+	return {
+		id = site.id,
+		kind = site.kind,
+		x = site.x,
+		y = site.y,
+		city = city.id,
+		owner = city.owner,
+		inactive = blocked or p and occupied(state, p, site.x, site.y, false) or nil,
+	}
+end
 function Sites.active(state, city, site)
 	local p = owner(state, city)
 	local ok, why = geography(state, p, city, site.kind, site.x, site.y)
@@ -347,6 +370,43 @@ function Sites.effects(state, city)
 	end
 	return result
 end
+function Sites.owned(state, p, city)
+	local result = {
+		focus = Sites.allowance(state, city),
+		siteProjectStatus = {},
+		familyAvailability = {},
+		effectiveBuildings = {},
+	}
+	for _, kind in ipairs(Sites.order) do
+		local site = (city.sites or {})[kind]
+		local active, reason = false, "Place a " .. Sites.definitions[kind].name
+		if site then
+			active, reason = Sites.active(state, city, site)
+		end
+		result.familyAvailability[kind] =
+			{ available = active, reason = not active and reason or nil }
+	end
+	for id, pr in pairs(city.siteProjects or {}) do
+		local legal, reason =
+			Sites.canPlace(state, p, city, pr.kind, pr.x, pr.y, pr.id, pr.sourceSiteId)
+		if legal and occupied(state, p, pr.x, pr.y, false) then
+			legal, reason = false, "Hostile unit occupies site"
+		end
+		result.siteProjectStatus[id] = {
+			paused = not legal,
+			reason = not legal and reason or nil,
+			selected = city.project ~= nil
+				and city.project.kind == "site"
+				and city.project.id == id,
+			cost = Sites.cost(p, pr),
+			progress = pr.progress,
+		}
+	end
+	for id in pairs(city.buildings or {}) do
+		result.effectiveBuildings[id] = Sites.effectiveBuilding(state, city, id)
+	end
+	return result
+end
 function Sites.cost(p, pr)
 	return Campaign.cost(30, p) + (pr.sourceSiteId and Campaign.cost(15, p) or 0)
 end
@@ -370,7 +430,7 @@ function Sites.pause(city)
 	end
 end
 function Sites.preview(state, p, city, request)
-	local sourceId = request.siteId
+	local sourceId = request.action == "redevelopSite" and request.siteId or nil
 	local ok, why =
 		Sites.canPlace(state, p, city, request.kind, request.x, request.y, nil, sourceId)
 	if not ok then

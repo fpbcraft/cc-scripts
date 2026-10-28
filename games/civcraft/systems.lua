@@ -580,9 +580,10 @@ function M.techCost(id, player)
 	local tech = M.techs[id]
 	return tech and CampaignRules.cost(tech.cost, player) or nil
 end
-function M.projectCost(kind, id, player)
+function M.projectCost(kind, id, player, city)
 	if kind == "site" then
-		return Sites.cost(player, {})
+		local retained = city and (city.siteProjects or {})[id]
+		return retained and Sites.cost(player, retained) or nil
 	end
 	if kind == "project" then
 		return M.projects[id] and M.projects[id].divisor or nil
@@ -956,12 +957,7 @@ function M.production(state, hex)
 				if c.project and c.project.kind == "site" then
 					local complete, record = Sites.advance(state, p, c, yield.industry)
 					if complete then
-						Events.notice(
-							state,
-							"site",
-							{ x = record.x, y = record.y, owner = c.owner },
-							record.kind
-						)
+						Events.site(state, c, record)
 					end
 				end
 				if c.project and c.project.kind ~= "project" and c.project.kind ~= "site" then

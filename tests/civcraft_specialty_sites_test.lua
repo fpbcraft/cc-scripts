@@ -294,3 +294,90 @@ end
 print(
 	"PASS: rejection atomicity, all building roles, real production, fog bonuses, capture/invalidation, schema rejection, old profiles and native save/reload"
 )
+-- Shared forecasts include paid redevelopment and native event metadata survives projection.
+state, p, c = fixture()
+assert(A.apply(state, 0, { action = "placeSite", city = 1, kind = "works", x = 5, y = 4 }, S))
+c.siteProjects[1].progress = 29
+c.project.progress = 29
+S.production(state, H)
+local streams = state.eventJournal.streams[0].entries
+local completion
+for _, event in ipairs(streams) do
+	if event.type == "site" then
+		completion = event
+	end
+end
+assert(completion and completion.specialty.cityId == 1 and completion.specialty.siteId == 1)
+assert(completion.specialty.kind == "works" and completion.specialty.sourceSiteId == nil)
+assert(
+	A.apply(
+		state,
+		0,
+		{ action = "redevelopSite", city = 1, siteId = 1, kind = "knowledge", x = 5, y = 4 },
+		S
+	)
+)
+assert(S.projectCost("site", 2, p, c) == 45)
+local Banner = dofile("/games/civcraft/city_banner.lua")
+local model = Banner.model(state, p, c, S)
+local yields = S.yields(p, c, state, H, nil, true)
+assert(model.production == "P" .. math.ceil(45 / math.max(1, yields.industry)) .. "T")
+local own = W.forPlayer(state, 0).cities[1]
+assert(own.focus.used == 1 and own.siteProjectStatus[2].cost == 45)
+assert(own.familyAvailability.works.available and not own.familyAvailability.knowledge.available)
+own.siteProjectStatus[2].cost = 999
+assert(Sites.owned(state, p, c).siteProjectStatus[2].cost == 45)
+c.siteProjects[2].progress = 44
+c.project.progress = 44
+S.production(state, H)
+for _, event in ipairs(state.eventJournal.streams[0].entries) do
+	if event.type == "site" then
+		completion = event
+	end
+end
+assert(completion.specialty.siteId == 2 and completion.specialty.sourceSiteId == 1)
+-- Known road bonuses agree in host forecasts, copied snapshots and remembered fog.
+state, p, c = fixture()
+state.world.roads = { ["5:4"] = true }
+W.reveal(state, H, S)
+local function roadParity(expected)
+	local projectedState = W.forPlayer(state, 0)
+	assert(Sites.bonus(state, p, "freight", 5, 4) == expected)
+	assert(Sites.bonus(projectedState, projectedState.players[1], "freight", 5, 4) == expected)
+end
+roadParity(1)
+p.visible["5:4"] = nil
+state.world.roads["5:4"] = nil
+roadParity(1)
+W.reveal(state, H, S)
+roadParity(0)
+print(
+	"PASS: projected completion identities, paid redevelopment forecasts, owned status and observed-road parity"
+)
+-- Opponent site projections include only visible occupation, never private research/queues.
+state, p, c = fixture()
+assert(A.apply(state, 0, { action = "placeSite", city = 1, kind = "works", x = 5, y = 4 }, S))
+assert(Sites.advance(state, p, c, 30))
+local rival = state.players[2]
+rival.visible = { ["5:4"] = true }
+rival.explored = { ["5:4"] = true }
+p.techs.engineering = nil
+local public = W.forPlayer(state, 1).world.specialtySites["5:4"]
+assert(public.kind == "works" and not public.inactive and not public.reason and not public.tech)
+state.units = { { id = 88, owner = -1, kind = "zombie", x = 5, y = 4, movesLeft = 0 } }
+public = W.forPlayer(state, 1).world.specialtySites["5:4"]
+assert(public.inactive and public.siteProjectStatus == nil)
+-- Site and Builder/wonder requests share hex exclusivity; rails may coexist by design.
+state, p, c = fixture()
+assert(A.apply(state, 0, { action = "placeSite", city = 1, kind = "works", x = 5, y = 4 }, S))
+local Improvements = dofile("/games/civcraft/tile_improvements.lua")
+local Landmarks = dofile("/games/civcraft/landmarks.lua")
+assert(not Improvements.canPlace(state, p, "farm", 5, 4, S))
+local wonder = next(S.wonders)
+assert(not Landmarks.canPlace(state, c, wonder, 5, 4, S))
+assert(A.apply(state, 0, { action = "cancelSite", city = 1, projectId = 1 }, S))
+c.project = { kind = "wonder", id = wonder, x = 5, y = 4, progress = 0 }
+assert(not Sites.canPlace(state, p, c, "works", 5, 4))
+print(
+	"PASS: opponent public occupation stays private-safe and shared tile reservations reject conflicting development"
+)

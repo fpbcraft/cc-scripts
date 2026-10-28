@@ -117,6 +117,7 @@ local notices = {
 	spawn = true,
 	building = true,
 	wonder = true,
+	site = true,
 	landmark = true,
 	research = true,
 	order = true,
@@ -147,6 +148,14 @@ function VisibilityEvents.project(event, observer)
 		actor = VisibilityEvents.actor(event.actor),
 		target = event.target and point(event.target),
 		content = type(event.content) == "string" and event.content or nil,
+		specialty = event.type == "site" and event.specialty and {
+			cityId = event.specialty.cityId,
+			siteId = event.specialty.siteId,
+			sourceSiteId = event.specialty.sourceSiteId,
+			kind = event.specialty.kind,
+			x = event.specialty.x,
+			y = event.specialty.y,
+		} or nil,
 	}
 end
 

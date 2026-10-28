@@ -431,6 +431,7 @@ function W.reveal(state, hex, systems, pendingNotices)
 				tile = copy(world.tiles[tileKey]),
 				geography = copy((world.geography or {})[tileKey]),
 				resource = (world.resources or {})[tileKey] or false,
+				road = Sites.enabled(state) and ((world.roads or {})[tileKey] == true) or nil,
 				improvement = world.improvements and (copy(world.improvements[tileKey]) or false)
 					or nil,
 				owner = claim and claim.owner or false,
@@ -446,14 +447,7 @@ function W.reveal(state, hex, systems, pendingNotices)
 				for _, c in ipairs(state.cities or {}) do
 					for _, site in pairs(c.sites or {}) do
 						if site.x == x and site.y == y then
-							memory.sites[tileKey] = {
-								id = site.id,
-								kind = site.kind,
-								x = x,
-								y = y,
-								city = c.id,
-								owner = c.owner,
-							}
+							memory.sites[tileKey] = Sites.public(state, c, site)
 						end
 					end
 				end
@@ -642,6 +636,7 @@ function W.forPlayer(state, id, afterSeq)
 			rails = {},
 			observedOwners = {},
 			specialtySites = Sites.enabled(state) and {} or nil,
+			roads = Sites.enabled(state) and {} or nil,
 			contentVersion = world.contentVersion,
 			generationVersion = world.generationVersion,
 			mapScaleVersion = world.mapScaleVersion,
@@ -674,18 +669,14 @@ function W.forPlayer(state, id, afterSeq)
 						view.world.improvements[k] = copy(record.improvement) or nil
 					end
 					if Sites.enabled(state) then
+						view.world.roads[k] = visible and ((world.roads or {})[k] == true)
+							or not visible and record and record.road == true
+							or nil
 						if visible then
 							for _, c in ipairs(state.cities or {}) do
 								for _, site in pairs(c.sites or {}) do
 									if site.x == x and site.y == y then
-										view.world.specialtySites[k] = {
-											id = site.id,
-											kind = site.kind,
-											x = x,
-											y = y,
-											city = c.id,
-											owner = c.owner,
-										}
+										view.world.specialtySites[k] = Sites.public(state, c, site)
 									end
 								end
 							end
@@ -727,6 +718,12 @@ function W.forPlayer(state, id, afterSeq)
 			if c.owner == id then
 				for field, value in pairs(c) do
 					copy[field] = value
+				end
+				if Sites.enabled(state) then
+					local details = Sites.owned(state, observer, c)
+					for field, value in pairs(details) do
+						copy[field] = value
+					end
 				end
 			else
 				copy = {
