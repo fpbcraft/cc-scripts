@@ -1,7 +1,12 @@
 local Hex = dofile("/games/civcraft/hex.lua")
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
+local Specialties = dofile("/games/civcraft/ai_specialties.lua")
 local CityRoles = {}
 
 function CityRoles.choose(view, player, systems)
+	if Sites.enabled(view) then
+		return Specialties.roles(view, player, systems)
+	end
 	local cities, scores, assigned, result = {}, {}, {}, {}
 	for _, city in ipairs(view.cities) do
 		if city.owner == player.id then

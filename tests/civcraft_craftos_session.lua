@@ -20,6 +20,10 @@ local includeRoutes = false
 local routeRecord
 local routeResumed = false
 for _, argument in ipairs({ ... }) do
+	if argument == "--specialization" then
+		includeDevelopment = true
+		developmentProfile = "balance5"
+	end
 	if argument == "--landwork" then
 		includeDevelopment = true
 		developmentProfile = "balance3"

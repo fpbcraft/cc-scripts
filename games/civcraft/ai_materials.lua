@@ -1,5 +1,6 @@
 local Villages = dofile("/games/civcraft/villages.lua")
 local CouncilRules = dofile("/games/civcraft/council_rules.lua")
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
 local Materials = {}
 
 function Materials.orders(view, player, systems)
@@ -8,7 +9,7 @@ function Materials.orders(view, player, systems)
 		if city.owner == player.id then
 			cities = cities + 1
 			market = market or city.buildings.market == true
-			if city.buildings.mixer and player.techs.brassworking then
+			if Sites.effectiveBuilding(view, city, "mixer") and player.techs.brassworking then
 				targets.copper, targets.zinc = 1, 1
 			end
 			local project = city.project

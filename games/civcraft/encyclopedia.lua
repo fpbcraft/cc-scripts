@@ -1,3 +1,4 @@
+local Sites = dofile("/games/civcraft/specialty_sites.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 -- Content-derived entries stay in sync with the simulation's costs and unlocks.
@@ -184,14 +185,27 @@ mechanics[#mechanics + 1] = {
 	name = "AI DIFFICULTY",
 	text = "The host selects each AI difficulty in Campaign Options before starting. Settler and Chieftain use shorter planning and sometimes choose near-best options; they initiate fewer wars. Prince is the competent baseline. King and Deity search more legal tactical choices, anticipate exposure, plan cooperative follow-up attacks and consider observed future city yields. Difficulty does not grant gold, supplies, combat strength, extra moves, instant production or unexplored map knowledge. Fixed civilization personality still governs preferences. Hostile-mob difficulty is a separate setting. Existing campaigns default to Prince.",
 }
+mechanics[#mechanics + 1] = {
+	id = "specialties",
+	name = "SPECIALTY SITES AND FOCUS",
+	text = "In Specialization V5, city production > SITES places Create Works (W), Ponder Campus (K) or Freight Yard (F) on owned explored land within three hexes. One completed or reserved site uses one focus slot; population 1-3 allows one, 4-6 two, 7+ three. Basics, defenses and ordinary improvements use none. Population loss keeps existing sites and queued work; only new slots wait for growth. Sites cost 30 base industry, scaled by speed. Each gives one city yield plus at most one local bonus; inspect the placement preview. Sites keep the ordinary worked tile yield but cannot share a Builder improvement or wonder. Redevelopment costs 45 base industry. The old site operates until replacement; changing role discards the old family buildings and saved family construction without refund. Moving the same role retains them. Canceling site construction forfeits invested industry, releases its reservation and retains any redevelopment source. Ponder, Tend and Trade remain available without a site. End Staging requires Nether Portal, not a Knowledge site, until the later End redesign. Hostile occupation or invalid terrain/ownership pauses output; recovery restores it. No SU or Trader routes are created by a site.",
+}
 local function title(id)
 	return id:gsub("_", " "):upper()
 end
 function E.entries(category, context)
 	if category == "mechanics" then
-		return mechanics
+		local result = {}
+		for _, entry in ipairs(mechanics) do
+			if entry.id ~= "specialties" or Sites.enabled(context) then
+				result[#result + 1] = entry
+			end
+		end
+		return result
 	end
-	local source = category == "improvements" and Works.definitions
+	local source = category == "specialties"
+			and (Sites.enabled(context) and Sites.definitions or {})
+		or category == "improvements" and Works.definitions
 		or category == "wonders" and Systems.wonders
 		or category == "projects" and Systems.projects
 		or category == "sites" and Systems.naturalWonders
@@ -219,6 +233,18 @@ function E.describe(category, entry, player, state)
 		player = context
 	end
 	if entry.text then
+		if Sites.enabled(state or player) and entry.id == "create" then
+			return {
+				"Advanced industry requires an active Create Works site. The V5 short chains are: Press -> Crushing/Belt Logistics; Nether Portal -> Blaze Burner -> Heated Mixer -> Deployer -> Assembly -> Crafter or Steam Plant. Mixer brass conversion and Forge workshop bonuses require an active Works. Basics such as Furnace and Smithy do not need a site. SU, fuel and machine priorities arrive in a later milestone.",
+			}
+		end
+		if Sites.enabled(state or player) and entry.id == "production" then
+			return {
+				entry.text,
+				"Specialty construction is in SITES. One site uses one focus slot. Placement and paid redevelopment show costs, local bonuses and losses before confirmation. Paused sites keep their hex and focus reservation; cancel explicitly to release them.",
+				"Ponder Research needs basic Library, Tend Crops basic Homesteads and Trade Contract basic Trading Hall, with separate unchanged remainders. End Staging needs Nether Portal without a specialty requirement.",
+			}
+		end
 		if ContentRules.startsWithSettler(state or player) and entry.id == "territory" then
 			return {
 				"You start with one Settler and one Stone Guard. No city or borders are pre-founded. Explore with either unit, move your Settler if desired, then choose FOUND CAPITAL on a legal land tile with movement remaining. Your first founded city becomes your original capital. The starting Settler is free and does not count as a trained Settler. New cities use the current population and growth rules. Later Settlers consume population when trained. "
@@ -282,6 +308,16 @@ function E.describe(category, entry, player, state)
 	end
 	local record = entry.record
 	local lines = {}
+	if category == "specialties" then
+		return {
+			"One focus slot. 30 base industry, scaled by speed; +1 "
+				.. record.output
+				.. " plus at most one local bonus.",
+			dofile("/games/civcraft/specialty_view.lua").bonuses[entry.id],
+			"Owned explored land within three hexes, excluding improvements, wonders and other sites. No citizen needed for site output; the tile remains workable.",
+			"Redevelopment costs 45 base industry. Role changes discard family buildings/progress; same-role moves retain them. See SPECIALTY SITES AND FOCUS in HELP.",
+		}
+	end
 	if category == "improvements" then
 		local placement = entry.id == "farm" and "Fertile open flat land"
 			or entry.id == "quarry" and "Clear hill or stone deposit"
@@ -400,7 +436,19 @@ function E.describe(category, entry, player, state)
 	if record.age then
 		lines[#lines + 1] = "Age: " .. Systems.ages[record.age].name
 	end
-	for _, need in ipairs(category == "buildings" and record.requires or {}) do
+	if category == "buildings" and Sites.enabled(state or player) then
+		local family = Sites.families[entry.id]
+		lines[#lines + 1] = family
+				and ("Requires active " .. Sites.definitions[family].name .. "; no extra focus slot.")
+			or "Basic or End building: no specialty slot."
+		if entry.id == "observatory" then
+			lines[#lines + 1] =
+				"Temporary End bridge: Nether Portal only; no Enchanting Room or specialty required."
+		end
+	end
+	for _, need in
+		ipairs(category == "buildings" and Sites.prerequisites(state or player, entry.id) or {})
+	do
 		lines[#lines + 1] = "Required building: " .. Systems.label("building", need)
 	end
 	if
