@@ -221,6 +221,29 @@ if term and fs and textutils then
 	end
 	actual.r.text = originalText
 	assert(table.concat(textSeen, " "):find("LOSE", 1, true))
+	-- A newly updated active family investment replaces stale saved progress in consent.
+	local oldConfirm
+	draw()
+	for _, b in ipairs(actual.r.buttons) do
+		if b.label == "CONFIRM" then
+			oldConfirm = b
+		end
+	end
+	assert(oldConfirm)
+	local beforeLossUpdate = last
+	assert(S.queue(p, c, "building", "press", state, H))
+	c.project.progress = 23
+	c.projectProgress["building:press"] = 3
+	actual.state = W.forPlayer(state, 0)
+	click(oldConfirm)
+	assert(last == beforeLossUpdate and c.project.kind == "building" and c.project.progress == 23)
+	local pressLoss
+	for _, loss in ipairs(actual.pendingMove.sitePreview.lostProgress) do
+		if loss.id == "press" then
+			pressLoss = loss.progress
+		end
+	end
+	assert(pressLoss == 23, "UI must review the current active investment exactly once")
 	button("CONFIRM")
 	assert(accepted and last.action == "redevelopSite" and c.sites.works and c.buildings.workshop)
 	local Saves = dofile("/games/civcraft/saves.lua")
@@ -291,6 +314,16 @@ if term and fs and textutils then
 		"Stale rendered consent must not discard newer investment"
 	)
 	button("KEEP")
+	-- Ownership invalidation hides cached losses and cannot cancel another owner's project.
+	cityMenu()
+	button("CANCEL K", true)
+	local beforeCapture = last
+	c.owner = 1
+	draw()
+	assert(actual.specialtyCancel.invalid)
+	button("CLOSE")
+	assert(last == beforeCapture and c.siteProjects[pendingId].progress == 9)
+	c.owner = 0
 	-- Map symbols consume only projected visible/remembered site records and retain hex targets.
 	local Map = dofile("/games/civcraft/map_view.lua")
 	local symbolCount = 0
