@@ -30,12 +30,16 @@ function H.resources(ui, state, player)
 	local economy = Systems.economy(player, state)
 	ui.economy = economy
 	local x = 4
+	local researchTarget
 	r:withClip({ x = 4, y = 14, w = r.w - 8, h = 7 }, function()
 		for _, entry in ipairs({
 			{ "gold", stock(player.gold or 20, economy.net) },
 			{ "science", rate(economy.science) },
 		}) do
 			local width = Icons.yieldValue(r, entry[1], entry[2], x, 15)
+			if entry[1] == "science" then
+				researchTarget = { x = x, y = 14, w = width, h = 7 }
+			end
 			x = x + width + 3
 		end
 		for _, kind in ipairs(Systems.resourceOrder) do
@@ -58,6 +62,28 @@ function H.resources(ui, state, player)
 			ui.resourceOffset = 0
 		end,
 	}
+	if researchTarget then
+		local ledger = r.buttons[#r.buttons]
+		researchTarget.w = math.max(0, math.min(researchTarget.w, r.w - 4 - researchTarget.x))
+		ledger.w = math.max(0, researchTarget.x - ledger.x)
+		local right = researchTarget.x + researchTarget.w
+		if right < r.w - 4 then
+			r.buttons[#r.buttons + 1] = {
+				x = right,
+				y = 14,
+				w = r.w - 4 - right,
+				h = 7,
+				label = "RESOURCE LEDGER",
+				fn = ledger.fn,
+			}
+		end
+		researchTarget.label = "QUICK RESEARCH"
+		researchTarget.fn = function()
+			ui.panel = "quickResearch"
+			ui.quickResearchOffset = 0
+		end
+		r.buttons[#r.buttons + 1] = researchTarget
+	end
 end
 
 local function contactLabel(state, player)

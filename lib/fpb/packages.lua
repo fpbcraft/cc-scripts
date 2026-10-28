@@ -245,6 +245,7 @@ P.packages.civcraft = {
 		"terrain_view.lua",
 		"fog_view.lua",
 		"tech_tree.lua",
+		"quick_research.lua",
 		"ui.lua",
 		"world.lua",
 	},

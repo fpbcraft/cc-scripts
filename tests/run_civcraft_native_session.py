@@ -18,6 +18,7 @@ parser.add_argument("--development", action="store_true", help="Select Developme
 parser.add_argument("--host", action="store_true", help="Test a host/AI session instead of hotseat/AI")
 parser.add_argument("--contact-hud", action="store_true", help="Click the known-civilization HUD badge through native mouse events")
 parser.add_argument("--installed-ref", help="Download this published revision through the real GitHub installer before testing")
+parser.add_argument("--quick-research", action="store_true", help="Choose available research through native mouse events")
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
 profile = Path(tempfile.mkdtemp(prefix="civcraft-session-"))
@@ -46,6 +47,8 @@ elif args.landwork:
     flags.append("--landwork")
 elif args.development:
     flags.append("--development")
+if args.quick_research:
+    flags.append("--quick-research")
 if args.monitor:
     flags.append("--touch-monitor")
 arguments = ", ".join(json.dumps(flag) for flag in flags)
