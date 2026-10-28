@@ -65,3 +65,17 @@ later turn. A city center cannot be improved; the inspector explains this.
 The roadmap also records the user's requested human Builder auto mode,
 city-founding suggestions and gold tile purchases as subsequent work. The
 current AI Builder planner and manual task queues are not a human auto mode.
+
+## Delivery evidence and handover
+
+[Founders validation record](validation/founders-v4-validation.json) identifies
+the tested gameplay revision, native runtime, source/installed sessions, parity
+checks and regression limitations. Native CraftOS-PC evidence is separate from
+physical Minecraft monitor/rednet validation. The banner image above is a
+source-rendered UI fixture. Expanded-map late-game performance remains unmeasured.
+
+Delivery and review are tracked in [issue #70](https://github.com/fpbcraft/cc-scripts/issues/70)
+and [PR #68](https://github.com/fpbcraft/cc-scripts/pull/68), stacked on M2 #65.
+The new orchestrator owns integration and any unresolved validation follow-up.
+This delivery does not resume balance studies or implement M3, Builder auto mode,
+settlement suggestions or gold tile purchases.

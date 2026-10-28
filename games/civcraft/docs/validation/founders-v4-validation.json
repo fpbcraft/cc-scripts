@@ -1,0 +1,443 @@
+{
+  "gameplayRevision": "2f8d6ce8eaab4dd1fe7fda8efdbf8889014f5ea6",
+  "branch": "codex/civcraft-settler-opening",
+  "pr": "https://github.com/fpbcraft/cc-scripts/pull/68",
+  "issue": "https://github.com/fpbcraft/cc-scripts/issues/70",
+  "nativeRules": {
+    "results": [
+      {
+        "test": "/civcraft_builder_test.lua",
+        "error": "nil",
+        "ok": true
+      },
+      {
+        "test": "/civcraft_settler_opening_test.lua",
+        "error": "nil",
+        "ok": true
+      },
+      {
+        "test": "/civcraft_city_banner_test.lua",
+        "error": "nil",
+        "ok": true
+      }
+    ],
+    "host": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)"
+  },
+  "nativeSessions": [
+    {
+      "scope": "Founders source host/AI session",
+      "sourceRevision": "2f8d6ce8eaab4dd1fe7fda8efdbf8889014f5ea6",
+      "profile": "/private/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-session-c52tf2hm",
+      "result": "PASS"
+    },
+    {
+      "scope": "published installer host/AI session; original and migrated save fixture preserved",
+      "sourceRevision": "2f8d6ce8eaab4dd1fe7fda8efdbf8889014f5ea6",
+      "profile": "/private/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-session-pn6x47jo",
+      "result": "PASS"
+    },
+    {
+      "scope": "Founders source hotseat/AI war session",
+      "sourceRevision": "83553ab57d10c1f23b81a07d2334c8fdcbcbf990",
+      "profile": "/private/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-session-j9fjr_v7",
+      "result": "PASS"
+    }
+  ],
+  "python": {
+    "count": 44,
+    "result": "PASS",
+    "localSourceRevision": "83553ab57d10c1f23b81a07d2334c8fdcbcbf990",
+    "integratedRevisionCI": "https://github.com/fpbcraft/cc-scripts/actions/runs/40607702711",
+    "scope": "shared-rules correctness and Lua53/LuaJIT parity; no new balance studies",
+    "command": "python -m unittest tests/test_civcraft_lab.py tests/test_civcraft_p1.py tests/test_civcraft_luajit.py tests/test_civcraft_pacing_probe.py tests/test_civcraft_opening_adaptation.py tests/test_civcraft_m1.py tests/test_civcraft_m2.py tests/test_civcraft_opening.py games/civcraft/research/lab/test_proposal_interface.py games/civcraft/research/lab/test_coordinated_siege_policy.py -q"
+  },
+  "network": {
+    "result": "PASS",
+    "sourceRevision": "83553ab57d10c1f23b81a07d2334c8fdcbcbf990",
+    "profile": "/private/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-network-8iwaux5t",
+    "scope": "three CraftOS computers; established balance3 wartime/collision regression, not Founders cityless network opening"
+  },
+  "bannerPreview": {
+    "path": "city-banners-preview.png",
+    "source": "real game UI source-rendered fixture, byte-identical after upstream renderer integration; not physical monitor evidence"
+  },
+  "limitations": [
+    "Physical Minecraft monitor/rednet and production-server behavior unverified.",
+    "Expanded Huge/Vast late-game latency not measured.",
+    "Founders cityless opening was not separately exercised through multiplayer rednet.",
+    "Broad local Lua regression results and graphics controls runtime are recorded separately below; timeout is not a passing assertion.",
+    "civcraft_controls_test.lua did not complete within 360s on the integrated revision; a supplemental LuaJIT run was stopped without a result. Orchestrator should resolve/accept this validation gap before merge.",
+    "CC Lua quality CI for gameplay revision was still in progress when evidence was captured; other six workflows had passed."
+  ],
+  "continuation": {
+    "automationId": "resume-this-chat-codex-threads-01a17985-76da-77b0-aba0-44a8bd5cc24a",
+    "result": "Update reported automation does not exist; no matching local automation definitions found; no replacement scheduled."
+  },
+  "commands": {
+    "luaSweep": "Run each tests/civcraft*_test.lua with Lua 5.3.6, four workers, 240s per file; run graphics controls alone with 360s timeout.",
+    "nativeRules": "python3 tests/run_civcraft_native_rules.py --tests civcraft_builder_test.lua civcraft_settler_opening_test.lua civcraft_city_banner_test.lua",
+    "sourceHost": "python3 tests/run_civcraft_native_session.py --host",
+    "installedHost": "python3 tests/run_civcraft_native_session.py --host --installed-ref 2f8d6ce8eaab4dd1fe7fda8efdbf8889014f5ea6",
+    "hotseat": "python3 tests/run_civcraft_native_session.py",
+    "network": "python3 tests/run_civcraft_native_network.py"
+  },
+  "ciAtGameplayRevision": [
+    {
+      "name": "Lua formatting and linting",
+      "result": "PASS",
+      "url": "https://github.com/fpbcraft/cc-scripts/actions/runs/40607702797"
+    },
+    {
+      "name": "CivCraft balance laboratory (correctness only)",
+      "result": "PASS",
+      "url": "https://github.com/fpbcraft/cc-scripts/actions/runs/40607702711"
+    }
+  ],
+  "luaRegression": {
+    "runtime": "Lua 5.3.6",
+    "sourceRevision": "2f8d6ce8eaab4dd1fe7fda8efdbf8889014f5ea6",
+    "sweep": [
+      {
+        "test": "civcraft_actions_test.lua",
+        "exitCode": 0,
+        "seconds": 12.041
+      },
+      {
+        "test": "civcraft_animation_ui_test.lua",
+        "exitCode": 0,
+        "seconds": 180.63
+      },
+      {
+        "test": "civcraft_animations_test.lua",
+        "exitCode": 0,
+        "seconds": 0.17
+      },
+      {
+        "test": "civcraft_audio_test.lua",
+        "exitCode": 0,
+        "seconds": 0.005
+      },
+      {
+        "test": "civcraft_biomes_test.lua",
+        "exitCode": 0,
+        "seconds": 55.08
+      },
+      {
+        "test": "civcraft_builder_test.lua",
+        "exitCode": 0,
+        "seconds": 0.043
+      },
+      {
+        "test": "civcraft_campaign_rules_test.lua",
+        "exitCode": 0,
+        "seconds": 8.757
+      },
+      {
+        "test": "civcraft_campaign_test.lua",
+        "exitCode": 0,
+        "seconds": 12.375
+      },
+      {
+        "test": "civcraft_city_banner_test.lua",
+        "exitCode": 0,
+        "seconds": 0.024
+      },
+      {
+        "test": "civcraft_civilization_picker_test.lua",
+        "exitCode": 0,
+        "seconds": 0.371
+      },
+      {
+        "test": "civcraft_command_fuzz_test.lua",
+        "exitCode": 0,
+        "seconds": 3.23
+      },
+      {
+        "test": "civcraft_compact_toolbar_test.lua",
+        "exitCode": 0,
+        "seconds": 0.465
+      },
+      {
+        "test": "civcraft_contacts_test.lua",
+        "exitCode": 0,
+        "seconds": 11.634
+      },
+      {
+        "test": "civcraft_conversation_ui_test.lua",
+        "exitCode": 0,
+        "seconds": 168.032
+      },
+      {
+        "test": "civcraft_council_test.lua",
+        "exitCode": 0,
+        "seconds": 0.023
+      },
+      {
+        "test": "civcraft_council_ui_test.lua",
+        "exitCode": 0,
+        "seconds": 0.354
+      },
+      {
+        "test": "civcraft_difficulty_test.lua",
+        "exitCode": 0,
+        "seconds": 0.052
+      },
+      {
+        "test": "civcraft_difficulty_ui_test.lua",
+        "exitCode": 0,
+        "seconds": 0.02
+      },
+      {
+        "test": "civcraft_diplomacy_test.lua",
+        "exitCode": 0,
+        "seconds": 17.874
+      },
+      {
+        "test": "civcraft_economic_ai_test.lua",
+        "exitCode": 0,
+        "seconds": 15.87
+      },
+      {
+        "test": "civcraft_embarkation_test.lua",
+        "exitCode": 0,
+        "seconds": 9.099
+      },
+      {
+        "test": "civcraft_escorts_test.lua",
+        "exitCode": 0,
+        "seconds": 0.134
+      },
+      {
+        "test": "civcraft_event_history_test.lua",
+        "exitCode": 0,
+        "seconds": 0.298
+      },
+      {
+        "test": "civcraft_events_test.lua",
+        "exitCode": 0,
+        "seconds": 8.872
+      },
+      {
+        "test": "civcraft_expansion_test.lua",
+        "exitCode": 0,
+        "seconds": 10.791
+      },
+      {
+        "test": "civcraft_expansion_ui_test.lua",
+        "exitCode": 124,
+        "seconds": 240.587
+      },
+      {
+        "test": "civcraft_fog_memory_test.lua",
+        "exitCode": 0,
+        "seconds": 0.131
+      },
+      {
+        "test": "civcraft_hex_test.lua",
+        "exitCode": 0,
+        "seconds": 0.013
+      },
+      {
+        "test": "civcraft_hostile_capture_test.lua",
+        "exitCode": 0,
+        "seconds": 0.022
+      },
+      {
+        "test": "civcraft_hotseat_test.lua",
+        "exitCode": 0,
+        "seconds": 0.274
+      },
+      {
+        "test": "civcraft_hud_test.lua",
+        "exitCode": 124,
+        "seconds": 240.685
+      },
+      {
+        "test": "civcraft_installer_test.lua",
+        "exitCode": 0,
+        "seconds": 0.134
+      },
+      {
+        "test": "civcraft_layout_only_test.lua",
+        "exitCode": 0,
+        "seconds": 0.005
+      },
+      {
+        "test": "civcraft_lifecycle_test.lua",
+        "exitCode": 0,
+        "seconds": 31.445
+      },
+      {
+        "test": "civcraft_m1_test.lua",
+        "exitCode": 0,
+        "seconds": 0.031
+      },
+      {
+        "test": "civcraft_m1_ui_test.lua",
+        "exitCode": 0,
+        "seconds": 0.025
+      },
+      {
+        "test": "civcraft_m2_growth_test.lua",
+        "exitCode": 0,
+        "seconds": 0.022
+      },
+      {
+        "test": "civcraft_module_cache_test.lua",
+        "exitCode": 0,
+        "seconds": 0.006
+      },
+      {
+        "test": "civcraft_movement_range_test.lua",
+        "exitCode": 0,
+        "seconds": 6.707
+      },
+      {
+        "test": "civcraft_observer_ui_test.lua",
+        "exitCode": 0,
+        "seconds": 119.736
+      },
+      {
+        "test": "civcraft_p1_test.lua",
+        "exitCode": 0,
+        "seconds": 0.018
+      },
+      {
+        "test": "civcraft_presentation_test.lua",
+        "exitCode": 0,
+        "seconds": 111.204
+      },
+      {
+        "test": "civcraft_progression_test.lua",
+        "exitCode": 0,
+        "seconds": 37.013
+      },
+      {
+        "test": "civcraft_queued_routes_test.lua",
+        "exitCode": 0,
+        "seconds": 0.171
+      },
+      {
+        "test": "civcraft_render_batch_test.lua",
+        "exitCode": 0,
+        "seconds": 0.009
+      },
+      {
+        "test": "civcraft_reports_determinism_test.lua",
+        "exitCode": 0,
+        "seconds": 0.009
+      },
+      {
+        "test": "civcraft_rules_ui_test.lua",
+        "exitCode": 0,
+        "seconds": 152.326
+      },
+      {
+        "test": "civcraft_save_resume_test.lua",
+        "exitCode": 0,
+        "seconds": 0.097
+      },
+      {
+        "test": "civcraft_saves_test.lua",
+        "exitCode": 0,
+        "seconds": 0.005
+      },
+      {
+        "test": "civcraft_scheduler_test.lua",
+        "exitCode": 0,
+        "seconds": 6.523
+      },
+      {
+        "test": "civcraft_settings_test.lua",
+        "exitCode": 0,
+        "seconds": 144.038
+      },
+      {
+        "test": "civcraft_settler_opening_test.lua",
+        "exitCode": 0,
+        "seconds": 0.059
+      },
+      {
+        "test": "civcraft_strategy_test.lua",
+        "exitCode": 0,
+        "seconds": 8.673
+      },
+      {
+        "test": "civcraft_systems_test.lua",
+        "exitCode": 0,
+        "seconds": 6.135
+      },
+      {
+        "test": "civcraft_tactics_test.lua",
+        "exitCode": 0,
+        "seconds": 138.122
+      },
+      {
+        "test": "civcraft_tech_canvas_test.lua",
+        "exitCode": 0,
+        "seconds": 7.643
+      },
+      {
+        "test": "civcraft_title_menu_test.lua",
+        "exitCode": 0,
+        "seconds": 0.119
+      },
+      {
+        "test": "civcraft_turn_tasks_test.lua",
+        "exitCode": 0,
+        "seconds": 107.975
+      },
+      {
+        "test": "civcraft_ui_test.lua",
+        "exitCode": 0,
+        "seconds": 58.117
+      },
+      {
+        "test": "civcraft_unit_stacks_test.lua",
+        "exitCode": 0,
+        "seconds": 0.076
+      },
+      {
+        "test": "civcraft_v06_integration_test.lua",
+        "exitCode": 0,
+        "seconds": 5.276
+      },
+      {
+        "test": "civcraft_watchdog_test.lua",
+        "exitCode": 0,
+        "seconds": 0.029
+      },
+      {
+        "test": "civcraft_world_test.lua",
+        "exitCode": 0,
+        "seconds": 5.233
+      },
+      {
+        "test": "civcraft_zone_control_test.lua",
+        "exitCode": 0,
+        "seconds": 6.101
+      },
+      {
+        "test": "civcraft_controls_test.lua",
+        "exitCode": 124,
+        "seconds": 360.585
+      }
+    ],
+    "isolatedReruns": [
+      {
+        "test": "civcraft_expansion_ui_test.lua",
+        "exitCode": 0,
+        "seconds": 123.863,
+        "output": "CIVCRAFT expansion UI: wonder/rail confirmation, village diplomacy, ledger, Codex and hotseat privacy passed.\n"
+      },
+      {
+        "test": "civcraft_hud_test.lua",
+        "exitCode": 0,
+        "seconds": 94.071,
+        "output": "CIVCRAFT: rate-only science/food/industry, unlocked material stocks, nonzero rates, distinct faction colors and lobby bonuses passed.\n"
+      }
+    ],
+    "summary": "65 files: original sweep 62 pass and 3 timeouts; expansion UI and HUD pass individually, leaving 64 distinct files passed and controls incomplete at 360s. No failing assertions observed.",
+    "supplementalControlsLuaJIT": "Stopped after approximately six minutes without a completion result; not a pass."
+  }
+}
