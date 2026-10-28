@@ -567,7 +567,15 @@ for _, graphics in ipairs({ false, true }) do
 			end
 			ui:close()
 			checks = checks + 1
-			print(string.format("CIVCRAFT controls: %s %dx%d completed in %.2fs", graphics and "graphics" or "text", cw, ch, os.clock() - started))
+			print(
+				string.format(
+					"CIVCRAFT controls: %s %dx%d completed in %.2fs",
+					graphics and "graphics" or "text",
+					cw,
+					ch,
+					os.clock() - started
+				)
+			)
 		end
 	end
 end
