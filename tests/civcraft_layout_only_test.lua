@@ -47,3 +47,60 @@ assert(#full.buttons == 1 and uploads == 1)
 assert(full.buttons[1].x == layout.buttons[1].x)
 assert(full.buttons[1].w == layout.buttons[1].w)
 print("CIVCRAFT: layout-only buttons, geometry and hit tests match the full renderer.")
+
+-- Use the same module cache as the installed game for the integration fixture.
+native("games/civcraft/module_cache.lua").install(_G)
+-- Tile visibility must not shadow animation actor identities in layout maps.
+local Map = dofile("/games/civcraft/map_view.lua")
+local World = dofile("/games/civcraft/world.lua")
+local Systems = dofile("/games/civcraft/systems.lua")
+local Hex = dofile("/games/civcraft/hex.lua")
+local UI = dofile("/games/civcraft/ui.lua")
+local world = World.generate(75123, "compact", 2, "continents")
+local start = world.starts[1]
+local state = {
+	phase = "game",
+	round = 1,
+	world = world,
+	players = { { id = 1, name = "ONE", techs = {}, civ = "verdant" } },
+	cities = {
+		{
+			id = 7,
+			owner = 1,
+			name = "TEST",
+			x = start.x,
+			y = start.y,
+			population = 2,
+			jobs = { food = 1, wood = 1, science = 0 },
+			buildings = {},
+		},
+	},
+	units = {},
+}
+Systems.migrate(state)
+World.reveal(state, Hex, Systems)
+local ui = UI.new(monitor, function() end, { layoutOnly = true })
+ui.playerID = 1
+local names = 0
+local drawText = ui.r.text
+ui.r.text = function(self, x, y, value, ...)
+	if value == "TEST" then
+		names = names + 1
+	end
+	return drawText(self, x, y, value, ...)
+end
+local function drawMap(hidden)
+	ui.animationFrame = { hidden = hidden, effects = {}, sprites = {} }
+	ui.hexTargets = {}
+	ui.r:begin()
+	Map.draw(ui, state, state.players[1], { x = 0, y = 0, w = 240, h = 180 })
+	ui.r:finish()
+end
+drawMap({})
+assert(names > 0, "Visible city label survives layout-only rendering")
+names = 0
+local hiddenActors = { ["city:7"] = true }
+drawMap(hiddenActors)
+assert(names == 0, "Animated hidden city has no duplicate layout label")
+assert(hiddenActors["city:7"], "Layout rendering preserves animation identities")
+print("CIVCRAFT: layout-only city labels respect hidden animation actors.")
