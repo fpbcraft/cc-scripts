@@ -12,6 +12,7 @@ local Terrain = dofile("/games/civcraft/terrain_view.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local CityBanner = dofile("/games/civcraft/city_banner.lua")
+local QueuedRoutes = dofile("/games/civcraft/queued_routes.lua")
 local V = {}
 local function at(list, x, y)
 	for _, item in ipairs(list or {}) do
@@ -21,6 +22,238 @@ local function at(list, x, y)
 	end
 end
 local ownerColor = FactionColors.owner
+
+local function copyUnit(unit)
+	local result = {}
+	for key, value in pairs(unit or {}) do
+		result[key] = value
+	end
+	return result
+end
+
+local function virtualPosition(view, unit, partner, x, y)
+	local result = {}
+	for key, value in pairs(view) do
+		result[key] = value
+	end
+	result.units = {}
+	local moved
+	for _, actor in ipairs(view.units or {}) do
+		local copy = copyUnit(actor)
+		if actor.id == unit.id or partner and actor.id == partner.id then
+			copy.x, copy.y = x, y
+		end
+		result.units[#result.units + 1] = copy
+		if copy.id == unit.id then
+			moved = copy
+		end
+	end
+	if not moved then
+		moved = copyUnit(unit)
+		moved.x, moved.y = x, y
+		result.units[#result.units + 1] = moved
+	end
+	return result, moved
+end
+
+local function samePoint(a, b)
+	return a and b and a.x == b.x and a.y == b.y
+end
+
+local function copyPoints(points, start, estimated)
+	local result = {}
+	for index = start, #points do
+		local point = points[index]
+		result[#result + 1] = { x = point.x, y = point.y, estimated = estimated == true }
+	end
+	return result
+end
+
+-- The active leg is saved verbatim. Later legs are recomputed from the observer's
+-- map projection and kept in a UI cache; rendering never edits the saved queue.
+function V.queuedRoute(ui, state, player)
+	if not ui.selected or ui.selected.kind ~= "unit" or ui.selected.empty then
+		return nil
+	end
+	local selected
+	for _, unit in ipairs(state.units or {}) do
+		if unit.id == ui.selected.unitID and unit.owner == ui.playerID then
+			selected = unit
+			break
+		end
+	end
+	if not selected then
+		return nil
+	end
+	local queue, leader = QueuedRoutes.get(state, selected)
+	if not queue or type(queue.goals) ~= "table" or #queue.goals == 0 then
+		return nil
+	end
+	local cached = ui.queuedRouteCache
+	if
+		cached
+		and cached.unitID == leader.id
+		and cached.queue == queue
+		and cached.path == queue.path
+		and cached.goals == queue.goals
+		and cached.next == queue.next
+		and cached.x == leader.x
+		and cached.y == leader.y
+		and cached.visible == player.visible
+		and cached.explored == player.explored
+		and cached.tiles == (state.world and state.world.tiles)
+		and cached.units == state.units
+		and cached.cities == state.cities
+		and cached.round == state.round
+		and cached.paused == queue.paused
+	then
+		return cached.route
+	end
+
+	local route = { unitID = leader.id, queue = queue, goals = {}, segments = {} }
+	for _, goal in ipairs(queue.goals) do
+		route.goals[#route.goals + 1] = { x = goal.x, y = goal.y }
+	end
+	local path = type(queue.path) == "table" and queue.path or {}
+	if #path > 0 then
+		local cursor = math.max(1, math.min(#path, (queue.next or 2) - 1))
+		if samePoint(path[cursor], leader) then
+			local remaining = { { x = leader.x, y = leader.y, estimated = false } }
+			for _, point in ipairs(copyPoints(path, math.min(#path + 1, queue.next or 2), false)) do
+				remaining[#remaining + 1] = point
+			end
+			route.segments[#route.segments + 1] = { points = remaining, estimated = false }
+		else
+			local replanned = QueuedRoutes.preview(
+				state,
+				leader,
+				route.goals[1].x,
+				route.goals[1].y,
+				false,
+				Systems,
+				{ allowUnknown = true }
+			)
+			if replanned then
+				route.segments[#route.segments + 1] = {
+					points = copyPoints(replanned, 1, true),
+					estimated = true,
+				}
+			end
+		end
+	end
+
+	local partner = Stacks.partner(state, leader)
+	for index = 2, #route.goals do
+		local start, goal = route.goals[index - 1], route.goals[index]
+		local virtual, traveler = virtualPosition(state, leader, partner, start.x, start.y)
+		local estimate = QueuedRoutes.preview(
+			virtual,
+			traveler,
+			goal.x,
+			goal.y,
+			false,
+			Systems,
+			{ allowUnknown = true }
+		)
+		if estimate then
+			route.segments[#route.segments + 1] = {
+				points = copyPoints(estimate, 1, true),
+				estimated = true,
+			}
+		end
+	end
+	route.paused = not not queue.paused
+	ui.queuedRouteCache = {
+		unitID = leader.id,
+		queue = queue,
+		path = queue.path,
+		goals = queue.goals,
+		next = queue.next,
+		x = leader.x,
+		y = leader.y,
+		visible = player.visible,
+		explored = player.explored,
+		tiles = state.world and state.world.tiles,
+		units = state.units,
+		cities = state.cities,
+		round = state.round,
+		paused = queue.paused,
+		route = route,
+	}
+	return route
+end
+
+local function drawSolidPath(r, ax, ay, bx, by, color)
+	for offset = -1, 1 do
+		r:line(ax + offset, ay, bx + offset, by, 0)
+		r:line(ax, ay + offset, bx, by + offset, 0)
+	end
+	r:line(ax, ay, bx, by, color)
+end
+
+local function drawDottedPath(r, ax, ay, bx, by, color)
+	local dx, dy = bx - ax, by - ay
+	local count = math.max(1, math.ceil(math.max(math.abs(dx), math.abs(dy))))
+	for index = 0, count do
+		if index % 4 < 2 then
+			local x, y = ax + dx * index / count, ay + dy * index / count
+			r:fill(x - 1, y - 1, 3, 3, 0)
+			r:fill(x, y, 1, 1, color)
+		end
+	end
+end
+
+local function drawRouteSegments(r, segments, player, center, paused)
+	for _, segment in ipairs(segments or {}) do
+		local points = segment.points or {}
+		local previousHidden = #points > 0
+			and World.known(player, points[1].x, points[1].y) == "hidden"
+		for index = 2, #points do
+			local point, previous = points[index], points[index - 1]
+			local pointHidden = World.known(player, point.x, point.y) == "hidden"
+			local ax, ay = center(previous)
+			local bx, by = center(point)
+			if previousHidden or pointHidden then
+				drawDottedPath(r, ax, ay, bx, by, 13)
+			elseif segment.estimated or previous.estimated or point.estimated then
+				drawDottedPath(r, ax, ay, bx, by, 16)
+			else
+				drawSolidPath(r, ax, ay, bx, by, paused and 31 or 9)
+			end
+			previousHidden = pointHidden
+		end
+	end
+end
+
+local function drawGoalMarkers(r, goals, player, center, paused)
+	for index, goal in ipairs(goals or {}) do
+		local x, y = center(goal)
+		local hidden = World.known(player, goal.x, goal.y) == "hidden"
+		local color = hidden and 13 or index == 1 and (paused and 31 or 18) or 8
+		local size = index == 1 and 7 or 5
+		r:outline(x - math.floor(size / 2), y - math.floor(size / 2), size, size, color)
+	end
+end
+
+local function drawPendingPath(r, path, player, center)
+	if not path or #path < 2 then
+		return
+	end
+	local previousHidden = World.known(player, path[1].x, path[1].y) == "hidden"
+	for index = 2, #path do
+		local point, previous = path[index], path[index - 1]
+		local pointHidden = World.known(player, point.x, point.y) == "hidden"
+		local ax, ay = center(previous)
+		local bx, by = center(point)
+		if previousHidden or pointHidden then
+			drawDottedPath(r, ax, ay, bx, by, 35)
+		else
+			drawSolidPath(r, ax, ay, bx, by, 18)
+		end
+		previousHidden = pointHidden
+	end
+end
+
 function V.draw(ui, state, player, rect)
 	local frame = rect
 	rect = { x = frame.x + 4, y = frame.y + 4, w = frame.w - 8, h = frame.h - 8 }
@@ -231,19 +464,25 @@ function V.draw(ui, state, player, rect)
 			end
 		end
 		r = canvas
+		local function center(point)
+			return rect.x + (point.x - 0.5 + ((point.y - 1) % 2) * 0.5) * size - ui.panX,
+				rect.y + (point.y - 1) * step + size / 2 - ui.panY
+		end
+		local queuedRoute = V.queuedRoute(ui, state, player)
+		if queuedRoute then
+			drawRouteSegments(r, queuedRoute.segments, player, center, queuedRoute.paused)
+			drawGoalMarkers(r, queuedRoute.goals, player, center, queuedRoute.paused)
+		end
 		if ui.pendingMove and ui.pendingMove.path then
-			local function center(point)
-				return rect.x + (point.x - 0.5 + ((point.y - 1) % 2) * 0.5) * size - ui.panX,
-					rect.y + (point.y - 1) * step + size / 2 - ui.panY
-			end
-			for i = 2, #ui.pendingMove.path do
-				local ax, ay = center(ui.pendingMove.path[i - 1])
-				local bx, by = center(ui.pendingMove.path[i])
-				for offset = -1, 1 do
-					r:line(ax + offset, ay, bx + offset, by, 0)
-					r:line(ax, ay + offset, bx, by + offset, 0)
-				end
-				r:line(ax, ay, bx, by, 18)
+			drawPendingPath(r, ui.pendingMove.path, player, center)
+			if ui.pendingMove.queued then
+				drawGoalMarkers(
+					r,
+					{ { x = ui.pendingMove.x, y = ui.pendingMove.y } },
+					player,
+					center,
+					false
+				)
 			end
 		end
 		-- All map hitboxes were collected above. Skip this visual-only pass

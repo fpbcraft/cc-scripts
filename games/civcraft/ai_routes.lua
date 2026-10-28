@@ -43,6 +43,7 @@ end
 function Routes.from(view, unit, systems, options)
 	options = options or {}
 	local costs, previous, blocked = {}, {}, {}
+	local tiles = view.world and view.world.tiles or {}
 	for _, other in ipairs(view.units or {}) do
 		if
 			other.id ~= unit.id
@@ -58,6 +59,7 @@ function Routes.from(view, unit, systems, options)
 		end
 	end
 	local start = World.key(unit.x, unit.y)
+	local target = options.targetKey
 	local heap, visited = {}, 0
 	costs[start] = 0
 	push(heap, { x = unit.x, y = unit.y, cost = 0 })
@@ -65,13 +67,16 @@ function Routes.from(view, unit, systems, options)
 		local current = pop(heap)
 		if current.cost == costs[World.key(current.x, current.y)] then
 			visited = visited + 1
+			if target and World.key(current.x, current.y) == target then
+				break
+			end
 			if visited % 64 == 0 and systems.checkpoint then
 				systems.checkpoint()
 			end
 			for _, nextPoint in ipairs(Hex.neighbours(current.x, current.y, view)) do
 				local key = World.key(nextPoint.x, nextPoint.y)
 				if
-					(view.world.tiles or {})[key]
+					(tiles[key] ~= nil or options.allowUnknown == true)
 					and not blocked[key]
 					and (not options.allow or options.allow(nextPoint))
 				then

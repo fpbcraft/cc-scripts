@@ -286,6 +286,11 @@ Use **MOVE / ATTACK** to show destinations: cyan dotted outlines and movement
 cost numbers mark moves; red crosses mark attacks. Choose a target to preview
 the route, then click it again or press the confirm icon. Gold pips identify
 units that can still act. Gold-framed worker badges identify worked tiles. **CANCEL MOVE** leaves the unit selected.
+**QUEUE MOVES** and **ADD WAYPOINT** can target undiscovered hexes. Selecting a
+unit with a route shows the committed known path in solid gold, its fogged
+continuation as blue dots, and muted dashed estimates for later waypoints;
+square markers show each destination. Newly discovered blocked steps pause the
+route without starting combat.
 **SLEEP UNIT** excludes a unit from unfinished-order reminders across rounds;
 **WAKE UNIT** restores active orders. Other unit actions require their own
 inspector buttons. Escape closes a dialog or cancels the current action first.

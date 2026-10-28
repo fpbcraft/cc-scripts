@@ -125,9 +125,10 @@ full-session tests, run the driver in the installed loader environment with
 `_lib/fpb/loader.lua`, so entry-point globals and the module cache match installation.
 
 
-`civcraft_queued_routes_test.lua` exercises saved waypoints, independent and escort
-budgets, no automatic attacks, fog/private projections, malformed saves, sea
-landing and compact queue controls. Run the full-session driver with `--routes`
+`civcraft_queued_routes_test.lua` exercises saved waypoints, undiscovered
+destinations, fog-safe path previews, selected-unit route overlays, independent
+and escort budgets, no automatic attacks, private projections, malformed saves,
+sea landing and compact queue controls. Run the full-session driver with `--routes`
 to verify the actual host start-of-turn hook and saved progress. A peaceful run
 asserts resumption; combining it with `--war` verifies waiting for the rotated
 war-group activation. These scenarios use isolated computers and the installed

@@ -477,7 +477,12 @@ dofile = function(path)
 				else
 					for _, unit in ipairs(state.units) do
 						if unit.id == routeUnit then
-							assert(unit.moveQueue and unit.movesLeft == 0)
+							assert(
+								unit.moveQueue
+									and unit.moveQueue.goals[1].x == routeGoal.x
+									and unit.moveQueue.goals[1].y == routeGoal.y
+									and #unit.moveQueue.path >= 2
+							)
 							routeRecord = { id = unit.id, x = unit.x, y = unit.y, goal = routeGoal }
 						end
 					end

@@ -18,6 +18,14 @@ profile=Path(tempfile.mkdtemp(prefix='civcraft-native-rules-'))
 computer=profile/'computer/0'
 computer.mkdir(parents=True)
 shutil.copytree(root/'games/civcraft',computer/'games/civcraft',ignore=shutil.ignore_patterns('data','__pycache__'))
+# Focused UI/save fixtures use the same read-only helper modules as standalone Lua.
+for helper_dir in ('helpers', 'support'):
+    source = root/'tests'/helper_dir
+    if source.is_dir():
+        shutil.copytree(source, computer/'tests'/helper_dir)
+# Installed-save fixtures execute the real installer against local source files.
+for source_dir in ('installers', 'lib'):
+    shutil.copytree(root/source_dir, computer/source_dir)
 for name in args.tests:
     shutil.copyfile(root/'tests'/name,computer/name)
 files='{'+','.join(json.dumps('/'+name) for name in args.tests)+'}'
@@ -31,6 +39,7 @@ script='''local function run(path)
 end
 local results={}
 for _,path in ipairs(%s) do
+ os.queueEvent("native_rule_boundary");os.pullEvent("native_rule_boundary")
  local ok,why=pcall(run,path)
  results[#results+1]={test=path,ok=ok,error=tostring(why)}
 end

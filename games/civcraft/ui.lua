@@ -566,12 +566,19 @@ function UI:draw(state, playerID, opts)
 	self.lastPlayer = playerID
 	self.lastCampaign = state and state.campaignID
 	if self.selected.kind == "unit" and self.selected.unitID then
+		local selectedUnit
 		for _, u in ipairs(state.units or {}) do
 			if u.id == self.selected.unitID and u.owner == playerID then
-				self.selected.x = u.x
-				self.selected.y = u.y
+				selectedUnit = u
 				break
 			end
+		end
+		if selectedUnit then
+			self.selected.x = selectedUnit.x
+			self.selected.y = selectedUnit.y
+		else
+			self.selected = { x = self.selected.x, y = self.selected.y, empty = true }
+			self.queuedRouteCache = nil
 		end
 	end
 	if
