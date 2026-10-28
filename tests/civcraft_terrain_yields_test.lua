@@ -138,8 +138,9 @@ assert(center.food == 2 and center.industry == 1 and center.science == 1 and cen
 	"City-center rules remain independent of tile yield migration")
 
 -- Worked Gold must actually enter treasury once, not just show on the map.
-local city = { id = 1, owner = 1, x = 4, y = 5, population = 2,
-	buildings = {}, worked = { ["5:4"] = true, ["7:4"] = true } }
+local city = { id = 1, owner = 1, x = 6, y = 5, population = 2,
+	buildings = {}, worked = { ["5:4"] = true, ["7:4"] = true },
+	claimed = { ["5:4"] = true, ["7:4"] = true, ["6:5"] = true } }
 local state = { version = 6, phase = "game", contentRules = "balance3",
 	round = 1, world = world,
 	players = { { id = 1, civ = "iron", gold = 20, techs = {} } },
