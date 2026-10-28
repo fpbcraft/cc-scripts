@@ -156,7 +156,7 @@ local function starts(world, count)
 				local score = 0
 				for _, neighbor in ipairs(Hex.neighbours(x, y, { world = world })) do
 					local tile = Biomes.tile(world, neighbor.x, neighbor.y)
-					local food, industry = Biomes.yields(tile)
+					local food, industry = Biomes.yields(tile, world.terrainYieldVersion)
 					score = score + food + industry - (Biomes.terrain(tile) == "water" and 2 or 0)
 				end
 				candidates[#candidates + 1] = { x = x, y = y, score = score + rng:next() * 4 }
@@ -364,7 +364,7 @@ local function deposits(world, checkpoint)
 	end
 end
 
-function WorldGen.generate(seed, size, count, mapType, dimensions, checkpoint)
+function WorldGen.generate(seed, size, count, mapType, dimensions, checkpoint, terrainYieldVersion)
 	local world = {
 		width = dimensions[1],
 		height = dimensions[2],
@@ -372,6 +372,7 @@ function WorldGen.generate(seed, size, count, mapType, dimensions, checkpoint)
 		size = size,
 		mapType = mapType,
 		generationVersion = WorldGen.version,
+		terrainYieldVersion = terrainYieldVersion or "sparse1",
 		contentVersion = 1,
 		tiles = {},
 		geography = {},

@@ -17,6 +17,7 @@ local Diplomacy, Council, CouncilRules =
 local Scheduler, Movement, Queue =
 	module("turn_scheduler"), module("movement_budget"), module("queued_routes")
 local Stacks = module("unit_stacks")
+local MapView = module("map_view")
 local function equal(a, b, label)
 	assert(type(a) == type(b), label)
 	if type(a) ~= "table" then
@@ -213,6 +214,43 @@ for _, speed in ipairs({ "quick", "standard", "epic" }) do
 		"A resumed queue ran twice"
 	)
 end
+
+local fogRoute = fixture("standard")
+local actor = fogRoute.units[1]
+local observer = World.forPlayer(fogRoute, 1)
+local hiddenGoal = { x = 20, y = 6 }
+local hiddenGoalKey = World.key(hiddenGoal.x, hiddenGoal.y)
+assert(not observer.world.tiles[hiddenGoalKey], "The appended destination is unexplored")
+for _, city in ipairs(observer.cities) do
+	assert(city.owner ~= 3, "The enemy city at the destination remains hidden")
+end
+order(fogRoute, 1, {
+	action = "queueMove",
+	unitID = actor.id,
+	sx = actor.x,
+	sy = actor.y,
+	x = hiddenGoal.x,
+	y = hiddenGoal.y,
+	append = true,
+})
+assert(#actor.moveQueue.goals == 2 and actor.moveQueue.goals[2].x == hiddenGoal.x)
+fogRoute = reload(fogRoute)
+actor = fogRoute.units[1]
+observer = World.forPlayer(fogRoute, 1)
+assert(not observer.world.tiles[hiddenGoalKey], "Saving the queued route exposes no terrain")
+local restoredRoute = MapView.queuedRoute(
+	{ playerID = 1, selected = { kind = "unit", unitID = actor.id } },
+	observer,
+	observer.players[1]
+)
+assert(
+	restoredRoute and #restoredRoute.goals == 2 and #restoredRoute.segments >= 2,
+	"Resuming shows the active leg and every later queued destination"
+)
+assert(
+	restoredRoute.segments[2].estimated,
+	"Later waypoints use observer-only estimated paths after save/load"
+)
 print(
-	"CIVCRAFT: six coupled save/load windows preserve reactions, escort routes, deals, votes, AI plans, fog memory and observer cursors."
+	"CIVCRAFT: six coupled save/load windows preserve reactions, escort routes, deals, votes, AI plans, fog memory, observer cursors and fog-safe queued route overlays."
 )

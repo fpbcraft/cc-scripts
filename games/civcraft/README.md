@@ -286,6 +286,11 @@ Use **MOVE / ATTACK** to show destinations: cyan dotted outlines and movement
 cost numbers mark moves; red crosses mark attacks. Choose a target to preview
 the route, then click it again or press the confirm icon. Gold pips identify
 units that can still act. Gold-framed worker badges identify worked tiles. **CANCEL MOVE** leaves the unit selected.
+**QUEUE MOVES** and **ADD WAYPOINT** can target undiscovered hexes. Selecting a
+unit with a route shows the committed known path in solid gold, its fogged
+continuation as blue dots, and muted dashed estimates for later waypoints;
+square markers show each destination. Newly discovered blocked steps pause the
+route without starting combat.
 **SLEEP UNIT** excludes a unit from unfinished-order reminders across rounds;
 **WAKE UNIT** restores active orders. Other unit actions require their own
 inspector buttons. Escape closes a dialog or cancels the current action first.
@@ -452,3 +457,5 @@ with links to their Codex entries. Prerequisites are left of their dependents;
 arrows show direction, amber links enter the selected technology and blue links
 lead onward. Click a prerequisite/dependent in the sidebar to focus it. Pan/zoom
 controls remain available on touch-only screens; the sidebar pages separately.
+
+Click the science value in the top resource strip, or the turn prompt when research is pending, to choose from available technologies. The quick picker shows saved progress, science cost, the current project, and estimated turns at the current science rate. Switching projects retains progress; **TECH TREE** still opens the complete technology graph.

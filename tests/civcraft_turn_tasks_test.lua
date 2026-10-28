@@ -158,7 +158,12 @@ for _, graphics in ipairs({ false, true }) do
 		ui:turnAction() == "RESEARCH" and ends == 0,
 		"Explicit No Production satisfies the city reminder"
 	)
-	assert(click("RESEARCH") and ui.panel == "tech")
+	assert(click("RESEARCH") and ui.panel == "quickResearch")
+	draw()
+	assert(
+		find("RESEARCH agriculture") and find("TECH TREE"),
+		"Turn research opens available choices and preserves full-tree access"
+	)
 	ui:command("researchTech", { id = "agriculture" })
 	ui.panel = "context"
 	draw()

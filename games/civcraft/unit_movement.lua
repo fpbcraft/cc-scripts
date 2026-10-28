@@ -73,7 +73,7 @@ function UnitMovement.walk(state, unit, path, systems, lastPoint)
 			break
 		end
 		if blocked or not cost then
-			completed, reason = false, "Route blocked by a discovered obstacle"
+			completed, reason = false, "Route blocked"
 			break
 		end
 		spent = spent + cost
