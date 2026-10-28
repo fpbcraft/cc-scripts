@@ -1,250 +1,219 @@
--- Pixel-art artillery battlefield. View coordinates are scaled by FPB Canvas.
+-- WORMFRONT view: camera-following battlefield, platforms, rope and weapon picker.
 local Canvas = require("lib.fpb.canvas")
+local Pixelbuffer = require("lib.fpb.pixelbuffer")
 local Sim = require("sim")
 local UI = {}
 UI.__index = UI
-local teamColors = { 13, 31, 18, 11 }
+local colorsByTeam = { 13, 31, 18, 11 }
 local themes = {
-	{ sky = 19, far = 3, dirt = 16, stone = 17, grass = 11, cloud = 24 },
-	{ sky = 20, far = 25, dirt = 9, stone = 26, grass = 8, cloud = 30 },
-	{ sky = 23, far = 20, dirt = 17, stone = 27, grass = 13, cloud = 24 },
-	{ sky = 25, far = 12, dirt = 26, stone = 17, grass = 28, cloud = 6 },
+	{ sky = 19, ground = 16, grass = 11, hill = 3 },
+	{ sky = 20, ground = 9, grass = 8, hill = 25 },
+	{ sky = 23, ground = 17, grass = 13, hill = 20 },
+	{ sky = 25, ground = 26, grass = 28, hill = 12 },
 }
-
-function UI.new(monitor, dispatch)
-	return setmetatable({ r = Canvas.new(monitor), dispatch = dispatch, board = nil }, UI)
+local function fill(r, x, y, w, h, c)
+	r:fill(math.floor(x), math.floor(y), math.max(0, math.ceil(w)), math.max(0, math.ceil(h)), c)
 end
-function UI:close()
-	self.r:close()
+local function dot(r, x, y, radius, color)
+	radius = math.floor(radius)
+	for dy = -radius, radius do
+		local reach = math.floor(math.sqrt(math.max(0, radius * radius - dy * dy)))
+		fill(r, x - reach, y + dy, 2 * reach + 1, 1, color)
+	end
+end
+local function buttonRow(r, entries, y, enabled)
+	local gap = 2
+	local width = math.floor((r.w - gap * (#entries + 1)) / #entries)
+	for i, entry in ipairs(entries) do
+		local x = gap + (i - 1) * (width + gap)
+		r:button(
+			x,
+			y,
+			width,
+			13,
+			entry[1],
+			(enabled or entry[4]) and entry[2] or nil,
+			{ primary = entry[3] and enabled }
+		)
+	end
+end
+function UI.new(mon, dispatch)
+	return setmetatable(
+		{ r = Pixelbuffer.attach(Canvas.new(mon)), dispatch = dispatch, picker = false },
+		UI
+	)
 end
 function UI:resize()
 	self.r:resize()
 end
-local function rect(r, x, y, width, height, c)
-	r:fill(math.floor(x), math.floor(y), width, height, c)
-end
-local function dot(r, x, y, radius, c)
-	for dy = -radius, radius do
-		local dx = math.floor(math.sqrt(math.max(0, radius * radius - dy * dy)))
-		rect(r, x - dx, y + dy, dx * 2 + 1, 1, c)
-	end
+function UI:close()
+	self.r:close()
 end
 
-local function buttonRow(r, items, y, enabled)
-	local gap, height = 2, 13
-	local width = math.floor((r.w - gap * (#items + 1)) / #items)
-	for i, item in ipairs(items) do
-		local x = gap + (i - 1) * (width + gap)
-		r:button(x, y, width, height, item[1], (enabled or item[4]) and item[2] or nil, {
-			primary = item[3] and enabled,
-		})
-	end
+-- World coordinates are mapped through the scrolling camera.
+local function screen(b, x, y)
+	return b.x + (x - 1 - b.scrollX) * b.scale, b.y + (y - 1 - b.scrollY) * b.scale
 end
-
-local function scene(r, g, b, frame)
-	local palette = themes[g.theme or 1]
-	local x0, y0, scale = b.x, b.y, b.scale
-	local width, height = Sim.W * scale, Sim.H * scale
-	r:fill(x0, y0, width, height, palette.sky)
-	-- Atmospheric horizon layers; no bitmap assets or non-ComputerCraft colors.
-	r:fill(x0, y0 + math.floor(height * 0.63), width, math.ceil(height * 0.37), palette.far)
-	dot(r, x0 + width * 0.80, y0 + height * 0.21, math.max(2, 3 * scale), 18)
-	for i = 1, 5 do
-		local cx = x0 + ((i * 17 + (g.seed or 1) % 13) % Sim.W) * scale
-		local cy = y0 + (4 + i % 3 * 3) * scale
-		rect(r, cx - 3 * scale, cy, 6 * scale, scale, palette.cloud)
-		rect(r, cx - scale, cy - scale, 4 * scale, scale, palette.cloud)
-	end
-	-- Terrain: draw columns in vertical runs, then grass rim and stratified pebbles.
-	for x = 1, Sim.W do
-		local column = g.terrain[x]
-		local start, previous = nil, nil
-		for y = 1, Sim.H + 1 do
-			local isSolid = y <= Sim.H and column:sub(y, y) == "#"
-			local color = isSolid
-					and (((x * 7 + y * 13) % 17 == 0) and palette.stone or palette.dirt)
-				or nil
-			if color ~= previous then
-				if start then
-					rect(
-						r,
-						x0 + (x - 1) * scale,
-						y0 + (start - 1) * scale,
-						scale,
-						(y - start) * scale,
-						previous
-					)
-				end
-				previous, start = color, (color and y or nil)
-			end
-		end
-		for y = 1, Sim.H do
-			if column:sub(y, y) == "#" and (y == 1 or column:sub(y - 1, y - 1) == ".") then
-				rect(
-					r,
-					x0 + (x - 1) * scale,
-					y0 + (y - 1) * scale,
-					scale,
-					math.max(1, math.ceil(scale / 2)),
-					palette.grass
-				)
-			end
-		end
-	end
-	-- Scenery remains deterministic across clients.
-	for i = 1, 7 do
-		local tx = 3 + ((i * 23 + g.seed) % (Sim.W - 5))
-		local ty = Sim.ground(g, tx)
-		if ty < Sim.H and ty > 4 and (i + g.theme) % 2 == 0 then
-			local px = x0 + (tx - 1) * scale
-			local py = y0 + (ty - 1) * scale
-			rect(r, px, py - 3 * scale, math.max(1, scale - 1), 3 * scale, 22)
-			rect(r, px - scale, py - 5 * scale, 3 * scale, 3 * scale, palette.grass)
-		end
-	end
-	-- Animated pickup crates are deliberately drawn above the terrain.
-	for i, item in ipairs(g.items or {}) do
-		local x = x0 + (item.x - 1) * scale
-		local y = y0 + (item.y - 1) * scale - 3 * scale
-		local bob = (frame + i * 3) % 8 < 4 and 0 or 1
-		rect(
-			r,
-			x - scale,
-			y - bob,
-			3 * scale,
-			3 * scale,
-			item.kind == "MEDKIT" and 11 or item.kind == "AMMO" and 8 or 13
-		)
-		r:outline(x - scale, y - bob, 3 * scale, 3 * scale, 7)
-		if item.kind == "MEDKIT" then
-			rect(r, x, y + scale - bob, scale, 1, 7)
-			rect(r, x + math.floor(scale / 2), y - bob, 1, 3 * scale, 7)
-		elseif item.kind == "AMMO" then
-			dot(r, x, y + scale - bob, math.max(1, scale - 1), 10)
-		else
-			r:line(x - scale, y + scale - bob, x + scale, y + 2 * scale - bob, 18)
-		end
-	end
+local function visible(b, x, y, pad)
+	pad = pad or 2
+	return x >= b.scrollX - pad
+		and x < b.scrollX + b.w / b.scale + pad
+		and y >= b.scrollY - pad
+		and y < b.scrollY + b.h / b.scale + pad
 end
-
-local function drawWorm(r, w, x0, y0, scale, selected, frame)
-	if w.hp <= 0 then
-		return
+local function camera(r, g)
+	local areaW, areaH = r.w - 6, math.max(30, r.h - 68)
+	local scale = math.max(1, math.min(3, math.floor(areaH / 42)))
+	local focus = g.projectile or Sim.worm(g)
+	focus = focus or { x = Sim.W / 2, y = Sim.H / 2 }
+	local vw, vh = areaW / scale, areaH / scale
+	local clamp = function(n, a, z)
+		return math.max(a, math.min(z, n))
 	end
-	local x = x0 + (w.x - 1) * scale
-	local y = y0 + (w.y - 1) * scale
-	local s = math.max(2, scale)
-	local facing = w.facing or 1
-	local bob = selected and frame % 10 < 5 and 1 or 0
-	local foot = y + math.floor(s * 0.3)
-	local top = foot - 3 * s - bob
-	-- Soft shadow, distinct feet, outlined body and helmet.
-	rect(r, x - s, foot, 3 * s, 1, 23)
-	rect(r, x - s, foot - s, s, s, 15)
-	rect(r, x + s, foot - s, s, s, 15)
-	rect(r, x - 2 * s, top + s, 4 * s, 2 * s, 23)
-	rect(r, x - 2 * s + 1, top + s + 1, 4 * s - 2, 2 * s - 1, teamColors[w.team])
-	rect(r, x - s, top, 3 * s, s + 1, 24)
-	rect(r, x - s + 1, top + 1, 3 * s - 2, s - 1, teamColors[w.team])
-	rect(r, x + facing * s, top + s, math.max(1, s - 1), math.max(1, s), 24)
-	rect(r, x + facing * s, top + s, 1, 1, 0)
-	rect(r, x + facing * s, top + 2 * s, 1, 1, 31)
-	local barWidth = math.max(6, 4 * s + 2)
-	rect(r, x - math.floor(barWidth / 2), top - 4, barWidth, 2, 10)
-	rect(r, x - math.floor(barWidth / 2), top - 4, math.floor(barWidth * w.hp / 100), 2, 11)
-	if w.shield then
-		r:outline(x - 2 * s - 1, top - 1, 4 * s + 2, 3 * s + 2, 13)
-	end
-	if selected then
-		r:line(x, top - 10, x - 3, top - 7, 18)
-		r:line(x, top - 10, x + 3, top - 7, 18)
-		r:line(x - 3, top - 7, x + 3, top - 7, 18)
-	end
-end
-
-local function aimGuide(r, g, b, worm)
-	if not worm or worm.hp <= 0 then
-		return
-	end
-	local a = math.rad(worm.aim)
-	local x = b.x + (worm.x - 1) * b.scale
-	local y = b.y + (worm.y - 1) * b.scale - b.scale
-	local len = math.max(12, b.scale * 8)
-	r:line(x, y, x + math.cos(a) * len, y - math.sin(a) * len, 23)
-	r:line(x, y - 1, x + math.cos(a) * len, y - math.sin(a) * len - 1, 7)
-	dot(r, x + math.cos(a) * len, y - math.sin(a) * len, 1, 18)
-	-- Simple protractor ticks anchored on the selected worm.
-	for degrees = 15, 165, 15 do
-		local t = math.rad(degrees)
-		local inner, outer = b.scale * 4.4, b.scale * 4.8
-		r:line(
-			x + math.cos(t) * inner,
-			y - math.sin(t) * inner,
-			x + math.cos(t) * outer,
-			y - math.sin(t) * outer,
-			6
-		)
-	end
-end
-
-local function effects(r, g, b, frame)
-	local scale = b.scale
-	for i, p in ipairs(g.trail or {}) do
-		if p.x >= 1 and p.x <= Sim.W and p.y >= 1 and p.y <= Sim.H then
-			dot(
-				r,
-				b.x + (p.x - 1) * scale,
-				b.y + (p.y - 1) * scale,
-				i % 3 == 0 and 1 or 0,
-				i % 2 == 0 and 8 or 24
-			)
-		end
-	end
-	local p = g.projectile
-	if p and p.x >= 1 and p.x <= Sim.W and p.y > 0 and p.y <= Sim.H then
-		local x = b.x + (p.x - 1) * scale
-		local y = b.y + (p.y - 1) * scale
-		dot(r, x, y, math.max(2, scale), 31)
-		dot(r, x, y, 1, 18)
-	end
-	local explosion = g.explosion
-	if explosion and explosion.radius > 0 then
-		local progress = math.min(1, explosion.elapsed / 0.85)
-		local x = b.x + (explosion.x - 1) * scale
-		local y = b.y + (explosion.y - 1) * scale
-		local radius =
-			math.floor(explosion.radius * scale * (0.3 + 0.7 * math.sin(progress * math.pi)))
-		if radius > 0 then
-			dot(r, x, y, radius, progress < 0.4 and 18 or 9)
-			dot(r, x, y, math.max(1, math.floor(radius * 0.65)), progress < 0.35 and 7 or 31)
-			for i = 1, 8 do
-				local angle = (i / 8) * math.pi * 2 + frame * 0.07
-				local distance = radius * (1 + progress * 0.7)
-				dot(r, x + math.cos(angle) * distance, y + math.sin(angle) * distance, 1, 8)
-			end
-		end
-	end
-end
-
-local function battlefield(r, g, frame)
-	local scale = math.max(1, math.floor(math.min((r.w - 6) / Sim.W, (r.h - 66) / Sim.H)))
-	local b = {
+	return {
+		x = 3,
+		y = 20,
+		w = areaW,
+		h = areaH,
 		scale = scale,
-		x = math.floor((r.w - Sim.W * scale) / 2),
-		y = 20 + math.floor(math.max(0, r.h - 66 - Sim.H * scale) / 2),
+		scrollX = clamp(focus.x - vw / 2, 0, math.max(0, Sim.W - vw)),
+		scrollY = clamp(focus.y - vh * 0.62, 0, math.max(0, Sim.H - vh)),
 	}
-	scene(r, g, b, frame)
-	for _, w in ipairs(g.worms) do
-		drawWorm(r, w, b.x, b.y, scale, w == Sim.worm(g) and g.state == "aim", frame)
-	end
-	if g.state == "aim" then
-		aimGuide(r, g, b, Sim.worm(g))
-	end
-	effects(r, g, b, frame)
-	r:outline(b.x - 1, b.y - 1, Sim.W * scale + 2, Sim.H * scale + 2, 3)
-	return b
 end
-
+local function scene(r, g, b, frame)
+	local theme = themes[g.theme or 1]
+	fill(r, b.x, b.y, b.w, b.h, theme.sky)
+	fill(r, b.x, b.y + b.h * 0.65, b.w, b.h * 0.35, theme.hill)
+	-- Background detail is kept independent of camera position.
+	for i = 1, 6 do
+		local x, y = screen(b, i * 27 - 7, 8 + i % 4 * 3)
+		if x > b.x + 4 and x < b.x + b.w - 12 and y > b.y + 3 and y < b.y + b.h - 5 then
+			fill(r, x, y, 9, 2, 24)
+			fill(r, x + 2, y - 2, 6, 3, 24)
+		end
+	end
+	local xStart = math.max(1, math.floor(b.scrollX + 1))
+	local xEnd = math.min(Sim.W, math.ceil(b.scrollX + b.w / b.scale))
+	local yStart = math.max(1, math.floor(b.scrollY + 1))
+	local yEnd = math.min(Sim.H, math.ceil(b.scrollY + b.h / b.scale))
+	-- Render solid runs, not every terrain cell. Open craters stay open.
+	for x = xStart, xEnd do
+		local column = g.terrain[x]
+		local px = b.x + (x - 1 - b.scrollX) * b.scale
+		local runStart, runType = nil, nil
+		for y = yStart, yEnd + 1 do
+			local kind = y <= yEnd and column:sub(y, y) or "."
+			if kind ~= runType then
+				if runStart and runType ~= "." then
+					local py = b.y + (runStart - 1 - b.scrollY) * b.scale
+					fill(
+						r,
+						px,
+						py,
+						b.scale,
+						(y - runStart) * b.scale,
+						runType == "=" and 8 or theme.ground
+					)
+					if
+						runType == "#"
+						and (runStart == 1 or column:sub(runStart - 1, runStart - 1) == ".")
+					then
+						fill(r, px, py, b.scale, math.max(1, b.scale / 2), theme.grass)
+					end
+				end
+				runStart, runType = y, kind
+			end
+		end
+	end
+	for i, item in ipairs(g.items or {}) do
+		if visible(b, item.x, item.y, 1) then
+			local x, y = screen(b, item.x, item.y)
+			y = y - b.scale * 2 - ((frame + i) % 8 < 4 and 1 or 0)
+			local s = math.max(2, b.scale * 2)
+			local c = item.kind == "MEDKIT" and 11 or item.kind == "SHIELD" and 13 or 8
+			fill(r, x - s / 2, y, s, s, c)
+			r:outline(x - s / 2, y, s, s, 7)
+		end
+	end
+	for _, mine in ipairs(g.mines or {}) do
+		if visible(b, mine.x, mine.y) then
+			local x, y = screen(b, mine.x, mine.y)
+			dot(r, x, y, b.scale + 1, mine.arm == 0 and 31 or 17)
+		end
+	end
+	for _, fire in ipairs(g.fires or {}) do
+		if visible(b, fire.x, fire.y) then
+			local x, y = screen(b, fire.x, fire.y)
+			dot(r, x, y - (frame % 4), b.scale + 1, 31)
+			dot(r, x, y - b.scale - (frame % 4), b.scale, 18)
+		end
+	end
+end
+local function worms(r, g, b, frame)
+	for _, worm in ipairs(g.worms) do
+		if worm.hp > 0 and visible(b, worm.x, worm.y, 4) then
+			local x, y = screen(b, worm.x, worm.y)
+			local s = math.max(2, b.scale)
+			local selected = worm == Sim.worm(g)
+			local bob = selected and frame % 8 < 4 and 1 or 0
+			local top = y - s * 3 - bob
+			fill(r, x - s, y, s, s, 15)
+			fill(r, x + s, y, s, s, 15)
+			fill(r, x - 2 * s, top + s, 4 * s, 2 * s, 23)
+			fill(r, x - 2 * s + 1, top + s + 1, 4 * s - 2, 2 * s - 1, colorsByTeam[worm.team])
+			fill(r, x - s, top, 3 * s, s, 24)
+			fill(r, x - s + 1, top + 1, 3 * s - 2, math.max(1, s - 1), colorsByTeam[worm.team])
+			fill(r, x + (worm.facing or 1) * s, top + s, s, s, 7)
+			fill(r, x + (worm.facing or 1) * s, top + s, 1, 1, 0)
+			fill(r, x - 3 * s, top - 4, 6 * s, 2, 10)
+			fill(r, x - 3 * s, top - 4, 6 * s * worm.hp / 100, 2, 11)
+			if worm.shield then
+				r:outline(x - 2 * s - 1, top - 2, 4 * s + 2, 3 * s + 3, 13)
+			end
+			if selected then
+				r:line(x, top - 10, x - 3, top - 7, 18)
+				r:line(x, top - 10, x + 3, top - 7, 18)
+				if worm.rope then
+					local ax, ay = screen(b, worm.rope.x, worm.rope.y)
+					r:line(x, y, ax, ay, 6)
+				end
+			end
+		end
+	end
+end
+local function effects(r, g, b, frame)
+	for i, p in ipairs(g.trail or {}) do
+		if visible(b, p.x, p.y) then
+			local x, y = screen(b, p.x, p.y)
+			dot(r, x, y, 1, i % 2 == 0 and 8 or 24)
+		end
+	end
+	if g.projectile and visible(b, g.projectile.x, g.projectile.y) then
+		local x, y = screen(b, g.projectile.x, g.projectile.y)
+		dot(r, x, y, math.max(2, b.scale), 31)
+	end
+	if g.explosion and g.explosion.radius > 0 and visible(b, g.explosion.x, g.explosion.y, 12) then
+		local e = g.explosion
+		local x, y = screen(b, e.x, e.y)
+		local phase = math.min(1, e.elapsed / 0.85)
+		local radius =
+			math.max(1, math.floor(e.radius * b.scale * (0.2 + math.sin(phase * math.pi) * 0.8)))
+		dot(r, x, y, radius, phase < 0.5 and 18 or 31)
+		dot(r, x, y, math.floor(radius / 2), 7)
+	end
+	local w = Sim.worm(g)
+	if g.state == "aim" and w and visible(b, w.x, w.y) then
+		local a = math.rad(w.aim)
+		local x, y = screen(b, w.x, w.y)
+		r:line(
+			x,
+			y - b.scale,
+			x + math.cos(a) * b.scale * 7,
+			y - b.scale - math.sin(a) * b.scale * 7,
+			7
+		)
+	end
+end
 function UI:touch(x, y)
 	local vx, vy = self.r:touch(x, y)
 	if not vx then
@@ -253,66 +222,80 @@ function UI:touch(x, y)
 	if self.r:hit(vx, vy) then
 		return true
 	end
-	local b = self.board
+	if self.picker then
+		return false
+	end
+	local b, g = self.board, self.game
 	if
-		b
-		and self.canControl
-		and vx >= b.x
-		and vx < b.x + Sim.W * b.scale
-		and vy >= b.y
-		and vy < b.y + Sim.H * b.scale
+		not b
+		or not self.canControl
+		or vx < b.x
+		or vx >= b.x + b.w
+		or vy < b.y
+		or vy >= b.y + b.h
 	then
-		local w = Sim.worm(self.game)
-		local dx = vx - (b.x + (w.x - 1) * b.scale)
-		local dy = (b.y + (w.y - 1) * b.scale) - vy
+		return false
+	end
+	local wx = (vx - b.x) / b.scale + b.scrollX + 1
+	local wy = (vy - b.y) / b.scale + b.scrollY + 1
+	local worm = Sim.worm(g)
+	if not worm then
+		return false
+	end
+	if self.aimMode == "rope" then
+		self.dispatch({ kind = "rope", x = wx, y = wy })
+		self.aimMode = nil
+	elseif Sim.weapons[worm.weapon].kind == "strike" then
+		self.dispatch({ kind = "setTarget", x = wx })
+	else
+		local dx, dy = wx - worm.x, worm.y - wy
 		if dx ~= 0 or dy ~= 0 then
-			local angle = math.deg(math.atan2 and math.atan2(dy, dx) or math.atan(dy, dx))
-			self.dispatch({ kind = "setAim", angle = angle })
-			return true
+			local a = math.deg(math.atan(dy, dx))
+			if a >= 0 and a <= 180 then
+				self.dispatch({ kind = "setAim", angle = a })
+			end
 		end
 	end
-	return false
+	return true
 end
-
 function UI:draw(g, opts)
 	opts = opts or {}
 	local r = self.r
-	self.game, self.canControl, self.board = g, false, nil
 	local frame = opts.frame or 0
+	self.game, self.board, self.canControl = g, nil, false
 	r:begin()
-	r:fill(0, 0, r.w, 18, 1)
-	r:text(3, 2, "WORMFRONT", 8)
+	fill(r, 0, 0, r.w, 19, 1)
+	r:text(3, 3, "WORMFRONT", 8)
 	if not g then
-		local y = math.floor(r.h * 0.29)
-		r:center(y, "TACTICAL ARTILLERY", 7)
-		r:center(y + 11, "PLAYERS " .. (opts.count or 1) .. "/4", 13)
-		r:center(y + 21, opts.status or "WAITING FOR PLAYERS", 6)
+		r:center(math.floor(r.h * 0.3), "MULTIPLAYER ARTILLERY", 7)
+		r:center(math.floor(r.h * 0.3) + 13, "PLAYERS " .. (opts.count or 1) .. "/4", 13)
+		r:center(math.floor(r.h * 0.3) + 25, opts.status or "WAITING", 7)
 		if opts.role == "host" then
-			r:center(y + 31, "HOST " .. tostring(opts.hostId or "?"), 8)
+			r:center(math.floor(r.h * 0.3) + 37, "HOST " .. tostring(opts.hostId or "?"), 8)
 			r:button(math.floor(r.w / 2) - 32, r.h - 33, 64, 16, "START", function()
 				self.dispatch({ kind = "start" })
-			end, { primary = true })
+			end)
 		end
-		r:button(r.w - 46, r.h - 17, 44, 13, "EXIT", function()
+		r:button(r.w - 48, r.h - 17, 46, 13, "EXIT", function()
 			self.dispatch({ kind = "exit" })
 		end)
 		r:finish()
 		return
 	end
-
 	local active = g.phase == "playing" and g.state == "aim"
 	local mine = active and (opts.role == "local" or (opts.slot ~= nil and opts.slot == g.turn))
 	self.canControl = mine
-	local timer = math.ceil(g.turnLeft or 0)
-	r:text(r.w - 104, 2, "TEAM " .. g.turn .. "  TIME " .. timer, timer < 10 and 31 or 7, 1, 100)
-	r:fill(3, 11, r.w - 6, 3, 3)
-	r:fill(
+	local remaining = math.max(0, g.turnLeft or 0)
+	r:text(
+		math.max(68, r.w - 104),
 		3,
-		11,
-		math.floor((r.w - 6) * (g.turnLeft or 0) / Sim.TURN_SECONDS),
-		3,
-		timer < 10 and 10 or 11
+		"TEAM " .. g.turn .. "  TIME " .. math.ceil(remaining),
+		remaining < 10 and 31 or 7,
+		1,
+		100
 	)
+	fill(r, 3, 11, r.w - 6, 3, 3)
+	fill(r, 3, 11, (r.w - 6) * remaining / Sim.TURN_SECONDS, 3, remaining < 10 and 31 or 11)
 	r:text(
 		3,
 		15,
@@ -321,50 +304,93 @@ function UI:draw(g, opts)
 		1,
 		r.w - 6
 	)
-	self.board = battlefield(r, g, frame)
-
+	local b = camera(r, g)
+	self.board = b
+	scene(r, g, b, frame)
+	worms(r, g, b, frame)
+	effects(r, g, b, frame)
+	r:outline(b.x - 1, b.y - 1, b.w + 2, b.h + 2, 3)
 	if g.phase == "finished" then
-		r:fill(0, r.h - 37, r.w, 35, 1)
-		r:center(r.h - 31, g.message, 18)
-		r:button(r.w - 51, r.h - 16, 49, 13, "EXIT", function()
+		r:center(r.h - 28, g.message, 18)
+		r:button(r.w - 50, r.h - 16, 48, 13, "EXIT", function()
 			self.dispatch({ kind = "exit" })
 		end)
-	else
-		local worm = Sim.worm(g)
-		local y = r.h - 33
-		r:fill(0, y - 13, r.w, 12, 1)
-		local angle = worm and worm.aim or 0
-		local status = worm
-				and ("HP " .. worm.hp .. "  ANGLE " .. angle .. "  " .. (worm.weapon == 2 and ("MEGA " .. worm.mega) or "ROCKET"))
-			or ""
-		local charge = g.charging and math.min(1, (g.charge or 0) / 1.8) or 0
-		local pw = math.min(74, math.max(20, math.floor(r.w * 0.33)))
-		if r.w < 180 and worm then
-			status = "HP " .. worm.hp .. "  ANG " .. angle
+		r:finish()
+		return
+	end
+	local w = Sim.worm(g)
+	local id = w and w.weapon or 1
+	local ammo = g.inventory[g.turn] and g.inventory[g.turn][id] or 0
+	local name = Sim.weapons[id].name
+	local y = r.h - 35
+	fill(r, 0, y - 12, r.w, 12, 1)
+	local charge = g.charging and math.min(1, g.charge / 1.8) or 0
+	local pw = math.max(24, math.floor(r.w / 4))
+	local status = "HP "
+		.. (w and w.hp or 0)
+		.. "  "
+		.. name
+		.. " "
+		.. (ammo == -1 and "INF" or ammo)
+	r:text(3, y - 10, status, 6, 1, r.w - pw - 8)
+	fill(r, r.w - pw - 3, y - 11, pw, 7, 3)
+	fill(r, r.w - pw - 3, y - 11, pw * charge, 7, charge > 0.9 and 31 or 18)
+	r:outline(r.w - pw - 3, y - 11, pw, 7, 7)
+	local function act(kind, dir)
+		return function()
+			self.dispatch({ kind = kind, dir = dir })
 		end
-		r:text(3, y - 11, status, 6, 1, r.w - pw - 9)
-		r:fill(r.w - pw - 3, y - 12, pw, 7, 3)
-		r:fill(r.w - pw - 3, y - 12, pw * charge, 7, charge > 0.85 and 31 or 18)
-		r:outline(r.w - pw - 3, y - 12, pw, 7, 6)
-		local function act(kind, dir)
-			return function()
-				self.dispatch({ kind = kind, dir = dir })
-			end
+	end
+	buttonRow(r, {
+		{ "LEFT", act("move", -1) },
+		{ "RIGHT", act("move", 1) },
+		{ "AIM -", act("aim", -1) },
+		{ "AIM +", act("aim", 1) },
+		{ "JUMP", act("jump") },
+		{
+			"ARMS",
+			function()
+				self.picker = not self.picker
+			end,
+		},
+	}, y, mine)
+	buttonRow(r, {
+		{
+			"ROPE",
+			function()
+				if w and w.rope then
+					self.dispatch({ kind = "rope" })
+				else
+					self.aimMode = "rope"
+				end
+			end,
+		},
+		{ "REEL -", act("reel", -1) },
+		{ "REEL +", act("reel", 1) },
+		{ g.charging and "RELEASE" or "CHARGE", act("fire"), true },
+		{ "PASS", act("pass") },
+		{ "EXIT", act("exit"), false, true },
+	}, y + 15, mine)
+	if self.picker then
+		local x0 = math.max(2, math.floor(r.w * 0.09))
+		local bw = math.floor((r.w - 2 * x0 - 8) / 2)
+		local height = math.min(b.y + b.h - 8, 12 * 6 + 12)
+		local sy = b.y + math.max(2, math.floor((b.h - height) / 2))
+		fill(r, x0 - 3, sy - 3, bw * 2 + 14, height + 6, 1)
+		r:outline(x0 - 3, sy - 3, bw * 2 + 14, height + 6, 8)
+		for i, weapon in ipairs(Sim.weapons) do
+			local row, col = math.floor((i - 1) / 2), (i - 1) % 2
+			local ix, iy = x0 + col * (bw + 4), sy + row * 14
+			local stock = g.inventory[g.turn][i] or 0
+			local label = weapon.name .. " " .. (stock == -1 and "INF" or stock)
+			r:button(ix, iy, bw, 12, label, mine and stock ~= 0 and function()
+				self.dispatch({ kind = "weapon", id = i })
+				self.picker = false
+			end or nil, { selected = id == i })
 		end
-		buttonRow(r, {
-			{ "WORM", act("select") },
-			{ "AIM -", act("aim", -1) },
-			{ "AIM +", act("aim", 1) },
-			{ "JUMP", act("jump") },
-			{ "WEAPON", act("weapon") },
-		}, y, mine)
-		buttonRow(r, {
-			{ "LEFT", act("move", -1) },
-			{ "RIGHT", act("move", 1) },
-			{ g.charging and "RELEASE" or "CHARGE", act("fire"), true },
-			{ "PASS", act("pass") },
-			{ "EXIT", act("exit"), false, true },
-		}, y + 15, mine)
+		r:button(x0, sy + 70, bw * 2 + 4, 12, "CLOSE", function()
+			self.picker = false
+		end)
 	end
 	r:finish()
 end

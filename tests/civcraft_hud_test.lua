@@ -8,6 +8,7 @@ local Factions = dofile("/games/civcraft/faction_view.lua")
 local Icons = dofile("/games/civcraft/icons.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local UI = dofile("/games/civcraft/ui.lua")
+dofile("tests/helpers/civcraft_layout_only.lua")(UI)
 local World = dofile("/games/civcraft/world.lua")
 local world = { width = 12, height = 10, tiles = {}, resources = {}, landmarks = {}, rails = {} }
 for y = 1, 10 do

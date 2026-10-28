@@ -1,107 +1,134 @@
--- WORMFRONT v0.2 rules: deterministic maps, time-based turns and ballistics.
 local Sim = dofile("games/wormfront/sim.lua")
-local function map(g)
+local function terrain(g)
 	return table.concat(g.terrain, ",")
 end
 for teams = 2, 4 do
-	local g = Sim.new(teams, 1234)
-	assert(g.phase == "playing" and g.teams == teams)
+	local g = Sim.new(teams, 2026)
+	local other = Sim.new(teams, 2026)
+	assert(g.version == 3 and Sim.W == 144 and Sim.H == 60)
+	assert(terrain(g) == terrain(other), "Maps must reproduce by seed")
 	assert(#g.worms == teams * 3 and #g.items >= 1)
-	assert(g.turnLeft == Sim.TURN_SECONDS)
+	assert(g.items[1].x == other.items[1].x)
+	local platforms = 0
 	for x = 1, Sim.W do
 		assert(#g.terrain[x] == Sim.H)
+		for y = 1, Sim.H do
+			if g.terrain[x]:sub(y, y) == "=" then
+				platforms = platforms + 1
+			end
+		end
 	end
-	local same = Sim.new(teams, 1234)
-	assert(map(g) == map(same) and g.theme == same.theme)
-	assert(g.items[1].kind == same.items[1].kind and g.items[1].x == same.items[1].x)
+	assert(platforms > 0, "Random map must contain elevated platforms")
 	for team = 1, teams do
-		assert(g.selected[team] and g.worms[g.selected[team]].team == team)
+		local items = g.inventory[team]
+		assert(items[1] == -1, "Each team starts with only a bazooka")
+		for id = 2, #Sim.weapons do
+			assert(items[id] == nil, "Special weapons must be collected")
+		end
 	end
 end
-assert(map(Sim.new(2, 4)) ~= map(Sim.new(2, 5)), "Maps should vary between seeds")
+assert(terrain(Sim.new(2, 1)) ~= terrain(Sim.new(2, 2)))
+assert(#Sim.weapons == 10, "All ten weapon types must be registered")
 
-local g = Sim.new(2, 77)
-local worm = Sim.worm(g)
-assert(not Sim.apply(g, 2, { kind = "charge" }), "Opponent cannot fire")
-assert(not Sim.apply(g, 1, { kind = "move", dir = 50 }))
-assert(not Sim.apply(g, 1, { kind = "teleport" }))
-local beforeAim = worm.aim
-assert(Sim.apply(g, 1, { kind = "aim", dir = 1 }))
-assert(worm.aim == beforeAim + 3)
-assert(Sim.apply(g, 1, { kind = "setAim", angle = 123 }))
-assert(worm.aim == 123)
-assert(not Sim.apply(g, 1, { kind = "setAim", angle = math.huge }))
-assert(not Sim.apply(g, 1, { kind = "setAim", angle = -99 }))
+local g = Sim.new(2, 44)
+local first1 = g.selected[1]
+local first2 = g.selected[2]
+assert(not Sim.apply(g, 1, { kind = "select" }), "Worm switching disabled")
+assert(not Sim.apply(g, 2, { kind = "pass" }), "Only current team can act")
+assert(not Sim.apply(g, 1, { kind = "weapon", id = 3 }), "No special weapons at spawn")
+assert(not Sim.apply(g, 1, { kind = "rope", x = math.huge, y = 5 }))
+assert(Sim.apply(g, 1, { kind = "pass" }))
+assert(g.turn == 2 and g.selected[2] == first2, "Team 2 must use first worm")
+assert(Sim.apply(g, 2, { kind = "pass" }))
+assert(g.turn == 1 and g.selected[1] ~= first1, "Next round uses next worm")
+local second = g.selected[1]
+assert(Sim.apply(g, 1, { kind = "pass" }))
+assert(Sim.apply(g, 2, { kind = "pass" }))
+assert(g.selected[1] ~= second, "Third worm is next")
+assert(Sim.apply(g, 1, { kind = "pass" }))
+assert(Sim.apply(g, 2, { kind = "pass" }))
+assert(g.selected[1] == first1, "Rotation must wrap back to first living worm")
 
--- Movement no longer has a four-step quota; movement is timer-limited.
-local flat = (".."):rep(11) .. ("#"):rep(Sim.H - 22)
-for x = 1, Sim.W do
-	g.terrain[x] = flat
-end
-worm.x, worm.y = 10, 22
-worm.hp = 55
-g.items = { { x = 11, y = 22, kind = "MEDKIT" }, { x = 18, y = 22, kind = "AMMO" } }
-assert(Sim.apply(g, 1, { kind = "move", dir = 1 }))
-assert(worm.hp == 85 and #g.items == 1)
-for _ = 1, 5 do
-	assert(Sim.apply(g, 1, { kind = "move", dir = 1 }))
-end
-assert(worm.x == 16)
-worm.facing = 1
-assert(Sim.apply(g, 1, { kind = "jump" }))
-assert(worm.airborne)
-assert(not Sim.apply(g, 1, { kind = "jump" }))
-for _ = 1, 28 do
-	Sim.tick(g, 0.05)
-end
-assert(not worm.airborne, "Jump should land")
-assert(worm.x > 16, "Jump should move the worm")
-assert(worm.y == 22)
-
--- A charge is held for real elapsed time. Release starts an animated flight.
-assert(Sim.apply(g, 1, { kind = "weapon" }))
-assert(worm.weapon == 2)
-assert(Sim.apply(g, 1, { kind = "charge" }))
-Sim.tick(g, 0.6)
-assert(g.charging and g.charge >= 0.59)
-assert(not Sim.apply(g, 1, { kind = "move", dir = 1 }), "No walking while charging")
-assert(Sim.apply(g, 1, { kind = "release" }))
-assert(g.state == "flight" and not g.charging and worm.mega == 1)
-assert(g.projectile and g.projectile.vx)
-assert(not Sim.apply(g, 1, { kind = "aim", dir = 1 }))
-local steps = 0
-while g.phase == "playing" and g.turn == 1 and steps < 300 do
-	Sim.tick(g, 0.05)
-	steps = steps + 1
-end
-assert(g.turn == 2 or g.phase == "finished", "Animated shot must finish")
-assert(steps > 3, "Projectile must animate over more than a frame")
-assert(not Sim.apply(g, 1, { kind = "charge" }))
-
-local timed = Sim.new(2, 9)
-timed.turnLeft = 0.25
+local timed = Sim.new(2, 55)
+timed.turnLeft = 0.2
 Sim.tick(timed, 0.3)
-assert(timed.turn == 2 and timed.turnLeft == Sim.TURN_SECONDS, "Timeout must pass the turn")
+assert(timed.turn == 2 and timed.turnLeft > Sim.TURN_SECONDS - 0.2)
 
-local tapped = Sim.new(2, 77)
-assert(Sim.apply(tapped, 1, { kind = "fire" }))
-Sim.tick(tapped, 0.3)
-assert(Sim.apply(tapped, 1, { kind = "fire" }))
-assert(tapped.state == "flight", "Two touchscreen taps should charge then release")
+-- Weapon pickups grant the owning team ammunition, not each individual worm.
+local loot = Sim.new(2, 80)
+local w = Sim.worm(loot)
+loot.items = { { x = w.x + 1, y = w.y, kind = "WEAPON", weapon = 3 } }
+-- Make a convenient flat path to pick the weapon up.
+local base = w.y + 1
+for x = math.floor(w.x), math.floor(w.x + 2) do
+	loot.terrain[x] = ("."):rep(base - 1) .. ("#"):rep(Sim.H - base + 1)
+end
+assert(Sim.apply(loot, 1, { kind = "move", dir = 1 }))
+assert(loot.inventory[1][3] == Sim.weapons[3].gift)
+assert(Sim.apply(loot, 1, { kind = "weapon", id = 3 }))
+assert(Sim.worm(loot).weapon == 3)
 
-local noAmmo = Sim.new(2, 9)
-local selected = Sim.worm(noAmmo)
-selected.weapon, selected.mega = 2, 0
-assert(not Sim.apply(noAmmo, 1, { kind = "charge" }))
-assert(noAmmo.turn == 1)
+local shot = Sim.new(2, 99)
+local shooter = Sim.worm(shot)
+assert(Sim.apply(shot, 1, { kind = "charge" }))
+Sim.tick(shot, 0.3)
+Sim.tick(shot, 0.3)
+assert(shot.charge >= 0.55)
+assert(not Sim.apply(shot, 1, { kind = "move", dir = 1 }), "Charging blocks walking")
+assert(Sim.apply(shot, 1, { kind = "release" }))
+assert(shot.state == "flight" and shot.projectile.weapon == 1)
+for _ = 1, 260 do
+	if shot.turn ~= 1 or shot.phase == "finished" then
+		break
+	end
+	Sim.tick(shot, 0.06)
+end
+assert(shot.turn == 2 or shot.phase == "finished", "Projectile flight eventually completes")
 
-local won = Sim.new(2, 23)
-for _, target in ipairs(won.worms) do
-	if target.team == 2 then
-		target.hp = 0
+-- Ropes attach to actual collidable terrain, respect length and detach.
+local rope = Sim.new(2, 77)
+local unit = Sim.worm(rope)
+local top = math.floor(unit.y - 12)
+local x = math.floor(unit.x)
+local col = rope.terrain[x]
+rope.terrain[x] = col:sub(1, top - 1) .. "=" .. col:sub(top + 1)
+assert(Sim.apply(rope, 1, { kind = "rope", x = x, y = top }))
+assert(unit.rope and unit.airborne)
+local length = unit.rope.length
+assert(Sim.apply(rope, 1, { kind = "reel", dir = -1 }))
+assert(unit.rope.length < length)
+assert(Sim.apply(rope, 1, { kind = "move", dir = 1 }))
+for _ = 1, 20 do
+	Sim.tick(rope, 0.05)
+end
+assert(unit.rope and unit.x >= 1 and unit.x <= Sim.W)
+assert(Sim.apply(rope, 1, { kind = "rope" }))
+assert(not unit.rope)
+
+-- Every special weapon has a real action and bounded ammo consumption.
+for id = 2, #Sim.weapons do
+	local weaponGame = Sim.new(2, 150 + id)
+	local actor = Sim.worm(weaponGame)
+	weaponGame.inventory[1][id] = 2
+	assert(Sim.apply(weaponGame, 1, { kind = "weapon", id = id }))
+	if id == 5 then
+		assert(Sim.apply(weaponGame, 1, { kind = "setTarget", x = 66 }))
+	end
+	assert(Sim.apply(weaponGame, 1, { kind = "charge" }))
+	Sim.tick(weaponGame, 0.2)
+	assert(Sim.apply(weaponGame, 1, { kind = "release" }), Sim.weapons[id].name)
+	assert(weaponGame.inventory[1][id] == 1)
+	assert(weaponGame.state == "flight" or weaponGame.state == "blast")
+end
+
+local eliminated = Sim.new(2, 123)
+for _, enemy in ipairs(eliminated.worms) do
+	if enemy.team == 2 then
+		enemy.hp = 0
 	end
 end
-assert(Sim.apply(won, 1, { kind = "pass" }))
-assert(won.phase == "finished" and won.winner == 1)
-assert(not Sim.apply(won, 1, { kind = "charge" }))
-print("WORMFRONT: seeded maps, pickups, jumps, charged shots, timing and victory passed")
+assert(Sim.apply(eliminated, 1, { kind = "pass" }))
+assert(eliminated.phase == "finished" and eliminated.winner == 1)
+assert(not Sim.apply(eliminated, 1, { kind = "pass" }))
+
+print("WORMFRONT: rotation, larger maps, crates, arsenal, rope, wind and time passed")

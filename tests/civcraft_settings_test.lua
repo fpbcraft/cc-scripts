@@ -13,6 +13,7 @@ dofile = function(path)
 end
 local Audio = dofile("/games/civcraft/audio.lua")
 local UI = dofile("/games/civcraft/ui.lua")
+dofile("tests/helpers/civcraft_layout_only.lua")(UI)
 local files, encoded, notes = {}, {}, {}
 fs = {
 	exists = function(path)

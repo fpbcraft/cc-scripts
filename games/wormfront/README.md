@@ -1,104 +1,98 @@
-# WORMFRONT v0.2 — Tactical Artillery
+# WORMFRONT v0.3 — Artillery and ninja rope
 
-A lightweight, original Worms-inspired game for **CC:Tweaked**. Two to four
-teams battle with three worms each across procedurally generated, destructible
-landscapes. Compatible with **local hotseat** or **rednet multiplayer** on the
-same wired or wireless modem network.
+Original lightweight Worms-inspired game for CC:Tweaked and CraftOS-PC. Supports
+2–4 players, with three worms per team, locally (hotseat) or over rednet modems.
+Install from FPB Store or use the repository's one-command installer.
 
-## Install the feature branch
-
-Run this command **on each participating computer** before the PR merges:
+## Install
 
 ```sh
-wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/codex/wormfront-multiplayer/installers/wormfront.lua codex/wormfront-multiplayer
+wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/codex/wormfront-arsenal-rope/installers/wormfront.lua codex/wormfront-arsenal-rope
 ```
 
-After merge, the regular command is:
+Once merged, use the regular `main` installer. On each client use the **same
+revision** of the game; v0.3 uses its own rednet protocol.
 
 ```sh
-wget run https://raw.githubusercontent.com/fpbcraft/cc-scripts/main/installers/wormfront.lua
+/games/wormfront/main.lua local 2
+/games/wormfront/main.lua host
+/games/wormfront/main.lua join
 ```
 
-## Start
-
-- Single terminal, 2–4 hotseat teams:
-  `/games/wormfront/main.lua local 2`
-- Create a remote match:
-  `/games/wormfront/main.lua host`
-- Join from each separate ComputerCraft computer:
-  `/games/wormfront/main.lua join`
-- If multiple hosts exist:
-  `/games/wormfront/main.lua join <HOST_ID>`
-
-The host presses **START** once 2–4 players are connected. A disconnected
-player can rejoin from the **same computer ID** as long as the host is still
-running. Different Minecraft servers do not automatically connect through
-rednet: an external relay is outside this release.
+The host starts a 2–4 player session. Everyone needs a modem or a correctly
+connected wired modem network. Only the host simulates combat and turn timing.
 
 ## Gameplay
 
-- Each team gets three worms with 100 HP.
-- **45-second turns** tick in real time on the authoritative host, independent
-  of how many movements a player makes.
-- **Walking:** as many steps as time permits, with small slope climbing.
-- **Jumping:** forward ballistic leap with gravity, optional air steering.
-- **Aim:** change the barrel angle in 3-degree increments; a visible barrel,
-  angle readout and protractor ticks indicate direction.
-- **Power:** hold Space to charge, release to shoot. A moving bar shows charge
-  progress up to maximum power in 1.8 seconds. On touchscreens, tap **CHARGE**
-  once to begin and **RELEASE** once to launch.
-- **Wind** affects the rocket's flight; projectiles visibly arc over terrain.
-- Rocket ammo is unlimited. Each worm starts with two **MEGA** shots, which
-  have a larger blast radius.
-- **Random crates** can contain a 30-HP medkit, another MEGA round or a
-  damage-reducing shield. Crates appear at match start and over subsequent
-  rounds and can be collected by walking or jumping into them.
-- The last surviving team wins. Falling into deep holes can eliminate worms.
+- 45-second timed turns; no movement quota
+- **Sequential team worm order**: each time a team gets a turn it receives the
+  next living worm in roster order. Players cannot manually switch worms.
+- Each team's initial inventory contains **only unlimited BAZOOKA**.
+- Collect random **WEAPON** crates to unlock other equipment and ammunition.
+  Weapon stocks belong to teams, so later worms share the ammo collected.
+- Medkits restore 30 HP; shields reduce the next damage event.
+- Large 144×60-cell destructible maps with themed hills, elevated platforms and
+  a camera which follows the active worm or projectile.
+- Wind changes gently per turn (−3 through +3), deflecting thrown and fired
+  projectiles. The HUD shows its current value.
+- Projectiles animate; explosions carve craters and can knock worms into the air.
+- A physics-based **ninja rope** attaches to solid terrain, swings with
+  horizontal controls, reels in/out, and detaches using the rope or jump key.
 
-### Controls
+## Weapons
 
-| Action | Advanced Monitor | Keyboard |
+| Weapon | Initial stock | Stock from a weapon crate | Behavior |
+| --- | --- | --- | --- |
+| Bazooka | Unlimited | N/A | Wind-affected explosive rocket |
+| Grenade | 0 | 3 | Bouncing, timed explosive |
+| Dynamite | 0 | 1 | Close-range timed heavy explosive |
+| Baseball Bat | 0 | 2 | Short-range damage and knockback |
+| Air Strike | 0 | 1 | Five explosions around a chosen horizontal position |
+| Minigun | 0 | 1 | Eight rapid shots |
+| Mine | 0 | 2 | Placed proximity-triggered explosive |
+| Fire Punch | 0 | 2 | Short-range uppercut knockback |
+| Handgun | 0 | 3 | Two accurate direct-hit bullets |
+| Petrol Bomb | 0 | 2 | Explosive impact and lingering fire |
+
+Special weapon ammo is consumed when used. No special weapons are preloaded.
+Crates appear throughout a match, rather than giving every worm its own stock.
+
+## Controls
+
+| Action | Keyboard | Advanced Monitor |
 | --- | --- | --- |
-| Walk left/right | LEFT / RIGHT | Left / Right (hold) |
-| Rotate barrel | AIM - / AIM + or tap battlefield | Down / Up (hold) |
-| Jump | JUMP | J |
-| Change active worm | WORM | Tab |
-| Choose weapon | WEAPON | W |
-| Charge / shoot | CHARGE then RELEASE | Hold Space, then release (or F twice) |
-| End turn without a shot | PASS | Enter |
-| Exit | EXIT | Q |
+| Move / rope swing | Left / Right (hold) | LEFT / RIGHT |
+| Aim | Up / Down (hold) | AIM − / AIM + or touch world |
+| Charge & fire | Hold/release Space | CHARGE then RELEASE |
+| Jump / detach rope | J | JUMP |
+| Rope attach / detach | R or T | ROPE then touch a terrain anchor |
+| Reel rope | Page Up / Page Down | REEL − / REEL + |
+| Open weapons | W cycles unlocked weapons; number keys 1–0 choose slot | ARMS menu |
+| Target air strike | Touch world | Touch battlefield |
+| End turn | Enter | PASS |
+| Quit | Q | EXIT |
 
-The controls disable battle actions on spectators' screens or out-of-turn
-players. Remote players see the same real-time projectiles and explosions.
+The weapon menu marks locked weapon entries unavailable. Number 0 is the
+tenth weapon. Use the same computer ID to reconnect after a disconnection.
 
-### Graphics and hardware
+## Graphics and performance
 
-The game **automatically sets an attached Advanced Monitor to text scale 0.5**
-before initializing the shared FPB pixel canvas, and restores its previous
-scale on exit. It chooses the largest monitor automatically.
+Attached Advanced Monitors automatically switch to **0.5 text scale** before
+pixel graphics initialization, restoring the previous scale on exit. The game
+also uses CraftOS-PC graphics mode if supported.
 
-The updated graphics include four themed randomized battlefields, layered
-terrain, background clouds and hills, helmeted worms with team colors and
-health bars, aiming guides, animated projectiles and smoke trails, and
-multi-stage explosions. Animations use the event/timer loop; no animations
-are played synchronously inside input callbacks.
+The renderer follows the camera rather than drawing all 144×60 tiles.
+It now uses the reusable `lib/fpb/pixelbuffer.lua` framebuffer on compatible
+CraftOS-PC / CC: Graphics displays. Shapes and glyphs are rasterized to Lua
+scanlines and flushed with batched `drawPixels` bitmap calls, with no native
+pixel calls for unchanged frames. This also avoids clearing the physical display
+on every frame. The accelerated target cadence is 10 frames/sec; regular text
+mode uses a slower fallback. Input and network events **never** force a redraw,
+which prevents the keyboard-triggered screen flashing.
 
-Native CraftOS-PC pixel graphics are supported when available; regular
-text-mode computers use the existing virtual terminal fallback. A large
-Advanced Monitor is recommended to see fine sprite details.
-
-## Architecture and limitations
-
-`sim.lua` owns authoritative rules and time-stepped projectile/jump physics.
-`ui.lua` renders the pixel battlefield and normalizes pointer input using
-`lib/fpb/canvas.lua`. `main.lua` runs the event loop, host, client, and hotseat
-modes. Host state is sent approximately every 150 ms to all clients and
-validated actions are applied only on the host.
-
-For this first expanded edition there are no saved or persistent matches,
-ropes, terrain editor, matchmaking service, or support for reconnecting from
-a different computer ID. Animations and performance should be verified on a
-real multiplayer CC:Tweaked monitor setup before merging.
+Remote clients receive the terrain once and only receive it again when its
+revision changes after an explosion. Normal authoritative updates exclude
+unchanged terrain, reducing the load on rednet and the host.
 
 ## Tests
 
@@ -108,3 +102,7 @@ lua5.3 tests/wormfront_ui_test.lua
 lua5.3 tests/wormfront_installer_test.lua
 make style-check
 ```
+
+Monitor-specific rendering, frame cadence, and multiplayer latency should
+still be checked on real CraftOS-PC and CC: Graphics hardware. This edition
+does not include match saves, cross-server relay, or full Worms physics.

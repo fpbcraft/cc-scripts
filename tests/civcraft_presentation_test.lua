@@ -6,6 +6,7 @@ local Icons = dofile("games/civcraft/icons.lua")
 local Systems = dofile("games/civcraft/systems.lua")
 local Content = dofile("games/civcraft/content.lua")
 local UI = dofile("games/civcraft/ui.lua")
+dofile("tests/helpers/civcraft_layout_only.lua")(UI)
 colors = {
 	black = 32768,
 	white = 1,
