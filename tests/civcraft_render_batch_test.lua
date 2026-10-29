@@ -234,3 +234,41 @@ assert(
 os.epoch, os.queueEvent, os.pullEvent = oldEpoch, oldQueue, oldPull
 os.startTimer, os.cancelTimer = oldStart, oldCancel
 print("CIVCRAFT: render checkpoint recovers when its sentinel event is lost.")
+
+-- A slow display/runtime can spend its whole watchdog budget in fewer than
+-- 128 primitives, or in a single sprite. Model elapsed work between rows.
+local now, yielded = 1000, 0
+events = {}
+os.epoch = function()
+	return now
+end
+os.queueEvent = function(...)
+	events[#events + 1] = table.pack(...)
+end
+os.pullEvent = function()
+	yielded = yielded + 1
+	return table.unpack(assert(table.remove(events, 1)))
+end
+os.startTimer, os.cancelTimer = nil, nil
+r:begin()
+local beforeSprite = yielded
+local sprite = setmetatable({}, {
+	__index = function(_, row)
+		assert(now - r.lastYield <= 40, "Sprite rows must not accumulate unyielded work")
+		if row > 12 then
+			return nil
+		end
+		now = now + 40
+		return string.char(8):rep(20)
+	end,
+})
+r:blit(sprite, 0, 0)
+assert(yielded >= beforeSprite + 12, "One expensive sprite yields between rows")
+local beforeFill = yielded
+now = now + 40
+r:fill(0, 0, 1, 1, 8)
+assert(yielded > beforeFill, "An overdue primitive yields without waiting for 128 calls")
+r:finish()
+os.epoch, os.queueEvent, os.pullEvent = oldEpoch, oldQueue, oldPull
+os.startTimer, os.cancelTimer = oldStart, oldCancel
+print("CIVCRAFT: slow sprites and infrequent drawing calls respect the render time budget.")

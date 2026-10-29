@@ -34,6 +34,14 @@ reports, two human turns, private handoffs, pause, save and exit. It does not
 replace the terminal, renderer, filesystem, peripheral APIs, input loop, rules
 or save implementation.
 
+For the slow-render watchdog regression, run
+`/tests/civcraft_craftos_render_watchdog.lua` in the same isolated installation.
+It deliberately spends 200 ms on each of 100 sprite rows: the complete drawing
+operation exceeds the default 17-second watchdog, but each row remains bounded.
+The original renderer fails; row checkpoints let the patched renderer finish.
+Results are written to `/civcraft-render-watchdog.txt`. Headless runs instrument
+the graphics output; GUI runs use the native graphics terminal when available.
+
 Recorded local validation used **CraftOS-PC 2.8.3 / ComputerCraft 1.112.0**.
 Headless checks use the real **text** backend at the default **51×19** terminal.
 The separate regression suite covers graphics primitives and text/graphics
