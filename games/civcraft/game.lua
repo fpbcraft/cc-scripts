@@ -121,6 +121,7 @@ local function newCampaignID()
 	local stamp = os.epoch and os.epoch("utc") or math.floor(os.clock() * 1000000)
 	return tostring(stamp) .. ":" .. campaignCounter
 end
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local CampaignRules = dofile("/games/civcraft/campaign_rules.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
@@ -129,7 +130,7 @@ local W, H = Hex.width, Hex.height
 local state
 local turnProgress = function() end
 local function newGame()
-	return Lifecycle.newLobby(newCampaignID(), "balance4")
+	return Lifecycle.newLobby(newCampaignID(), ContentRules.default)
 end
 state = newGame()
 local hasHumanSave = false

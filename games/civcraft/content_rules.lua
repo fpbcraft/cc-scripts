@@ -7,6 +7,7 @@ local Rules = {
 	landwork = "balance3",
 	opening = "balance4",
 	specialization = "balance5",
+	default = "balance5",
 }
 function Rules.isP1(context)
 	return context and context.contentRules == Rules.current

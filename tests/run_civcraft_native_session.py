@@ -12,9 +12,15 @@ parser.add_argument(
     default=shutil.which("craftos") or "/Applications/CraftOS-PC.app/Contents/MacOS/craftos",
 )
 parser.add_argument("--monitor", action="store_true", help="Use a real emulated monitor and monitor_touch; requires GUI")
-parser.add_argument("--specialization", action="store_true", help="Select Specialization V5 in the native lobby")
-parser.add_argument("--landwork", action="store_true", help="Select Landwork V3 in the native lobby")
-parser.add_argument("--development", action="store_true", help="Select Development V2 in the native lobby")
+profile = parser.add_mutually_exclusive_group()
+profile.add_argument("--specialization", action="store_true", help="Select Specialization V5 in the native lobby")
+profile.add_argument(
+    "--default-specialization",
+    action="store_true",
+    help="Verify a fresh campaign defaults to V5 without changing its lobby profile",
+)
+profile.add_argument("--landwork", action="store_true", help="Select Landwork V3 in the native lobby")
+profile.add_argument("--development", action="store_true", help="Select Development V2 in the native lobby")
 parser.add_argument("--host", action="store_true", help="Test a host/AI session instead of hotseat/AI")
 parser.add_argument("--contact-hud", action="store_true", help="Click the known-civilization HUD badge through native mouse events")
 parser.add_argument("--installed-ref", help="Download this published revision through the real GitHub installer before testing")
@@ -36,7 +42,7 @@ else:
     shutil.copytree(repo / "games/civcraft", root / "games/civcraft", ignore=shutil.ignore_patterns("data"))
     shutil.copytree(repo / "lib/fpb", root / "games/civcraft/_lib/fpb", dirs_exist_ok=True)
 shutil.copyfile(repo / "tests/civcraft_craftos_session.lua", root / "tests/civcraft_craftos_session.lua")
-if args.specialization:
+if args.specialization or args.default_specialization:
     shutil.copyfile(
         repo / "tests/civcraft_craftos_specialization_session.lua",
         root / "tests/civcraft_craftos_specialization_session.lua",
@@ -50,6 +56,8 @@ if args.contact_hud:
     flags.append("--contact-hud")
 if args.specialization:
     flags.append("--specialization")
+if args.default_specialization:
+    flags.append("--default-specialization")
 elif args.landwork:
     flags.append("--landwork")
 elif args.development:
@@ -67,7 +75,7 @@ install = ""
 if args.installed_ref:
     install = 'assert(shell.run("/bootstrap.lua", %s, "--no-startup"), "Installer failed")' % json.dumps(args.installed_ref)
 specialization = ""
-if args.specialization:
+if args.specialization or args.default_specialization:
     for resume in (False, True):
         flags = (["--host"] if args.host else []) + (["--resume"] if resume else [])
         specialization += (
@@ -94,12 +102,12 @@ with (profile / "native-console.log").open("w") as console:
         stdout=console,
         stderr=subprocess.STDOUT,
         check=True,
-        timeout=240 if args.installed_ref else 180 if args.specialization else 90,
+        timeout=240 if args.installed_ref else 180 if args.specialization or args.default_specialization else 90,
     )
 result = root / "session-return.txt"
 content = result.read_text() if result.exists() else "NO RESULT"
 print(content)
-if content == "PASS" and args.specialization:
+if content == "PASS" and (args.specialization or args.default_specialization):
     pending = json.loads((root / "specialty-session-pending.json").read_text())
     resumed = json.loads((root / "specialty-session-resumed.json").read_text())
     assert pending["campaign"] == resumed["campaign"]

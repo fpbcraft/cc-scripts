@@ -11,6 +11,8 @@ local includeQuickResearch, quickResearchVerified = false, false
 local includeUnitBadges, unitBadgesVerified = false, false
 local includeDevelopment = false
 local developmentProfile = "balance2"
+local includeDefaultSpecialization = false
+local defaultSpecializationVerified = false
 local includeConversation = false
 local includeContactHUD, contactBadgeStep, contactBadgeVerified = false, 0, false
 local contactFactionPages = 0
@@ -28,6 +30,9 @@ for _, argument in ipairs({ ... }) do
 	if argument == "--specialization" then
 		includeDevelopment = true
 		developmentProfile = "balance5"
+	end
+	if argument == "--default-specialization" then
+		includeDefaultSpecialization = true
 	end
 	if argument == "--landwork" then
 		includeDevelopment = true
@@ -330,6 +335,13 @@ dofile = function(path)
 					tap(self, "NEXT")
 				end
 				return
+			end
+			if includeDefaultSpecialization and stage == 1 and state.phase == "lobby" then
+				assert(
+					state.contentRules == "balance5",
+					"A fresh native campaign lobby defaults to Specialization V5 without profile selection"
+				)
+				defaultSpecializationVerified = true
 			end
 			if
 				includeDevelopment
@@ -1014,6 +1026,14 @@ if includeDevelopment then
 		"Development profile must survive native save/reload"
 	)
 end
+if includeDefaultSpecialization then
+	assert(
+		state.contentRules == "balance5"
+			and state.players[1].contentRules == "balance5"
+			and state.players[2].contentRules == "balance5",
+		"The V5 default must reach the started campaign and every player record"
+	)
+end
 if includeCampaign then
 	assert(
 		state.gameSpeed == "quick"
@@ -1131,6 +1151,10 @@ if includeDifficulty then
 	assert(found, "AI difficulty must survive the full session and save reload")
 end
 assert(not includeMapTools or mapToolsVerified, "Native short-screen map tools must complete")
+assert(
+	not includeDefaultSpecialization or defaultSpecializationVerified,
+	"Native new-campaign flow must verify the unmodified Specialization V5 default"
+)
 assert(not includeCouncil or councilVerified, "Native Council ballot must complete")
 if includeCouncil then
 	assert(state.council.lastRound == state.round, "Council advances at the real round boundary")
@@ -1159,6 +1183,7 @@ output.write(textutils.serialize({
 	stages = stage,
 	round = state.round,
 	contentRules = state.contentRules,
+	defaultSpecialization = defaultSpecializationVerified,
 	roundLimit = state.roundLimit,
 	industrialEnabled = dofile("/games/civcraft/campaign_rules.lua").enabled(state, "industrial"),
 	diplomaticEnabled = dofile("/games/civcraft/campaign_rules.lua").enabled(state, "diplomatic"),

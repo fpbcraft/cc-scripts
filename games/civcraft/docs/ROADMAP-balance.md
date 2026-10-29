@@ -1,6 +1,6 @@
 # CivCraft balance implementation roadmap
 
-Date: 2026-10-27. Mode: implementation. Current position: **M3 specification complete; rules/UI/AI delivery in progress; balance calibration deferred**. This document plans the accepted [38 ADRs](adr/README.md); it
+Date: 2026-10-29. Mode: implementation. Current position: **M3 mechanics delivery is complete; V5 new-campaign default implemented, native default-flow check pending; balance calibration deferred**. Physical Minecraft monitor/rednet validation remains open. This document plans the accepted [38 ADRs](adr/README.md); it
 does not mark the redesign implemented. All 16 follow-up answers were A.
 
 ## Product and delivery target
@@ -200,26 +200,40 @@ immediate user-requested slice before this subsequent work.
 ## M3 — Make cities specialize
 
 Reviewed implementation contract: [M3 specialty sites](M3-SPECIALIZATION.md),
-tracked by #84 and PR #98. Rules are opt-in in PR #99; UI/AI and combined native
-validation remain #86–#88. Specification completion does not mark the playable
-milestone complete or establish balance evidence.
+tracked by #84 and delivered through PRs #99, #100, #107, #108 and #133. Combined
+native validation is recorded under #88/#132; the accepted campaign boundary
+now enables V5 for new campaigns. This marks playable mechanics delivery, not
+competitive balance evidence or physical Minecraft validation.
 
 Goal: location and specialty investments give cities different useful roles.
 
-- [ ] Define a small specialty-site catalog and placement rules. One site uses
+- [x] Define a small specialty-site catalog and placement rules. One site uses
   one focus slot; basics, defenses and ordinary improvements use none.
-- [ ] Define the modest population-based allowance and redevelopment cost;
+- [x] Define the modest population-based allowance and redevelopment cost;
   avoid a second independent slot system or accidental loss after Settler completion.
-- [ ] Add simple terrain/resource bonuses, range rules and full placement previews.
-- [ ] Audit existing building prerequisites into compact role-based chains;
+- [x] Add simple terrain/resource bonuses, range rules and full placement previews.
+- [x] Audit existing building prerequisites into compact role-based chains;
   maintain useful civilian projects rather than starving specialized city menus.
-- [ ] Add AI site placement and city-role selection, map symbols and inspectors.
-- [ ] Retain a viable legacy End path during the transition, using temporary
+- [x] Add AI site placement and city-role selection, map symbols and inspectors.
+- [x] Retain a viable legacy End path during the transition, using temporary
   prerequisite mapping where necessary until the new M9 objectives exist.
 
 Done when: two cities in one campaign make different defensible investments,
 the player understands why, and redevelopment/save/load cannot duplicate sites
 or permanently strand a victory prerequisite.
+
+M3 delivery record: rules, UI, AI, save/replay/projection behavior and the
+combined native host, hotseat, network and published-installer checks are
+recorded in #88 and #132, with final candidate validation summarized under #88
+before PR #133 merged. The regression suites and native fixtures establish
+correctness under their controlled technology, population and visibility
+setups, not competitive balance. New campaigns now default to V5; explicit
+earlier profiles and saved profile identity remain supported. This change adds
+a native path that checks the fresh lobby without manually cycling profiles;
+its default host and published-installer hotseat runs passed, including normal
+menu flow, redevelopment, save/restart and preservation of installation fixtures.
+Exact source, commands and limitations are recorded in #134.
+Physical Minecraft monitor/rednet validation remains open.
 
 ## M4 — Make machinery and materials operational choices
 

@@ -1,6 +1,6 @@
 # Founders V4: choose the first city
 
-User-requested extension after M2. New campaigns use `balance4` (Founders V4),
+User-requested extension after M2. New campaigns can use `balance4` (Founders V4),
 which inherits Landwork V3's Builders, capacity, economy and active victories.
 Earlier profiles and saved worlds retain their setup, size and rules.
 
@@ -50,8 +50,12 @@ indicators under CITY MAP BANNERS.
 | Vast | 96 × 60 | 120 × 76 |
 
 Dimensions are selected at generation and saved, never changed on load. The
-new scale is identified as `founders-v1`. These are not performance guarantees;
-large-world native latency remains part of the existing release validation work.
+new scale is identified as `founders-v1`. Specialization V5 inherits these
+starting units, first-city rules and map dimensions. New campaigns use V5 by
+default; hosts can select Founders V4 or another supported profile in Campaign
+Options, and saved campaigns retain their recorded profile. These are not
+performance guarantees; large-world native latency remains part of the existing
+release validation work.
 
 ## Builder interaction repairs
 
