@@ -8,6 +8,7 @@ local World = dofile("/games/civcraft/world.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local Actions = dofile("/games/civcraft/unit_actions.lua")
+local Render = dofile("/games/civcraft/render.lua")
 local world = World.generate(75123, "standard", 2, "continents")
 local a, b = world.starts[1], world.starts[2]
 local state = {
@@ -200,15 +201,18 @@ local function layout(width, height, graphics, expectIconsOnly)
 end
 
 local contextIcons = {
-	["ATTACH ESCORT"] = "people",
-	["DETACH ESCORT"] = "people",
-	["ADD WAYPOINT"] = "map",
+	["ATTACH ESCORT"] = "plus",
+	["DETACH ESCORT"] = "minus",
+	["ADD WAYPOINT"] = "plus",
 	["CANCEL ROUTE"] = "back",
 	["FOUND CITY"] = "station",
-	["FOUND CAPITAL"] = "station",
+	["FOUND CAPITAL"] = "star",
 	["BUILD RAIL (2 IRON)"] = "train",
-	["CANCEL WORK"] = "back",
+	["CANCEL WORK"] = "wrench",
 	["RESUME WORK"] = "right",
+	["SLEEP UNIT"] = "pause",
+	["STOP EXPLORING"] = "back",
+	["CANCEL MOVE"] = "minus",
 }
 for label, icon in pairs(contextIcons) do
 	local button = Actions.decorate({ label = label, run = function() end })
@@ -216,6 +220,93 @@ for label, icon in pairs(contextIcons) do
 		button.icon == icon and button.shortLabel and button.help,
 		"Context action icon and metadata: " .. label
 	)
+end
+
+local workActions = {
+	["PLAN WHEAT FIELD"] = { icon = "food", stage = "plan" },
+	["WHEAT FIELD HERE"] = { icon = "food", stage = "here" },
+	["PLAN QUARRY"] = { icon = "ore", stage = "plan" },
+	["QUARRY HERE"] = { icon = "ore", stage = "here" },
+	["PLAN LUMBER CAMP"] = { icon = "wood", stage = "plan" },
+	["LUMBER CAMP HERE"] = { icon = "wood", stage = "here" },
+}
+local workButtons = {}
+for label, expected in pairs(workActions) do
+	local button = Actions.decorate({ label = label, run = function() end })
+	assert(
+		button.icon == expected.icon,
+		"Builder action uses a distinct improvement glyph: " .. label
+	)
+	assert(button.workAction == expected.stage, "Builder action exposes its stage: " .. label)
+	assert(
+		button.shortLabel == expected.stage:upper(),
+		"Builder action keeps a wide-layout label: " .. label
+	)
+	assert(
+		button.help and button.help ~= label,
+		"Builder help describes the tile action: " .. label
+	)
+	workButtons[label] = button
+end
+
+local drawnPixels = {}
+local pixelMonitor = monitor(100, 30, true)
+pixelMonitor.drawPixels = function(x, y, color, width, height)
+	drawnPixels[#drawnPixels + 1] = table.concat({ x, y, color, width, height }, ",")
+end
+local raster = Render.new(pixelMonitor)
+local function buttonRaster(button)
+	drawnPixels = {}
+	Actions.draw(raster, { x = 0, y = 0, w = 30 }, {
+		columns = 1,
+		showLabels = false,
+		actionButtons = { button },
+	}, 0)
+	return table.concat(drawnPixels, ";")
+end
+local function actionRaster(label)
+	return buttonRaster(workButtons[label])
+end
+local rasterByLabel = {}
+for label in pairs(workActions) do
+	rasterByLabel[label] = actionRaster(label)
+	assert(rasterByLabel[label] ~= "", "Compact work action paints real pixels: " .. label)
+end
+for _, label in ipairs({ "PLAN WHEAT FIELD", "PLAN QUARRY", "PLAN LUMBER CAMP" }) do
+	for _, other in ipairs({ "PLAN WHEAT FIELD", "PLAN QUARRY", "PLAN LUMBER CAMP" }) do
+		if label ~= other then
+			assert(
+				rasterByLabel[label] ~= rasterByLabel[other],
+				"Work types look different on touch: " .. label
+			)
+		end
+	end
+end
+for _, pair in ipairs({
+	{ "PLAN WHEAT FIELD", "WHEAT FIELD HERE" },
+	{ "PLAN QUARRY", "QUARRY HERE" },
+	{ "PLAN LUMBER CAMP", "LUMBER CAMP HERE" },
+}) do
+	assert(
+		rasterByLabel[pair[1]] ~= rasterByLabel[pair[2]],
+		"Plan and HERE markers differ visually: " .. pair[1]
+	)
+end
+for _, group in ipairs({
+	{ "CANCEL ROUTE", "CANCEL WORK", "CANCEL MOVE" },
+	{ "SLEEP UNIT", "STOP EXPLORING" },
+	{ "QUEUE MOVES", "ADD WAYPOINT" },
+	{ "FOUND CITY", "FOUND CAPITAL" },
+	{ "WORK MODE: APPEND", "WORK MODE: REPLACE" },
+}) do
+	local seenRasters = {}
+	for _, label in ipairs(group) do
+		local button = Actions.decorate({ label = label, run = function() end })
+		local signature = buttonRaster(button)
+		assert(signature ~= "", "Compact action paints its glyph: " .. label)
+		assert(not seenRasters[signature], "Context actions use distinct compact glyphs: " .. label)
+		seenRasters[signature] = true
+	end
 end
 
 layout(57, 38, false, true)
