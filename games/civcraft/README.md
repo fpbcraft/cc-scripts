@@ -21,11 +21,12 @@ and [balance implementation roadmap](docs/ROADMAP-balance.md). These capture
 accepted design choices and planned milestones, rather than claiming the redesign
 is already implemented.
 
-The upcoming iteration adds layered Minecraft-inspired biomes and two larger map
-presets: **Huge 48×32** and **Vast 64×40**. New worlds use sparse, habitat-specific
-deposits and repaired starting areas; existing saves keep their original terrain
-and deposits. See [world-generation benchmarks](WORLDGEN-BENCHMARK.md) for the
-local measurements and remaining live validation.
+New worlds use layered Minecraft-inspired biomes, habitat-specific deposits and
+connected, nonpolar starting regions. Specialization V5 includes map presets
+through **Huge 96×60** and **Vast 120×76**; existing saves keep their recorded
+dimensions and geography. See the [generation contract](WORLDGEN.md) for opening
+guarantees and versioned seeds, and [earlier world-generation benchmarks](WORLDGEN-BENCHMARK.md)
+for their measured source and remaining validation limits.
 
 A Civilization-inspired, turn-based hex 4X for **CC:Tweaked**, supporting local hot-seat (2–4 human/AI slots) or multiplayer over rednet. Local games use one computer or an Advanced Monitor; networked games use an authoritative host. Computers communicate through **rednet modems**, either wireless (within range) or wired (via the same wired modem network). It also works over interdimensional wireless modems. No HTTP or external web server is needed after installation.
 
@@ -409,7 +410,7 @@ The economic system uses per-turn resource yields and does not require continuou
 
 Each local game now has **three independent campaign slots**, selectable from the title screen. The selected slot shows its campaign name and current round; you can create a new game, continue, or delete a slot (with a second-tap confirmation). The original `/games/civcraft/data/local-save.dat` is still importable into an untouched first slot. Previous campaign files are preserved as backups during save replacement, and removing a migrated slot does not resurrect a deleted game.
 
-From the local lobby, choose **MAP SIZE** (compact 12×8, standard 16×10, large 20×12) and **REROLL SEED**. Worlds are generated deterministically, and the seed, map dimensions, terrain and starting locations are serialized in each campaign. A seed always regenerates the same map. Loading an older map preserves its original 12×8 terrain instead of silently changing geography.
+From the lobby, choose **MAP SIZE** and **REROLL SEED**. Specialization V5 uses Compact 32×22, Standard 56×36, Large 72×46, Huge 96×60 and Vast 120×76. Earlier profiles retain their setup sizes. The seed, generation version, dimensions, terrain and starting locations are serialized in each campaign. Identical setup and generation versions reproduce the same map; loading an older map preserves its recorded geography rather than regenerating it. See the [generation contract](WORLDGEN.md).
 
 **Fog of war** is owned independently by each civilization. Capitals initially reveal nearby terrain; scouts, explorers and ships extend the field of view according to their own vision stat. Moving away leaves discovered hexes dimmed while still-unexplored hexes remain dark. Enemy units appear only when in current sight. Hot-seat changes remove the previous player's selection and movement preview, preventing accidental map leaks.
 
