@@ -668,10 +668,15 @@ for _, request in ipairs(requests) do
 	assert(request.ok, "Native UI site command rejected: " .. tostring(request.message))
 end
 local acceptedAIWorks = false
+local aiPlayers = {}
+for _, player in ipairs(saved.players or {}) do
+	aiPlayers[player.id] = player.ai == true
+end
 for _, request in ipairs(requests) do
 	if
 		request.ok
 		and request.actor ~= ownerId
+		and aiPlayers[request.actor]
 		and request.action == "placeSite"
 		and request.kind == "works"
 	then
