@@ -28,6 +28,7 @@ local openingChecked = false
 local foundSent, foundingMove, foundingRound = false, false, nil
 local createdOne, createdTwo, setup = false, false, false
 local sentStep, reportedStep, endedRound = nil, nil, nil
+local lastProductionObservation
 local snapshotSerial, sentExpectation = 0, nil
 local publicSiteExpectationSnapshot
 local foreignProjectExpectationSnapshot
@@ -42,6 +43,20 @@ local function trace(message)
 	local file = assert(fs.open("/specialty-network-progress.txt", "a"))
 	file.writeLine(phase .. ": " .. message)
 	file.close()
+end
+local function packetStatus(packet)
+	local state = packet.state or packet
+	local readiness = {}
+	for _, participant in ipairs(state.players or {}) do
+		readiness[#readiness + 1] = tostring(participant.id) .. "=" .. tostring(participant.ready)
+	end
+	return table.concat({
+		"session=" .. tostring(packet.session),
+		"serial=" .. tostring(packet.serial),
+		"round=" .. tostring(state.round),
+		"campaign=" .. tostring(state.campaignID),
+		"ready=" .. table.concat(readiness, ","),
+	}, " ")
 end
 local function player(state, id)
 	for _, p in ipairs(state.players or {}) do
@@ -235,13 +250,25 @@ function env.rednet.receive(filter, timeout)
 	local sender, packet, received = baseNet.receive(filter, timeout)
 	if filter == protocol and type(packet) == "table" then
 		if computer == 0 then
-			trace("RECEIVE " .. sender .. " " .. tostring(packet.action))
+			trace(
+				"RECEIVE "
+					.. sender
+					.. " "
+					.. tostring(packet.action)
+					.. (
+						packet.action == "end"
+							and authoritative
+							and " " .. packetStatus(authoritative)
+						or ""
+					)
+			)
 			lastRequest[sender] = packet
 			if packet.action == "join" then
 				joins[sender] = (joins[sender] or 0) + 1
 			end
 		elseif sender == 0 and packet.type == "state" then
 			snapshotSerial = snapshotSerial + 1
+			trace("STATE " .. packetStatus(packet))
 		elseif sender == 0 and packet.type == "result" and pendingTag then
 			results[pendingTag] = packet
 			trace(pendingTag .. " ACK " .. tostring(packet.ok) .. ": " .. tostring(packet.message))
@@ -251,7 +278,13 @@ function env.rednet.receive(filter, timeout)
 end
 function env.rednet.send(to, packet, outgoing)
 	if outgoing == protocol and type(packet) == "table" then
-		trace("PACKET to " .. to .. " " .. tostring(packet.action or packet.type))
+		trace(
+			"PACKET to "
+				.. to
+				.. " "
+				.. tostring(packet.action or packet.type)
+				.. (packet.type == "state" and " " .. packetStatus(packet) or "")
+		)
 	end
 	if
 		computer == 0
@@ -431,6 +464,22 @@ local function hostDraw(ui, state)
 		return
 	end
 	assert(state.contentRules == "balance5")
+	if phase == "production" then
+		local c = city(authoritative, 1)
+		local works = c and c.sites and c.sites.works
+		local project = c and c.project
+		local observation = table.concat({
+			tostring(state.round),
+			tostring(works and works.id),
+			tostring(project and project.id),
+			tostring(project and project.progress),
+			tostring(endedRound),
+		}, ":")
+		if observation ~= lastProductionObservation then
+			lastProductionObservation = observation
+			trace("host observation round/site/project/progress/ended=" .. observation)
+		end
+	end
 	if phase == "founding" then
 		if not setup then
 			local capital = establish(ui, state)
