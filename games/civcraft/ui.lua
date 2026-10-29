@@ -1707,6 +1707,32 @@ function UI:tap(x, y)
 				return true
 			end
 		end
+		-- The city banner wins inside its visible rectangle. Outside the
+		-- banner, hit the actual rendered unit glyph (no extra bubble).
+		-- This retains independent selection of civilian/military stacks and
+		-- visible rival units, even when no circular callout is necessary.
+		local iconMatches = {}
+		for _, target in ipairs(self.unitIconTargets or {}) do
+			if
+				rx >= target.x and rx < target.x + target.w
+				and ry >= target.y and ry < target.y + target.h
+			then
+				iconMatches[#iconMatches + 1] = target.unit
+			end
+		end
+		if #iconMatches > 0 then
+			local nextUnit = iconMatches[#iconMatches]
+			if #iconMatches > 1 and self.selected.kind == "unit" then
+				for index, unit in ipairs(iconMatches) do
+					if unit.id == self.selected.unitID then
+						nextUnit = iconMatches[index % #iconMatches + 1]
+						break
+					end
+				end
+			end
+			self:focus("unit", nextUnit)
+			return true
+		end
 	end
 	local best, distance
 	for _, hex in ipairs(self.hexTargets or {}) do
