@@ -334,6 +334,37 @@ end
 -- Search normal callout offsets first, then use a compact grid only when
 -- crowded/edge tiles leave no room at the preferred offsets. Collision checks
 -- use the entire hitbox so icons and city labels remain independently clickable.
+-- Match the actual painted unit glyph bounds, not the entire hex.
+-- The small icons paint a 2x2 colored core; larger ones use the faction sprite.
+local function unitIconBounds(tile, size, secondary)
+	local x, y, extent
+	if secondary then
+		x, y = tile.px + size * 0.65, tile.py + size * 0.6
+		extent = size < 16 and 2 or math.min(7, size / 2)
+	else
+		x, y = tile.px + size / 2, tile.py + size / 2
+		extent = size < 16 and 2 or 11
+		if size >= 16 then
+			x, y = x - 5, y - 5
+		end
+	end
+	return { x = x, y = y, w = extent, h = extent }
+end
+
+local function rectanglesOverlap(a, b)
+	return a.x < b.x + b.w and a.x + a.w > b.x
+		and a.y < b.y + b.h and a.y + a.h > b.y
+end
+
+local function underCityBanner(icon, banners)
+	for _, banner in ipairs(banners) do
+		if rectanglesOverlap(icon, banner) then
+			return true
+		end
+	end
+	return false
+end
+
 local function findUnitCallout(rect, occupied, cx, cy, diameter, tileSize)
 	local half = math.floor(diameter / 2)
 	local lastX, lastY = rect.x + rect.w - diameter, rect.y + rect.h - diameter
@@ -958,8 +989,9 @@ function V.draw(ui, state, player, rect)
 				{ x = box.x, y = box.y, w = box.w, h = box.h, city = label.city }
 		end
 		ui.unitBadgeTargets = {}
-		-- Give each visible formation its own selectable target around the fixed city
-		-- banners, including stacked civilians and their escorts.
+		ui.unitIconTargets = {}
+		-- Only a unit whose painted icon is obscured by a city banner needs
+		-- a callout. Unobscured glyphs remain directly selectable on the map.
 		for _, tile in ipairs(tiles) do
 			local centerX, centerY = tile.px + size / 2, tile.py + size / 2
 			local onScreen = centerX >= rect.x
@@ -984,14 +1016,26 @@ function V.draw(ui, state, player, rect)
 			if badgeSize % 2 == 0 then
 				badgeSize = badgeSize + 1
 			end
+			local mainUnit = unitIndex[World.key(tile.x, tile.y)]
+			local civilian = civilianIndex[World.key(tile.x, tile.y)]
 			for _, actor in ipairs(visible) do
-				local badge = {
-					w = badgeSize,
-					h = badgeSize,
-					unit = actor,
-					anchorX = round(centerX),
-					anchorY = round(centerY),
-				}
+				-- A civilian escort is painted to the lower-right of the main
+				-- unit. Its own icon, not the military icon, decides visibility.
+				local secondary = actor == civilian and actor ~= mainUnit
+					and mainUnit and not hiddenActors[Animations.identity(mainUnit)]
+				local icon = unitIconBounds(tile, size, secondary)
+				if not underCityBanner(icon, ui.cityBannerTargets) then
+					ui.unitIconTargets[#ui.unitIconTargets + 1] = {
+						x = icon.x, y = icon.y, w = icon.w, h = icon.h, unit = actor,
+					}
+				else
+					local badge = {
+						w = badgeSize,
+						h = badgeSize,
+						unit = actor,
+						anchorX = round(centerX),
+						anchorY = round(centerY),
+					}
 				local chosen
 				-- Keep the circle large when possible, but allow it to shrink to
 				-- preserve separate hit targets on narrow terminal viewports.
@@ -1017,7 +1061,8 @@ function V.draw(ui, state, player, rect)
 				badge.x, badge.y = chosen.x, chosen.y
 				placePointer(badge)
 				ui.unitBadgeTargets[#ui.unitBadgeTargets + 1] = badge
-				occupied[#occupied + 1] = badge
+					occupied[#occupied + 1] = badge
+				end
 			end
 		end
 		-- Draw connectors behind city labels, so the line always targets its
