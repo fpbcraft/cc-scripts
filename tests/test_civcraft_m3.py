@@ -94,5 +94,50 @@ class SpecializationTests(unittest.TestCase):
         self.assertEqual(reference.observe(0), accelerated.observe(0))
 
 
+    @unittest.skipUnless(importlib.util.find_spec('lupa.luajit21'),
+                         'Optional LuaJIT extension is not installed')
+    def test_foreign_projection_and_rejected_ownership_match_jit(self):
+        reference, accelerated = fixture(), fixture('luajit21')
+        city_id, x, y = self.prepare(reference)
+        accelerated.restore(reference.canonical_state())
+        request = {'action': 'placeSite', 'city': city_id,
+                   'kind': 'works', 'x': x, 'y': y}
+        for runtime in (reference, accelerated):
+            before = runtime.canonical_state()
+            self.assertFalse(runtime.apply(1, request)[0])
+            self.assertEqual(runtime.canonical_state(), before)
+            self.assertTrue(runtime.apply(0, request)[0])
+            setup = runtime.lua.eval("""function(state,cityId,x,y)
+                local sites=dofile('/games/civcraft/specialty_sites.lua')
+                local world=dofile('/games/civcraft/world.lua')
+                for _,city in ipairs(state.cities) do if city.id==cityId then
+                    assert(sites.advance(state,state.players[1],city,30))
+                    -- Controlled observer visibility; no map/unit/site edits.
+                    local observer=state.players[2]
+                    for _,point in ipairs({city,{x=x,y=y}}) do
+                        local key=world.key(point.x,point.y)
+                        observer.visible[key]=true;observer.explored[key]=true
+                    end
+                    return
+                end end
+                error('Expected completed specialty city')
+            end""")
+            runtime.call(setup, runtime.state, city_id, x, y)
+            self.assertTrue(runtime.apply(0, {'action': 'redevelopSite', 'city': city_id,
+                                              'siteId': 1, 'kind': 'knowledge', 'x': x, 'y': y})[0])
+        self.assertEqual(reference.state_hash(), accelerated.state_hash())
+        self.assertEqual(reference.observe(1), accelerated.observe(1))
+        foreign = reference.observe(1)
+        public_city = next(city for city in foreign['cities'] if city['id'] == city_id)
+        self.assertNotIn('project', public_city)
+        self.assertNotIn('siteProjects', public_city)
+        self.assertEqual(foreign['world']['specialtySites'][f'{x}:{y}']['kind'], 'works')
+        owner_city = next(city for city in reference.state.cities.values() if city.id == city_id)
+        self.assertEqual(owner_city.project.kind, 'site')
+        accelerated.restore(reference.canonical_state())
+        self.assertEqual(reference.observe(0), accelerated.observe(0))
+        self.assertEqual(reference.observe(1), accelerated.observe(1))
+
+
 if __name__ == '__main__':
     unittest.main()
