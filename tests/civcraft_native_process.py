@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import signal
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any, Callable
@@ -28,6 +29,15 @@ def _signal_name(return_code: int | None) -> str | None:
 
 def _save_report(profile: Path, report: dict[str, Any]) -> None:
 	(profile / "native-process.json").write_text(json.dumps(report, indent=2) + "\n")
+
+
+def _kill_and_reap(process: Any) -> None:
+	if process.poll() is None:
+		try:
+			process.kill()
+		except ProcessLookupError:
+			pass
+	process.wait()
 
 
 def capture_process_sample(pid: int, profile: Path, timeout: float = 4.0) -> dict[str, Any]:
@@ -65,27 +75,38 @@ def run_native_process(
 	profile = Path(profile)
 	process = popen_factory(command, stdout=stdout, stderr=subprocess.STDOUT)
 	started = clock()
+	reaped = False
 	try:
-		process.wait(timeout=timeout)
-	except subprocess.TimeoutExpired:
-		elapsed = clock() - started
 		try:
-			sample = sampler(process.pid, profile)
-		except Exception as error:
-			sample = {"error": f"{type(error).__name__}: {error}"}
-		process.kill()
-		process.wait()
-		report = {
-			"timedOut": True,
-			"pid": process.pid,
-			"elapsedSeconds": elapsed,
-			"profile": str(profile),
-			"returnCode": process.returncode,
-			"signal": _signal_name(process.returncode),
-			"sample": sample,
-		}
-		_save_report(profile, report)
-		raise NativeProcessTimeout(report)
+			process.wait(timeout=timeout)
+		except subprocess.TimeoutExpired:
+			elapsed = clock() - started
+			try:
+				sample = sampler(process.pid, profile)
+			except Exception as error:
+				sample = {"error": f"{type(error).__name__}: {error}"}
+			_kill_and_reap(process)
+			reaped = True
+			report = {
+				"timedOut": True,
+				"pid": process.pid,
+				"elapsedSeconds": elapsed,
+				"profile": str(profile),
+				"returnCode": process.returncode,
+				"signal": _signal_name(process.returncode),
+				"sample": sample,
+			}
+			_save_report(profile, report)
+			raise NativeProcessTimeout(report)
+		reaped = True
+	finally:
+		if not reaped:
+			pending_exception = sys.exc_info()[0] is not None
+			try:
+				_kill_and_reap(process)
+			except BaseException:
+				if not pending_exception:
+					raise
 
 	report = {
 		"timedOut": False,
