@@ -347,10 +347,15 @@ python3 tests/run_civcraft_native_specialty_network.py --reverse-race
 ```
 
 Both contention orders cover legal founding commands, duplicate-site rejection,
-production and pausing, host save/exit/restart, client OS reboot/rejoin, and private
-owner/foreign projections. Successful commands require a newer snapshot from the
-same campaign at the expected round before the observer accepts them. The controlled
-post-founding fixture grants research, population, gold, food, industry buildings
-and owned claims; terrain, generated starting actors, site legality, site commands
-and production remain authoritative. This is native CraftOS-PC evidence, not an
-unmodified progression run or physical Minecraft monitor/rednet validation.
+production and pausing, host save/exit/restart, client OS reboot/rejoin, and owner and
+foreign projections. Client 2 confirms an actually completed but unseen foreign site
+is absent, then receives the expected foreign city and public site IDs in a newer
+snapshot from the same campaign at or after the expectation round. That public site
+record omits progress, source-site, project and pause-reason fields; foreign city
+records omit private site, project, focus and progress fields. The temporary vision
+boost runs the real reveal and snapshot code, and the original unit stat is restored
+after the observation is acknowledged. The controlled post-founding fixture grants
+research, population, gold, food, industry buildings and owned claims; terrain,
+generated starting actor positions, site legality, site commands and production remain
+authoritative. This is native CraftOS-PC evidence, not an unmodified progression run
+or physical Minecraft monitor/rednet validation.

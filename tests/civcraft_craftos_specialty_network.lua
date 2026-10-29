@@ -1,7 +1,9 @@
 -- Real generated cityless V5 startup and site orders on three emulated computers.
 -- Post-founding fixture grants research, population, gold, stored food, basic
 -- industry and owned claims; workers are assigned through the shared query.
--- terrain, resources, starting actors, site validation and production stay real.
+-- terrain, resources, actor positions, site validation and production stay real.
+-- A temporary unit-vision boost tests public foreign-city/site snapshots by
+-- running the actual reveal and observer-projection code over the real map.
 local reverse = ({ ... })[1] == "--reverse-race"
 local computer = os.getComputerID()
 assert(computer >= 0 and computer <= 2)
@@ -27,6 +29,10 @@ local foundSent, foundingMove, foundingRound = false, false, nil
 local createdOne, createdTwo, setup = false, false, false
 local sentStep, reportedStep, endedRound = nil, nil, nil
 local snapshotSerial, sentExpectation = 0, nil
+local publicSiteExpectationSnapshot
+local publicVisionGranted = false
+local originalWarriorVision
+local unseenSiteChecked = false
 local target, siteID, projectID, campaignID, restarted = nil, nil, nil, nil, false
 local raceFirst = reverse and 2 or 1
 local savedProgress
@@ -86,7 +92,9 @@ local function private(state)
 		if c.owner ~= computer then
 			assert(
 				not c.siteProjects
+					and not c.sites
 					and not c.focus
+					and not c.project
 					and not c.projectProgress
 					and not c.familyAvailability
 			)
@@ -99,6 +107,60 @@ local function private(state)
 		)
 	end
 	assert(not state.eventJournal)
+end
+local function assertPublicForeignSite(state)
+	local expected = controls.publicSiteExpected
+	if computer ~= 2 or not expected or controls.publicSiteObserved then
+		return
+	end
+	if
+		snapshotSerial <= publicSiteExpectationSnapshot
+		or state.round < expected.round
+		or state.campaignID ~= expected.campaignID
+	then
+		return
+	end
+	local key = expected.siteX .. ":" .. expected.siteY
+	local site = state.world and state.world.specialtySites and state.world.specialtySites[key]
+	if not site then
+		return
+	end
+	local foreignCity
+	local citySummary = {}
+	for _, c in ipairs(state.cities or {}) do
+		citySummary[#citySummary + 1] =
+			table.concat({ tostring(c.id), tostring(c.owner), tostring(c.x), tostring(c.y) }, ":")
+		if c.id == expected.cityID then
+			foreignCity = c
+			break
+		end
+	end
+	assert(
+		foreignCity
+			and foreignCity.owner == 1
+			and foreignCity.x == expected.cityX
+			and foreignCity.y == expected.cityY,
+		"Visible foreign city "
+			.. tostring(expected.cityID)
+			.. " must arrive in the observer snapshot; got "
+			.. table.concat(citySummary, ",")
+	)
+	assert(
+		site
+			and site.id == expected.siteID
+			and site.kind == "works"
+			and site.x == expected.siteX
+			and site.y == expected.siteY
+			and site.city == expected.cityID
+			and site.owner == 1,
+		"Visible foreign site must arrive with its public identity and location"
+	)
+	assert(
+		not site.progress and not site.sourceSiteId and not site.projectId and not site.reason,
+		"Public foreign site cannot expose private investment details"
+	)
+	controls.publicSiteObserved = true
+	send(0, "publicSiteObserved", { cityID = expected.cityID, siteID = expected.siteID })
 end
 env.rednet = {}
 for k, v in pairs(baseNet) do
@@ -225,13 +287,16 @@ local function stepDone(id, token, accepted)
 	assert(ack.ok == accepted, token .. ": " .. tostring(ack.message))
 	return true
 end
-local function legalTarget(state, c, kind, exclude)
+local function legalTarget(state, c, kind, exclude, unseenBy)
 	local Sites = env.dofile("/games/civcraft/specialty_sites.lua")
+	local World = env.dofile("/games/civcraft/world.lua")
 	local p = player(state, c.owner)
+	local observer = unseenBy and player(state, unseenBy)
 	for y = math.max(1, c.y - 3), math.min(state.world.height, c.y + 3) do
 		for x = math.max(1, c.x - 3), math.min(state.world.width, c.x + 3) do
 			if
 				(not exclude or x ~= exclude.x or y ~= exclude.y)
+				and (not observer or not (observer.visible or {})[World.key(x, y)])
 				and Sites.canPlace(state, p, c, kind, x, y)
 			then
 				return { x = x, y = y }
@@ -270,7 +335,7 @@ local function configureFixture()
 		end
 	end
 	World.reveal(authoritative, Hex, Systems)
-	target = legalTarget(authoritative, assert(city(authoritative, 1)), "works")
+	target = legalTarget(authoritative, assert(city(authoritative, 1)), "works", nil, 2)
 	target.city = city(authoritative, 1).id
 	campaignID = authoritative.campaignID
 end
@@ -373,25 +438,98 @@ local function hostDraw(ui, state)
 			focus.used == 1 and focus.reserved == 1,
 			"Duplicate site orders cannot consume another focus slot"
 		)
+		send(2, "publicSiteExpected", {
+			campaignID = authoritative.campaignID,
+			cityID = c.id,
+			cityX = c.x,
+			cityY = c.y,
+			round = authoritative.round,
+			siteID = siteID,
+			siteX = target.x,
+			siteY = target.y,
+		})
 		advancePhase("production")
 	elseif phase == "production" then
 		local c = city(authoritative, 1)
 		if c.sites and c.sites.works then
 			assert(c.sites.works.id == siteID and not c.siteProjects[siteID])
-			local destination = legalTarget(authoritative, c, "knowledge", target)
-			step(
-				1,
-				"pending",
-				"placeSite",
-				{ city = c.id, kind = "knowledge", x = destination.x, y = destination.y }
-			)
-			advancePhase("pending")
+			if controls.publicSiteObserved then
+				local destination = legalTarget(authoritative, c, "knowledge", target)
+				step(
+					1,
+					"pending",
+					"placeSite",
+					{ city = c.id, kind = "knowledge", x = destination.x, y = destination.y }
+				)
+				advancePhase("pending")
+			elseif not publicVisionGranted then
+				local observer = assert(player(authoritative, 2))
+				local World = env.dofile("/games/civcraft/world.lua")
+				local siteKey = World.key(target.x, target.y)
+				assert(
+					not (observer.visible or {})[siteKey],
+					"The completed foreign site starts outside the observer's vision"
+				)
+				local unseen = assert(World.forPlayer(authoritative, 2))
+				assert(
+					unseen.world.specialtySites[siteKey] == nil,
+					"Unseen completed foreign site must be absent from the observer projection"
+				)
+				unseenSiteChecked = true
+				local Systems = env.dofile("/games/civcraft/systems.lua")
+				originalWarriorVision = Systems.units.warrior.vision
+				Systems.units.warrior.vision = authoritative.world.width
+					+ authoritative.world.height
+					+ 5
+				World.reveal(authoritative, env.dofile("/games/civcraft/hex.lua"), Systems)
+				assert(
+					(observer.visible or {})[siteKey],
+					"Controlled reveal must see the completed site"
+				)
+				local public = assert(World.forPlayer(authoritative, 2))
+				local projectedSite = public.world.specialtySites[siteKey]
+				local projectedCity
+				for _, candidate in ipairs(public.cities) do
+					if candidate.id == c.id then
+						projectedCity = candidate
+					end
+				end
+				assert(
+					projectedCity
+						and projectedCity.owner == 1
+						and projectedSite
+						and projectedSite.id == siteID,
+					"Observer projection must expose the actual completed foreign city and site"
+				)
+				publicVisionGranted = true
+				local hostCity = assert(city(authoritative, 0))
+				issue(ui, "queue", {
+					cityX = hostCity.x,
+					cityY = hostCity.y,
+					kind = "none",
+				})
+				advancePhase("publicSite")
+			end
 		elseif endedRound ~= state.round then
 			endedRound = state.round
 			send(1, "endRound", { round = state.round })
 			send(2, "endRound", { round = state.round })
 			issue(ui, "end", { confirmed = true })
 		end
+	elseif phase == "publicSite" and controls.publicSiteObserved then
+		if originalWarriorVision then
+			env.dofile("/games/civcraft/systems.lua").units.warrior.vision = originalWarriorVision
+			originalWarriorVision = nil
+		end
+		local c = assert(city(authoritative, 1))
+		local destination = legalTarget(authoritative, c, "knowledge", target)
+		step(
+			1,
+			"pending",
+			"placeSite",
+			{ city = c.id, kind = "knowledge", x = destination.x, y = destination.y }
+		)
+		advancePhase("pending")
 	elseif phase == "pending" and stepDone(1, "pending", true) then
 		projectID = city(authoritative, 1).project.id
 		assert(projectID ~= siteID and city(authoritative, 1).siteProjects[projectID])
@@ -517,6 +655,7 @@ local function clientDraw(ui, state)
 		return
 	end
 	private(state)
+	assertPublicForeignSite(state)
 	trace(
 		"view "
 			.. tostring(state.phase)
@@ -684,6 +823,9 @@ local ok, why = pcall(function()
 				assert(computer == 0 and (sender == 1 or sender == 2) or sender == 0)
 				assert(packet.kind ~= "failed", "Client failure: " .. tostring(packet.reason))
 				controls[packet.kind] = packet
+				if packet.kind == "publicSiteExpected" then
+					publicSiteExpectationSnapshot = snapshotSerial
+				end
 				os.queueEvent("civcraft_state_changed")
 			end
 		end
@@ -712,6 +854,9 @@ file.write(textutils.serialize({
 	restarted = restarted,
 	siteID = siteID,
 	projectID = projectID,
+	foreignCityID = target and target.city,
+	foreignCitySiteObserved = controls.publicSiteObserved ~= nil,
+	unseenForeignSiteAbsent = unseenSiteChecked,
 	joins = joins,
 }))
 file.close()
