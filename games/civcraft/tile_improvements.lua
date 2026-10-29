@@ -6,8 +6,8 @@ local Hex = dofile("/games/civcraft/hex.lua")
 local Works = {
 	order = { "farm", "quarry", "lumber" },
 	definitions = {
-		farm = { name = "WHEAT FIELD", tech = "agriculture", food = 2, industry = 0 },
-		quarry = { name = "QUARRY", tech = "mining", food = 0, industry = 2 },
+		farm = { name = "WHEAT FIELD", tech = "agriculture", food = 1, industry = 0 },
+		quarry = { name = "QUARRY", tech = "mining", food = 0, industry = 1 },
 		lumber = { name = "LUMBER CAMP", tech = "crafting", food = 0, industry = 1 },
 	},
 }
@@ -76,6 +76,7 @@ function Works.canPlace(state, player, kind, x, y, systems)
 			or tile.feature ~= "none"
 			or tile.biome == "desert"
 			or tile.biome == "snowy_plains"
+			or tile.biome == "taiga"
 			or tile.biome == "badlands"
 		)
 	then

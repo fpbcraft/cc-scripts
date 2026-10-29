@@ -15,6 +15,11 @@ local function campaign()
 			tiles[W.key(x, y)] = x >= 11 and "water" or "plains"
 		end
 	end
+	-- Keep the opening city's food production equivalent to the previous
+	-- 2-food plains rule using Civ VI grassland with Woods.
+	for _, point in ipairs({ { 2, 3 }, { 3, 2 }, { 3, 4 }, { 4, 3 } }) do
+		tiles[W.key(point[1], point[2])] = "forest"
+	end
 	local state = {
 		version = 5,
 		phase = "game",
@@ -54,7 +59,12 @@ p.civ = "scholar"
 city.buildings.library = true
 local center = S.centerYields(p, city)
 assert(center.science == 5, "City tile includes library science")
-local sums = { food = center.food, industry = center.industry, science = center.science }
+local sums = {
+	food = center.food,
+	industry = center.industry,
+	science = center.science,
+	gold = center.gold or 0,
+}
 for _, tile in ipairs(S.workable(state, city)) do
 	if city.worked[tile.key] then
 		for key, value in pairs(tile.yield) do

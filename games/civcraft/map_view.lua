@@ -843,10 +843,10 @@ function V.draw(ui, state, player, rect)
 			end
 			if overlays.yields and t.visibility ~= "hidden" then
 				if size >= 40 then
-					for i, kind in ipairs({ "food", "industry", "science" }) do
+					for i, kind in ipairs({ "food", "industry", "science", "gold" }) do
 						local value = t.yields[kind]
 						local width = Icons.yieldWidth(r, value)
-						local yy = py + size * ({ 0.18, 0.65, 0.82 })[i]
+						local yy = py + size * ({ 0.18, 0.65, 0.82, 0.47 })[i]
 						if width > 0 then
 							Icons.yieldValue(
 								r,
@@ -865,6 +865,7 @@ function V.draw(ui, state, player, rect)
 					for _, entry in ipairs({
 						{ "wood", t.yields.industry },
 						{ "science", t.yields.science },
+						{ "gold", t.yields.gold or 0 },
 					}) do
 						if entry[2] > value then
 							kind = entry[1]

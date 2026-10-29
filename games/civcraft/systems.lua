@@ -63,6 +63,7 @@ function M.workable(state, city)
 		for xx = math.max(1, city.x - 3), math.min(state.world.width, city.x + 3) do
 			if
 				not (xx == city.x and yy == city.y)
+				and World.terrain(state.world, xx, yy) ~= "mountain"
 				and Hex.distance(xx, yy, city.x, city.y) <= 3
 				and World.territoryCity(state, Hex, xx, yy) == city
 			then
@@ -91,8 +92,8 @@ function M.tileJob(tile)
 	end
 	return "food"
 end
-local function workerSelection(state, city, readOnly)
-	local tiles = M.workable(state, city)
+local function workerSelection(state, city, readOnly, tiles)
+	tiles = tiles or M.workable(state, city)
 	local had = city.worked ~= nil
 	local worked = city.worked or {}
 	if readOnly then
@@ -137,11 +138,11 @@ local function workerSelection(state, city, readOnly)
 	end
 	return worked, jobs
 end
-function M.ensureWorkers(state, city)
+function M.ensureWorkers(state, city, tiles)
 	if not state.world or not city then
 		return
 	end
-	city.worked, city.jobs = workerSelection(state, city, false)
+	city.worked, city.jobs = workerSelection(state, city, false, tiles)
 end
 function M.workTile(state, city, x, y)
 	if not city or not state.world or type(x) ~= "number" or type(y) ~= "number" then
@@ -359,6 +360,8 @@ function M.treasury(p, state, includeProjects)
 		if city.owner == p.id then
 			local effects = Economy.effects(city, state, M)
 			income = income + 2 + (city.population or 2) + effects.gold
+			-- Gold on worked coast/resource hexes enters the treasury once per turn.
+			income = income + M.yields(p, city, state, Hex, nil, true).gold
 			if
 				includeProjects ~= false
 				and ContentRules.usesP1Economy(p)
@@ -633,7 +636,7 @@ function M.centerYields(p, c, state)
 	if civ == "merchant" and buildings.market then
 		food = food + 2
 	end
-	return { food = food, industry = industry, science = science }
+	return { food = food, industry = industry, science = science, gold = 0 }
 end
 function M.yields(p, c, state, hex, owned, readOnly)
 	local center = M.centerYields(p, c, state)
@@ -641,26 +644,29 @@ function M.yields(p, c, state, hex, owned, readOnly)
 	local food = center.food - 1 + jobs.food * 2
 	local industry = center.industry + jobs.wood * 2
 	local science = center.science - 1 + jobs.science * 2
+	local gold = 0
 	if state and state.world then
-		-- Replace abstract F/W/S worker counters with owned worked hexes.
+		-- Reuse the same tile snapshot for worker selection and yield summing.
+		local tiles = M.workable(state, c)
 		local worked
 		if readOnly then
-			worked = workerSelection(state, c, true)
+			worked = workerSelection(state, c, true, tiles)
 		else
-			M.ensureWorkers(state, c)
+			M.ensureWorkers(state, c, tiles)
 			worked = c.worked
 		end
 		local center = M.centerYields(p, c, state)
 		food, industry, science = center.food, center.industry, center.science
-		for _, tile in ipairs(M.workable(state, c)) do
+		for _, tile in ipairs(tiles) do
 			if worked and worked[tile.key] then
 				food = food + tile.yield.food
 				industry = industry + tile.yield.industry
 				science = science + tile.yield.science
+				gold = gold + (tile.yield.gold or 0)
 			end
 		end
 	end
-	return { food = food, industry = industry, science = science }
+	return { food = food, industry = industry, science = science, gold = gold }
 end
 -- Stable city yield entry point for UI, AI and regression tests.
 function M.cityYield(state, city)

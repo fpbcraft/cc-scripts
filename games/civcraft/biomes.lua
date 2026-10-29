@@ -72,42 +72,42 @@ function Biomes.label(tile)
 	return label
 end
 
-function Biomes.yields(tile, terrainYieldVersion)
-	if terrainYieldVersion == "sparse1" then
-		if tile.biome == "desert" then
-			return 0, tile.elevation == "flat" and 0 or 1
-		end
-		if tile.biome == "taiga" then
-			local supported = tile.elevation ~= "flat"
-				or tile.feature == "woods"
-				or tile.feature == "dense"
-			return 0, supported and 1 or 0
-		end
+-- Standard Civ VI terrain yields. CivCraft's Minecraft biomes map to the
+-- closest terrain/feature combination; custom biomes have explicit analogues.
+-- Returns Food, Production (industry in CivCraft), and Gold.
+local baseYields = {
+	plains = { 1, 1 },
+	forest = { 2, 0 }, -- Grassland with optional Woods
+	savanna = { 1, 1 }, -- Plains
+	desert = { 0, 0 },
+	taiga = { 1, 0 }, -- Tundra
+	jungle = { 1, 1 }, -- Plains with optional Rainforest
+	swamp = { 2, 0 }, -- Grassland with optional Marsh
+	snowy_plains = { 0, 0 }, -- Snow
+	badlands = { 0, 0 }, -- Desert
+	mushroom = { 2, 0 }, -- Grassland (no direct Civ VI counterpart)
+}
+function Biomes.yields(tile)
+	if tile.elevation == "mountain" then
+		return 0, 0, 0 -- Unworkable in Civ VI.
 	end
-	local food, industry = 2, 1
-	if tile.biome == "ocean" or tile.biome == "coast" then
-		return 2, 0
+	if tile.biome == "coast" then
+		return 1, 0, 1
 	end
-	if tile.biome == "desert" or tile.biome == "snowy_plains" then
-		food = 1
-	elseif tile.biome == "badlands" then
-		food, industry = 1, 2
-	elseif tile.biome == "mushroom" then
-		food = 3
+	if tile.biome == "ocean" then
+		return 1, 0, 0
+	end
+	local base = baseYields[tile.biome] or baseYields.plains
+	local food, industry = base[1], base[2]
+	if tile.elevation == "hill" then
+		industry = industry + 1
 	end
 	if tile.feature == "woods" then
-		food, industry = 1, 2
-	elseif tile.feature == "dense" then
-		food, industry = 2, 2
-	elseif tile.feature == "marsh" then
-		food, industry = 2, 1
+		industry = industry + 1
+	elseif tile.feature == "dense" or tile.feature == "marsh" then
+		food = food + 1
 	end
-	if tile.elevation == "hill" then
-		food, industry = math.min(1, food), math.max(2, industry)
-	elseif tile.elevation == "mountain" then
-		food, industry = 0, 2
-	end
-	return food, industry
+	return food, industry, 0
 end
 
 function Biomes.eligible(tile, resource)
