@@ -29,10 +29,10 @@ assert(
 	p.researchTarget == "agriculture" and not p.techs.agriculture,
 	"Research should be scheduled, not instantly purchased"
 )
-state.world.tiles["4:3"] = "forest"
+state.world.tiles["4:3"] = "hills"
 state.world.resources["4:3"] = nil
 state.world.tiles["3:4"] = "plains"
-state.world.resources["3:4"] = "saltpeter"
+state.world.resources["3:4"] = "iron"
 city.worked = {}
 S.ensureWorkers(state, city)
 assert(S.assign(city, "idle", "wood", state))
@@ -47,9 +47,9 @@ assert(
 assert(city.jobs.wood == 0 and city.jobs.science == 1)
 assert(not S.assign(city, "wood", "science", state))
 city.worked = {}
-state.world.tiles["2:3"] = "plains"
+state.world.tiles["2:3"] = "forest"
 state.world.resources["2:3"] = nil
-state.world.tiles["3:2"] = "plains"
+state.world.tiles["3:2"] = "forest"
 state.world.resources["3:2"] = nil
 S.ensureWorkers(state, city)
 assert(S.assign(city, "idle", "food", state))
