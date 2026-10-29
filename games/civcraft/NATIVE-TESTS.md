@@ -335,3 +335,30 @@ The second command makes client 2 win the initial collision, also exercising
 client 1's legal fallback movement. Both variants pass. The harness waits for
 individual result packets and updated snapshots separately; receiving a new round
 does not imply that another client's result acknowledgement has already arrived.
+
+## Specialization V5 network recovery
+
+Run the generated cityless V5 opening and specialty command flow on three actual
+CraftOS-PC computers with:
+
+```sh
+python3 tests/run_civcraft_native_specialty_network.py
+python3 tests/run_civcraft_native_specialty_network.py --reverse-race
+```
+
+Both contention orders cover legal founding commands, duplicate-site rejection,
+production and pausing, host save/exit/restart, client OS reboot/rejoin, and owner and
+foreign projections. Client 2 confirms an actually completed but unseen foreign site
+is absent, then receives the expected foreign city and public site IDs in a newer
+snapshot from the same campaign at or after the expectation round. That public site
+record omits progress, source-site, project and pause-reason fields; foreign city
+records omit private site, project, focus and progress fields. After the real Knowledge
+site project has positive owner-side progress, client 2 must receive a second newer
+snapshot containing the same foreign city and completed site while omitting the active
+project, `siteProjects`, focus, and progress fields. The project is paused only after
+this check; the temporary vision boost and original unit stat are retained until the
+second acknowledgement. The controlled post-founding fixture grants research,
+population, gold, food, industry buildings and owned claims; terrain, generated
+starting actor positions, site legality, site commands and production remain
+authoritative. This is native CraftOS-PC evidence, not an unmodified progression run
+or physical Minecraft monitor/rednet validation.
