@@ -1,0 +1,91 @@
+"""Unit tests for native process timeout reporting and cleanup."""
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+from civcraft_native_process import NativeProcessTimeout, run_native_process
+
+
+class FakeProcess:
+	def __init__(self, events, timeout=False, return_code=0):
+		self.events = events
+		self.pid = 43210
+		self.returncode = None
+		self.timeout = timeout
+		self.exit_code = return_code
+
+	def wait(self, timeout=None):
+		self.events.append(("wait", timeout))
+		if timeout is not None and self.timeout:
+			raise subprocess.TimeoutExpired(["fake-native"], timeout)
+		if self.returncode is None:
+			self.returncode = -9 if self.timeout else self.exit_code
+		return self.returncode
+
+	def kill(self):
+		self.events.append(("kill", self.pid))
+		self.returncode = -9
+
+
+class NativeProcessTests(unittest.TestCase):
+	def test_success_records_exit_without_sampling(self):
+		with tempfile.TemporaryDirectory() as directory:
+			profile = Path(directory)
+			events = []
+			process = FakeProcess(events)
+			result = run_native_process(
+				["fake-native"],
+				profile,
+				subprocess.DEVNULL,
+				popen_factory=lambda *args, **kwargs: process,
+				sampler=lambda *_: self.fail("success must not sample"),
+			)
+			self.assertFalse(result["timedOut"])
+			self.assertEqual(result["returnCode"], 0)
+			self.assertEqual(result["pid"], 43210)
+			self.assertEqual(result["profile"], str(profile))
+
+	def test_nonzero_exit_code_is_preserved(self):
+		with tempfile.TemporaryDirectory() as directory:
+			process = FakeProcess([], return_code=7)
+			result = run_native_process(
+				["fake-native"],
+				Path(directory),
+				subprocess.DEVNULL,
+				popen_factory=lambda *args, **kwargs: process,
+				sampler=lambda *_: self.fail("nonzero exit must not sample"),
+			)
+			self.assertFalse(result["timedOut"])
+			self.assertEqual(result["returnCode"], 7)
+
+	def test_timeout_samples_before_kill_and_reaps_after_sampler_failure(self):
+		with tempfile.TemporaryDirectory() as directory:
+			profile = Path(directory)
+			events = []
+			process = FakeProcess(events, timeout=True)
+
+			def failed_sample(pid, sample_profile):
+				events.append(("sample", pid, sample_profile))
+				raise OSError("sample unavailable")
+
+			with self.assertRaises(NativeProcessTimeout) as raised:
+				run_native_process(
+					["fake-native"],
+					profile,
+					subprocess.DEVNULL,
+					popen_factory=lambda *args, **kwargs: process,
+					sampler=failed_sample,
+				)
+			self.assertEqual(events[1][0], "sample")
+			self.assertEqual(events[2], ("kill", 43210))
+			self.assertEqual(events[3], ("wait", None))
+			self.assertEqual(process.returncode, -9)
+			self.assertTrue(raised.exception.report["timedOut"])
+			self.assertEqual(raised.exception.report["returnCode"], -9)
+			self.assertEqual(raised.exception.report["signal"], "SIGKILL")
+			self.assertIn("sample unavailable", raised.exception.report["sample"]["error"])
+
+
+if __name__ == "__main__":
+	unittest.main()

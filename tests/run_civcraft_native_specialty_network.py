@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from civcraft_native_process import NativeProcessTimeout, run_native_process
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--craftos", default=shutil.which("craftos") or "/Applications/CraftOS-PC.app/Contents/MacOS/craftos")
@@ -22,10 +23,19 @@ for identity in range(3):
     shutil.copytree(repo / "lib/fpb", root / "games/civcraft/_lib/fpb", dirs_exist_ok=True)
     shutil.copyfile(repo / "tests" / fixture, root / "tests" / fixture)
     (root / "startup.lua").write_text(boot + "\n")
+command = [args.craftos, "--headless", "--directory", str(profile), "--exec", boot]
+process_report = None
+timed_out = False
 with (profile / "native-console.log").open("w") as console:
-    subprocess.run([args.craftos, "--headless", "--directory", str(profile), "--exec", boot],
-                   stdout=console, stderr=subprocess.STDOUT, check=True, timeout=120)
-failed = False
+    try:
+        process_report = run_native_process(command, profile, console, timeout=120)
+    except NativeProcessTimeout as error:
+        process_report = error.report
+        timed_out = True
+        print(f"Native process timed out: {process_report}", flush=True)
+if not timed_out:
+    print(f"Native process exited: {process_report}", flush=True)
+failed = timed_out or process_report["returnCode"] != 0
 for identity in range(3):
     result = profile / "computer" / str(identity) / "civcraft-specialty-network.txt"
     content = result.read_text() if result.exists() else "NO RESULT"
