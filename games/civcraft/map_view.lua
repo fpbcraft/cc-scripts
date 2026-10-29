@@ -1026,11 +1026,15 @@ function V.draw(ui, state, player, rect)
 					and not hiddenActors[Animations.identity(mainUnit)]
 				local icon = unitIconBounds(tile, size, secondary)
 				if not underCityBanner(icon, ui.cityBannerTargets) then
+					-- Text terminals map clicks to coarse pixel cells. Expand only
+					-- the hit target, never the painted icon/occlusion bounds.
+					local hitWidth = math.max(8, icon.w)
+					local hitHeight = math.max(8, icon.h)
 					ui.unitIconTargets[#ui.unitIconTargets + 1] = {
-						x = icon.x,
-						y = icon.y,
-						w = icon.w,
-						h = icon.h,
+						x = round(icon.x + (icon.w - hitWidth) / 2),
+						y = round(icon.y + (icon.h - hitHeight) / 2),
+						w = hitWidth,
+						h = hitHeight,
 						unit = actor,
 					}
 				else
