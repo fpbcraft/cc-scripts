@@ -352,8 +352,7 @@ local function unitIconBounds(tile, size, secondary)
 end
 
 local function rectanglesOverlap(a, b)
-	return a.x < b.x + b.w and a.x + a.w > b.x
-		and a.y < b.y + b.h and a.y + a.h > b.y
+	return a.x < b.x + b.w and a.x + a.w > b.x and a.y < b.y + b.h and a.y + a.h > b.y
 end
 
 local function underCityBanner(icon, banners)
@@ -1021,12 +1020,18 @@ function V.draw(ui, state, player, rect)
 			for _, actor in ipairs(visible) do
 				-- A civilian escort is painted to the lower-right of the main
 				-- unit. Its own icon, not the military icon, decides visibility.
-				local secondary = actor == civilian and actor ~= mainUnit
-					and mainUnit and not hiddenActors[Animations.identity(mainUnit)]
+				local secondary = actor == civilian
+					and actor ~= mainUnit
+					and mainUnit
+					and not hiddenActors[Animations.identity(mainUnit)]
 				local icon = unitIconBounds(tile, size, secondary)
 				if not underCityBanner(icon, ui.cityBannerTargets) then
 					ui.unitIconTargets[#ui.unitIconTargets + 1] = {
-						x = icon.x, y = icon.y, w = icon.w, h = icon.h, unit = actor,
+						x = icon.x,
+						y = icon.y,
+						w = icon.w,
+						h = icon.h,
+						unit = actor,
 					}
 				else
 					local badge = {
@@ -1036,31 +1041,31 @@ function V.draw(ui, state, player, rect)
 						anchorX = round(centerX),
 						anchorY = round(centerY),
 					}
-				local chosen
-				-- Keep the circle large when possible, but allow it to shrink to
-				-- preserve separate hit targets on narrow terminal viewports.
-				for diameter = badgeSize, 9, -2 do
-					chosen = findUnitCallout(rect, occupied, centerX, centerY, diameter, size)
-					if chosen then
-						badge.w, badge.h = diameter, diameter
-						break
+					local chosen
+					-- Keep the circle large when possible, but allow it to shrink to
+					-- preserve separate hit targets on narrow terminal viewports.
+					for diameter = badgeSize, 9, -2 do
+						chosen = findUnitCallout(rect, occupied, centerX, centerY, diameter, size)
+						if chosen then
+							badge.w, badge.h = diameter, diameter
+							break
+						end
 					end
-				end
-				if not chosen then
-					chosen = {
-						x = math.max(
-							rect.x,
-							math.min(rect.x + rect.w - badge.w, round(centerX - badge.w / 2))
-						),
-						y = math.max(
-							rect.y,
-							math.min(rect.y + rect.h - badge.h, round(centerY - badge.h / 2))
-						),
-					}
-				end
-				badge.x, badge.y = chosen.x, chosen.y
-				placePointer(badge)
-				ui.unitBadgeTargets[#ui.unitBadgeTargets + 1] = badge
+					if not chosen then
+						chosen = {
+							x = math.max(
+								rect.x,
+								math.min(rect.x + rect.w - badge.w, round(centerX - badge.w / 2))
+							),
+							y = math.max(
+								rect.y,
+								math.min(rect.y + rect.h - badge.h, round(centerY - badge.h / 2))
+							),
+						}
+					end
+					badge.x, badge.y = chosen.x, chosen.y
+					placePointer(badge)
+					ui.unitBadgeTargets[#ui.unitBadgeTargets + 1] = badge
 					occupied[#occupied + 1] = badge
 				end
 			end
