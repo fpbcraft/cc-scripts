@@ -12,7 +12,7 @@ local START_SEARCH_RADIUS = 4
 local START_COMPONENT_MINIMUM = START_LAND_TARGET * 3
 local DIFFICULT_LAND_LIMIT = 0.45
 
-local WorldGen = { version = 3 }
+local WorldGen = { version = 4 }
 local function key(x, y)
 	return x .. ":" .. y
 end
@@ -21,23 +21,34 @@ local function clamp(value)
 	return math.max(0, math.min(1, value))
 end
 
-local function climateField(seed, salt, width, height, scale)
+local function climateField(seed, salt, width, height, scale, wrapX)
 	local rng = Random.new(seed, salt)
 	local cells = {}
+	local periodicColumns = math.max(1, math.ceil(width / scale))
 	for y = 0, math.ceil(height / scale) + 1 do
 		cells[y] = {}
-		for x = 0, math.ceil(width / scale) + 1 do
+		local lastColumn = wrapX and periodicColumns - 1 or math.ceil(width / scale) + 1
+		for x = 0, lastColumn do
 			cells[y][x] = rng:next()
 		end
 	end
 	return function(x, y)
-		x, y = x / scale, y / scale
+		if wrapX then
+			x = ((x - 1) % width) / width * periodicColumns
+		else
+			x = x / scale
+		end
+		y = y / scale
 		local xx, yy = math.floor(x), math.floor(y)
 		local fx, fy = x - xx, y - yy
 		fx = fx * fx * (3 - 2 * fx)
 		fy = fy * fy * (3 - 2 * fy)
-		local a = cells[yy][xx] * (1 - fx) + cells[yy][xx + 1] * fx
-		local b = cells[yy + 1][xx] * (1 - fx) + cells[yy + 1][xx + 1] * fx
+		local x0, x1 = xx, xx + 1
+		if wrapX then
+			x0, x1 = xx % periodicColumns, (xx + 1) % periodicColumns
+		end
+		local a = cells[yy][x0] * (1 - fx) + cells[yy][x1] * fx
+		local b = cells[yy + 1][x0] * (1 - fx) + cells[yy + 1][x1] * fx
 		return a * (1 - fy) + b * fy
 	end
 end
@@ -69,19 +80,20 @@ end
 
 local function layers(world, checkpoint)
 	local width, height, seed = world.width, world.height, world.seed
-	local macro = climateField(seed, 11, width, height, math.max(4, width / 5))
-	local detail = climateField(seed, 23, width, height, 3)
-	local elevation = climateField(seed, 37, width, height, 5)
-	local moisture = climateField(seed, 41, width, height, math.max(4, width / 6))
-	local heat = climateField(seed, 53, width, height, 7)
-	local vegetation = climateField(seed, 67, width, height, 2)
+	local macro = climateField(seed, 11, width, height, math.max(4, width / 5), world.wrapX)
+	local detail = climateField(seed, 23, width, height, 3, world.wrapX)
+	local elevation = climateField(seed, 37, width, height, 5, world.wrapX)
+	local moisture = climateField(seed, 41, width, height, math.max(4, width / 6), world.wrapX)
+	local heat = climateField(seed, 53, width, height, 7, world.wrapX)
+	local vegetation = climateField(seed, 67, width, height, 2, world.wrapX)
 	local heights, sorted, rises = {}, {}, {}
 	local waterShare = ({ continents = 0.32, archipelago = 0.46, pangaea = 0.25, highlands = 0.12 })[world.mapType]
 	for y = 1, height do
 		for x = 1, width do
 			local normalizedX, normalizedY =
 				(x - (width + 1) / 2) / (width / 2), (y - (height + 1) / 2) / (height / 2)
-			local distance = math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY)
+			local distance = world.wrapX and math.abs(normalizedY)
+				or math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY)
 			local edge = world.mapType == "pangaea" and distance * 0.24
 				or math.max(0, distance - 0.65) * 0.12
 			local height = macro(x, y) * 0.75 + detail(x, y) * 0.25 - edge
@@ -151,6 +163,12 @@ local function passable(world, x, y)
 	return terrain ~= "water" and terrain ~= "mountain"
 end
 
+local function forRadius(world, centerX, centerY, radius, callback)
+	for _, position in ipairs(Hex.withinRadius(centerX, centerY, radius, world)) do
+		callback(position.x, position.y)
+	end
+end
+
 local function landComponents(world, checkpoint)
 	local components, membership = {}, {}
 	for y = 1, world.height do
@@ -171,9 +189,7 @@ local function landComponents(world, checkpoint)
 					index = index + 1
 					component.tiles[#component.tiles + 1] = current
 					component.size = component.size + 1
-					for _, neighbor in
-						ipairs(Hex.neighbours(current.x, current.y, { world = world }))
-					do
+					for _, neighbor in ipairs(Hex.neighbours(current.x, current.y, world)) do
 						local neighborKey = key(neighbor.x, neighbor.y)
 						if
 							passable(world, neighbor.x, neighbor.y) and not membership[neighborKey]
@@ -193,26 +209,22 @@ end
 local function openingScore(world, x, y)
 	local food, industry, openLand, cold, radius = 0, 0, 0, 0, START_SEARCH_RADIUS
 	local snowWithinOpening = 0
-	for yy = math.max(1, y - radius), math.min(world.height, y + radius) do
-		for xx = math.max(1, x - radius), math.min(world.width, x + radius) do
-			if Hex.distance(x, y, xx, yy) <= radius then
-				local tile = Biomes.tile(world, xx, yy)
-				if passable(world, xx, yy) then
-					local tileFood, tileIndustry = Biomes.yields(tile, world.terrainYieldVersion)
-					food, industry = food + tileFood, industry + tileIndustry
-					if tile.elevation ~= "mountain" and tile.biome ~= "snowy_plains" then
-						openLand = openLand + 1
-					end
-					if tile.biome == "snowy_plains" or tile.biome == "taiga" then
-						cold = cold + 1
-					end
-					if tile.biome == "snowy_plains" and Hex.distance(x, y, xx, yy) <= 3 then
-						snowWithinOpening = snowWithinOpening + 1
-					end
-				end
+	forRadius(world, x, y, radius, function(xx, yy)
+		local tile = Biomes.tile(world, xx, yy)
+		if passable(world, xx, yy) then
+			local tileFood, tileIndustry = Biomes.yields(tile, world.terrainYieldVersion)
+			food, industry = food + tileFood, industry + tileIndustry
+			if tile.elevation ~= "mountain" and tile.biome ~= "snowy_plains" then
+				openLand = openLand + 1
+			end
+			if tile.biome == "snowy_plains" or tile.biome == "taiga" then
+				cold = cold + 1
+			end
+			if tile.biome == "snowy_plains" and Hex.distance(x, y, xx, yy, world) <= 3 then
+				snowWithinOpening = snowWithinOpening + 1
 			end
 		end
-	end
+	end)
 	return food + industry * 1.25 + openLand * 0.7 - cold * 1.5, snowWithinOpening
 end
 
@@ -282,7 +294,7 @@ local function starts(world, count, checkpoint)
 				end
 				local spaced = true
 				for _, prior in ipairs(selected) do
-					if Hex.distance(candidate.x, candidate.y, prior.x, prior.y) < 6 then
+					if Hex.distance(candidate.x, candidate.y, prior.x, prior.y, world) < 6 then
 						spaced = false
 						break
 					end
@@ -348,32 +360,29 @@ local function starts(world, count, checkpoint)
 		local baseX, baseY =
 			anchor and anchor.x or math.floor(width / 2),
 			anchor and anchor.y or math.floor(height / 2)
-		local firstX = math.max(3, math.min(width - 2 - (count - 1) * 6, baseX - (count - 1) * 3))
+		local firstX = baseX - (count - 1) * 3
+		if not world.wrapX then
+			firstX = math.max(3, math.min(width - 2 - (count - 1) * 6, firstX))
+		end
 		candidates = {}
 		local clusterScore = openingScore(world, baseX, baseY)
 		for index = 1, count do
 			local x, y = firstX + (index - 1) * 6, baseY
-			if x > width - 2 then
+			if world.wrapX then
+				x = Hex.canonical(x, y, world)
+			elseif x > width - 2 then
 				x = width - 2
 			end
-			for patchY = math.max(1, y - 3), math.min(height, y + 3) do
-				if checkpoint then
-					checkpoint()
+			forRadius(world, x, y, 3, function(patchX, patchY)
+				local tile = Biomes.tile(world, patchX, patchY)
+				if not passable(world, patchX, patchY) or tile.biome == "snowy_plains" then
+					setTile(world, patchX, patchY, {
+						biome = "plains",
+						elevation = "flat",
+						feature = "none",
+					})
 				end
-				for patchX = math.max(1, x - 3), math.min(width, x + 3) do
-					local tile = Biomes.tile(world, patchX, patchY)
-					if
-						Hex.distance(x, y, patchX, patchY) <= 3
-						and (not passable(world, patchX, patchY) or tile.biome == "snowy_plains")
-					then
-						setTile(world, patchX, patchY, {
-							biome = "plains",
-							elevation = "flat",
-							feature = "none",
-						})
-					end
-				end
-			end
+			end)
 			candidates[index] = {
 				x = x,
 				y = y,
@@ -391,7 +400,8 @@ local function starts(world, count, checkpoint)
 			end
 			local distance, safe = math.huge, true
 			for _, prior in ipairs(world.starts) do
-				local candidateDistance = Hex.distance(candidate.x, candidate.y, prior.x, prior.y)
+				local candidateDistance =
+					Hex.distance(candidate.x, candidate.y, prior.x, prior.y, world)
 				distance = math.min(distance, candidateDistance)
 				if candidateDistance < 6 then
 					safe = false
@@ -422,7 +432,7 @@ local function starts(world, count, checkpoint)
 			best.y,
 			{ biome = "plains", elevation = "flat", feature = "none" }
 		)
-		local ironX = Hex.distance(best.x, best.y, adjacentX, best.y + 1) == 1 and adjacentX
+		local ironX = Hex.distance(best.x, best.y, adjacentX, best.y + 1, world) == 1 and adjacentX
 			or best.x
 		setTile(
 			world,
@@ -452,11 +462,11 @@ local function repairStart(world, start, rng, checkpoint)
 			end
 			local candidate = queue[index]
 			index = index + 1
-			for _, neighbor in ipairs(Hex.neighbours(candidate.x, candidate.y, { world = world })) do
+			for _, neighbor in ipairs(Hex.neighbours(candidate.x, candidate.y, world)) do
 				local tileKey = key(neighbor.x, neighbor.y)
 				if
 					not reached[tileKey]
-					and Hex.distance(start.x, start.y, neighbor.x, neighbor.y)
+					and Hex.distance(start.x, start.y, neighbor.x, neighbor.y, world)
 						<= START_SEARCH_RADIUS
 				then
 					local terrain = world.tiles[tileKey]
@@ -473,26 +483,19 @@ local function repairStart(world, start, rng, checkpoint)
 		end
 	end
 	visit()
-	for y = math.max(1, start.y - 3), math.min(world.height, start.y + 3) do
-		if checkpoint then
-			checkpoint()
+	forRadius(world, start.x, start.y, 3, function(x, y)
+		local tile = Biomes.tile(world, x, y)
+		if tile.biome == "snowy_plains" then
+			setTile(world, x, y, {
+				biome = "plains",
+				elevation = tile.elevation,
+				feature = "none",
+			})
 		end
-		for x = math.max(1, start.x - 3), math.min(world.width, start.x + 3) do
-			if Hex.distance(start.x, start.y, x, y) <= 3 then
-				local tile = Biomes.tile(world, x, y)
-				if tile.biome == "snowy_plains" then
-					setTile(world, x, y, {
-						biome = "plains",
-						elevation = tile.elevation,
-						feature = "none",
-					})
-				end
-			end
-		end
-	end
+	end)
 	-- Preserve the legacy opening guarantee: every immediate neighbor is
 	-- walkable, even if the selected viable site has a local shoreline or peak.
-	for _, neighbor in ipairs(Hex.neighbours(start.x, start.y, { world = world })) do
+	for _, neighbor in ipairs(Hex.neighbours(start.x, start.y, world)) do
 		if not passable(world, neighbor.x, neighbor.y) then
 			setTile(world, neighbor.x, neighbor.y, {
 				biome = "plains",
@@ -504,7 +507,8 @@ local function repairStart(world, start, rng, checkpoint)
 	while #queue < START_LAND_TARGET and #frontier > 0 do
 		table.sort(frontier, function(a, b)
 			local da, db =
-				Hex.distance(start.x, start.y, a.x, a.y), Hex.distance(start.x, start.y, b.x, b.y)
+				Hex.distance(start.x, start.y, a.x, a.y, world),
+				Hex.distance(start.x, start.y, b.x, b.y, world)
 			if da ~= db then
 				return da < db
 			end
@@ -530,7 +534,7 @@ local function coasts(world)
 		for x = 1, world.width do
 			local tile = world.geography[key(x, y)]
 			if tile.biome == "ocean" then
-				for _, neighbor in ipairs(Hex.neighbours(x, y, { world = world })) do
+				for _, neighbor in ipairs(Hex.neighbours(x, y, world)) do
 					if world.tiles[key(neighbor.x, neighbor.y)] ~= "water" then
 						tile.biome = "coast"
 						break
@@ -548,10 +552,10 @@ local function reserveWonderSiteIfNeeded(world, checkpoint)
 		if checkpoint then
 			checkpoint()
 		end
-		for x = 2, world.width - 1 do
+		for x = world.wrapX and 1 or 2, world.wrapX and world.width or world.width - 1 do
 			local nearest = math.huge
 			for _, start in ipairs(world.starts) do
-				nearest = math.min(nearest, Hex.distance(x, y, start.x, start.y))
+				nearest = math.min(nearest, Hex.distance(x, y, start.x, start.y, world))
 			end
 			if nearest >= buffer then
 				local tile = Biomes.tile(world, x, y)
@@ -665,13 +669,23 @@ local function deposits(world, checkpoint)
 	end
 end
 
-function WorldGen.generate(seed, size, count, mapType, dimensions, checkpoint, terrainYieldVersion)
+function WorldGen.generate(
+	seed,
+	size,
+	count,
+	mapType,
+	dimensions,
+	checkpoint,
+	terrainYieldVersion,
+	wrapX
+)
 	local world = {
 		width = dimensions[1],
 		height = dimensions[2],
 		seed = seed,
 		size = size,
 		mapType = mapType,
+		wrapX = wrapX == true,
 		generationVersion = WorldGen.version,
 		terrainYieldVersion = terrainYieldVersion or "civ6-1",
 		contentVersion = 1,

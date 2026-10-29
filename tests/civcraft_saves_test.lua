@@ -52,6 +52,14 @@ local a = { name = "RED", round = 4, phase = "game", world = { seed = 101, size 
 local b = { name = "BLUE", round = 12, phase = "game", world = { seed = 202, size = "large" } }
 Save.save(1, a)
 Save.save(2, b)
+local wrapped = {
+	name = "WRAPPED",
+	round = 1,
+	phase = "game",
+	world = { width = 5, height = 4, seed = 77, wrapX = true },
+}
+Save.save(3, wrapped)
+assert(Save.load(3).world.wrapX == true, "Serialized world topology survives save and load")
 assert(Save.load(1).name == "RED" and Save.load(2).name == "BLUE")
 Save.save(
 	1,

@@ -75,7 +75,7 @@ assert(#scorerVersions > 0, "Generation evaluates terrain for start placement")
 for _, version in ipairs(scorerVersions) do
 	assert(version == "civ6-1", "Start scoring uses current rules")
 end
-assert(generated.generationVersion == 3, "Yield changes do not regenerate the map")
+assert(generated.generationVersion == 4, "Yield changes do not regenerate the map")
 
 local world = {
 	width = 12,
