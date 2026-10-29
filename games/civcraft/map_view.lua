@@ -1035,6 +1035,10 @@ function V.draw(ui, state, player, rect)
 						y = round(icon.y + (icon.h - hitHeight) / 2),
 						w = hitWidth,
 						h = hitHeight,
+						glyphX = icon.x,
+						glyphY = icon.y,
+						glyphW = icon.w,
+						glyphH = icon.h,
 						unit = actor,
 					}
 				else
