@@ -130,9 +130,15 @@ assert(ui:animating() and click("SKIP"))
 assert(not ui:animating() and #ui.playback.feed > 0, "Skip retains the observed summary")
 state.players[2].ai = true
 AI.beginTurn(state, state.players[2])
+state.world.wrapX = true
 assert(Saves.save(3, state))
+state.world.wrapX = false
 local restored = Saves.load(3)
-assert(restored.campaignID == state.campaignID and restored.eventJournal.version == 1)
+assert(
+	restored.campaignID == state.campaignID
+		and restored.eventJournal.version == 1
+		and restored.world.wrapX == true
+)
 assert(Events.forPlayer(restored, 1).lastSeq == before.lastSeq)
 assert(restored.units[1].x == target.x and restored.units[1].y == target.y)
 assert(

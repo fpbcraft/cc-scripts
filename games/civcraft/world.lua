@@ -129,7 +129,8 @@ function W.generate(seed, size, count, mapType, context)
 		mapType,
 		W.dimensions(size, context),
 		W.checkpoint,
-		context and context.terrainYieldVersion or W.currentTerrainYieldVersion
+		context and context.terrainYieldVersion or W.currentTerrainYieldVersion,
+		context and (context.wrapX == true or context.mapWrapX == true) or false
 	)
 	if ContentRules.startsWithSettler(context) then
 		world.mapScaleVersion = "founders-v1"
@@ -181,6 +182,8 @@ function W.migrate(state)
 		world.mapType = world.mapType or "continents"
 		world.resources = world.resources or {}
 		world.generationVersion = world.generationVersion or 1
+		-- Old serialized maps remain finite unless a save explicitly records wrap.
+		world.wrapX = world.wrapX == true
 		-- Upgrade all existing saves in place; no world regeneration or reset.
 		world.terrainYieldVersion = W.currentTerrainYieldVersion
 	end
@@ -640,6 +643,7 @@ function W.forPlayer(state, id, afterSeq)
 	end
 	if state.phase ~= "game" and state.phase ~= "over" then
 		view.mapSize, view.mapType, view.mapSeed = state.mapSize, state.mapType, state.mapSeed
+		view.mapWrapX = state.mapWrapX == true or state.wrapX == true
 		for _, player in ipairs(state.players) do
 			view.players[#view.players + 1] = {
 				id = player.id,
@@ -670,6 +674,7 @@ function W.forPlayer(state, id, afterSeq)
 			roads = Sites.enabled(state) and {} or nil,
 			contentVersion = world.contentVersion,
 			generationVersion = world.generationVersion,
+			wrapX = world.wrapX == true,
 			mapScaleVersion = world.mapScaleVersion,
 			terrainYieldVersion = world.terrainYieldVersion,
 		}
