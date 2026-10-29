@@ -59,7 +59,12 @@ p.civ = "scholar"
 city.buildings.library = true
 local center = S.centerYields(p, city)
 assert(center.science == 5, "City tile includes library science")
-local sums = { food = center.food, industry = center.industry, science = center.science, gold = center.gold or 0 }
+local sums = {
+	food = center.food,
+	industry = center.industry,
+	science = center.science,
+	gold = center.gold or 0,
+}
 for _, tile in ipairs(S.workable(state, city)) do
 	if city.worked[tile.key] then
 		for key, value in pairs(tile.yield) do
