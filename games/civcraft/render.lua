@@ -322,7 +322,12 @@ local pixelColors = {}
 for color in pairs(R.palette) do
 	pixelColors[color] = string.char(color)
 end
-R.cooperate = dofile("/games/civcraft/cooperative.lua").checkpoint
+local Cooperative = dofile("/games/civcraft/cooperative.lua")
+function R:cooperate(force)
+	-- Drawing calls have very different costs: 128 sprites can take much longer
+	-- than 128 single-pixel strokes. Always sample time at renderer checkpoints.
+	Cooperative.checkpoint(self, force, true)
+end
 
 function R:pullEvent()
 	local queue = self.pendingEvents
@@ -370,6 +375,7 @@ function R:fill(x, y, w, h, color)
 			-- Mutate reusable pixels; rebuilding strings per stroke causes heavy GC on CraftOS.
 			local pixel = pixelColors[color or 0]
 			for row = y0 + 1, y1 do
+				self:cooperate()
 				local pixels = self.buffer[row]
 				for column = x0 + 1, x1 do
 					pixels[column] = pixel
@@ -390,6 +396,7 @@ function R:fill(x, y, w, h, color)
 		local count = math.max(0, bx - ax + 1)
 		if self.textBuffer then
 			for row = ay, by do
+				self:cooperate()
 				local line = self.textBuffer[row]
 				line[1] = splice(line[1], ax, bx, (" "):rep(count))
 				line[3] = splice(line[3], ax, bx, blitColor(color):rep(count))
@@ -397,6 +404,7 @@ function R:fill(x, y, w, h, color)
 		else
 			self.m.setBackgroundColor(terminalColors[color] or 32768)
 			for row = ay, by do
+				self:cooperate()
 				self.m.setCursorPos(ax, row)
 				self.m.write((" "):rep(count))
 			end
@@ -426,6 +434,7 @@ function R:blit(rows, x, y)
 	local bottom = math.min(self.h, clip.y + clip.h)
 	local pattern = "[^" .. string.char(255) .. "]+"
 	for i, row in ipairs(rows) do
+		self:cooperate()
 		local target = y + i - 1
 		if target >= top and target < bottom then
 			local start = 1
@@ -916,6 +925,17 @@ function R:icon(id, x, y, s)
 			"000000000",
 			"000000000",
 		},
+		shield = {
+			"000111000",
+			"001111100",
+			"011111110",
+			"111111111",
+			"111111111",
+			"011111110",
+			"001111100",
+			"000110000",
+			"000000000",
+		},
 		star = {
 			"000010000",
 			"000010000",
@@ -1077,27 +1097,51 @@ function R:button(x, y, w, h, label, fn, opt)
 	local bg = opt.selected and 12 or opt.primary and 11 or opt.danger and 10 or 2
 	self:fill(x, y, w, h, bg)
 	self:outline(x, y, w, h, opt.primary and 8 or 3)
-	if opt.icon and w >= 48 then
+	local shownLabel = opt.displayLabel or label
+	local iconOnly = opt.compactAction and opt.iconOnly == true
+	local tx, max
+	if opt.compactAction and opt.icon then
+		if iconOnly then
+			self:icon(opt.icon, x + math.floor((w - 9) / 2), y + 1, 1)
+		else
+			self:icon(opt.icon, x + 3, y + 1, 1)
+			tx = x + 14
+			max = w - 17
+		end
+	elseif opt.icon and w >= 48 then
 		self:icon(opt.icon, x + 4, y + math.max(3, math.floor((h - 9) / 2)), 1)
 	end
-	local tx = x + (opt.icon and w >= 48 and 17 or 4)
-	local max = w - (tx - x) - 3
-	if not opt.icon and label then
-		tx = x + math.max(3, math.floor((w - self:textWidth(label)) / 2))
-		max = w - (tx - x) - 2
+	if not tx then
+		tx = x + (opt.icon and w >= 48 and 17 or 4)
+		max = w - (tx - x) - 3
+		if not opt.icon and shownLabel then
+			tx = x + math.max(3, math.floor((w - self:textWidth(shownLabel)) / 2))
+			max = w - (tx - x) - 2
+		end
 	end
-	if label then
+	if shownLabel and not iconOnly then
 		self:text(
 			tx,
 			y + math.max(2, math.floor((h - 7) / 2)),
-			label,
+			shownLabel,
 			opt.primary and 0 or 7,
 			1,
 			max
 		)
 	end
 	if fn then
-		self.buttons[#self.buttons + 1] = { x = x, y = y, w = w, h = h, fn = fn, label = label }
+		self.buttons[#self.buttons + 1] = {
+			x = x,
+			y = y,
+			w = w,
+			h = h,
+			fn = fn,
+			label = label,
+			help = opt.help or label,
+			icon = opt.icon,
+			displayLabel = shownLabel,
+			iconOnly = iconOnly,
+		}
 	end
 end
 function R:touch(x, y)
@@ -1145,6 +1189,7 @@ function R:begin()
 		self.buffer = self.frameRows
 		self.frameClear = true
 		for y = 1, self.h do
+			self:cooperate()
 			local row = self.buffer[y] or {}
 			self.buffer[y] = row
 			for x = 1, self.w do
@@ -1154,6 +1199,7 @@ function R:begin()
 	else
 		self.textBuffer = {}
 		for y = 1, self.ch do
+			self:cooperate()
 			self.textBuffer[y] = { (" "):rep(self.cw), ("0"):rep(self.cw), ("f"):rep(self.cw) }
 		end
 	end
@@ -1225,6 +1271,7 @@ function R:finish()
 	if self.textBuffer then
 		local previous = self.lastTextRows or {}
 		for y, line in ipairs(self.textBuffer) do
+			self:cooperate()
 			local old = previous[y]
 			if not old or old[1] ~= line[1] or old[2] ~= line[2] or old[3] ~= line[3] then
 				self.m.setCursorPos(1, y)

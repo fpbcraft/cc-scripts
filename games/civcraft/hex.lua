@@ -168,6 +168,43 @@ function H.passable(x, y, state, unit, Systems)
 	return H.moveCost(x, y, state, unit or { kind = "warrior" }, Systems) ~= nil
 end
 local occupant = Stacks.at
+-- A binary heap avoids sorting the entire open set on every route expansion.
+-- A sequence key makes equal-cost ties deterministic.
+local function comesBefore(a, b)
+	return a.cost < b.cost or a.cost == b.cost and a.sequence < b.sequence
+end
+local function heapPush(heap, item)
+	local index = #heap + 1
+	while index > 1 do
+		local parent = math.floor(index / 2)
+		if not comesBefore(item, heap[parent]) then
+			break
+		end
+		heap[index] = heap[parent]
+		index = parent
+	end
+	heap[index] = item
+end
+local function heapPop(heap)
+	local first, last = heap[1], table.remove(heap)
+	if #heap == 0 then
+		return first
+	end
+	local index = 1
+	while index * 2 <= #heap do
+		local child = index * 2
+		if heap[child + 1] and comesBefore(heap[child + 1], heap[child]) then
+			child = child + 1
+		end
+		if not comesBefore(heap[child], last) then
+			break
+		end
+		heap[index] = heap[child]
+		index = child
+	end
+	heap[index] = last
+	return first
+end
 local function settlement(state, x, y)
 	for _, c in ipairs(state.cities or {}) do
 		if c.x == x and c.y == y then
@@ -175,7 +212,7 @@ local function settlement(state, x, y)
 		end
 	end
 end
-function H.reachable(state, unit, owner, Systems)
+function H.reachable(state, unit, owner, Systems, options)
 	local out = {}
 	if not unit or unit.owner ~= owner or unit.moved then
 		return out
@@ -196,7 +233,10 @@ function H.reachable(state, unit, owner, Systems)
 	local w, h = dims(state)
 	local start = unit.y * w + unit.x
 	local distance = { [start] = 0 }
-	local fringe = { { x = unit.x, y = unit.y, cost = 0 } }
+	local sequence = 0
+	local fringe = { { x = unit.x, y = unit.y, cost = 0, sequence = sequence } }
+	-- Exploration needs costs for every possible frontier, but only one final path.
+	local deferPaths = options and options.deferPaths == true
 	local attacks = {}
 	local zones = Zone.map(state, unit, Systems, H)
 	local stopped = { [start] = Zone.locked(state, unit, Systems) }
@@ -234,10 +274,7 @@ function H.reachable(state, unit, owner, Systems)
 		if Systems and Systems.checkpoint then
 			Systems.checkpoint()
 		end
-		table.sort(fringe, function(a, b)
-			return a.cost < b.cost
-		end)
-		local cur = table.remove(fringe, 1)
+		local cur = heapPop(fringe)
 		if cur.cost == distance[cur.y * w + cur.x] then
 			for _, nextHex in ipairs(H.neighbours(cur.x, cur.y, state)) do
 				local nx, ny = nextHex.x, nextHex.y
@@ -299,7 +336,8 @@ function H.reachable(state, unit, owner, Systems)
 							distance[idx] = total
 							stopped[idx] = controlled
 							previous[idx] = { x = cur.x, y = cur.y }
-							fringe[#fringe + 1] = { x = nx, y = ny, cost = total }
+							sequence = sequence + 1
+							heapPush(fringe, { x = nx, y = ny, cost = total, sequence = sequence })
 						end
 					end
 				end
@@ -314,7 +352,7 @@ function H.reachable(state, unit, owner, Systems)
 					x = x,
 					y = y,
 					cost = distance[idx],
-					path = route(x, y),
+					path = not deferPaths and route(x, y) or nil,
 					zoneStop = stopped[idx] or false,
 				}
 			end
@@ -379,6 +417,11 @@ function H.reachable(state, unit, owner, Systems)
 		end
 		return a.y == b.y and a.x < b.x or a.y < b.y
 	end)
+	if deferPaths then
+		return out, function(x, y)
+			return route(x, y)
+		end
+	end
 	return out
 end
 return H

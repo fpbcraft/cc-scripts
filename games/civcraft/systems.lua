@@ -809,7 +809,13 @@ function M.autoExplore(state, unit, hex)
 	for _, member in ipairs({ unit, Stacks.partner(state, unit) }) do
 		member.standby, member.healing, member.skippedTurn = false, false, nil
 	end
+	local steps = 0
 	while (unit.movesLeft or 0) > 0 and not unit.moved do
+		steps = steps + 1
+		if steps > 64 then
+			unit.autoExplore = false
+			return false, "Exploration turn exceeded its movement safety limit"
+		end
 		local companion = Stacks.partner(state, unit)
 		if companion and (companion.moved or (companion.movesLeft or 0) <= 0) then
 			break
@@ -823,7 +829,8 @@ function M.autoExplore(state, unit, hex)
 		scout.moved = false
 		local best, bestScore
 		local vision = (M.units[unit.kind] or M.units.scout).vision
-		for _, choice in ipairs(hex.reachable(state, scout, unit.owner, M)) do
+		local choices, routeTo = hex.reachable(state, scout, unit.owner, M, { deferPaths = true })
+		for _, choice in ipairs(choices) do
 			if not choice.attack then
 				local discoveries = 0
 				for y = math.max(1, choice.y - vision), math.min(state.world.height, choice.y + vision) do
@@ -850,6 +857,9 @@ function M.autoExplore(state, unit, hex)
 			unit.autoExplore = false
 			return true, "No safe unexplored frontier remains"
 		end
+		if routeTo then
+			best.path = routeTo(best.x, best.y)
+		end
 		local spent = 0
 		local destination
 		for i = 2, #best.path do
@@ -875,6 +885,7 @@ function M.autoExplore(state, unit, hex)
 			unit.moved = true
 			break
 		end
+		local previousX, previousY, previousMoves = unit.x, unit.y, unit.movesLeft
 		unit.executingAutoExplore = true
 		local request = {
 			action = "move",
@@ -892,6 +903,10 @@ function M.autoExplore(state, unit, hex)
 		if not ok then
 			unit.autoExplore = false
 			return false, "Exploration route blocked"
+		end
+		if unit.x == previousX and unit.y == previousY and unit.movesLeft == previousMoves then
+			unit.autoExplore = false
+			return false, "Exploration order made no progress"
 		end
 		unit.autoExplore = true
 	end
