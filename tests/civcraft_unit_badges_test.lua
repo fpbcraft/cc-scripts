@@ -85,9 +85,114 @@ for _, graphics in ipairs({ false, true }) do
 			end
 			assert(ui:tap(x, y), "Badge pointer was not consumed")
 		end
+		local function overlaps(a, b)
+			return a.x < b.x + b.w and a.x + a.w > b.x
+				and a.y < b.y + b.h and a.y + a.h > b.y
+		end
+		local function findTarget(list, id)
+			for _, target in ipairs(list or {}) do
+				if target.unit.id == id then
+					return target
+				end
+			end
+			return nil
+		end
+		-- Independent reference for the painted glyph bounds. City callouts
+		-- must depend on glyph/banner overlap, never just sharing a hex.
+		local function glyphAt(hex, secondary)
+			local size = ui.mapViewport.tile
+			if size < 16 then
+				return {
+					x = hex.x + (secondary and size * 0.65 or size / 2),
+					y = hex.y + (secondary and size * 0.6 or size / 2),
+					w = 2, h = 2,
+				}
+			end
+			if secondary then
+				local diameter = math.min(7, size / 2)
+				return { x = hex.x + size * 0.65, y = hex.y + size * 0.6,
+					w = diameter, h = diameter }
+			end
+			return { x = hex.x + size / 2 - 5, y = hex.y + size / 2 - 5,
+				w = 11, h = 11 }
+		end
+		local function projectedHex(actor)
+			for _, hex in ipairs(ui.hexTargets or {}) do
+				if hex.tx == actor.x and hex.ty == actor.y then
+					return hex
+				end
+			end
+			return nil
+		end
+		local function needsCallout(actor)
+			local hex = projectedHex(actor)
+			if not hex then return false end
+			local secondary = false
+			if actor.kind == "settler" then
+				for _, other in ipairs(state.units) do
+					if other.id ~= actor.id and other.x == actor.x and other.y == actor.y
+						and other.kind ~= "settler" then
+						secondary = true
+					end
+				end
+			end
+			local glyph = glyphAt(hex, secondary)
+			for _, banner in ipairs(ui.cityBannerTargets or {}) do
+				if overlaps(glyph, banner) then return true end
+			end
+			return false
+		end
+		local function targetFor(actor)
+			local covered = needsCallout(actor)
+			local badge = findTarget(ui.unitBadgeTargets, actor.id)
+			local icon = findTarget(ui.unitIconTargets, actor.id)
+			assert((badge ~= nil) == covered,
+				"Circle must appear if and only if a city banner obscures the unit glyph: "
+					.. actor.id .. " graphics=" .. tostring(graphics) .. " zoom=" .. zoom)
+			if covered then
+				assert(not icon, "Covered unit should not have a direct glyph target")
+				return badge, true
+			end
+			assert(icon, "Uncovered unit remains selectable without a callout")
+			return icon, false
+		end
 		draw()
 		local anchored = assert(ui.cityBannerTargets[1], "City banner is visible")
 		local initialX, initialY = anchored.x, anchored.y
+		local coveredHex, clearHex
+		for _, hex in ipairs(ui.hexTargets) do
+			if state.players[1].visible[World.key(hex.tx, hex.ty)] then
+				local glyph = glyphAt(hex, false)
+				local hidden = overlaps(glyph, anchored)
+				local atCity = hex.tx == state.cities[1].x and hex.ty == state.cities[1].y
+				if hidden and not coveredHex then
+					coveredHex = hex
+				elseif not hidden and not atCity and not clearHex then
+					clearHex = hex
+				end
+			end
+		end
+		assert(coveredHex and clearHex,
+			"Map viewport should contain visible covered and uncovered hexes for the regression")
+		local scout = state.units[3]
+		local scoutX, scoutY = scout.x, scout.y
+		scout.x, scout.y = coveredHex.tx, coveredHex.ty
+		World.reveal(state, Hex, Systems)
+		draw()
+		assert(needsCallout(scout), "Fixture must actually put the scout beneath the city banner")
+		local coveredTarget, isCovered = targetFor(scout)
+		assert(isCovered and coveredTarget, "Covered scout needs a circular, clickable callout")
+		tap(coveredTarget)
+		assert(ui.selected.kind == "unit" and ui.selected.unitID == scout.id,
+			"Covered callout selects its exact unit")
+		scout.x, scout.y = clearHex.tx, clearHex.ty
+		World.reveal(state, Hex, Systems)
+		draw()
+		assert(not needsCallout(scout), "Fixture must move the scout clear of the banner")
+		local clearTarget, clearCovered = targetFor(scout)
+		assert(not clearCovered and clearTarget, "Clear scout uses its normal unit icon")
+		ui:focus("city", state.cities[1])
+		draw()
 		-- A moving formation must not make the city's label jump to another row.
 		local previousX, previousY = state.units[1].x, state.units[1].y
 		state.units[1].x, state.units[1].y = 6, 4
@@ -109,7 +214,7 @@ for _, graphics in ipairs({ false, true }) do
 				break
 			end
 		end
-		assert(movedBadge and movedBadge.unit.x == 6, "Moving unit has a floating marker")
+		assert(not movedBadge, "A unit away from the city should not have a floating marker")
 		local movedHex
 		for _, hex in ipairs(ui.hexTargets) do
 			if hex.tx == 6 and hex.ty == 4 then
@@ -119,28 +224,25 @@ for _, graphics in ipairs({ false, true }) do
 		end
 		assert(movedHex, "Moved unit's actual world tile is projected")
 		assert(
-			movedBadge.anchorX == math.floor(movedHex.x + movedHex.w / 2 + 0.5)
-				and movedBadge.anchorY == math.floor(movedHex.y + movedHex.h / 2 + 0.5),
-			"Moving the unit must move its callout anchor to the real tile, not the old city"
+			not needsCallout(state.units[1]) and findTarget(ui.unitIconTargets, 2),
+			"Moving outside the banner must reveal the normal on-hex icon"
 		)
 		state.units[1].x, state.units[1].y = previousX, previousY
+		scout.x, scout.y = scoutX, scoutY
 		World.reveal(state, Hex, Systems)
 		draw()
 		for _, actor in ipairs(state.units) do
 			ui:focus("unit", actor)
 			draw()
-			local found
-			for _, badge in ipairs(ui.unitBadgeTargets) do
-				if badge.unit.id == actor.id then
-					found = badge
-					break
-				end
+			local found, covered = targetFor(actor)
+			assert(found, "Each visible formation has a selectable icon or callout")
+			if covered then
+				assert(
+					found.w == found.h and found.w >= 9 and found.w % 2 == 1,
+					"Covered unit callout is circular"
+				)
 			end
-			assert(found, "Each visible stacked/adjacent formation has a target")
-			assert(
-				found.w == found.h and found.w >= 9 and found.w % 2 == 1,
-				"Unit badge is circular"
-			)
+			if covered then
 			local hexAnchor
 			for _, hex in ipairs(ui.hexTargets) do
 				if hex.tx == actor.x and hex.ty == actor.y then
@@ -220,6 +322,7 @@ for _, graphics in ipairs({ false, true }) do
 						.. ui.mapViewport.h
 				)
 			end
+			end
 			tap(found)
 			assert(
 				ui.selected.kind == "unit" and ui.selected.unitID == actor.id,
@@ -251,8 +354,9 @@ for _, graphics in ipairs({ false, true }) do
 				rivalBadge = badge
 			end
 		end
-		assert(rivalBadge, "A visible rival has an inspectable badge")
-		tap(rivalBadge)
+		local rivalTarget = targetFor(rival)
+		assert(rivalTarget, "A visible rival has a selectable icon or covered callout")
+		tap(rivalTarget)
 		draw()
 		assert(
 			ui.selected.kind == "unit" and ui.selected.unitID == 5 and not ui.selected.empty,
@@ -276,7 +380,8 @@ for _, graphics in ipairs({ false, true }) do
 		assert(ui.selected.kind == "city", "Banner remains independently clickable")
 		draw()
 		ui.source = { x = 4, y = 4, unitID = 2 }
-		local target = ui.unitBadgeTargets[1]
+		local target = ui.unitBadgeTargets[1] or ui.unitIconTargets[1]
+		assert(target, "Visible unit can be targeted in armed movement mode")
 		local called = false
 		local original = ui.tile
 		ui.tile = function()
@@ -315,4 +420,4 @@ for _, graphics in ipairs({ false, true }) do
 		ui:close()
 	end
 end
-print("PASS: separate city/unit badges, exact stack selection, fog, zoom and armed-target priority")
+print("PASS: only covered units have callouts; clear icons, rivals, stacks, fog and armed input remain selectable")
