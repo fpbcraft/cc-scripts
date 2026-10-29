@@ -29,6 +29,16 @@ assert(
 	p.researchTarget == "agriculture" and not p.techs.agriculture,
 	"Research should be scheduled, not instantly purchased"
 )
+-- Use a controlled worked-hex fixture rather than relying on generated
+-- biome/resource composition or old 2-food plains expectations.
+for key in pairs(city.claimed) do
+	if key ~= W.key(city.x, city.y) then
+		state.world.tiles[key] = "hills"
+		state.world.geography[key] = nil
+		state.world.resources[key] = nil
+		state.world.landmarks[key] = nil
+	end
+end
 state.world.tiles["4:3"] = "hills"
 state.world.geography["4:3"] = nil -- Override generated biome with a plains hill.
 state.world.resources["4:3"] = nil
