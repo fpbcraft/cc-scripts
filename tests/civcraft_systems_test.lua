@@ -30,8 +30,10 @@ assert(
 	"Research should be scheduled, not instantly purchased"
 )
 state.world.tiles["4:3"] = "hills"
+state.world.geography["4:3"] = nil -- Override generated biome with a plains hill.
 state.world.resources["4:3"] = nil
 state.world.tiles["3:4"] = "plains"
+state.world.geography["3:4"] = nil -- Ensure the iron hex has 1/1/1 yields.
 state.world.resources["3:4"] = "iron"
 city.worked = {}
 S.ensureWorkers(state, city)
@@ -48,8 +50,10 @@ assert(city.jobs.wood == 0 and city.jobs.science == 1)
 assert(not S.assign(city, "wood", "science", state))
 city.worked = {}
 state.world.tiles["2:3"] = "forest"
+state.world.geography["2:3"] = nil
 state.world.resources["2:3"] = nil
 state.world.tiles["3:2"] = "forest"
+state.world.geography["3:2"] = nil
 state.world.resources["3:2"] = nil
 S.ensureWorkers(state, city)
 assert(S.assign(city, "idle", "food", state))
