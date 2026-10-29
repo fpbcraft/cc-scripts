@@ -86,8 +86,7 @@ for _, graphics in ipairs({ false, true }) do
 			assert(ui:tap(x, y), "Badge pointer was not consumed")
 		end
 		local function overlaps(a, b)
-			return a.x < b.x + b.w and a.x + a.w > b.x
-				and a.y < b.y + b.h and a.y + a.h > b.y
+			return a.x < b.x + b.w and a.x + a.w > b.x and a.y < b.y + b.h and a.y + a.h > b.y
 		end
 		local function findTarget(list, id)
 			for _, target in ipairs(list or {}) do
@@ -105,16 +104,20 @@ for _, graphics in ipairs({ false, true }) do
 				return {
 					x = hex.x + (secondary and size * 0.65 or size / 2),
 					y = hex.y + (secondary and size * 0.6 or size / 2),
-					w = 2, h = 2,
+					w = 2,
+					h = 2,
 				}
 			end
 			if secondary then
 				local diameter = math.min(7, size / 2)
-				return { x = hex.x + size * 0.65, y = hex.y + size * 0.6,
-					w = diameter, h = diameter }
+				return {
+					x = hex.x + size * 0.65,
+					y = hex.y + size * 0.6,
+					w = diameter,
+					h = diameter,
+				}
 			end
-			return { x = hex.x + size / 2 - 5, y = hex.y + size / 2 - 5,
-				w = 11, h = 11 }
+			return { x = hex.x + size / 2 - 5, y = hex.y + size / 2 - 5, w = 11, h = 11 }
 		end
 		local function projectedHex(actor)
 			for _, hex in ipairs(ui.hexTargets or {}) do
@@ -126,19 +129,27 @@ for _, graphics in ipairs({ false, true }) do
 		end
 		local function needsCallout(actor)
 			local hex = projectedHex(actor)
-			if not hex then return false end
+			if not hex then
+				return false
+			end
 			local secondary = false
 			if actor.kind == "settler" then
 				for _, other in ipairs(state.units) do
-					if other.id ~= actor.id and other.x == actor.x and other.y == actor.y
-						and other.kind ~= "settler" then
+					if
+						other.id ~= actor.id
+						and other.x == actor.x
+						and other.y == actor.y
+						and other.kind ~= "settler"
+					then
 						secondary = true
 					end
 				end
 			end
 			local glyph = glyphAt(hex, secondary)
 			for _, banner in ipairs(ui.cityBannerTargets or {}) do
-				if overlaps(glyph, banner) then return true end
+				if overlaps(glyph, banner) then
+					return true
+				end
 			end
 			return false
 		end
@@ -146,9 +157,15 @@ for _, graphics in ipairs({ false, true }) do
 			local covered = needsCallout(actor)
 			local badge = findTarget(ui.unitBadgeTargets, actor.id)
 			local icon = findTarget(ui.unitIconTargets, actor.id)
-			assert((badge ~= nil) == covered,
+			assert(
+				(badge ~= nil) == covered,
 				"Circle must appear if and only if a city banner obscures the unit glyph: "
-					.. actor.id .. " graphics=" .. tostring(graphics) .. " zoom=" .. zoom)
+					.. actor.id
+					.. " graphics="
+					.. tostring(graphics)
+					.. " zoom="
+					.. zoom
+			)
 			if covered then
 				assert(not icon, "Covered unit should not have a direct glyph target")
 				return badge, true
@@ -172,8 +189,10 @@ for _, graphics in ipairs({ false, true }) do
 				end
 			end
 		end
-		assert(coveredHex and clearHex,
-			"Map viewport should contain visible covered and uncovered hexes for the regression")
+		assert(
+			coveredHex and clearHex,
+			"Map viewport should contain visible covered and uncovered hexes for the regression"
+		)
 		local scout = state.units[3]
 		local scoutX, scoutY = scout.x, scout.y
 		scout.x, scout.y = coveredHex.tx, coveredHex.ty
@@ -183,8 +202,10 @@ for _, graphics in ipairs({ false, true }) do
 		local coveredTarget, isCovered = targetFor(scout)
 		assert(isCovered and coveredTarget, "Covered scout needs a circular, clickable callout")
 		tap(coveredTarget)
-		assert(ui.selected.kind == "unit" and ui.selected.unitID == scout.id,
-			"Covered callout selects its exact unit")
+		assert(
+			ui.selected.kind == "unit" and ui.selected.unitID == scout.id,
+			"Covered callout selects its exact unit"
+		)
 		scout.x, scout.y = clearHex.tx, clearHex.ty
 		World.reveal(state, Hex, Systems)
 		draw()
@@ -243,85 +264,85 @@ for _, graphics in ipairs({ false, true }) do
 				)
 			end
 			if covered then
-			local hexAnchor
-			for _, hex in ipairs(ui.hexTargets) do
-				if hex.tx == actor.x and hex.ty == actor.y then
-					hexAnchor = hex
-					break
+				local hexAnchor
+				for _, hex in ipairs(ui.hexTargets) do
+					if hex.tx == actor.x and hex.ty == actor.y then
+						hexAnchor = hex
+						break
+					end
 				end
-			end
-			assert(hexAnchor, "The unit's hex must be in the map viewport")
-			assert(
-				found.anchorX == math.floor(hexAnchor.x + hexAnchor.w / 2 + 0.5)
-					and found.anchorY == math.floor(hexAnchor.y + hexAnchor.h / 2 + 0.5),
-				"Unit callout pointer is anchored to the actual hex center at every zoom"
-			)
-			local cx = found.x + math.floor(found.w / 2)
-			local cy = found.y + math.floor(found.h / 2)
-			local dx, dy = found.anchorX - cx, found.anchorY - cy
-			local px, py = found.pointerX - cx, found.pointerY - cy
-			local distance = math.sqrt(dx * dx + dy * dy)
-			assert(distance > 0, "Callout cannot obscure the unit's original tile")
-			assert(
-				dx * px + dy * py > 0
-					and math.abs(dx * py - dy * px)
-						<= distance * math.sqrt(px * px + py * py) * 0.2 + 2,
-				"Bubble tail must point toward the true unit position, not its banner"
-			)
-			assert(
-				(found.anchorX - found.pointerX) ^ 2 + (found.anchorY - found.pointerY) ^ 2
-					< dx * dx + dy * dy,
-				"The tail tip must be closer to the real unit than the badge center"
-			)
-			for _, other in ipairs(ui.unitBadgeTargets) do
-				if other ~= found then
+				assert(hexAnchor, "The unit's hex must be in the map viewport")
+				assert(
+					found.anchorX == math.floor(hexAnchor.x + hexAnchor.w / 2 + 0.5)
+						and found.anchorY == math.floor(hexAnchor.y + hexAnchor.h / 2 + 0.5),
+					"Unit callout pointer is anchored to the actual hex center at every zoom"
+				)
+				local cx = found.x + math.floor(found.w / 2)
+				local cy = found.y + math.floor(found.h / 2)
+				local dx, dy = found.anchorX - cx, found.anchorY - cy
+				local px, py = found.pointerX - cx, found.pointerY - cy
+				local distance = math.sqrt(dx * dx + dy * dy)
+				assert(distance > 0, "Callout cannot obscure the unit's original tile")
+				assert(
+					dx * px + dy * py > 0
+						and math.abs(dx * py - dy * px)
+							<= distance * math.sqrt(px * px + py * py) * 0.2 + 2,
+					"Bubble tail must point toward the true unit position, not its banner"
+				)
+				assert(
+					(found.anchorX - found.pointerX) ^ 2 + (found.anchorY - found.pointerY) ^ 2
+						< dx * dx + dy * dy,
+					"The tail tip must be closer to the real unit than the badge center"
+				)
+				for _, other in ipairs(ui.unitBadgeTargets) do
+					if other ~= found then
+						assert(
+							found.x >= other.x + other.w
+								or other.x >= found.x + found.w
+								or found.y >= other.y + other.h
+								or other.y >= found.y + found.h,
+							"Adjacent formation targets cannot overlap"
+						)
+					end
+				end
+				for _, banner in ipairs(ui.cityBannerTargets) do
 					assert(
-						found.x >= other.x + other.w
-							or other.x >= found.x + found.w
-							or found.y >= other.y + other.h
-							or other.y >= found.y + found.h,
-						"Adjacent formation targets cannot overlap"
+						found.x >= banner.x + banner.w
+							or banner.x >= found.x + found.w
+							or found.y >= banner.y + banner.h
+							or banner.y >= found.y + found.h,
+						"City banner overlaps unit badge: graphics="
+							.. tostring(graphics)
+							.. " zoom="
+							.. zoom
+							.. " unit="
+							.. actor.id
+							.. " badge="
+							.. found.x
+							.. ","
+							.. found.y
+							.. ","
+							.. found.w
+							.. ","
+							.. found.h
+							.. " banner="
+							.. banner.x
+							.. ","
+							.. banner.y
+							.. ","
+							.. banner.w
+							.. ","
+							.. banner.h
+							.. " viewport="
+							.. ui.mapViewport.x
+							.. ","
+							.. ui.mapViewport.y
+							.. ","
+							.. ui.mapViewport.w
+							.. ","
+							.. ui.mapViewport.h
 					)
 				end
-			end
-			for _, banner in ipairs(ui.cityBannerTargets) do
-				assert(
-					found.x >= banner.x + banner.w
-						or banner.x >= found.x + found.w
-						or found.y >= banner.y + banner.h
-						or banner.y >= found.y + found.h,
-					"City banner overlaps unit badge: graphics="
-						.. tostring(graphics)
-						.. " zoom="
-						.. zoom
-						.. " unit="
-						.. actor.id
-						.. " badge="
-						.. found.x
-						.. ","
-						.. found.y
-						.. ","
-						.. found.w
-						.. ","
-						.. found.h
-						.. " banner="
-						.. banner.x
-						.. ","
-						.. banner.y
-						.. ","
-						.. banner.w
-						.. ","
-						.. banner.h
-						.. " viewport="
-						.. ui.mapViewport.x
-						.. ","
-						.. ui.mapViewport.y
-						.. ","
-						.. ui.mapViewport.w
-						.. ","
-						.. ui.mapViewport.h
-				)
-			end
 			end
 			tap(found)
 			assert(
@@ -420,4 +441,6 @@ for _, graphics in ipairs({ false, true }) do
 		ui:close()
 	end
 end
-print("PASS: only covered units have callouts; clear icons, rivals, stacks, fog and armed input remain selectable")
+print(
+	"PASS: only covered units have callouts; clear icons, rivals, stacks, fog and armed input remain selectable"
+)
