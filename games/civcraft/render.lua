@@ -266,6 +266,8 @@ function R:fitGraphics()
 end
 function R:resize()
 	self.scaledRows = nil
+	-- The native framebuffer must be fully uploaded after a resize.
+	self.lastGraphicsRows = nil
 	self.frameRows = nil
 	local cw, ch = self.m.getSize()
 	if cw ~= self.cw or ch ~= self.ch then
@@ -1204,6 +1206,49 @@ function R:begin()
 		end
 	end
 end
+-- Large, single-call framebuffer uploads can monopolize slower CraftOS hosts.
+-- Compare completed rows and upload only changes, in bounded native calls. Each
+-- strip uses the documented drawPixels(x, y, rows, width, height) signature.
+function R:uploadGraphics(rows)
+	local previous = self.lastGraphicsRows or {}
+	local stripeHeight = math.max(1, math.min(32, math.floor(16384 / math.max(1, self.pw))))
+	local updates, dirtyRows = 0, 0
+	local frozen = false
+	local y = 1
+	local function upload()
+		while y <= self.ph do
+			if rows[y] == previous[y] then
+				y = y + 1
+			else
+				local start = y
+				local stripe = {}
+				while y <= self.ph and #stripe < stripeHeight and rows[y] ~= previous[y] do
+					stripe[#stripe + 1] = rows[y]
+					y = y + 1
+				end
+				if not frozen and self.m.setFrozen then
+					-- Keep the frame coherent even when the upload spans several yields.
+					local ok = pcall(self.m.setFrozen, true)
+					frozen = ok
+				end
+				self:cooperate()
+				self.m.drawPixels(0, start - 1, stripe, self.pw, #stripe)
+				updates = updates + 1
+				dirtyRows = dirtyRows + #stripe
+			end
+		end
+	end
+	local ok, err = pcall(upload)
+	if frozen then
+		pcall(self.m.setFrozen, false)
+	end
+	if not ok then
+		error(err, 0)
+	end
+	self.lastGraphicsRows = rows
+	self.lastUploadStats = { calls = updates, rows = dirtyRows }
+end
+
 function R:finish()
 	if self.layoutOnly then
 		return
@@ -1262,7 +1307,7 @@ function R:finish()
 		if self.trace then
 			self.trace("frame.upload.begin")
 		end
-		self.m.drawPixels(0, 0, rows, self.pw, self.ph)
+		self:uploadGraphics(rows)
 		if self.trace then
 			self.trace("frame.upload.end")
 		end
