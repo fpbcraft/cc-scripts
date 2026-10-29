@@ -4,7 +4,8 @@
 ]]
 local CommandQueue = {}
 
-function CommandQueue.new(onIdle)
+-- onIdle reports mutations; onBatchIdle reports every completed batch.
+function CommandQueue.new(onIdle, onBatchIdle)
 	local queue = { busy = false, pending = {}, maxPending = 256 }
 	function queue:submit(command, notify)
 		if #self.pending >= self.maxPending then
@@ -34,6 +35,9 @@ function CommandQueue.new(onIdle)
 		self.notify = false
 		if changed and onIdle then
 			onIdle()
+		end
+		if onBatchIdle then
+			onBatchIdle(changed)
 		end
 		return true
 	end

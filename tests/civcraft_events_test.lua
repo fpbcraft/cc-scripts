@@ -451,6 +451,77 @@ reads:submit(function()
 	assert(value == 1)
 end, false)
 assert(notifications == 1, "Publishing must not trigger an endless state-change/publication loop")
+
+-- Only a draw skipped during a queue batch needs a post-idle wake.
+local idleWakes, deferred = 0, false
+local idleReads = CommandQueue.new(function()
+	idleWakes = idleWakes + 1
+end, function(changed)
+	if deferred then
+		deferred = false
+		if not changed then
+			idleWakes = idleWakes + 1
+		end
+	end
+end)
+idleReads:submit(function() end, false)
+assert(idleWakes == 0, "An uncontended read-only batch must not request another draw")
+
+local wakes, drawn = {}, 0
+local redrawDeferred = false
+local redraw = CommandQueue.new(function()
+	wakes[#wakes + 1] = "state_changed"
+end, function(changed)
+	if redrawDeferred then
+		redrawDeferred = false
+		if not changed then
+			wakes[#wakes + 1] = "state_changed"
+		end
+	end
+end)
+redraw:submit(function() end)
+local publication = coroutine.create(function()
+	redraw:submit(function()
+		coroutine.yield("publishing")
+	end, false)
+end)
+assert(coroutine.resume(publication) and redraw.busy)
+assert(table.remove(wakes, 1) == "state_changed")
+if redraw.busy then
+	redrawDeferred = true
+else
+	drawn = drawn + 1
+end
+assert(drawn == 0, "The initial redraw wake is consumed while publication is busy")
+assert(coroutine.resume(publication) and not redraw.busy)
+assert(not redrawDeferred and table.remove(wakes, 1) == "state_changed")
+drawn = drawn + 1
+assert(drawn == 1, "A post-publication wake must allow the host redraw")
+
+local mutationWakes, mutationDeferred = 0, false
+local mutationQueue = CommandQueue.new(function()
+	mutationWakes = mutationWakes + 1
+end, function(changed)
+	if mutationDeferred then
+		mutationDeferred = false
+		if not changed then
+			mutationWakes = mutationWakes + 1
+		end
+	end
+end)
+local mutation = coroutine.create(function()
+	mutationQueue:submit(function()
+		coroutine.yield("mutation")
+	end)
+end)
+assert(coroutine.resume(mutation) and mutationQueue.busy)
+mutationDeferred = true
+assert(coroutine.resume(mutation) and not mutationQueue.busy)
+assert(
+	not mutationDeferred and mutationWakes == 1,
+	"Mutation notification already wakes a skipped draw"
+)
+
 local bounded = CommandQueue.new()
 bounded.busy = true
 bounded.maxPending = 2
