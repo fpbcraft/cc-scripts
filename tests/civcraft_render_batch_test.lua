@@ -17,7 +17,7 @@ colors = {
 	brown = 4096,
 }
 local Renderer = native("games/civcraft/render.lua")
-local calls, pixels = 0, nil
+local calls, pixels = 0, {}
 local m = {
 	getSize = function(mode)
 		if mode == 2 then
@@ -33,12 +33,12 @@ local m = {
 }
 function m.drawPixels(x, y, rows, w, h)
 	calls = calls + 1
-	assert(x == 0 and y == 0 and w == 120 and h == 90 and type(rows) == "table")
-	assert(#rows == 90)
-	for _, row in ipairs(rows) do
+	assert(x == 0 and y >= 0 and y + h <= 90 and w == 120 and type(rows) == "table")
+	assert(#rows == h and h >= 1 and h <= 32, "Uploads must have bounded strip height")
+	for i, row in ipairs(rows) do
 		assert(#row == 120)
+		pixels[y + i] = row
 	end
-	pixels = rows
 end
 local r = Renderer.new(m)
 r:begin()
@@ -48,7 +48,8 @@ r:withClip({ x = 4, y = 3, w = 5, h = 4 }, function()
 end)
 r:fill(20, 10, 3, 3, 13)
 r:finish()
-assert(calls == 1, "A complete graphics frame must use one batched peripheral update")
+assert(calls == 3, "The initial 90-row graphics frame must upload in three bounded strips")
+assert(r.lastUploadStats.calls == 3 and r.lastUploadStats.rows == 90)
 local function pixel(x, y)
 	return pixels[math.floor(r.oy + y * r.sy) + 1]:byte(math.floor(r.ox + x * r.sx) + 1)
 end
@@ -76,10 +77,23 @@ r:fill(20, 10, 3, 3, 13)
 r:finish()
 string.gsub = originalGsub
 assert(expansions == 0, "Identical frames reuse scaled rows without allocating replacements")
+assert(calls == 3 and r.lastUploadStats.calls == 0, "Unchanged frames must not upload any pixels")
 assert(
 	r.frameRows == frameRows,
 	"Frame pixel storage is reused instead of rebuilt for each primitive"
 )
+-- A single-pixel change updates only its affected output scanlines.
+r:begin()
+r:fill(0, 0, r.w, r.h, 2)
+r:withClip({ x = 4, y = 3, w = 5, h = 4 }, function()
+	r:fill(0, 0, 30, 30, 8)
+end)
+r:fill(20, 10, 3, 3, 13)
+r:fill(10, 10, 1, 1, 11)
+r:finish()
+assert(calls == 4 and r.lastUploadStats.calls == 1 and r.lastUploadStats.rows == 2,
+	"A local change should upload only two output scanlines")
+assert(pixel(10, 10) == 11 and pixel(11, 10) == 2, "Partial uploads retain neighboring pixels")
 -- Clearing an already blank frame is free, but clearing after drawing must
 -- still overwrite every pixel (including a cached scaled row).
 r:begin()
@@ -92,7 +106,7 @@ r:finish()
 assert(pixel(3, 3) == 0, "Full-frame clearing after drawing is never skipped")
 local cached = r.scaledRows
 r:resize()
-assert(r.scaledRows == nil, "Resizing invalidates scaled rows")
+assert(r.scaledRows == nil and r.lastGraphicsRows == nil, "Resizing invalidates both scaled and uploaded rows")
 assert(next(cached), "The previous frame has a bounded row cache")
 r:begin()
 r:fill(0, 0, r.w, r.h, 2)
@@ -174,7 +188,7 @@ assert(writes == 10, "Text mode flushes one blit per row")
 frame()
 assert(writes == 10, "Unchanged text rows never reach the peripheral")
 print(
-	"CIVCRAFT: one-call graphics frames, cached sprite clipping, text row batching and unchanged-row reuse passed."
+	"CIVCRAFT: bounded graphics uploads, dirty rows, cached sprites, text batching and unchanged-row reuse passed."
 )
 local oldEpoch, oldQueue, oldPull = os.epoch, os.queueEvent, os.pullEvent
 local events = {
