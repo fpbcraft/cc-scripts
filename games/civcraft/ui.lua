@@ -1140,6 +1140,7 @@ function UI:draw(state, playerID, opts)
 	r:finish()
 end
 function UI:focus(kind, item)
+	self.lastUnitTap = nil
 	self.unitDetails = false
 	self.cityStrikeSource = nil
 	self.source = nil
@@ -1719,20 +1720,44 @@ function UI:tap(x, y)
 				and ry >= target.y
 				and ry < target.y + target.h
 			then
-				iconMatches[#iconMatches + 1] = target.unit
+				local cx = target.glyphX + target.glyphW / 2
+				local cy = target.glyphY + target.glyphH / 2
+				iconMatches[#iconMatches + 1] = {
+					unit = target.unit,
+					distance = (rx - cx) ^ 2 + (ry - cy) ^ 2,
+				}
 			end
 		end
 		if #iconMatches > 0 then
-			local nextUnit = iconMatches[#iconMatches]
+			-- Larger invisible text-mode touch targets can overlap. Prefer
+			-- the closest actual glyph; an already-focused unit stays put on
+			-- the first tap, then repeat taps cycle through the same stack.
+			table.sort(iconMatches, function(a, b)
+				if a.distance == b.distance then
+					return a.unit.id < b.unit.id
+				end
+				return a.distance < b.distance
+			end)
+			local nextUnit = iconMatches[1].unit
 			if #iconMatches > 1 and self.selected.kind == "unit" then
-				for index, unit in ipairs(iconMatches) do
-					if unit.id == self.selected.unitID then
-						nextUnit = iconMatches[index % #iconMatches + 1]
+				for index, match in ipairs(iconMatches) do
+					if match.unit.id == self.selected.unitID then
+						if
+							self.lastUnitTap
+							and self.lastUnitTap.x == rx
+							and self.lastUnitTap.y == ry
+							and self.lastUnitTap.unitID == match.unit.id
+						then
+							nextUnit = iconMatches[index % #iconMatches + 1].unit
+						else
+							nextUnit = match.unit
+						end
 						break
 					end
 				end
 			end
 			self:focus("unit", nextUnit)
+			self.lastUnitTap = { x = rx, y = ry, unitID = nextUnit.id }
 			return true
 		end
 	end
