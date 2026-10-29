@@ -396,7 +396,10 @@ for _, graphics in ipairs({ false, true }) do
 		draw()
 		assert(
 			ui.selected.kind == "unit" and ui.selected.unitID == 5 and not ui.selected.empty,
-			"Visible rival identity remains selected after redraw"
+			"Visible rival identity remains selected after redraw: graphics="
+				.. tostring(graphics) .. " zoom=" .. zoom
+				.. " selected=" .. tostring(ui.selected.kind)
+				.. "/" .. tostring(ui.selected.unitID)
 		)
 		for _, button in ipairs(ui.r.buttons) do
 			assert(
