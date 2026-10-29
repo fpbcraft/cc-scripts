@@ -221,6 +221,10 @@ for _, graphics in ipairs({ false, true }) do
 			ui.selected.kind == "unit" and ui.selected.unitID == scout.id,
 			"Covered callout selects its exact unit"
 		)
+		-- Selection pans the camera. Restore the city-centered viewport so
+		-- the chosen clear hex is still on screen for direct icon testing.
+		ui:focus("city", state.cities[1])
+		draw()
 		scout.x, scout.y = clearHex.tx, clearHex.ty
 		World.reveal(state, Hex, Systems)
 		draw()
