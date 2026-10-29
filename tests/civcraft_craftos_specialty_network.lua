@@ -30,9 +30,11 @@ local createdOne, createdTwo, setup = false, false, false
 local sentStep, reportedStep, endedRound = nil, nil, nil
 local snapshotSerial, sentExpectation = 0, nil
 local publicSiteExpectationSnapshot
+local foreignProjectExpectationSnapshot
 local publicVisionGranted = false
 local originalWarriorVision
 local unseenSiteChecked = false
+local foreignProjectID, foreignProjectProgress
 local target, siteID, projectID, campaignID, restarted = nil, nil, nil, nil, false
 local raceFirst = reverse and 2 or 1
 local savedProgress
@@ -161,6 +163,69 @@ local function assertPublicForeignSite(state)
 	)
 	controls.publicSiteObserved = true
 	send(0, "publicSiteObserved", { cityID = expected.cityID, siteID = expected.siteID })
+end
+local function assertForeignProjectRedacted(state)
+	local expected = controls.foreignProjectExpected
+	if computer ~= 2 or not expected or controls.foreignProjectObserved then
+		return
+	end
+	if
+		snapshotSerial <= foreignProjectExpectationSnapshot
+		or state.round < expected.round
+		or state.campaignID ~= expected.campaignID
+	then
+		return
+	end
+	assert(
+		expected.projectKind == "knowledge"
+			and expected.projectID > 0
+			and expected.progress > 0
+			and expected.siteID > 0,
+		"The observer check must correspond to actual positive Knowledge project progress"
+	)
+	local foreignCity
+	for _, c in ipairs(state.cities or {}) do
+		if c.id == expected.cityID then
+			foreignCity = c
+			break
+		end
+	end
+	assert(
+		foreignCity
+			and foreignCity.owner == 1
+			and foreignCity.x == expected.cityX
+			and foreignCity.y == expected.cityY,
+		"Visible foreign city must remain in the pending-project snapshot"
+	)
+	assert(
+		not foreignCity.siteProjects
+			and not foreignCity.sites
+			and not foreignCity.project
+			and not foreignCity.projectProgress
+			and not foreignCity.focus
+			and not foreignCity.familyAvailability,
+		"Foreign city snapshot cannot expose its active Knowledge project or focus"
+	)
+	local siteKey = expected.siteX .. ":" .. expected.siteY
+	local site = state.world and state.world.specialtySites and state.world.specialtySites[siteKey]
+	assert(
+		site
+			and site.id == expected.siteID
+			and site.city == expected.cityID
+			and site.owner == 1
+			and not site.progress
+			and not site.projectId
+			and not site.sourceSiteId
+			and not site.reason,
+		"Completed public site cannot expose the active project's progress or source"
+	)
+	controls.foreignProjectObserved = true
+	send(0, "foreignProjectObserved", {
+		cityID = expected.cityID,
+		projectID = expected.projectID,
+		progress = expected.progress,
+		siteID = expected.siteID,
+	})
 end
 env.rednet = {}
 for k, v in pairs(baseNet) do
@@ -517,10 +582,6 @@ local function hostDraw(ui, state)
 			issue(ui, "end", { confirmed = true })
 		end
 	elseif phase == "publicSite" and controls.publicSiteObserved then
-		if originalWarriorVision then
-			env.dofile("/games/civcraft/systems.lua").units.warrior.vision = originalWarriorVision
-			originalWarriorVision = nil
-		end
 		local c = assert(city(authoritative, 1))
 		local destination = legalTarget(authoritative, c, "knowledge", target)
 		step(
@@ -541,20 +602,68 @@ local function hostDraw(ui, state)
 			"Second site must retain an unfinished production record"
 		)
 		if pending.progress > 0 then
-			savedProgress = pending.progress
-			step(
-				1,
-				"pausePending",
-				"queue",
-				{ cityX = c.x, cityY = c.y, kind = "none", confirmed = true }
+			assert(
+				pending.kind == "knowledge"
+					and c.project
+					and c.project.id == projectID
+					and c.project.progress == pending.progress
 			)
-			advancePhase("pausePending")
+			if not controls.foreignProjectExpectedSent then
+				foreignProjectID, foreignProjectProgress = projectID, pending.progress
+				send(2, "foreignProjectExpected", {
+					campaignID = authoritative.campaignID,
+					cityID = c.id,
+					cityX = c.x,
+					cityY = c.y,
+					projectKind = pending.kind,
+					projectID = projectID,
+					progress = pending.progress,
+					round = authoritative.round,
+					siteID = siteID,
+					siteX = target.x,
+					siteY = target.y,
+				})
+				controls.foreignProjectExpectedSent = true
+				advancePhase("pendingVisibilityPrepare")
+			end
 		elseif endedRound ~= state.round then
 			endedRound = state.round
 			send(1, "endRound", { round = state.round })
 			send(2, "endRound", { round = state.round })
 			issue(ui, "end", { confirmed = true })
 		end
+	elseif phase == "pendingVisibilityPrepare" and controls.foreignProjectReady then
+		local hostCity = assert(city(authoritative, 0))
+		issue(ui, "queue", {
+			cityX = hostCity.x,
+			cityY = hostCity.y,
+			kind = "none",
+		})
+		advancePhase("pendingVisibility")
+	elseif phase == "pendingVisibility" and controls.foreignProjectObserved then
+		local c = assert(city(authoritative, 1))
+		local pending = assert(c.siteProjects[projectID])
+		assert(
+			pending.kind == "knowledge"
+				and pending.progress == foreignProjectProgress
+				and pending.progress > 0
+				and c.project
+				and c.project.id == projectID
+				and c.project.progress == pending.progress,
+			"Private Knowledge progress must remain active through the observer check"
+		)
+		if originalWarriorVision then
+			env.dofile("/games/civcraft/systems.lua").units.warrior.vision = originalWarriorVision
+			originalWarriorVision = nil
+		end
+		savedProgress = pending.progress
+		step(
+			1,
+			"pausePending",
+			"queue",
+			{ cityX = c.x, cityY = c.y, kind = "none", confirmed = true }
+		)
+		advancePhase("pausePending")
 	elseif phase == "pausePending" and stepDone(1, "pausePending", true) then
 		assert(not city(authoritative, 1).project)
 		issue(ui, "save")
@@ -656,6 +765,7 @@ local function clientDraw(ui, state)
 	end
 	private(state)
 	assertPublicForeignSite(state)
+	assertForeignProjectRedacted(state)
 	trace(
 		"view "
 			.. tostring(state.phase)
@@ -825,6 +935,9 @@ local ok, why = pcall(function()
 				controls[packet.kind] = packet
 				if packet.kind == "publicSiteExpected" then
 					publicSiteExpectationSnapshot = snapshotSerial
+				elseif packet.kind == "foreignProjectExpected" then
+					foreignProjectExpectationSnapshot = snapshotSerial
+					send(0, "foreignProjectReady", { projectID = packet.projectID })
 				end
 				os.queueEvent("civcraft_state_changed")
 			end
@@ -856,6 +969,9 @@ file.write(textutils.serialize({
 	projectID = projectID,
 	foreignCityID = target and target.city,
 	foreignCitySiteObserved = controls.publicSiteObserved ~= nil,
+	foreignPendingProjectID = foreignProjectID,
+	foreignPendingProjectProgress = foreignProjectProgress,
+	foreignPendingProjectRedacted = controls.foreignProjectObserved ~= nil,
 	unseenForeignSiteAbsent = unseenSiteChecked,
 	joins = joins,
 }))
