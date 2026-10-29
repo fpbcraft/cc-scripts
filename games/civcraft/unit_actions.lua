@@ -1,12 +1,17 @@
 -- Compact action tiles for owned-unit inspector controls.
 local A = {}
+local builderWork = {
+	["WHEAT FIELD"] = { icon = "food", name = "WHEAT FIELD" },
+	QUARRY = { icon = "ore", name = "QUARRY" },
+	["LUMBER CAMP"] = { icon = "wood", name = "LUMBER CAMP" },
+}
 local definitions = {
 	["ATTACH ESCORT"] = {
-		icon = "people",
+		icon = "plus",
 		short = "LINK",
 		help = "Attach this formation to its escort.",
 	},
-	["DETACH ESCORT"] = { icon = "people", short = "UNLINK", help = "Detach the linked escort." },
+	["DETACH ESCORT"] = { icon = "minus", short = "UNLINK", help = "Detach the linked escort." },
 	["MOVE / ATTACK"] = {
 		icon = "right",
 		short = "MOVE",
@@ -18,7 +23,7 @@ local definitions = {
 		help = "Choose a route destination for this unit.",
 	},
 	["ADD WAYPOINT"] = {
-		icon = "map",
+		icon = "plus",
 		short = "WAYPT",
 		help = "Append a destination to the current route.",
 	},
@@ -40,13 +45,13 @@ local definitions = {
 		help = "Rest this unit and recover health.",
 	},
 	["CANCEL WORK"] = {
-		icon = "back",
+		icon = "wrench",
 		short = "CANCEL",
 		help = "Cancel this builder's queued work.",
 	},
 	["RESUME WORK"] = { icon = "right", short = "RESUME", help = "Resume the paused work queue." },
 	["WORK MODE: APPEND"] = {
-		icon = "contract",
+		icon = "plus",
 		short = "APPEND",
 		help = "Append new work to the current queue.",
 	},
@@ -65,9 +70,9 @@ local definitions = {
 		short = "EXPLORE",
 		help = "Explore automatically along safe routes.",
 	},
-	["STOP EXPLORING"] = { icon = "pause", short = "STOP", help = "Stop automatic exploration." },
+	["STOP EXPLORING"] = { icon = "back", short = "STOP", help = "Stop automatic exploration." },
 	["CANCEL MOVE"] = {
-		icon = "back",
+		icon = "minus",
 		short = "CANCEL",
 		help = "Cancel movement selection without changing orders.",
 	},
@@ -75,7 +80,7 @@ local definitions = {
 	["DESELECT"] = { icon = "minus", short = "CLEAR", help = "Clear the current unit selection." },
 	["FOUND CITY"] = { icon = "station", short = "FOUND", help = "Found a city at this location." },
 	["FOUND CAPITAL"] = {
-		icon = "station",
+		icon = "star",
 		short = "CAPITAL",
 		help = "Found your capital at this location.",
 	},
@@ -84,6 +89,18 @@ local definitions = {
 function A.decorate(button)
 	local label = tostring(button.label or "")
 	local definition = definitions[label]
+	local workName = label:match("^PLAN (.+)$") or label:match("^(.+) HERE$")
+	local work = builderWork[workName]
+	if work then
+		local planning = label:match("^PLAN ") ~= nil
+		definition = {
+			icon = work.icon,
+			short = planning and "PLAN" or "HERE",
+			help = planning and ("Plan a " .. work.name .. " on a legal owned tile.")
+				or ("Build a " .. work.name .. " here after confirming its preview."),
+			workAction = planning and "plan" or "here",
+		}
+	end
 	if not definition and (label:match("^PLAN ") or label:match(" HERE$")) then
 		definition = { icon = "wrench", short = label:match(" HERE$") and "BUILD" or "PLAN" }
 	end
@@ -93,6 +110,7 @@ function A.decorate(button)
 	button.icon = button.icon or definition.icon
 	button.shortLabel = button.shortLabel or definition.short
 	button.help = button.help or definition.help or button.label
+	button.workAction = button.workAction or definition.workAction
 	return button
 end
 
@@ -155,6 +173,22 @@ function A.draw(r, rect, row, y)
 		options.iconOnly = iconOnly
 		options.displayLabel = not iconOnly and button.shortLabel or nil
 		r:button(x, y, width, 11, button.label, button.run, options)
+		if button.workAction and iconOnly then
+			-- A small plus marks a planned site; a small outlined target marks
+			-- the immediate HERE shortcut. Both stay visible with the work glyph.
+			local markerX = x + width - 5
+			local markerY = y + 2
+			local markerColor = options.primary and 7 or 13
+			if button.workAction == "plan" then
+				r:fill(markerX, markerY + 1, 3, 1, markerColor)
+				r:fill(markerX + 1, markerY, 1, 3, markerColor)
+			else
+				r:fill(markerX, markerY, 3, 1, markerColor)
+				r:fill(markerX, markerY, 1, 3, markerColor)
+				r:fill(markerX + 2, markerY, 1, 3, markerColor)
+				r:fill(markerX, markerY + 2, 3, 1, markerColor)
+			end
+		end
 	end
 end
 
