@@ -230,7 +230,9 @@ correctness under their controlled technology, population and visibility
 setups, not competitive balance. New campaigns now default to V5; explicit
 earlier profiles and saved profile identity remain supported. This change adds
 a native path that checks the fresh lobby without manually cycling profiles;
-its default host, hotseat and published-installer run remains to be recorded.
+its default host and published-installer hotseat runs passed, including normal
+menu flow, redevelopment, save/restart and preservation of installation fixtures.
+Exact source, commands and limitations are recorded in #134.
 Physical Minecraft monitor/rednet validation remains open.
 
 ## M4 — Make machinery and materials operational choices
