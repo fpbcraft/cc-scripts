@@ -5,6 +5,7 @@ local Content = dofile("/games/civcraft/content.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local Random = dofile("/games/civcraft/world_random.lua")
 local L = {}
+L.kinds = { "ice_spikes", "mushroom", "lushcavern", "amethyst", "dripstone", "ancientcity" }
 local function key(x, y)
 	return x .. ":" .. y
 end
@@ -35,13 +36,15 @@ function L.habitat(tile, id)
 	end
 	return tile.elevation == "hill" or tile.elevation == "mountain" or tile.biome == "badlands"
 end
+function L.spawnBuffer(world)
+	local short = math.min(world.width, world.height)
+	return short <= 12 and 5 or short >= 26 and 8 or 6
+end
 function L.generate(world, checkpoint)
 	world.landmarks = {}
 	world.rails = {}
 	local rng = Random.new(world.seed, 83)
-	local kinds = { "ice_spikes", "mushroom", "lushcavern", "amethyst", "dripstone", "ancientcity" }
-	local short = math.min(world.width, world.height)
-	world.wonderSpawnBuffer = short <= 12 and 5 or short >= 26 and 8 or 6
+	world.wonderSpawnBuffer = L.spawnBuffer(world)
 	world.wonderSeparation = math.min(world.width, world.height) >= 26 and 4 or 3
 	local candidates = {}
 	for y = 2, world.height - 1 do
@@ -63,7 +66,7 @@ function L.generate(world, checkpoint)
 	end
 	rng:shuffle(candidates)
 	local placed = {}
-	for _, id in ipairs(kinds) do
+	for _, id in ipairs(L.kinds) do
 		local best, bestScore
 		for rank, c in ipairs(candidates) do
 			if checkpoint and rank % 128 == 0 then
