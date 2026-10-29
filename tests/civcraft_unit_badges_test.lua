@@ -174,17 +174,30 @@ for _, graphics in ipairs({ false, true }) do
 			return icon, false
 		end
 		draw()
+		ui:focus("city", state.cities[1])
+		draw()
 		local anchored = assert(ui.cityBannerTargets[1], "City banner is visible")
 		local initialX, initialY = anchored.x, anchored.y
 		local coveredHex, clearHex
 		for _, hex in ipairs(ui.hexTargets) do
-			if state.players[1].visible[World.key(hex.tx, hex.ty)] then
+			local view = ui.mapViewport
+			local centerX, centerY = hex.x + hex.w / 2, hex.y + hex.h / 2
+			local onScreen = centerX >= view.x and centerX < view.x + view.w
+				and centerY >= view.y and centerY < view.y + view.h
+			if onScreen and state.players[1].visible[World.key(hex.tx, hex.ty)] then
 				local glyph = glyphAt(hex, false)
 				local hidden = overlaps(glyph, anchored)
 				local atCity = hex.tx == state.cities[1].x and hex.ty == state.cities[1].y
-				if hidden and not coveredHex then
+				local occupied = false
+				for _, other in ipairs(state.units) do
+					if other.x == hex.tx and other.y == hex.ty then
+						occupied = true
+						break
+					end
+				end
+				if hidden and not coveredHex and not occupied then
 					coveredHex = hex
-				elseif not hidden and not atCity and not clearHex then
+				elseif not hidden and not atCity and not clearHex and not occupied then
 					clearHex = hex
 				end
 			end
