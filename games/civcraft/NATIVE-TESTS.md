@@ -335,3 +335,22 @@ The second command makes client 2 win the initial collision, also exercising
 client 1's legal fallback movement. Both variants pass. The harness waits for
 individual result packets and updated snapshots separately; receiving a new round
 does not imply that another client's result acknowledgement has already arrived.
+
+## Specialization V5 network recovery
+
+Run the generated cityless V5 opening and specialty command flow on three actual
+CraftOS-PC computers with:
+
+```sh
+python3 tests/run_civcraft_native_specialty_network.py
+python3 tests/run_civcraft_native_specialty_network.py --reverse-race
+```
+
+Both contention orders cover legal founding commands, duplicate-site rejection,
+production and pausing, host save/exit/restart, client OS reboot/rejoin, and private
+owner/foreign projections. Successful commands require a newer snapshot from the
+same campaign at the expected round before the observer accepts them. The controlled
+post-founding fixture grants research, population, gold, food, industry buildings
+and owned claims; terrain, generated starting actors, site legality, site commands
+and production remain authoritative. This is native CraftOS-PC evidence, not an
+unmodified progression run or physical Minecraft monitor/rednet validation.
