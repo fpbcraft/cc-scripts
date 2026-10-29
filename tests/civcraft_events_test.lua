@@ -451,6 +451,35 @@ reads:submit(function()
 	assert(value == 1)
 end, false)
 assert(notifications == 1, "Publishing must not trigger an endless state-change/publication loop")
+
+-- A publish batch can consume the wake queued by an earlier mutation while draws are busy.
+local wakes, drawn = {}, 0
+local redraw = CommandQueue.new(function()
+	wakes[#wakes + 1] = "state_changed"
+end, function(changed)
+	if not changed then
+		wakes[#wakes + 1] = "state_changed"
+	end
+end)
+redraw:submit(function() end)
+local publication = coroutine.create(function()
+	redraw:submit(function()
+		coroutine.yield("publishing")
+	end, false)
+end)
+assert(coroutine.resume(publication) and redraw.busy)
+assert(table.remove(wakes, 1) == "state_changed")
+if not redraw.busy then
+	drawn = drawn + 1
+end
+assert(drawn == 0, "The initial redraw wake is consumed while publication is busy")
+assert(coroutine.resume(publication) and not redraw.busy)
+assert(table.remove(wakes, 1) == "state_changed", "Batch idle must wake a skipped redraw")
+if not redraw.busy then
+	drawn = drawn + 1
+end
+assert(drawn == 1, "A post-publication wake must allow the host redraw")
+
 local bounded = CommandQueue.new()
 bounded.busy = true
 bounded.maxPending = 2

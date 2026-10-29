@@ -106,6 +106,10 @@ local commandQueue = CommandQueue.new(function()
 	if os.queueEvent then
 		os.queueEvent("civcraft_state_changed")
 	end
+end, function(changed)
+	if not changed and os.queueEvent then
+		os.queueEvent("civcraft_state_changed")
+	end
 end)
 local campaignCounter = 0
 local function newCampaignID()
