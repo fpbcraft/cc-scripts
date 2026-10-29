@@ -182,8 +182,10 @@ for _, graphics in ipairs({ false, true }) do
 		for _, hex in ipairs(ui.hexTargets) do
 			local view = ui.mapViewport
 			local centerX, centerY = hex.x + hex.w / 2, hex.y + hex.h / 2
-			local onScreen = centerX >= view.x and centerX < view.x + view.w
-				and centerY >= view.y and centerY < view.y + view.h
+			local onScreen = centerX >= view.x
+				and centerX < view.x + view.w
+				and centerY >= view.y
+				and centerY < view.y + view.h
 			if onScreen and state.players[1].visible[World.key(hex.tx, hex.ty)] then
 				local glyph = glyphAt(hex, false)
 				local hidden = overlaps(glyph, anchored)
