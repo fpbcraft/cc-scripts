@@ -36,6 +36,11 @@ else:
     shutil.copytree(repo / "games/civcraft", root / "games/civcraft", ignore=shutil.ignore_patterns("data"))
     shutil.copytree(repo / "lib/fpb", root / "games/civcraft/_lib/fpb", dirs_exist_ok=True)
 shutil.copyfile(repo / "tests/civcraft_craftos_session.lua", root / "tests/civcraft_craftos_session.lua")
+if args.specialization:
+    shutil.copyfile(
+        repo / "tests/civcraft_craftos_specialization_session.lua",
+        root / "tests/civcraft_craftos_specialization_session.lua",
+    )
 flags = [
     "--settings", "--research", "--campaign", "--conversation", "--routes",
     "--history", "--council", "--map-tools", "--difficulty", "--civilization",
@@ -61,22 +66,70 @@ arguments = ", ".join(json.dumps(flag) for flag in flags)
 install = ""
 if args.installed_ref:
     install = 'assert(shell.run("/bootstrap.lua", %s, "--no-startup"), "Installer failed")' % json.dumps(args.installed_ref)
+specialization = ""
+if args.specialization:
+    for resume in (False, True):
+        flags = (["--host"] if args.host else []) + (["--resume"] if resume else [])
+        specialization += (
+            '\nlocal specialEnv = dofile("/games/civcraft/_lib/fpb/loader.lua")'
+            '.environment("/games/civcraft", _ENV, "game.lua")\n'
+            'assert(loadfile("/tests/civcraft_craftos_specialization_session.lua", "t", '
+            'specialEnv))(%s)\n'
+        ) % ", ".join(json.dumps(flag) for flag in flags)
 script = '''local ok, why = pcall(function()
 %s
 local env = dofile("/games/civcraft/_lib/fpb/loader.lua").environment("/games/civcraft", _ENV, "game.lua")
 assert(loadfile("/tests/civcraft_craftos_session.lua", "t", env))(%s)
+%s
 end)
 local file = assert(fs.open("/session-return.txt", "w"))
-file.write(ok and "PASS" or tostring(why)); file.close(); os.shutdown()''' % (install, arguments)
+file.write(ok and "PASS" or tostring(why)); file.close(); os.shutdown()''' % (install, arguments, specialization)
 command = [args.craftos, "--directory", str(profile), "--exec", script]
 if not args.monitor:
     command.insert(1, "--headless")
 print(f"Isolated profile: {profile}", flush=True)
 with (profile / "native-console.log").open("w") as console:
-    subprocess.run(command, stdout=console, stderr=subprocess.STDOUT, check=True, timeout=240 if args.installed_ref else 90)
+    subprocess.run(
+        command,
+        stdout=console,
+        stderr=subprocess.STDOUT,
+        check=True,
+        timeout=240 if args.installed_ref else 180 if args.specialization else 90,
+    )
 result = root / "session-return.txt"
 content = result.read_text() if result.exists() else "NO RESULT"
 print(content)
+if content == "PASS" and args.specialization:
+    pending = json.loads((root / "specialty-session-pending.json").read_text())
+    resumed = json.loads((root / "specialty-session-resumed.json").read_text())
+    assert pending["campaign"] == resumed["campaign"]
+    assert pending["redevelopmentPreview"]["verified"]
+    assert pending["redevelopmentPreview"]["confirmButtonRendered"]
+    assert pending["redevelopmentPreview"]["cost"] == 45
+    assert pending["redevelopmentPreview"]["focusBefore"] == 1
+    assert pending["redevelopmentPreview"]["focusAfter"] == 1
+    assert pending["redevelopmentPreview"]["allowance"] == 1
+    assert pending["focus"]["primary"]["used"] == 1
+    assert pending["focus"]["primary"]["reserved"] == 1
+    assert pending["focus"]["secondary"]["used"] == 1
+    assert resumed["restoredCheckpoint"]["progress"] > 0
+    assert resumed["primary"]["sites"]["freight"]["id"] == resumed["restoredCheckpoint"]["projectId"]
+    assert resumed["secondary"]["sites"]["knowledge"]["id"] == pending["secondary"]["sites"]["knowledge"]["id"]
+    assert resumed["focus"]["primary"]["used"] == 1
+    assert resumed["focus"]["secondary"]["used"] == 1
+    print(
+        json.dumps(
+            {
+                "specialtySession": resumed["mode"],
+                "savedRound": pending["round"],
+                "resumedRound": resumed["round"],
+                "checkpoint": resumed["restoredCheckpoint"],
+                "distinctOutputs": resumed["effects"],
+                "acceptedAIWorks": pending["acceptedAIWorks"] or resumed["acceptedAIWorks"],
+                "evidence": str(root),
+            }
+        )
+    )
 if content == "PASS" and args.installed_ref:
     assert (root / "games/civcraft/data/slot-2.dat").read_text() == fixture
     assert (root / "civcraft/data/slot-2.dat").read_text() == fixture
