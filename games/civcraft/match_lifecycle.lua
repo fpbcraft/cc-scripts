@@ -132,16 +132,25 @@ function Lifecycle.initialize(state)
 	return state
 end
 
-function Lifecycle.advance(state)
+function Lifecycle.advance(state, progress)
+	local function stage(label)
+		if progress then
+			progress(label)
+		end
+	end
 	state.round = state.round + 1
 	for _, p in ipairs(state.players) do
 		p.ready = false
 	end
+	stage("COUNCIL AND DIPLOMACY")
 	Council.advance(state)
 	Diplomacy.boundary(state)
 	Events.prune(state)
+	stage("COMBAT AND RECOVERY")
 	Combat.round(state, Systems)
+	stage("ECONOMY AND PRODUCTION")
 	Systems.production(state, Hex)
+	stage("VILLAGES AND HOSTILES")
 	Villages.round(state, Systems, Combat)
 	Hostiles.round(state, Systems)
 	for _, u in ipairs(state.units) do
@@ -149,14 +158,17 @@ function Lifecycle.advance(state)
 		local base = Systems.units[u.kind] or Systems.units.warrior
 		MovementBudget.reset(state, u, base, owner, Hex)
 	end
+	stage("VISIBILITY AND DIPLOMACY")
 	World.reveal(state, Hex, Systems)
 	DiplomaticPerception.promises(state, Hex, World, Systems.units)
+	stage("AUTOMATIC EXPLORATION")
 	for _, unit in ipairs(state.units) do
 		if unit.autoExplore and not unit.standby and Scheduler.canAct(state, unit.owner) then
 			unit.autoExploreRound = state.round
 			Systems.autoExplore(state, unit, Hex)
 		end
 	end
+	stage("TURN REPORTS")
 	for _, p in ipairs(state.players) do
 		p.age = Systems.age(p)
 		p.endStage = 0

@@ -251,8 +251,10 @@ Names appear above cities and in city navigation, and remain stable in saves.
 
 The map stays central with a permanent inspector. City **INFO**, **JOBS**,
 **TILES** and **PROD** views separate statistics from the task being edited;
-compact unit inspectors separate actions from secondary details. Extremely
-short sidebars open a full-screen inspector. **PREV/NEXT**, the scrollbar and
+compact unit inspectors separate actions from secondary details. Unit actions
+use a compact icon grid; wider inspectors pair icons with short labels, while
+narrow ones show the icons alone. Extremely short sidebars open a full-screen
+inspector. **PREV/NEXT**, the scrollbar and
 mouse wheel navigate long lists. Status messages appear below the map.
 
 One primary button occupies the inspector footer. It shows **UNIT ORDERS**,
@@ -459,3 +461,5 @@ lead onward. Click a prerequisite/dependent in the sidebar to focus it. Pan/zoom
 controls remain available on touch-only screens; the sidebar pages separately.
 
 Click the science value in the top resource strip, or the turn prompt when research is pending, to choose from available technologies. The quick picker shows saved progress, science cost, the current project, and estimated turns at the current science rate. Switching projects retains progress; **TECH TREE** still opens the complete technology graph.
+
+Visible formations have separate faction-colored map badges. Click a badge to select that exact unit, including a civilian sharing a military unit’s hex; click the city banner to inspect the city. Badges stay above city labels, and an armed move or attack continues to use the hex target. Remembered terrain does not retain unit badges.

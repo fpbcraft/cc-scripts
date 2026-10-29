@@ -78,6 +78,7 @@ function UI:turnProgress(title, detail)
 	local w, h = r.w, r.h
 	r:begin()
 	self.hexTargets = {}
+	self.unitBadgeTargets = {}
 	self.mapViewport = nil
 	self.inspectorBounds = nil
 	self.modalBounds = nil
@@ -567,8 +568,21 @@ function UI:draw(state, playerID, opts)
 	self.lastCampaign = state and state.campaignID
 	if self.selected.kind == "unit" and self.selected.unitID then
 		local selectedUnit
+		local observer
+		for _, candidate in ipairs(state.players or {}) do
+			if candidate.id == playerID then
+				observer = candidate
+				break
+			end
+		end
 		for _, u in ipairs(state.units or {}) do
-			if u.id == self.selected.unitID and u.owner == playerID then
+			if
+				u.id == self.selected.unitID
+				and (
+					u.owner == playerID
+					or observer and (observer.visible or {})[World.key(u.x, u.y)]
+				)
+			then
 				selectedUnit = u
 				break
 			end
@@ -627,6 +641,7 @@ function UI:draw(state, playerID, opts)
 	Playback.update(self, state, playerID, opts)
 	r:begin()
 	self.hexTargets = {}
+	self.unitBadgeTargets = {}
 	self.mapViewport = nil
 	self.inspectorBounds = nil
 	self.inputMode = nil
@@ -1125,6 +1140,7 @@ function UI:draw(state, playerID, opts)
 	r:finish()
 end
 function UI:focus(kind, item)
+	self.lastUnitTap = nil
 	self.unitDetails = false
 	self.cityStrikeSource = nil
 	self.source = nil
@@ -1670,6 +1686,17 @@ function UI:tap(x, y)
 		and not self.pendingMove
 		and not self.cityStrikeSource
 	then
+		for _, badge in ipairs(self.unitBadgeTargets or {}) do
+			if
+				rx >= badge.x
+				and rx < badge.x + badge.w
+				and ry >= badge.y
+				and ry < badge.y + badge.h
+			then
+				self:focus("unit", badge.unit)
+				return true
+			end
+		end
 		for _, banner in ipairs(self.cityBannerTargets or {}) do
 			if
 				rx >= banner.x
@@ -1680,6 +1707,58 @@ function UI:tap(x, y)
 				self:focus("city", banner.city)
 				return true
 			end
+		end
+		-- The city banner wins inside its visible rectangle. Outside the
+		-- banner, hit the actual rendered unit glyph (no extra bubble).
+		-- This retains independent selection of civilian/military stacks and
+		-- visible rival units, even when no circular callout is necessary.
+		local iconMatches = {}
+		for _, target in ipairs(self.unitIconTargets or {}) do
+			if
+				rx >= target.x
+				and rx < target.x + target.w
+				and ry >= target.y
+				and ry < target.y + target.h
+			then
+				local cx = target.glyphX + target.glyphW / 2
+				local cy = target.glyphY + target.glyphH / 2
+				iconMatches[#iconMatches + 1] = {
+					unit = target.unit,
+					distance = (rx - cx) ^ 2 + (ry - cy) ^ 2,
+				}
+			end
+		end
+		if #iconMatches > 0 then
+			-- Larger invisible text-mode touch targets can overlap. Prefer
+			-- the closest actual glyph; an already-focused unit stays put on
+			-- the first tap, then repeat taps cycle through the same stack.
+			table.sort(iconMatches, function(a, b)
+				if a.distance == b.distance then
+					return a.unit.id < b.unit.id
+				end
+				return a.distance < b.distance
+			end)
+			local nextUnit = iconMatches[1].unit
+			if #iconMatches > 1 and self.selected.kind == "unit" then
+				for index, match in ipairs(iconMatches) do
+					if match.unit.id == self.selected.unitID then
+						if
+							self.lastUnitTap
+							and self.lastUnitTap.x == rx
+							and self.lastUnitTap.y == ry
+							and self.lastUnitTap.unitID == match.unit.id
+						then
+							nextUnit = iconMatches[index % #iconMatches + 1].unit
+						else
+							nextUnit = match.unit
+						end
+						break
+					end
+				end
+			end
+			self:focus("unit", nextUnit)
+			self.lastUnitTap = { x = rx, y = ry, unitID = nextUnit.id }
+			return true
 		end
 	end
 	local best, distance

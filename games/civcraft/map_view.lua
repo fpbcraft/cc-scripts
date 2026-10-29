@@ -254,6 +254,177 @@ local function drawPendingPath(r, path, player, center)
 	end
 end
 
+-- Offset unit callouts never change the unit's world position. Their pointer
+-- always faces the rendered center of the unit's actual hex, not the city label.
+local bubbleDirections = {
+	{ 0, -1 },
+	{ -0.7, -0.7 },
+	{ 0.7, -0.7 },
+	{ -1, 0 },
+	{ 1, 0 },
+	{ -0.7, 0.7 },
+	{ 0.7, 0.7 },
+	{ 0, 1 },
+}
+
+local function round(value)
+	return math.floor(value + 0.5)
+end
+
+local function placePointer(badge)
+	local cx = badge.x + math.floor(badge.w / 2)
+	local cy = badge.y + math.floor(badge.h / 2)
+	local dx, dy = badge.anchorX - cx, badge.anchorY - cy
+	local distance = math.sqrt(dx * dx + dy * dy)
+	if distance < 1 then
+		dx, dy, distance = 0, 1, 1
+	end
+	local ux, uy = dx / distance, dy / distance
+	local radius = math.floor(badge.w / 2)
+	local length = math.max(4, math.min(7, math.floor(badge.w / 3)))
+	badge.pointerX = round(cx + ux * (radius + length))
+	badge.pointerY = round(cy + uy * (radius + length))
+	badge.pointerBaseX = round(cx + ux * (radius - 1))
+	badge.pointerBaseY = round(cy + uy * (radius - 1))
+	badge.pointerDX, badge.pointerDY = ux, uy
+end
+
+local function drawBubblePointer(r, badge, color, tileSize)
+	local ux, uy = badge.pointerDX, badge.pointerDY
+	local px, py = -uy, ux
+	local bx, by = badge.pointerBaseX, badge.pointerBaseY
+	local tipX, tipY = badge.pointerX, badge.pointerY
+	-- The hairline terminates at the real tile center. It is drawn behind city
+	-- banners, so it cannot obscure their text even when a city covers the unit.
+	local cx, cy = badge.x + math.floor(badge.w / 2), badge.y + math.floor(badge.h / 2)
+	local distance = math.sqrt((badge.anchorX - cx) ^ 2 + (badge.anchorY - cy) ^ 2)
+	if distance > tileSize * 0.9 then
+		r:line(tipX, tipY, badge.anchorX, badge.anchorY, color)
+	end
+	for offset = -2, 2 do
+		r:line(round(bx + px * offset), round(by + py * offset), tipX, tipY, color)
+	end
+	r:line(bx, by, round(tipX - ux * 2), round(tipY - uy * 2), 0)
+end
+
+local function drawUnitBubble(r, badge, color, selected)
+	local cx = badge.x + math.floor(badge.w / 2)
+	local cy = badge.y + math.floor(badge.h / 2)
+	local radius = math.floor(badge.w / 2)
+	local border = selected and 7 or color
+	for dy = -radius, radius do
+		local half = math.floor(math.sqrt(radius * radius - dy * dy))
+		r:fill(cx - half, cy + dy, half * 2 + 1, 1, border)
+	end
+	for dy = -radius + 1, radius - 1 do
+		local half = math.floor(math.sqrt((radius - 1) ^ 2 - dy * dy))
+		r:fill(cx - half, cy + dy, half * 2 + 1, 1, 0)
+	end
+	local glyph = math.max(5, badge.w - 4)
+	Icons.draw(
+		r,
+		badge.unit.kind,
+		cx - math.floor(glyph / 2),
+		cy - math.floor(glyph / 2),
+		glyph,
+		color
+	)
+end
+
+-- Search normal callout offsets first, then use a compact grid only when
+-- crowded/edge tiles leave no room at the preferred offsets. Collision checks
+-- use the entire hitbox so icons and city labels remain independently clickable.
+-- Match the actual painted unit glyph bounds, not the entire hex.
+-- The small icons paint a 2x2 colored core; larger ones use the faction sprite.
+local function unitIconBounds(tile, size, secondary)
+	local x, y, extent
+	if secondary then
+		x, y = tile.px + size * 0.65, tile.py + size * 0.6
+		extent = size < 16 and 2 or math.min(7, size / 2)
+	else
+		x, y = tile.px + size / 2, tile.py + size / 2
+		extent = size < 16 and 2 or 11
+		if size >= 16 then
+			x, y = x - 5, y - 5
+		end
+	end
+	return { x = x, y = y, w = extent, h = extent }
+end
+
+local function rectanglesOverlap(a, b)
+	return a.x < b.x + b.w and a.x + a.w > b.x and a.y < b.y + b.h and a.y + a.h > b.y
+end
+
+local function underCityBanner(icon, banners)
+	for _, banner in ipairs(banners) do
+		if rectanglesOverlap(icon, banner) then
+			return true
+		end
+	end
+	return false
+end
+
+local function findUnitCallout(rect, occupied, cx, cy, diameter, tileSize)
+	local half = math.floor(diameter / 2)
+	local lastX, lastY = rect.x + rect.w - diameter, rect.y + rect.h - diameter
+	if lastX < rect.x or lastY < rect.y then
+		return nil
+	end
+	local function clear(x, y)
+		if x < rect.x or y < rect.y or x > lastX or y > lastY then
+			return false
+		end
+		if (cx - x - half) ^ 2 + (cy - y - half) ^ 2 <= (half + 3) ^ 2 then
+			return false
+		end
+		for _, other in ipairs(occupied) do
+			if
+				x < other.x + other.w
+				and x + diameter > other.x
+				and y < other.y + other.h
+				and y + diameter > other.y
+			then
+				return false
+			end
+		end
+		return true
+	end
+	for ring = 1, 7 do
+		local distance = half + tileSize * 0.5 + 3 + (ring - 1) * (diameter + 2) * 0.7
+		for _, direction in ipairs(bubbleDirections) do
+			local x = round(cx + direction[1] * distance - half)
+			local y = round(cy + direction[2] * distance - half)
+			if clear(x, y) then
+				return { x = x, y = y }
+			end
+		end
+	end
+	-- The eight preferred directions can miss a narrow free corridor between
+	-- a city nameplate and the map edge, particularly at high zoom levels.
+	local best, bestDistance
+	local function consider(x, y)
+		if not clear(x, y) then
+			return
+		end
+		local distance = (cx - x - half) ^ 2 + (cy - y - half) ^ 2
+		if not bestDistance or distance < bestDistance then
+			best, bestDistance = { x = x, y = y }, distance
+		end
+	end
+	local stride = math.max(1, math.floor(diameter / 3))
+	for y = rect.y, lastY, stride do
+		for x = rect.x, lastX, stride do
+			consider(x, y)
+		end
+		consider(lastX, y)
+	end
+	for x = rect.x, lastX, stride do
+		consider(x, lastY)
+	end
+	consider(lastX, lastY)
+	return best
+end
+
 function V.draw(ui, state, player, rect)
 	local frame = rect
 	rect = { x = frame.x + 4, y = frame.y + 4, w = frame.w - 8, h = frame.h - 8 }
@@ -301,7 +472,7 @@ function V.draw(ui, state, player, rect)
 	ui.mapViewport =
 		{ x = rect.x, y = rect.y, w = rect.w, h = rect.h, tile = size, maxX = maxX, maxY = maxY }
 	local citySignature = {}
-	local cityIndex, unitIndex, civilianIndex = {}, {}, {}
+	local cityIndex, unitIndex, civilianIndex, unitGroups = {}, {}, {}, {}
 	local hiddenActors = ui.animationFrame and ui.animationFrame.hidden or {}
 	local campIndex = {}
 	for _, camp in ipairs(World.observedCamps(state, player)) do
@@ -314,6 +485,8 @@ function V.draw(ui, state, player, rect)
 	end
 	for _, unit in ipairs(state.units or {}) do
 		local key = World.key(unit.x, unit.y)
+		unitGroups[key] = unitGroups[key] or {}
+		unitGroups[key][#unitGroups[key] + 1] = unit
 		if not unitIndex[key] or Stacks.isCivilian(unitIndex[key]) then
 			unitIndex[key] = unit
 		end
@@ -796,7 +969,10 @@ function V.draw(ui, state, player, rect)
 		end
 		r = canvas
 		local occupied = {}
+		-- City identity is anchored first. Unit placement must adapt to banners,
+		-- never displace a city's name when a formation moves behind it.
 		ui.cityBannerTargets = {}
+		local cityBanners = {}
 		table.sort(cityLabels, function(a, b)
 			if (a.city.owner == ui.playerID) ~= (b.city.owner == ui.playerID) then
 				return a.city.owner == ui.playerID
@@ -807,10 +983,125 @@ function V.draw(ui, state, player, rect)
 			local model = CityBanner.model(state, player, label.city, Systems)
 			local box = CityBanner.layout(r, model, label, rect, occupied)
 			occupied[#occupied + 1] = box
-			local targetRenderer = label.remembered and rememberedRenderer or canvas
-			CityBanner.draw(targetRenderer, model, box, ownerColor(state, label.city.owner))
+			cityBanners[#cityBanners + 1] = { model = model, box = box, label = label }
 			ui.cityBannerTargets[#ui.cityBannerTargets + 1] =
 				{ x = box.x, y = box.y, w = box.w, h = box.h, city = label.city }
+		end
+		ui.unitBadgeTargets = {}
+		ui.unitIconTargets = {}
+		-- Only a unit whose painted icon is obscured by a city banner needs
+		-- a callout. Unobscured glyphs remain directly selectable on the map.
+		for _, tile in ipairs(tiles) do
+			local centerX, centerY = tile.px + size / 2, tile.py + size / 2
+			local onScreen = centerX >= rect.x
+				and centerX < rect.x + rect.w
+				and centerY >= rect.y
+				and centerY < rect.y + rect.h
+			local actors = onScreen
+					and tile.visibility == "visible"
+					and unitGroups[World.key(tile.x, tile.y)]
+				or {}
+			local visible = {}
+			for _, actor in ipairs(actors or {}) do
+				if not hiddenActors[Animations.identity(actor)] then
+					visible[#visible + 1] = actor
+				end
+			end
+			table.sort(visible, function(a, b)
+				return a.id < b.id
+			end)
+			-- Odd pixel diameter keeps the circle and direction ray centered exactly.
+			local badgeSize = math.min(17, math.max(11, math.floor(size * 0.6) + 1))
+			if badgeSize % 2 == 0 then
+				badgeSize = badgeSize + 1
+			end
+			local mainUnit = unitIndex[World.key(tile.x, tile.y)]
+			local civilian = civilianIndex[World.key(tile.x, tile.y)]
+			for _, actor in ipairs(visible) do
+				-- A civilian escort is painted to the lower-right of the main
+				-- unit. Its own icon, not the military icon, decides visibility.
+				local secondary = actor == civilian
+					and actor ~= mainUnit
+					and mainUnit
+					and not hiddenActors[Animations.identity(mainUnit)]
+				local icon = unitIconBounds(tile, size, secondary)
+				if not underCityBanner(icon, ui.cityBannerTargets) then
+					-- Text terminals map clicks to coarse pixel cells. Expand only
+					-- the hit target, never the painted icon/occlusion bounds.
+					local hitWidth = math.max(8, icon.w)
+					local hitHeight = math.max(8, icon.h)
+					ui.unitIconTargets[#ui.unitIconTargets + 1] = {
+						x = round(icon.x + (icon.w - hitWidth) / 2),
+						y = round(icon.y + (icon.h - hitHeight) / 2),
+						w = hitWidth,
+						h = hitHeight,
+						glyphX = icon.x,
+						glyphY = icon.y,
+						glyphW = icon.w,
+						glyphH = icon.h,
+						unit = actor,
+					}
+				else
+					local badge = {
+						w = badgeSize,
+						h = badgeSize,
+						unit = actor,
+						anchorX = round(centerX),
+						anchorY = round(centerY),
+					}
+					local chosen
+					-- Keep the circle large when possible, but allow it to shrink to
+					-- preserve separate hit targets on narrow terminal viewports.
+					for diameter = badgeSize, 9, -2 do
+						chosen = findUnitCallout(rect, occupied, centerX, centerY, diameter, size)
+						if chosen then
+							badge.w, badge.h = diameter, diameter
+							break
+						end
+					end
+					if not chosen then
+						chosen = {
+							x = math.max(
+								rect.x,
+								math.min(rect.x + rect.w - badge.w, round(centerX - badge.w / 2))
+							),
+							y = math.max(
+								rect.y,
+								math.min(rect.y + rect.h - badge.h, round(centerY - badge.h / 2))
+							),
+						}
+					end
+					badge.x, badge.y = chosen.x, chosen.y
+					placePointer(badge)
+					ui.unitBadgeTargets[#ui.unitBadgeTargets + 1] = badge
+					occupied[#occupied + 1] = badge
+				end
+			end
+		end
+		-- Draw connectors behind city labels, so the line always targets its
+		-- true world tile without painting over important city information.
+		for _, badge in ipairs(ui.unitBadgeTargets) do
+			local color = ownerColor(state, badge.unit.owner)
+			local selected = ui.selected.kind == "unit" and ui.selected.unitID == badge.unit.id
+			drawBubblePointer(r, badge, selected and 7 or color, size)
+		end
+		for _, entry in ipairs(cityBanners) do
+			local targetRenderer = entry.label.remembered and rememberedRenderer or canvas
+			CityBanner.draw(
+				targetRenderer,
+				entry.model,
+				entry.box,
+				ownerColor(state, entry.label.city.owner)
+			)
+		end
+		for _, badge in ipairs(ui.unitBadgeTargets) do
+			local color = ownerColor(state, badge.unit.owner)
+			drawUnitBubble(
+				r,
+				badge,
+				color,
+				ui.selected.kind == "unit" and ui.selected.unitID == badge.unit.id
+			)
 		end
 		AnimationView.draw(ui, state, rect, size)
 	end)

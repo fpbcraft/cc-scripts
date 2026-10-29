@@ -43,6 +43,25 @@ assert(
 	"Scouts ignore forest movement surcharge"
 )
 local far = H.reachable(state, unit, 1, S)
+local lean, pathTo = H.reachable(state, unit, 1, S, { deferPaths = true })
+assert(#far == #lean and type(pathTo) == "function", "Deferred routing retains every destination")
+for index, destination in ipairs(far) do
+	local deferred = lean[index]
+	assert(
+		deferred.x == destination.x
+			and deferred.y == destination.y
+			and deferred.cost == destination.cost,
+		"Deferred routing must preserve reachable costs and deterministic order"
+	)
+	if not deferred.attack then
+		assert(deferred.path == nil, "Exploration does not precompute unused paths")
+		local path = pathTo(deferred.x, deferred.y)
+		assert(#path == #destination.path, "On-demand paths must match normal paths")
+		for step, point in ipairs(path) do
+			assert(point.x == destination.path[step].x and point.y == destination.path[step].y)
+		end
+	end
+end
 local maximum = 0
 for _, v in ipairs(far) do
 	maximum = math.max(maximum, H.distance(2, 2, v.x, v.y))
