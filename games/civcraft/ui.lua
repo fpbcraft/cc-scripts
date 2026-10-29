@@ -1714,8 +1714,10 @@ function UI:tap(x, y)
 		local iconMatches = {}
 		for _, target in ipairs(self.unitIconTargets or {}) do
 			if
-				rx >= target.x and rx < target.x + target.w
-				and ry >= target.y and ry < target.y + target.h
+				rx >= target.x
+				and rx < target.x + target.w
+				and ry >= target.y
+				and ry < target.y + target.h
 			then
 				iconMatches[#iconMatches + 1] = target.unit
 			end
