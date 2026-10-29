@@ -332,6 +332,7 @@ function V.draw(ui, state, player, rect)
 		cache = { world = world, cities = state.cities, signature = signature, claims = {} }
 		ui.mapCache = cache
 		for y = 1, height do
+			canvas:cooperate()
 			for x = 1, width do
 				cache.claims[World.key(x, y)] = World.territoryCity(state, Hex, x, y)
 			end
