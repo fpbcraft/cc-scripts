@@ -19,7 +19,10 @@ land patch with six-hex spacing. Overlapping radius-three patches connect the
 players without filling distant ocean corridors. Each opening is expanded to
 30 connected passable tiles within radius four. This local fallback can join
 nearby island fragments, while leaving the rest of archipelago geography
-intact. Each start retains a plains center and nearby grain and iron deposits.
+intact. If a generated map has no natural-wonder habitat outside the existing
+spawn buffer, generation reserves one distant passable hill while keeping the
+wonder placer authoritative. Each start retains a plains center and nearby
+grain and iron deposits.
 
 The generation model borrows the staged terrain and start-plot separation of
 Civ V map scripts, not a claimed replica of Firaxis' generator. The [Civ V

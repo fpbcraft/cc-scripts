@@ -490,6 +490,17 @@ local function repairStart(world, start, rng, checkpoint)
 			end
 		end
 	end
+	-- Preserve the legacy opening guarantee: every immediate neighbor is
+	-- walkable, even if the selected viable site has a local shoreline or peak.
+	for _, neighbor in ipairs(Hex.neighbours(start.x, start.y, { world = world })) do
+		if not passable(world, neighbor.x, neighbor.y) then
+			setTile(world, neighbor.x, neighbor.y, {
+				biome = "plains",
+				elevation = "flat",
+				feature = "none",
+			})
+		end
+	end
 	while #queue < START_LAND_TARGET and #frontier > 0 do
 		table.sort(frontier, function(a, b)
 			local da, db =
@@ -528,6 +539,48 @@ local function coasts(world)
 			end
 		end
 	end
+end
+
+local function reserveWonderSiteIfNeeded(world, checkpoint)
+	local buffer = Landmarks.spawnBuffer(world)
+	local best, bestDistance, reserved
+	for y = 2, world.height - 1 do
+		if checkpoint then
+			checkpoint()
+		end
+		for x = 2, world.width - 1 do
+			local nearest = math.huge
+			for _, start in ipairs(world.starts) do
+				nearest = math.min(nearest, Hex.distance(x, y, start.x, start.y))
+			end
+			if nearest >= buffer then
+				local tile = Biomes.tile(world, x, y)
+				for _, kind in ipairs(Landmarks.kinds) do
+					if Landmarks.habitat(tile, kind) then
+						return
+					end
+				end
+				if passable(world, x, y) and (not bestDistance or nearest > bestDistance) then
+					best, bestDistance = { x = x, y = y, tile = tile }, nearest
+				end
+				if not reserved or nearest > reserved.distance then
+					reserved = { x = x, y = y, tile = tile, distance = nearest }
+				end
+			end
+		end
+	end
+	if not best then
+		best = reserved
+	end
+	assert(best, "Start layout must leave a natural-wonder site outside its buffer")
+	local tile = best.tile
+	local water = tile.biome == "ocean" or tile.biome == "coast"
+	local biome = water and "plains" or tile.biome
+	setTile(world, best.x, best.y, {
+		biome = biome,
+		elevation = "hill",
+		feature = water and "none" or tile.feature,
+	})
 end
 local resources = {
 	{ "grain", 28 },
@@ -634,6 +687,7 @@ function WorldGen.generate(seed, size, count, mapType, dimensions, checkpoint, t
 		repairStart(world, start, rng, checkpoint)
 	end
 	traversability(world)
+	reserveWonderSiteIfNeeded(world, checkpoint)
 	coasts(world)
 	Landmarks.generate(world, checkpoint)
 	deposits(world, checkpoint)

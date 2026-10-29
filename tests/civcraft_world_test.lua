@@ -165,6 +165,28 @@ for _, mapType in ipairs({ "archipelago", "highlands" }) do
 	end
 	assert(sharesPassableLand(fixture), mapType .. " starts share a connected mainland")
 end
+local coastalOpening = W.generate(47531, "compact", 2, "archipelago")
+for _, start in ipairs(coastalOpening.starts) do
+	for _, neighbor in ipairs(H.neighbours(start.x, start.y, { world = coastalOpening })) do
+		local terrain = W.terrain(coastalOpening, neighbor.x, neighbor.y)
+		assert(
+			terrain ~= "water" and terrain ~= "mountain",
+			"Immediate start neighbors stay passable"
+		)
+	end
+end
+local fallbackWonder = W.generate(7031, "compact", 4, "archipelago")
+local wonderCount = 0
+for wonderKey, landmark in pairs(fallbackWonder.landmarks) do
+	if landmark.natural then
+		wonderCount = wonderCount + 1
+		local x, y = wonderKey:match("^(%d+):(%d+)$")
+		for _, start in ipairs(fallbackWonder.starts) do
+			assert(H.distance(tonumber(x), tonumber(y), start.x, start.y) >= 6)
+		end
+	end
+end
+assert(wonderCount >= 1, "Fallback opening preserves a natural wonder outside the start buffer")
 local state = {
 	world = a,
 	players = {
