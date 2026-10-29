@@ -48,7 +48,10 @@ r:withClip({ x = 4, y = 3, w = 5, h = 4 }, function()
 end)
 r:fill(20, 10, 3, 3, 13)
 r:finish()
-assert(calls == 3, "The initial 90-row graphics frame must upload in three bounded strips")
+assert(
+	calls == 3,
+	"The initial 90-row graphics frame must upload in three bounded strips"
+)
 assert(r.lastUploadStats.calls == 3 and r.lastUploadStats.rows == 90)
 local function pixel(x, y)
 	return pixels[math.floor(r.oy + y * r.sy) + 1]:byte(math.floor(r.ox + x * r.sx) + 1)
@@ -77,7 +80,10 @@ r:fill(20, 10, 3, 3, 13)
 r:finish()
 string.gsub = originalGsub
 assert(expansions == 0, "Identical frames reuse scaled rows without allocating replacements")
-assert(calls == 3 and r.lastUploadStats.calls == 0, "Unchanged frames must not upload any pixels")
+assert(
+	calls == 3 and r.lastUploadStats.calls == 0,
+	"Unchanged frames must not upload any pixels"
+)
 assert(
 	r.frameRows == frameRows,
 	"Frame pixel storage is reused instead of rebuilt for each primitive"
@@ -91,9 +97,14 @@ end)
 r:fill(20, 10, 3, 3, 13)
 r:fill(10, 10, 1, 1, 11)
 r:finish()
-assert(calls == 4 and r.lastUploadStats.calls == 1 and r.lastUploadStats.rows == 2,
-	"A local change should upload only two output scanlines")
-assert(pixel(10, 10) == 11 and pixel(11, 10) == 2, "Partial uploads retain neighboring pixels")
+assert(
+	calls == 4 and r.lastUploadStats.calls == 1 and r.lastUploadStats.rows == 2,
+	"A local change should upload only two output scanlines"
+)
+assert(
+	pixel(10, 10) == 11 and pixel(11, 10) == 2,
+	"Partial uploads retain neighboring pixels"
+)
 -- Clearing an already blank frame is free, but clearing after drawing must
 -- still overwrite every pixel (including a cached scaled row).
 r:begin()
@@ -106,7 +117,10 @@ r:finish()
 assert(pixel(3, 3) == 0, "Full-frame clearing after drawing is never skipped")
 local cached = r.scaledRows
 r:resize()
-assert(r.scaledRows == nil and r.lastGraphicsRows == nil, "Resizing invalidates both scaled and uploaded rows")
+assert(
+	r.scaledRows == nil and r.lastGraphicsRows == nil,
+	"Resizing invalidates both scaled and uploaded rows"
+)
 assert(next(cached), "The previous frame has a bounded row cache")
 r:begin()
 r:fill(0, 0, r.w, r.h, 2)
