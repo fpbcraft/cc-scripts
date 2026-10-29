@@ -3,6 +3,7 @@
 	/games/civcraft and /tests; its save slot 3 is used and left available to inspect.
 	No terminal, event, filesystem or peripheral API is mocked here.
 ]]
+dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local Actions = dofile("/games/civcraft/actions.lua")
 local AI = dofile("/games/civcraft/ai.lua")
 local Events = dofile("/games/civcraft/events.lua")

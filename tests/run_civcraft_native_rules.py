@@ -31,10 +31,22 @@ for name in args.tests:
 files='{'+','.join(json.dumps('/'+name) for name in args.tests)+'}'
 script='''local function run(path)
  local env=setmetatable({}, {__index=_G});env._G=env
- env.dofile=function(file)
-  local f=assert(fs.open(file,"r"));local source=f.readAll();f.close()
-  return assert(load(source,"@"..file,"t",env))()
+ local nativeLoadfile=loadfile
+ env.loadfile=function(file,mode,scope)
+  return nativeLoadfile(file,mode or "t",scope or env)
  end
+ env.dofile=function(file)
+  local chunk,why=env.loadfile(file)
+  assert(chunk,why)
+  return chunk()
+ end
+ local probePath="/tests/support/native_loadfile_probe.lua"
+ env.loadfileProbe=env
+ assert(assert(env.loadfile(probePath,"t"))()==env,"Default loadfile environment is isolated")
+ local explicit={loadfileProbe=true}
+ assert(assert(env.loadfile(probePath,"t",explicit))()==true,"Explicit loadfile environment is preserved")
+ local binaryOnly,modeError=env.loadfile(probePath,"b",explicit)
+ assert(not binaryOnly and modeError,"Explicit loadfile mode is preserved")
  env.dofile(path)
 end
 local results={}
