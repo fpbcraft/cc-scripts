@@ -5,11 +5,28 @@ end
 -- Match the installed program's shared internal module identities.
 dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local Rules = dofile("/games/civcraft/campaign_rules.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local Lifecycle = dofile("/games/civcraft/match_lifecycle.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local Strategy = dofile("/games/civcraft/ai_strategy.lua")
 local Victory = dofile("/games/civcraft/victory.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
+local defaultLobby = Lifecycle.newLobby("default-campaign", ContentRules.default)
+assert(
+	defaultLobby.contentRules == "balance5"
+		and defaultLobby.roundLimit == 250
+		and ContentRules.hasSpecialties(defaultLobby),
+	"Normal new campaigns default to Specialization V5"
+)
+local priorLobby = Lifecycle.newLobby("explicit-founders", "balance4")
+assert(
+	priorLobby.contentRules == "balance4"
+		and priorLobby.roundLimit == 250
+		and not ContentRules.hasSpecialties(priorLobby)
+		and ContentRules.startsWithSettler(priorLobby),
+	"An explicitly selected Founders V4 campaign keeps its profile"
+)
 local function fixture()
 	local world =
 		{ width = 12, height = 10, tiles = {}, resources = {}, landmarks = {}, rails = {} }

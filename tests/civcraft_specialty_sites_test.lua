@@ -290,6 +290,16 @@ if fs and textutils then
 	assert(restored.cities[1].siteProjects[2].progress == 0)
 	assert(Sites.advance(restored, restored.players[1], restored.cities[1], 45))
 	assert(restored.cities[1].sites.knowledge.id == 2 and not restored.cities[1].sites.works)
+	local earlier = fixture()
+	earlier.contentRules = "balance4"
+	earlier.specialtySchema, earlier.nextSiteId = nil, nil
+	for _, city in ipairs(earlier.cities) do
+		city.sites, city.siteProjects = nil, nil
+	end
+	assert(Saves.writeFile(Saves.path(2), earlier))
+	local earlierRestored = S.migrate(assert(Saves.load(2)))
+	assert(earlierRestored.contentRules == "balance4")
+	assert(not earlierRestored.specialtySchema and not Sites.enabled(earlierRestored))
 end
 print(
 	"PASS: rejection atomicity, all building roles, real production, fog bonuses, capture/invalidation, schema rejection, old profiles and native save/reload"
