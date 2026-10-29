@@ -101,14 +101,18 @@ end
 Systems.checkpoint, World.checkpoint, Saves.checkpoint = checkpoint, checkpoint, checkpoint
 local audio = Audio.new()
 local stateRevision = 0
+local deferredDraw = false
 local commandQueue = CommandQueue.new(function()
 	stateRevision = stateRevision + 1
 	if os.queueEvent then
 		os.queueEvent("civcraft_state_changed")
 	end
 end, function(changed)
-	if not changed and os.queueEvent then
-		os.queueEvent("civcraft_state_changed")
+	if deferredDraw then
+		deferredDraw = false
+		if not changed and os.queueEvent then
+			os.queueEvent("civcraft_state_changed")
+		end
 	end
 end)
 local campaignCounter = 0
@@ -451,6 +455,7 @@ end
 local displaySnapshot, displayRevision, displayObserver
 local function draw()
 	if commandQueue.busy then
+		deferredDraw = true
 		return
 	end
 	trace(
