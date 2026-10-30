@@ -13,6 +13,7 @@ function M.draw(ui, state, player, rect)
 	r:fill(rect.x, rect.y, rect.w, rect.h, 15)
 	local fullW = width + 0.5
 	local fullH = (height - 1) * 0.75 + 1
+	local wrappedX = world and world.wrapX == true
 	r:withClip(rect, function()
 		for y = 1, height do
 			for x = 1, width do
@@ -59,13 +60,32 @@ function M.draw(ui, state, player, rect)
 			end
 		end
 		local v = ui.mapViewport
-		r:outline(
-			rect.x + ui.panX / (fullW * v.tile) * rect.w,
-			rect.y + ui.panY / (fullH * v.tile) * rect.h,
-			math.min(rect.w, v.w / (fullW * v.tile) * rect.w),
-			math.min(rect.h, v.h / (fullH * v.tile) * rect.h),
-			7
-		)
+		local viewY = math.min(rect.h, v.h / (fullH * v.tile) * rect.h)
+		local viewTop = rect.y + ui.panY / (fullH * v.tile) * rect.h
+		if wrappedX and v.periodX and v.periodX > 0 then
+			local span = width / fullW * rect.w
+			local viewW = math.min(rect.w, v.w / v.periodX * span)
+			if viewW >= rect.w then
+				r:outline(rect.x, viewTop, rect.w, viewY, 7)
+			else
+				local viewLeft = rect.x + ui.panX / v.periodX * span
+				local right = rect.x + rect.w
+				if viewLeft + viewW <= right then
+					r:outline(viewLeft, viewTop, viewW, viewY, 7)
+				else
+					r:outline(viewLeft, viewTop, right - viewLeft, viewY, 7)
+					r:outline(rect.x, viewTop, viewLeft + viewW - right, viewY, 7)
+				end
+			end
+		else
+			r:outline(
+				rect.x + ui.panX / (fullW * v.tile) * rect.w,
+				viewTop,
+				math.min(rect.w, v.w / (fullW * v.tile) * rect.w),
+				viewY,
+				7
+			)
+		end
 	end)
 	r:outline(rect.x, rect.y, rect.w, rect.h, 3)
 	r.buttons[#r.buttons + 1] = {
@@ -79,8 +99,13 @@ function M.draw(ui, state, player, rect)
 				return
 			end
 			local v = ui.mapViewport
-			ui.panX =
-				math.max(0, math.min(v.maxX, (x - rect.x) / rect.w * fullW * v.tile - v.w / 2))
+			if wrappedX and v.periodX and v.periodX > 0 then
+				local panX = (x - rect.x) / rect.w * v.periodX - v.w / 2
+				ui.panX = ((panX % v.periodX) + v.periodX) % v.periodX
+			else
+				ui.panX =
+					math.max(0, math.min(v.maxX, (x - rect.x) / rect.w * fullW * v.tile - v.w / 2))
+			end
 			ui.panY =
 				math.max(0, math.min(v.maxY, (y - rect.y) / rect.h * fullH * v.tile - v.h / 2))
 			if ui.panel == "minimap" then

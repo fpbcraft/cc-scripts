@@ -77,7 +77,7 @@ local mechanics = {
 	{
 		id = "maps",
 		name = "MAP TYPES",
-		text = "Choose Compact, Standard or Large in the lobby. Continents, Archipelago, Pangaea and Highlands create different terrain distributions. A fixed seed reproduces the same world. Scouts reveal land; settlers expand into new territory.",
+		text = "Choose map size, Continents, Archipelago, Pangaea or Highlands, and horizontal wrap in the lobby. Wrapped maps join west and east while north and south stay bounded. New games default to horizontal wrap; saved maps keep their recorded topology. A fixed seed reproduces the same world. Scouts reveal land; settlers expand into new territory.",
 	},
 	{
 		id = "saving",
@@ -87,7 +87,7 @@ local mechanics = {
 	{
 		id = "controls",
 		name = "MAP AND INSPECTOR",
-		text = "Click the narrow map edges, or drag or scroll inside the map, to pan. Use + and - in the left sidebar to zoom. Its bottom fullscreen icon opens the fog-aware world overview; click a region to jump there. Resources, yields and territory are independent overlay toggles, off by default. TERRAIN clears overlays. YIELDS zooms in for readable drumstick, cog and flask symbols. Yields up to five repeat the symbol; higher yields show a number, and zero yields are omitted. Builder actions use a food icon for a Wheat Field, ore for a Quarry and wood for a Lumber Camp. A plus badge marks PLAN; an outlined target marks the HERE action. The right inspector stays visible. Use its scrollbar or PREV and NEXT to reach long lists. Modal screens block map input until closed.",
+		text = "Click the narrow map edges, or drag or scroll inside the map, to pan. Wrapped maps repeat west and east continuously; clicks on any copy select the same canonical hex. Use + and - in the left sidebar to zoom. Its bottom fullscreen icon opens the fog-aware world overview; click a region to jump there. Resources, yields and territory are independent overlay toggles, off by default. TERRAIN clears overlays. YIELDS zooms in for readable drumstick, cog and flask symbols. Yields up to five repeat the symbol; higher yields show a number, and zero yields are omitted. Builder actions use a food icon for a Wheat Field, ore for a Quarry and wood for a Lumber Camp. A plus badge marks PLAN; an outlined target marks the HERE action. The right inspector stays visible. Use its scrollbar or PREV and NEXT to reach long lists. Modal screens block map input until closed.",
 	},
 }
 mechanics[#mechanics + 1] = {

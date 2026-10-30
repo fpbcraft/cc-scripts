@@ -420,6 +420,13 @@ Each local game now has **three independent campaign slots**, selectable from th
 
 From the lobby, choose **MAP SIZE** and **REROLL SEED**. Specialization V5 uses Compact 32×22, Standard 56×36, Large 72×46, Huge 96×60 and Vast 120×76. Earlier profiles retain their setup sizes. The seed, generation version, dimensions, terrain and starting locations are serialized in each campaign. Identical setup and generation versions reproduce the same map; loading an older map preserves its recorded geography rather than regenerating it. See the [generation contract](WORLDGEN.md).
 
+New campaigns default to a horizontal cylinder. In **CAMPAIGN OPTIONS**, choose
+**MAP WRAP** to connect the west and east edges or keep them bounded; the north
+and south edges always stay bounded. The lobby labels the selected topology.
+The camera scrolls across the seam, repeated hexes remain clickable, and the
+world overview marks a viewport that crosses the seam on both sides. A loaded
+campaign keeps the topology recorded in its world data.
+
 **Fog of war** is owned independently by each civilization. Capitals initially reveal nearby terrain; scouts, explorers and ships extend the field of view according to their own vision stat. Moving away leaves discovered hexes dimmed while still-unexplored hexes remain dark. Enemy units appear only when in current sight. Hot-seat changes remove the previous player's selection and movement preview, preventing accidental map leaks.
 
 ## Strategy depth
