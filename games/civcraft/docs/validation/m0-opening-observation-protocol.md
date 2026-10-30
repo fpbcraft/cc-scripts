@@ -28,3 +28,11 @@ See [m0-opening-observations.json](m0-opening-observations.json) for exact sourc
 The driver clicks the visible zoom control, verifies a changed viewport after wheel-pan/drag, opens/resumes the pause menu, and queues a menu key during the first round resolution. That queued key was serviced at round 6 (217 ms text / 332 ms graphics); record this queue delay explicitly. It does not prove immediate menu service inside long work. Graphics inclusive round maximum was 205 ms and text 160 ms for this compact scenario. These two samples cannot establish worst-case budgets or Huge-map/iPad responsiveness.
 
 Native logs provide separate AI, save, draw and natural runtime GC spans. Round spans include rules and nested work; pure rules CPU cost is not isolated. Network is not exercised. Physical target measurements and release-budget decisions remain open in #75.
+
+## Separate native transport observations
+
+Run `python3 tests/run_civcraft_native_network.py --timings` and repeat with `--reverse-race`. The existing three-computer emulated-modem fixture uses V3, generated seed 12345 on a 40x26 map, with controlled starting positions/terrain and scenario injections. This is shared transport/legacy compatibility evidence, not a natural V5 opening run.
+
+Optional timing mode independently observes accepted result packets and snapshots proving the expected new position plus remaining movement budget for two serialized movement commands. The Python runner fails if either observation is missing. Since result packets do not carry request IDs, these measurements do not support arbitrary pipelined-command correlation. No production packet fields are added.
+
+[m0-network-timing-observations.json](m0-network-timing-observations.json) records source, commands, actual metadata, samples and artifact hashes. The final source samples were 22–24 ms to acknowledgement and 24–26 ms to the changed snapshot. These are four controlled local commands across two scenarios, not a network latency distribution or a physical rednet budget. Natural V5 network timing remains separate work.

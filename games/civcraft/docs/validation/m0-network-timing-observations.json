@@ -1,0 +1,114 @@
+{
+  "issue": 75,
+  "sourceRevision": "4bf5459d5f086bbb86ebc227cc3eaac15b7bd9bf",
+  "runtime": "CraftOS-PC 2.8.3 / CC 1.112.0",
+  "hardware": "Mac15,7 / Apple M3 Pro / 38654705664 bytes RAM",
+  "interpretation": {
+    "ackMillis": "Client-local elapsed time from scripted movement submission to accepted result packet receipt.",
+    "snapshotMillis": "Independently measured client-local elapsed time to a state packet containing the expected unit ID, new coordinates and remaining movement budget.",
+    "correlation": "Two serialized controlled movement commands; result packets have no request ID. No pipelined acknowledgement correlation is claimed.",
+    "notMeasured": [
+      "Remote physical rednet latency",
+      "Click-to-render latency",
+      "Natural V5 opening network timing",
+      "Packet-loss latency distributions",
+      "Target-device release budgets"
+    ]
+  },
+  "runs": [
+    {
+      "command": "python3 tests/run_civcraft_native_network.py --timings",
+      "profileDirectory": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-network-clij25it",
+      "result": "PASS on computers 0, 1 and 2",
+      "metadata": {
+        "width": 40,
+        "runtime": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+        "controlledTerrain": true,
+        "seed": 12345,
+        "height": 26,
+        "size": "standard",
+        "lua": "Lua 5.2",
+        "computers": 3,
+        "contentRules": "balance3"
+      },
+      "timings": {
+        "computer": 2,
+        "samples": {
+          "spendBeforeMerge": {
+            "unitID": 6,
+            "sentAt": 1793401642184,
+            "y": 7,
+            "ackMillis": 22,
+            "snapshotMillis": 24,
+            "x": 6,
+            "budget": 1
+          },
+          "peacefulConcurrentMove": {
+            "unitID": 6,
+            "sentAt": 1793401642619,
+            "y": 6,
+            "ackMillis": 24,
+            "snapshotMillis": 26,
+            "x": 5,
+            "budget": 1
+          }
+        },
+        "reverseRace": false
+      },
+      "artifactSha256": {
+        "computer/0/civcraft-network-metadata.json": "47e4f91201ffef3268aaa4ae9e6cd093f06e554f7d7edad22179dbb23fadfc53",
+        "computer/2/civcraft-network-timings.json": "88f122ce9ec4d55a601f8bcc1699e269238e9e0680efe95e513a52fd3721ed92",
+        "computer/0/civcraft-network-test.txt": "81d66f159c4f4fcd47013f1856bccf79c077e316341de91f65943ed282ec0df9",
+        "computer/1/civcraft-network-test.txt": "2e2fcd226fbb302abf8a527220ba4348d9193dfed13b6177c5ea9cab2c84f5a5",
+        "computer/2/civcraft-network-test.txt": "ff8235375b91872fa3ad25f1aed2d0b8bd57c0cb87289c1b7cd4cba5402383d4"
+      }
+    },
+    {
+      "command": "python3 tests/run_civcraft_native_network.py --timings --reverse-race",
+      "profileDirectory": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-network-brektwj6",
+      "result": "PASS on computers 0, 1 and 2",
+      "metadata": {
+        "runtime": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+        "width": 40,
+        "computers": 3,
+        "seed": 12345,
+        "controlledTerrain": true,
+        "contentRules": "balance3",
+        "size": "standard",
+        "lua": "Lua 5.2",
+        "height": 26
+      },
+      "timings": {
+        "reverseRace": true,
+        "computer": 2,
+        "samples": {
+          "peacefulConcurrentMove": {
+            "snapshotMillis": 26,
+            "sentAt": 1793401651848,
+            "unitID": 6,
+            "ackMillis": 24,
+            "budget": 1,
+            "y": 5,
+            "x": 7
+          },
+          "spendBeforeMerge": {
+            "snapshotMillis": 26,
+            "sentAt": 1793401651415,
+            "unitID": 6,
+            "ackMillis": 24,
+            "budget": 1,
+            "y": 6,
+            "x": 7
+          }
+        }
+      },
+      "artifactSha256": {
+        "computer/0/civcraft-network-metadata.json": "c20922618070ae62a57a6cc5f26af5e249c935e3cb634eff2826e918cd916f43",
+        "computer/2/civcraft-network-timings.json": "f16cf11a4923f939a3c867e1f11c0f5cbbabbabb06e06bbcda3e3e9db1862bc4",
+        "computer/0/civcraft-network-test.txt": "e1e389336d552886274faae0f51ef101e870467989bec17c01376178ce133535",
+        "computer/1/civcraft-network-test.txt": "f5abbf2f5f9d5558c851a6a299057bc86365188b4ec7d5488eb221847cce4918",
+        "computer/2/civcraft-network-test.txt": "3b373abc5076b47e8ab4943aeca129a6149059bd01859c4725a46ccc0392248d"
+      }
+    }
+  ]
+}
