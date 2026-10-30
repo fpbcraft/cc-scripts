@@ -707,6 +707,21 @@ env.dofile = function(path)
 		local generate = module.generate
 		module.generate = function(...)
 			local world = generate(...)
+			if observeTimings then
+				local file = assert(fs.open("/civcraft-network-metadata.json", "w"))
+				file.write(textutils.serializeJSON({
+					seed = world.seed,
+					width = world.width,
+					height = world.height,
+					size = world.size,
+					contentRules = "balance3",
+					runtime = _G._HOST,
+					lua = _VERSION,
+					computers = 3,
+					controlledTerrain = true,
+				}))
+				file.close()
+			end
 			local positions =
 				{ { x = 4, y = 6 }, { x = 6, y = 6 }, { x = 5, y = 8 }, { x = 7, y = 8 } }
 			for index = 1, #world.starts do

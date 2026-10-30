@@ -39,6 +39,12 @@ for identity in range(3):
         failed = True
         print(content)
 if args.timings:
+    metadata_file = profile / "computer/0/civcraft-network-metadata.json"
+    if not metadata_file.exists():
+        failed = True
+        print("Missing network campaign metadata")
+    else:
+        print("Campaign metadata:", metadata_file.read_text())
     timing_file = profile / "computer/2/civcraft-network-timings.json"
     if timing_file.exists():
         timing = json.loads(timing_file.read_text())
