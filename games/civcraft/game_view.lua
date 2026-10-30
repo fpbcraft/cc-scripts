@@ -16,6 +16,7 @@ local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 local QuickResearch = dofile("/games/civcraft/quick_research.lua")
 local TechTree = dofile("/games/civcraft/tech_tree.lua")
 local CouncilView = dofile("/games/civcraft/council_view.lua")
+local SettlementView = dofile("/games/civcraft/settlement_view.lua")
 local G = {}
 local modes = { "terrain", "territory", "resources", "yields" }
 local function modal(ui, rect, preserve)
@@ -31,6 +32,7 @@ local function modal(ui, rect, preserve)
 	end
 end
 function G.draw(ui, state, player)
+	ui.settlementSuggestions = SettlementView.current(ui, state, player)
 	Danger.update(ui, state, player)
 	local r = ui.r
 	local w, h = r.w, r.h
@@ -583,6 +585,9 @@ function G.draw(ui, state, player)
 	elseif ui.panel == "inspector" then
 		modal(ui, rect)
 		Inspector.draw(ui, state, player, rect, true)
+	elseif ui.panel == "settlementSuggestions" then
+		modal(ui, rect)
+		SettlementView.drawDetails(ui, state, player, rect)
 	elseif ui.panel == "minimap" then
 		modal(ui, rect, true)
 		r:text(rect.x + 4, rect.y + 4, "WORLD OVERVIEW", 8, 1, rect.w - 45)

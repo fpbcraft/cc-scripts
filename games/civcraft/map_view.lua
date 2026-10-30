@@ -14,6 +14,7 @@ local DisplayGeometry = dofile("/games/civcraft/display_geometry.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local CityBanner = dofile("/games/civcraft/city_banner.lua")
 local QueuedRoutes = dofile("/games/civcraft/queued_routes.lua")
+local SettlementView = dofile("/games/civcraft/settlement_view.lua")
 local V = {}
 local function at(list, x, y)
 	for _, item in ipairs(list or {}) do
@@ -1136,6 +1137,7 @@ function V.draw(ui, state, player, rect)
 			)
 		end
 		AnimationView.draw(ui, state, rect, size)
+		SettlementView.drawMarkers(ui, state, player, tiles, rect, size, r)
 	end)
 	r:outline(rect.x - 1, rect.y - 1, rect.w + 2, rect.h + 2, 3)
 	-- Four narrow click strips belong to the map frame, never the side panels.
