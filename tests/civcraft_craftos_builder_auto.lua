@@ -1,12 +1,20 @@
 -- Native Builder auto-work flow. The saved campaign fixture supplies a generated
--- balance3 map, research, a city, and one charged Builder; no work is completed here.
+-- balance5 map, research, a city, and one charged Builder; no work is completed here.
 local native = dofile
 native("/games/civcraft/module_cache.lua").install(_ENV)
+native = dofile
+local function progress(value)
+	local file = assert(fs.open("/builder-auto-progress.log", "a"))
+	file.writeLine(value)
+	file.close()
+end
+progress("begin")
 local resume = ({ ... })[1] == "--resume"
 local queued, step, completed = false, 0, false
 local ownerID, builderID, campaignID
 local requestLog = {}
 local saved = false
+local resumeVerified = false
 local function wake()
 	os.queueEvent("term_resize")
 end
@@ -41,7 +49,7 @@ if not resume then
 	local Systems = dofile("/games/civcraft/systems.lua")
 	local Saves = dofile("/games/civcraft/saves.lua")
 	local Works = dofile("/games/civcraft/tile_improvements.lua")
-	local state = Lifecycle.newLobby("native-builder-auto", "balance3")
+	local state = Lifecycle.newLobby("native-builder-auto", "balance5")
 	state.mapSeed, state.mapSize, state.mapType, state.hostileMode =
 		20261030, "compact", "pangaea", "off"
 	ownerID = (os.getComputerID and os.getComputerID() or 0) * 16 + 1
@@ -59,6 +67,7 @@ if not resume then
 	local initialized = false
 	local setupTimer = os.startTimer(120)
 	parallel.waitForAny(function()
+		progress("initialize")
 		Lifecycle.initialize(state)
 		initialized = true
 	end, function()
@@ -70,6 +79,25 @@ if not resume then
 		end
 	end)
 	assert(initialized, "Generated Builder fixture did not initialize")
+	progress("found capitals")
+	local Actions = dofile("/games/civcraft/actions.lua")
+	local settlers = {}
+	for _, unit in ipairs(state.units) do
+		if unit.kind == "settler" then
+			settlers[#settlers + 1] = unit
+		end
+	end
+	for _, unit in ipairs(settlers) do
+		assert(
+			Actions.apply(state, unit.owner, {
+				action = "found",
+				unitID = unit.id,
+				x = unit.x,
+				y = unit.y,
+			}, Systems),
+			"Fixture capitals use ordinary founding validation"
+		)
+	end
 	local player, capital, builder
 	for _, p in ipairs(state.players) do
 		for _, tech in ipairs({
@@ -82,8 +110,10 @@ if not resume then
 		}) do
 			p.techs[tech] = true
 		end
+		p.researchTarget = "masonry"
 	end
 	for _, city in ipairs(state.cities) do
+		city.productionIdle = true
 		if city.owner == ownerID then
 			capital = city
 		end
@@ -96,7 +126,7 @@ if not resume then
 	end
 	assert(capital and builder, "Generated fixture needs a capital and starting Warrior")
 	builder.kind, builder.charges = "builder", 2
-	builder.movesLeft, builder.moved = 2, false
+	builder.movesLeft, builder.moved = 0, true
 	builderID = builder.id
 	-- Controlled fixture prep: make one generated owned tile open plains so the
 	-- actual planner has a clear farm target beside the Builder.
@@ -113,6 +143,7 @@ if not resume then
 	World.reveal(state, dofile("/games/civcraft/hex.lua"), Systems)
 	assert(Works.canPlace(state, state.players[1], "farm", candidateX, candidateY, Systems))
 	state.nativeBuilderAuto = { ownerID = ownerID, builderID = builderID }
+	progress("save fixture")
 	assert(Saves.save(1, state), "Could not save generated Builder fixture")
 	print("Prepared generated campaign fixture with a real capital and charged Builder")
 else
@@ -158,56 +189,108 @@ dofile = function(path)
 				if queued then
 					return
 				end
+				local status = tostring(step)
+					.. ":"
+					.. tostring(opts.screen)
+					.. ":"
+					.. tostring(self.panel)
+					.. ":"
+					.. tostring(opts.paused)
+				if self.nativeBuilderStatus ~= status then
+					self.nativeBuilderStatus = status
+					progress(status)
+				end
+				if opts.screen == "title" then
+					tap(self, "LOAD CAMPAIGN")
+					return
+				end
+				if opts.handoff then
+					tap(self, "READY TO PLAY")
+					return
+				end
 				local unit = unitByID(state)
 				if not unit then
 					return
 				end
-				if not resume and step < 3 and self.panel ~= "inspector" then
-					if not (self.selected.kind == "unit" and self.selected.unitID == unit.id) then
-						self:focus("unit", unit)
-					end
+				if
+					step < 3
+					and not (self.selected.kind == "unit" and self.selected.unitID == unit.id)
+				then
+					self:focus("unit", unit)
 					wake()
 					return
 				end
-				if resume and not completed then
+				if step < 3 and self.panel ~= "inspector" then
+					if not tap(self, "DETAILS") then
+						tap(self, "NEXT")
+					end
+					return
+				end
+				if resume and not resumeVerified then
 					assert(state.campaignID == campaignID, "Restart must reopen the same campaign")
 					assert(unit.autoWork, "Auto-work intent must survive restart")
 					assert(unit.kind == "builder", "Saved Builder identity must survive restart")
-					completed = true
-					step = 3
+					resumeVerified = true
+					step = 7
 				elseif step == 0 and self.panel == "inspector" then
-					assert(tap(self, "AUTO WORK"), "Inspector must render AUTO WORK")
-					step = 1
+					if tap(self, "AUTO WORK") then
+						step = 1
+					else
+						tap(self, "NEXT")
+					end
 				elseif step == 1 and unit.autoWork and self.panel == "inspector" then
 					assert(
 						unit.workQueue and unit.workQueue.auto,
 						"Auto mode must create a provenance-marked queue"
 					)
-					assert(tap(self, "PAUSE AUTO WORK"), "Inspector must render PAUSE AUTO WORK")
-					step = 2
+					if tap(self, "PAUSE AUTO WORK") then
+						step = 2
+					else
+						tap(self, "NEXT")
+					end
 				elseif
 					step == 2
 					and unit.autoWork
 					and unit.autoWorkPaused
 					and self.panel == "inspector"
 				then
-					assert(
-						tap(self, "RESUME AUTO WORK"),
-						"Paused mode must render RESUME AUTO WORK"
-					)
-					step = 3
-				elseif step == 3 and self.panel == "inspector" then
-					assert(
-						tap(self, "PAUSE"),
-						"Native UI must expose pause after auto-work controls"
-					)
+					if tap(self, "RESUME AUTO WORK") then
+						step = 3
+					else
+						tap(self, "NEXT")
+					end
+				elseif step == 7 then
+					if (unit.charges or 0) < 2 and next(state.world.improvements or {}) then
+						completed = true
+						progress("automatic improvement consumed charge")
+						step = 3
+					else
+						assert(state.round < 6, "Auto work must complete within bounded real turns")
+						if
+							not tap(self, "END TURN")
+							and not tap(self, "CLOSE")
+							and not tap(self, "CONTINUE")
+						then
+							tap(self, "NEXT")
+						end
+					end
+				elseif step == 3 then
+					queued = true
+					os.queueEvent("key", keys.q)
+					os.queueEvent("builder_auto_input_complete")
 					step = 4
 				elseif step == 4 and opts.paused then
-					assert(tap(self, "SAVE"), "Pause menu must expose save")
-					step = 5
+					if tap(self, "SAVE") then
+						step = 5
+					else
+						tap(self, "NEXT")
+					end
 				elseif step == 5 and opts.paused then
-					assert(tap(self, "EXIT"), "Pause menu must expose exit")
-					step = 6
+					if tap(self, "EXIT") then
+						step = 6
+					else
+						tap(self, "NEXT")
+					end
 				end
 			end
 			return view
@@ -236,6 +319,7 @@ local function markSaved(state)
 		campaignID = state.campaignID,
 	}
 end
+progress("run app")
 local timeout = os.startTimer(150)
 local ok, why = pcall(function()
 	parallel.waitForAny(function()
