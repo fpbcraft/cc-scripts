@@ -362,3 +362,20 @@ population, gold, food, industry buildings and owned claims; terrain, generated
 starting actor positions, site legality, site commands and production remain
 authoritative. This is native CraftOS-PC evidence, not an unmodified progression run
 or physical Minecraft monitor/rednet validation.
+
+## Desktop graphics and stall diagnostics
+
+`python3 tests/run_civcraft_native_session.py --gui --default-specialization --host`
+uses the native GUI terminal instead of headless text. `--monitor` instead
+exercises an emulated advanced monitor and queued `monitor_touch` events. These
+are desktop runtime checks; neither proves iPad or physical Minecraft behavior.
+The contact-HUD scenario follows the compact menu or the direct contact badge
+provided by the actual viewport.
+
+The session fixture enables `--debug`. Rotated logs retain host/display headers
+and distinguish `gc.begin/end`, `yield.wait.begin/end`, graphics strip calls,
+and freeze/unfreeze calls. Compare both retained log segments after a stall.
+`civcraft_upload_recovery_test.lua` injects native graphics and diagnostic
+failures; `civcraft_yield_trace_test.lua` separates simulated collection time
+from event waiting and verifies pending input order. Fault injection is not a
+reproduction on the target device.
