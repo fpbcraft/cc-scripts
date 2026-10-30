@@ -37,6 +37,8 @@ local existing = {
 	players = {},
 }
 local savedTiles, savedGeography = existing.world.tiles, existing.world.geography
+existing.world.starts = { { x = 7, y = 8 }, { x = 14, y = 9 } }
+local savedStarts = existing.world.starts
 W.migrate(existing)
 assert(existing.world.width == 28 and existing.world.height == 18 and existing.world.seed == 12345)
 assert(
@@ -45,6 +47,7 @@ assert(
 		and existing.world.resources["28:18"] == "iron",
 	"Larger presets must never resize or regenerate saved worlds"
 )
+assert(existing.world.starts == savedStarts, "Migration preserves saved start locations")
 assert(existing.world.generationVersion == 2, "Migration preserves saved generation version")
 local a = W.generate(12345, "standard", 3)
 local b = W.generate(12345, "standard", 3)
@@ -71,6 +74,32 @@ for k, v in pairs(a.tiles) do
 	end
 end
 assert(differences > 12, "Different seeds should produce different geography")
+local function sameStarts(left, right)
+	for index, start in ipairs(left.starts) do
+		local other = right.starts[index]
+		if start.x ~= other.x or start.y ~= other.y then
+			return false
+		end
+	end
+	return #left.starts == #right.starts
+end
+math.randomseed(1)
+local seededStarts = W.generate(84321, "standard", 3)
+math.randomseed(999)
+assert(
+	sameStarts(seededStarts, W.generate(84321, "standard", 3)),
+	"Seeded starts must not depend on global random state"
+)
+local firstSeats = {}
+for seed = 84321, 84328 do
+	local world = W.generate(seed, "standard", 3)
+	firstSeats[W.key(world.starts[1].x, world.starts[1].y)] = true
+end
+local distinctSeats = 0
+for _ in pairs(firstSeats) do
+	distinctSeats = distinctSeats + 1
+end
+assert(distinctSeats > 1, "Distinct seeds should vary the first player's starting site")
 for _, size in ipairs({ "compact", "standard", "large" }) do
 	local world = W.generate(731, size, 4)
 	for _, pos in ipairs(world.starts) do
@@ -80,7 +109,7 @@ end
 
 -- Fixed regression for the former polar-corner starts on the expanded map.
 local opening = W.generate(12345, "standard", 4, "continents", { contentRules = "balance4" })
-assert(opening.generationVersion == 4)
+assert(opening.generationVersion == 5)
 local function openingTiles(world, start, radius)
 	local count, snow = 0, 0
 	local reached = { [W.key(start.x, start.y)] = true }
