@@ -256,5 +256,256 @@
     "command": "python3 tests/run_civcraft_native_network.py --timings --reverse-race",
     "profileDirectory": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-network-zal8qp9u",
     "result": "PASS all three computers"
+  },
+  "sustainedV5OrderLoad": {
+    "sourceRevision": "7a0a5f2109948a084245cd3b7af439c0b3dedfc0",
+    "command": "python3 tests/run_civcraft_native_network.py --v5-opening --opening-rounds 20",
+    "profileDirectory": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-network-ptgl1cyr",
+    "result": "PASS host and guest; all 18 consecutive round boundaries 3..20 observed",
+    "metadata": {
+      "contentRules": "balance5",
+      "players": 3,
+      "height": 22,
+      "runtime": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+      "controlledTerrain": false,
+      "roundLimit": 20,
+      "lua": "Lua 5.2",
+      "seed": 319497,
+      "width": 32
+    },
+    "timings": {
+      "metadata": {
+        "height": 22,
+        "kind": "metadata",
+        "controlledTerrain": false,
+        "contentRules": "balance5",
+        "roundLimit": 20,
+        "width": 32,
+        "runtime": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+        "seed": 319497,
+        "players": 3,
+        "lua": "Lua 5.2"
+      },
+      "computer": 1,
+      "samples": {
+        "round:11": {
+          "snapshotMillis": 109,
+          "fromRound": 10,
+          "ackMillis": 107,
+          "action": "end",
+          "sentAt": 1793402772898,
+          "targetRound": 11,
+          "token": "naturalOpeningRound"
+        },
+        "round:3": {
+          "snapshotMillis": 49,
+          "fromRound": 2,
+          "ackMillis": 47,
+          "action": "end",
+          "sentAt": 1793402772112,
+          "targetRound": 3,
+          "token": "naturalOpeningRound"
+        },
+        "round:12": {
+          "snapshotMillis": 116,
+          "fromRound": 11,
+          "ackMillis": 114,
+          "action": "end",
+          "sentAt": 1793402773024,
+          "targetRound": 12,
+          "token": "naturalOpeningRound"
+        },
+        "naturalOpeningRound": {
+          "snapshotMillis": 128,
+          "fromRound": 19,
+          "ackMillis": 127,
+          "token": "naturalOpeningRound",
+          "sentAt": 1793402774122,
+          "targetRound": 20,
+          "action": "end"
+        },
+        "round:7": {
+          "snapshotMillis": 88,
+          "fromRound": 6,
+          "ackMillis": 86,
+          "action": "end",
+          "sentAt": 1793402772467,
+          "targetRound": 7,
+          "token": "naturalOpeningRound"
+        },
+        "round:13": {
+          "snapshotMillis": 96,
+          "fromRound": 12,
+          "ackMillis": 95,
+          "action": "end",
+          "sentAt": 1793402773157,
+          "targetRound": 13,
+          "token": "naturalOpeningRound"
+        },
+        "round:17": {
+          "snapshotMillis": 125,
+          "fromRound": 16,
+          "ackMillis": 123,
+          "action": "end",
+          "sentAt": 1793402773676,
+          "targetRound": 17,
+          "token": "naturalOpeningRound"
+        },
+        "round:10": {
+          "snapshotMillis": 90,
+          "fromRound": 9,
+          "ackMillis": 89,
+          "action": "end",
+          "sentAt": 1793402772791,
+          "targetRound": 10,
+          "token": "naturalOpeningRound"
+        },
+        "round:8": {
+          "snapshotMillis": 95,
+          "fromRound": 7,
+          "ackMillis": 94,
+          "action": "end",
+          "sentAt": 1793402772571,
+          "targetRound": 8,
+          "token": "naturalOpeningRound"
+        },
+        "round:20": {
+          "snapshotMillis": 128,
+          "fromRound": 19,
+          "ackMillis": 127,
+          "action": "end",
+          "sentAt": 1793402774122,
+          "targetRound": 20,
+          "token": "naturalOpeningRound"
+        },
+        "round:6": {
+          "snapshotMillis": 97,
+          "fromRound": 5,
+          "ackMillis": 95,
+          "action": "end",
+          "sentAt": 1793402772352,
+          "targetRound": 6,
+          "token": "naturalOpeningRound"
+        },
+        "round:19": {
+          "snapshotMillis": 144,
+          "fromRound": 18,
+          "ackMillis": 142,
+          "action": "end",
+          "sentAt": 1793402773962,
+          "targetRound": 19,
+          "token": "naturalOpeningRound"
+        },
+        "round:5": {
+          "snapshotMillis": 71,
+          "fromRound": 4,
+          "ackMillis": 70,
+          "action": "end",
+          "sentAt": 1793402772264,
+          "targetRound": 5,
+          "token": "naturalOpeningRound"
+        },
+        "round:18": {
+          "snapshotMillis": 128,
+          "fromRound": 17,
+          "ackMillis": 127,
+          "action": "end",
+          "sentAt": 1793402773817,
+          "targetRound": 18,
+          "token": "naturalOpeningRound"
+        },
+        "naturalOpeningMove": {
+          "snapshotMillis": 16,
+          "ackMillis": 14,
+          "x": 25,
+          "y": 5,
+          "budget": 1,
+          "unitID": 4,
+          "sentAt": 1793402772082,
+          "token": "naturalOpeningMove",
+          "action": "move"
+        },
+        "round:16": {
+          "snapshotMillis": 124,
+          "fromRound": 15,
+          "ackMillis": 123,
+          "action": "end",
+          "sentAt": 1793402773535,
+          "targetRound": 16,
+          "token": "naturalOpeningRound"
+        },
+        "round:4": {
+          "snapshotMillis": 69,
+          "fromRound": 3,
+          "ackMillis": 66,
+          "action": "end",
+          "sentAt": 1793402772178,
+          "targetRound": 4,
+          "token": "naturalOpeningRound"
+        },
+        "round:15": {
+          "snapshotMillis": 107,
+          "fromRound": 14,
+          "ackMillis": 105,
+          "action": "end",
+          "sentAt": 1793402773410,
+          "targetRound": 15,
+          "token": "naturalOpeningRound"
+        },
+        "round:14": {
+          "snapshotMillis": 122,
+          "fromRound": 13,
+          "ackMillis": 121,
+          "action": "end",
+          "sentAt": 1793402773271,
+          "targetRound": 14,
+          "token": "naturalOpeningRound"
+        },
+        "round:9": {
+          "snapshotMillis": 91,
+          "fromRound": 8,
+          "ackMillis": 90,
+          "action": "end",
+          "sentAt": 1793402772683,
+          "targetRound": 9,
+          "token": "naturalOpeningRound"
+        }
+      }
+    },
+    "roundAckSummary": {
+      "count": 18,
+      "minimumMillis": 47,
+      "medianMillis": 100.0,
+      "maximumMillis": 142
+    },
+    "roundSnapshotSummary": {
+      "count": 18,
+      "minimumMillis": 49,
+      "medianMillis": 102.0,
+      "maximumMillis": 144
+    },
+    "limitations": [
+      "Fixed scenario on one Mac; not physical rednet, iPad or release-budget evidence.",
+      "Human production and research queues are idle; AI runs normal rules. This is not a played-campaign pacing or balance result.",
+      "Round latency includes host, AI, rules and transport and is not pure network overhead."
+    ],
+    "failedAttempts": [
+      {
+        "profile": "re5_fd8x",
+        "result": "FAIL: harness attempted JSON serialization with shared table references; fixed by independent sample records"
+      }
+    ],
+    "artifactSha256": {
+      "computer/0/civcraft-network-metadata.json": "7f47b320233f496398a9aa5ffa4e2827f5c9095f6c35715675d1c03fa2c3465a",
+      "computer/1/civcraft-network-timings.json": "16fda5a9f26edb284bd9e4fedae168194e8bba1fed0532fb537ed4bb85fadc3e",
+      "computer/0/civcraft-network-test.txt": "a25603c0f30b3e4d957034e4859af2e8ec4ddd6dfe8848e5e11fc49a3087ffa7",
+      "computer/1/civcraft-network-test.txt": "3657b939f385b9144c92304917f978ef91a8dfc3a71e6c2ce8c5b5fe0d631f00"
+    },
+    "shortModeCompatibility": {
+      "command": "python3 tests/run_civcraft_native_network.py --v5-opening",
+      "profile": "otb39emb",
+      "result": "PASS host and guest on the same source; one round boundary"
+    },
+    "invalidCliValidation": "Four invalid combinations rejected with exit2 before native launch: rounds2, rounds41, rounds20 without V5, V5 with reversed legacy race"
   }
 }
