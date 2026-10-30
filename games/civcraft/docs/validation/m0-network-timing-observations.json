@@ -10,9 +10,9 @@
     "notMeasured": [
       "Remote physical rednet latency",
       "Click-to-render latency",
-      "Natural V5 opening network timing",
       "Packet-loss latency distributions",
-      "Target-device release budgets"
+      "Target-device release budgets",
+      "Long V5 multiplayer campaign latency distributions"
     ]
   },
   "runs": [
@@ -110,5 +110,151 @@
         "computer/2/civcraft-network-test.txt": "3b373abc5076b47e8ab4943aeca129a6149059bd01859c4725a46ccc0392248d"
       }
     }
-  ]
+  ],
+  "naturalV5Opening": {
+    "sourceRevision": "b93f2dbf564d7755dabf6bd2a66d1c02d4bc8fa0",
+    "scope": "Natural V5 initial founding, guest movement and ordinary round boundary. Full first-build/research/expansion/civilian workflow remains the separate #157 observation.",
+    "limitations": [
+      "Two repeated fixed-seed runs; no latency distribution or target-device budget.",
+      "Actual network is an emulated modem inside CraftOS-PC; physical Minecraft/rednet and iPad are untested.",
+      "Commands remain serialized. Received result and matching state snapshot are timed independently. The guest workflow also waits until its current UI snapshot reflects the effect.",
+      "No terrain edits, resource grants or technology grants. Hostile mode is off as the fixed correctness scenario configuration."
+    ],
+    "failedAttempts": [
+      {
+        "profile": "w88nl2uu",
+        "result": "FAIL: harness indexed missing initial guest snapshot"
+      },
+      {
+        "profile": "2ftqt5df",
+        "result": "FAIL: harness cleared serialized wait on an unrelated snapshot"
+      },
+      {
+        "profile": "7bfdk_3i",
+        "result": "Stopped after confirming host-ready coordination deadlock in harness; not a pass"
+      }
+    ],
+    "runs": [
+      {
+        "command": "python3 tests/run_civcraft_native_network.py --v5-opening",
+        "profileDirectory": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-network-pkfeorsn",
+        "result": "PASS on host and guest",
+        "metadata": {
+          "contentRules": "balance5",
+          "controlledTerrain": false,
+          "width": 32,
+          "players": 3,
+          "runtime": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+          "seed": 319497,
+          "lua": "Lua 5.2",
+          "height": 22
+        },
+        "timings": {
+          "metadata": {
+            "contentRules": "balance5",
+            "controlledTerrain": false,
+            "width": 32,
+            "kind": "metadata",
+            "lua": "Lua 5.2",
+            "players": 3,
+            "runtime": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+            "height": 22,
+            "seed": 319497
+          },
+          "samples": {
+            "naturalOpeningMove": {
+              "budget": 1,
+              "unitID": 4,
+              "x": 25,
+              "y": 5,
+              "token": "naturalOpeningMove",
+              "snapshotMillis": 19,
+              "ackMillis": 16,
+              "action": "move",
+              "sentAt": 1793402011068
+            },
+            "naturalOpeningRound": {
+              "targetRound": 3,
+              "action": "end",
+              "fromRound": 2,
+              "snapshotMillis": 51,
+              "sentAt": 1793402011102,
+              "ackMillis": 49,
+              "token": "naturalOpeningRound"
+            }
+          },
+          "computer": 1
+        },
+        "artifactSha256": {
+          "computer/0/civcraft-network-metadata.json": "14fc70a93872815d674b544d65662653e907373270b384fde046b882a1a997a4",
+          "computer/1/civcraft-network-timings.json": "6f1b795c844bb58334c0a1f342a9baccf6475b6291944587858d66ab69cdb3ae",
+          "computer/0/civcraft-network-test.txt": "4f27ab20d1b22a5df0923748aba070e4d55ae6bfa138b0bf7c27d89e2861fb7c",
+          "computer/1/civcraft-network-test.txt": "e7070a4537a13a94b65bea9bf27b26e675a472e5c805072a7c8b27583d01b22f"
+        }
+      },
+      {
+        "command": "python3 tests/run_civcraft_native_network.py --v5-opening",
+        "profileDirectory": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-network-3sl3fsu4",
+        "result": "PASS on host and guest",
+        "metadata": {
+          "contentRules": "balance5",
+          "lua": "Lua 5.2",
+          "runtime": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+          "players": 3,
+          "controlledTerrain": false,
+          "width": 32,
+          "height": 22,
+          "seed": 319497
+        },
+        "timings": {
+          "samples": {
+            "naturalOpeningMove": {
+              "sentAt": 1793402037131,
+              "y": 5,
+              "x": 25,
+              "snapshotMillis": 17,
+              "ackMillis": 15,
+              "token": "naturalOpeningMove",
+              "budget": 1,
+              "unitID": 4,
+              "action": "move"
+            },
+            "naturalOpeningRound": {
+              "sentAt": 1793402037161,
+              "snapshotMillis": 48,
+              "ackMillis": 47,
+              "fromRound": 2,
+              "token": "naturalOpeningRound",
+              "targetRound": 3,
+              "action": "end"
+            }
+          },
+          "computer": 1,
+          "metadata": {
+            "controlledTerrain": false,
+            "height": 22,
+            "seed": 319497,
+            "lua": "Lua 5.2",
+            "players": 3,
+            "runtime": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+            "width": 32,
+            "kind": "metadata",
+            "contentRules": "balance5"
+          }
+        },
+        "artifactSha256": {
+          "computer/0/civcraft-network-metadata.json": "4221bf999281e05e2c3ad95d4c0c08629a9a6835fa1b3e31f2e76d87ae06c806",
+          "computer/1/civcraft-network-timings.json": "d78bda8a899a282570cd0a8562460d9143a4e2f05cdf20112852c26ed548975e",
+          "computer/0/civcraft-network-test.txt": "6a56a168c4e821894b5455664bc63b8416d5f01f31b55d5b3d9f8d3b2a3f1ab1",
+          "computer/1/civcraft-network-test.txt": "91b8d2c6f71a6135eaf1a96042b3130c7cdd3898d85ec7dff49a49a9b167d5c0"
+        }
+      }
+    ]
+  },
+  "compatibilityRerun": {
+    "sourceRevision": "b93f2dbf564d7755dabf6bd2a66d1c02d4bc8fa0",
+    "command": "python3 tests/run_civcraft_native_network.py --timings --reverse-race",
+    "profileDirectory": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-network-zal8qp9u",
+    "result": "PASS all three computers"
+  }
 }
