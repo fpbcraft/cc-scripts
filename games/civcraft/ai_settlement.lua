@@ -3,6 +3,7 @@ local Routes = dofile("/games/civcraft/ai_routes.lua")
 local World = dofile("/games/civcraft/world.lua")
 local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local Founding = dofile("/games/civcraft/founding.lua")
 local Settlement = {}
 
 function Settlement.value(view, player, x, y, unit)
@@ -11,12 +12,11 @@ function Settlement.value(view, player, x, y, unit)
 	if claim and claim.owner ~= player.id then
 		return nil
 	end
-	if
-		not view.world.tiles[key]
-		or Hex.terrain(x, y, view) == "water"
-		or not Hex.passable(x, y, view, unit or { owner = player.id, kind = "settler" })
-		or (view.world.landmarks or {})[key]
-	then
+	if not view.world.tiles[key] or (view.world.landmarks or {})[key] then
+		return nil
+	end
+	local legal = Founding.canFound(view, player.id, x, y, nil, unit)
+	if not legal then
 		return nil
 	end
 	local home, homes = math.huge, 0
