@@ -9,6 +9,8 @@ local Capacity = dofile("/games/civcraft/settlement_capacity.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Suggestions = {}
 local MAX_RESULTS = 256
+Suggestions.minimumCityDistance = 4
+Suggestions.minimumRecommendationDistance = 4
 
 local function known(view, x, y)
 	local key = World.key(x, y)
@@ -107,6 +109,91 @@ local function futureSpecialties(view, player, x, y)
 	return result
 end
 
+-- Exact observed inputs keep same-table exploration updates from leaving stale icons.
+function Suggestions.observationSignature(view, observerId, settler, systems)
+	local parts = {
+		tostring(observerId),
+		tostring(settler.id),
+		tostring(view.contentRules),
+		tostring(view.campaignID),
+	}
+	local function add(value)
+		if type(value) ~= "table" then
+			parts[#parts + 1] = type(value) .. ":" .. tostring(value)
+			return
+		end
+		local keys = {}
+		for key in pairs(value) do
+			keys[#keys + 1] = key
+		end
+		table.sort(keys, function(a, b)
+			return tostring(a) < tostring(b)
+		end)
+		parts[#parts + 1] = "{"
+		for _, key in ipairs(keys) do
+			add(key)
+			add(value[key])
+		end
+		parts[#parts + 1] = "}"
+	end
+	local world = view.world
+	add({ world.width, world.height, world.wrapX, world.terrainYieldVersion })
+	local checked = 0
+	for y = 1, world.height do
+		for x = 1, world.width do
+			if known(view, x, y) then
+				local key = World.key(x, y)
+				add(key)
+				for _, field in ipairs({
+					"tiles",
+					"geography",
+					"resources",
+					"improvements",
+					"observedOwners",
+					"landmarks",
+				}) do
+					add((world[field] or {})[key])
+				end
+				checked = checked + 1
+				if checked % 64 == 0 and systems and systems.checkpoint then
+					systems.checkpoint()
+				end
+			end
+		end
+	end
+	for _, city in ipairs(view.cities or {}) do
+		add({ city.id, city.owner, city.x, city.y, city.sites, city.siteProjects })
+	end
+	add(view.spawners or {})
+	for _, player in ipairs(view.players or {}) do
+		if player.id == observerId then
+			add(player.techs or {})
+		end
+	end
+	return table.concat(parts, "\31")
+end
+
+local function regionScore(view, x, y)
+	local score, food, industry = 0, 0, 0
+	for _, point in ipairs(Hex.withinRadius(x, y, 3, view)) do
+		if known(view, point.x, point.y) then
+			local key = World.key(point.x, point.y)
+			local owner = (view.world.observedOwners or {})[key]
+			-- Existing claims are less useful than fresh workable land for a new city.
+			local weight = (4 - Hex.distance(x, y, point.x, point.y, view))
+				* (owner ~= nil and 0.5 or 1)
+			local yields = World.yields(view.world, point.x, point.y, view)
+			food = food + yields.food * weight
+			industry = industry + yields.industry * weight
+			score = score + (yields.food * 2 + yields.industry + (yields.science or 0)) * weight
+			if (view.world.resources or {})[key] then
+				score = score + 3 * weight
+			end
+		end
+	end
+	return score, food, industry
+end
+
 function Suggestions.forSettler(view, observerId, settler, systems, limit)
 	-- Returns globally ranked canonical candidates from the projected view. Checkpoints run
 	-- each row and every 64 known tiles; output is capped after ranking to `limit` (max 256).
@@ -142,14 +229,22 @@ function Suggestions.forSettler(view, observerId, settler, systems, limit)
 				if observedOwner and observedOwner ~= observerId then
 					legal = false
 				end
+				for _, city in ipairs(view.cities or {}) do
+					if
+						Hex.distance(x, y, city.x, city.y, view) < Suggestions.minimumCityDistance
+					then
+						legal = false
+						break
+					end
+				end
 				if legal then
-					local yields = World.yields(view.world, x, y, view)
+					local score, food, industry = regionScore(view, x, y)
 					found[#found + 1] = {
 						x = x,
 						y = y,
-						score = yields.food * 2 + yields.industry,
-						food = yields.food,
-						industry = yields.industry,
+						score = score,
+						food = food,
+						industry = industry,
 					}
 				end
 			end
@@ -161,9 +256,26 @@ function Suggestions.forSettler(view, observerId, settler, systems, limit)
 		end
 		return a.y == b.y and a.x < b.x or a.y < b.y
 	end)
-	while #found > limit do
-		found[#found] = nil
+	local separated = {}
+	for _, candidate in ipairs(found) do
+		local distinct = candidate.score > 0
+		for _, prior in ipairs(separated) do
+			if
+				Hex.distance(candidate.x, candidate.y, prior.x, prior.y, view)
+				< Suggestions.minimumRecommendationDistance
+			then
+				distinct = false
+				break
+			end
+		end
+		if distinct then
+			separated[#separated + 1] = candidate
+		end
+		if #separated >= limit then
+			break
+		end
 	end
+	found = separated
 	for index, candidate in ipairs(found) do
 		if systems and systems.checkpoint and index % 16 == 0 then
 			systems.checkpoint()

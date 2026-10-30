@@ -1733,9 +1733,7 @@ function UI:tap(x, y)
 				and ry >= target.y
 				and ry < target.y + target.h
 			then
-				self.settlementSuggestionDetail = { x = target.site.x, y = target.site.y }
-				self.settlementSuggestionOffset = 0
-				self.panel = "settlementSuggestions"
+				-- Recommendation icons are passive: preserve the selected Settler.
 				return true
 			end
 		end

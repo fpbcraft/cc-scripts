@@ -131,7 +131,7 @@ assert(
 	sites[1].incompleteKnowledge and sites[1].knowledgeNote:find("explored observations", 1, true)
 )
 local worksOpportunity = false
-local waterCandidate = false
+
 for index, site in ipairs(sites) do
 	assert(player.explored[site.x .. ":" .. site.y])
 	assert(site.capacity.active and site.capacity.base == 4)
@@ -162,16 +162,21 @@ for index, site in ipairs(sites) do
 		)
 		worksOpportunity = worksOpportunity or specialty.kind == "works"
 	end
-	waterCandidate = waterCandidate
-		or (site.x == 6 and site.y == 4 and site.capacity.waterBonus == 1)
-	if site.x == 6 and site.y == 4 then
-		local canonical =
-			Capacity.details(view, { x = site.x, y = site.y, buildings = {} }, Content.buildings)
-		assert(site.capacity.observedMinimum == canonical.total)
+	local canonical =
+		Capacity.details(view, { x = site.x, y = site.y, buildings = {} }, Content.buildings)
+	assert(
+		site.capacity.observedMinimum == canonical.total,
+		"Observed water uses canonical capacity"
+	)
+	for _, city in ipairs(view.cities) do
+		assert(Hex.distance(site.x, site.y, city.x, city.y, view) >= 4)
+	end
+	for other = 1, index - 1 do
+		assert(Hex.distance(site.x, site.y, sites[other].x, sites[other].y, view) >= 4)
 	end
 end
 assert(worksOpportunity, "M3 site roles use the explored geography contract")
-assert(waterCandidate, "Observed adjacent water uses canonical capacity rules")
+
 assert(not Founding.canFound(state, 1, 3, 2), "Three hex spacing is shared founding legality")
 assert(Founding.canFound(state, 1, 6, 4), "A separated land tile is legal")
 state.spawners = { { x = 6, y = 4, cleared = false } }
@@ -191,17 +196,39 @@ end
 local after = snapshot(World.forPlayer(state, 1))
 assert(before == after, "Hidden terrain and resources do not change suggestions")
 
--- An unknown neighbor that is water in authority cannot grant observer capacity.
+-- New revealed information changes the same projected view's advisory inputs.
 state, player = fixture(false)
-state.world.tiles["9:6"] = "water"
 view = World.forPlayer(state, 1)
-local boundary
-for _, site in ipairs(Suggestions.forSettler(view, 1, state.units[1])) do
-	if site.x == 8 and site.y == 6 then
-		boundary = site
+local signature = Suggestions.observationSignature(view, 1, state.units[1])
+local oldSites = snapshot(view)
+for y = 1, view.world.height do
+	for x = 9, view.world.width do
+		local key = World.key(x, y)
+		view.world.tiles[key] = "plains"
+		view.world.resources[key] = "grain"
 	end
 end
-assert(boundary and boundary.capacity.waterBonus == 0, "Unknown water does not affect capacity")
+assert(
+	signature ~= Suggestions.observationSignature(view, 1, state.units[1]),
+	"Revealed land invalidates advice"
+)
+assert(oldSites ~= snapshot(view), "New productive land can replace earlier recommendations")
+local updated = Suggestions.observationSignature(view, 1, state.units[1])
+view.cities[#view.cities + 1] = { id = 20, owner = 2, x = 10, y = 4 }
+assert(
+	updated ~= Suggestions.observationSignature(view, 1, state.units[1]),
+	"New known cities invalidate advice"
+)
+for _, site in ipairs(Suggestions.forSettler(view, 1, state.units[1])) do
+	assert(
+		Hex.distance(site.x, site.y, 10, 4, view) >= 4,
+		"Recommendations avoid the newly known city"
+	)
+end
+assert(
+	Founding.canFound(state, 1, 5, 2),
+	"Advisory four-hex spacing does not prohibit legal three-hex founding"
+)
 
 -- Canonical site previews ignore obvious tiles already unavailable for placement.
 state, player = fixture(false)
