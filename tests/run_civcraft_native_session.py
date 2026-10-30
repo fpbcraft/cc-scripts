@@ -12,6 +12,7 @@ parser.add_argument(
     default=shutil.which("craftos") or "/Applications/CraftOS-PC.app/Contents/MacOS/craftos",
 )
 parser.add_argument("--monitor", action="store_true", help="Use a real emulated monitor and monitor_touch; requires GUI")
+parser.add_argument("--gui", action="store_true", help="Use the native GUI terminal instead of headless text")
 profile = parser.add_mutually_exclusive_group()
 profile.add_argument("--specialization", action="store_true", help="Select Specialization V5 in the native lobby")
 profile.add_argument(
@@ -93,7 +94,7 @@ end)
 local file = assert(fs.open("/session-return.txt", "w"))
 file.write(ok and "PASS" or tostring(why)); file.close(); os.shutdown()''' % (install, arguments, specialization)
 command = [args.craftos, "--directory", str(profile), "--exec", script]
-if not args.monitor:
+if not (args.monitor or args.gui):
     command.insert(1, "--headless")
 print(f"Isolated profile: {profile}", flush=True)
 with (profile / "native-console.log").open("w") as console:
