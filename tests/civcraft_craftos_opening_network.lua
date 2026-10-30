@@ -187,7 +187,7 @@ local function workflow(ui, state, options)
 		issue(ui, "exit")
 		return
 	end
-	if p.ready then
+	if p.ready and id == 1 then
 		return
 	end
 	if ui:animating() then
@@ -240,7 +240,9 @@ local function workflow(ui, state, options)
 		elseif controls.naturalOpeningMove and not endRequested then
 			endRequested = true
 			control("measureEnd", { targetRound = state.round + 1 })
-			issue(ui, "end")
+			if not p.ready then
+				issue(ui, "end")
+			end
 		elseif controls.naturalOpeningRound then
 			control("finish")
 		end
