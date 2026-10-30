@@ -11,7 +11,7 @@ local env =
 	dofile("/games/civcraft/_lib/fpb/loader.lua").environment("/games/civcraft", _ENV, "game.lua")
 local baseFile, baseNet = env.dofile, rednet
 local controls, samples, metadata = {}, {}, nil
-local pending, complete, created, newRequested, joined, guestFounded
+local pending, complete, created, newRequested, guestFounded
 local sentEndRound, guestEndRound, moveRequested, endRequested
 local function player(state, owner)
 	for _, p in ipairs(state.players or {}) do
@@ -67,16 +67,46 @@ function env.rednet.send(to, packet, outgoingProtocol)
 	then
 		assert(not pending, "Guest commands must remain serialized")
 		pending = { action = packet.action, sentAt = os.epoch("utc") }
-		if packet.action == "move" and controls.measureMove then
-			pending.token = "naturalOpeningMove"
+		if packet.action == "move" then
 			pending.unitID, pending.x, pending.y = packet.unitID, packet.x, packet.y
-			pending.budget = controls.measureMove.budget
-		elseif packet.action == "end" and controls.measureEnd then
-			pending.token, pending.targetRound =
-				"naturalOpeningRound", controls.measureEnd.targetRound
+			if controls.measureMove then
+				pending.token, pending.budget = "naturalOpeningMove", controls.measureMove.budget
+			end
+		elseif packet.action == "found" then
+			pending.cityX, pending.cityY = packet.x, packet.y
+		elseif packet.action == "end" then
+			pending.fromRound = packet.round
+			if controls.measureEnd then
+				pending.token, pending.targetRound =
+					"naturalOpeningRound", controls.measureEnd.targetRound
+			end
 		end
 	end
 	return baseNet.send(to, packet, outgoingProtocol)
+end
+local function matches(state, request)
+	if not state then
+		return false
+	end
+	if request.unitID then
+		local u = unit(state, request.unitID)
+		return u
+			and u.x == request.x
+			and u.y == request.y
+			and (request.budget == nil or u.movesLeft == request.budget)
+	elseif request.cityX then
+		for _, city in ipairs(state.cities or {}) do
+			if city.owner == id and city.x == request.cityX and city.y == request.cityY then
+				return true
+			end
+		end
+		return false
+	elseif request.targetRound then
+		return state.round >= request.targetRound
+	elseif request.action == "end" then
+		return player(state, id).ready or state.round > request.fromRound
+	end
+	return false
 end
 function env.rednet.receive(filter, timeout)
 	local sender, packet, receivedProtocol = baseNet.receive(filter, timeout)
@@ -84,28 +114,8 @@ function env.rednet.receive(filter, timeout)
 		if packet.type == "result" then
 			assert(packet.ok, tostring(pending.action) .. ": " .. tostring(packet.message))
 			pending.ackMillis = pending.ackMillis or os.epoch("utc") - pending.sentAt
-		elseif packet.type == "state" then
-			local state, matched = packet.state, true
-			if pending.unitID then
-				local u = unit(state, pending.unitID)
-				matched = u
-					and u.x == pending.x
-					and u.y == pending.y
-					and u.movesLeft == pending.budget
-			elseif pending.targetRound then
-				matched = state.round >= pending.targetRound
-			end
-			if matched then
-				pending.snapshotMillis = pending.snapshotMillis or os.epoch("utc") - pending.sentAt
-			end
-		end
-		if pending.ackMillis and pending.snapshotMillis then
-			if pending.token then
-				samples[pending.token] = pending
-				writeTimings()
-				control(pending.token, { sample = pending })
-			end
-			pending = nil
+		elseif packet.type == "state" and matches(packet.state, pending) then
+			pending.snapshotMillis = pending.snapshotMillis or os.epoch("utc") - pending.sentAt
 		end
 	end
 	return sender, packet, receivedProtocol
@@ -129,7 +139,15 @@ local function founding(ui, state, p)
 end
 local function workflow(ui, state, options)
 	if id == 1 and pending then
-		return
+		if not (pending.ackMillis and pending.snapshotMillis and matches(state, pending)) then
+			return
+		end
+		if pending.token then
+			samples[pending.token] = pending
+			writeTimings()
+			control(pending.token, { sample = pending })
+		end
+		pending = nil
 	end
 	if id == 0 and options.screen == "title" then
 		if not newRequested then
