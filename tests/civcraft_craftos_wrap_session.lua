@@ -61,6 +61,8 @@ World.reveal(state, Hex, Systems)
 
 local requests = {}
 local function dispatch(action, request)
+	request = request or {}
+	request.action = action
 	requests[#requests + 1] =
 		{ action = action, x = request and request.x, y = request and request.y }
 	local ok, why = Actions.apply(state, 1, request, Systems)
@@ -92,7 +94,7 @@ local function tap(x, y)
 	local sx, sy = screenPoint(x, y)
 	if monitorMode then
 		os.queueEvent("monitor_touch", "top", sx, sy)
-		local event, side, px, py = os.pullEvent()
+		local event, side, px, py = os.pullEvent("monitor_touch")
 		assert(
 			event == "monitor_touch" and side == "top",
 			"Native monitor touch event was not queued"
@@ -100,11 +102,11 @@ local function tap(x, y)
 		ui:tap(px, py)
 	else
 		os.queueEvent("mouse_click", 1, sx, sy)
-		local event, button, px, py = os.pullEvent()
+		local event, button, px, py = os.pullEvent("mouse_click")
 		assert(event == "mouse_click" and button == 1, "Native mouse click event was not queued")
 		ui:pointerDown(px, py)
 		os.queueEvent("mouse_up", 1, sx, sy)
-		local release, releaseButton, rx, ry = os.pullEvent()
+		local release, releaseButton, rx, ry = os.pullEvent("mouse_up")
 		assert(release == "mouse_up" and releaseButton == 1, "Native mouse release was not queued")
 		ui:pointerUp(rx, ry)
 	end
@@ -145,11 +147,9 @@ local function findUnitCopies()
 			result[#result + 1] = target
 		end
 	end
-	if #result == 0 then
-		for _, target in ipairs(ui.unitBadgeTargets or {}) do
-			if target.unit.id == 11 then
-				result[#result + 1] = target
-			end
+	for _, target in ipairs(ui.unitBadgeTargets or {}) do
+		if target.unit.id == 11 then
+			result[#result + 1] = target
 		end
 	end
 	return result
@@ -208,15 +208,34 @@ assert(ui.selected.kind == "city" and ui.selected.x == 2 and ui.selected.y == 2)
 draw()
 
 local unitCopies = findUnitCopies()
-assert(#unitCopies > 1, "Repeated native unit icon or badge targets were not produced")
+assert(
+	#unitCopies > 1,
+	"Repeated native unit icon or badge targets were not produced: "
+		.. textutils.serialize({
+			count = #unitCopies,
+			viewport = ui.mapViewport,
+			panY = ui.panY,
+			icons = #ui.unitIconTargets,
+			badges = #ui.unitBadgeTargets,
+		})
+)
 local unitX, unitY = targetPoint(unitCopies[#unitCopies])
 tap(unitX, unitY)
 assert(ui.selected.kind == "unit" and ui.selected.unitID == 11)
 draw()
 
+if ui.panel ~= "context" then
+	tapButton("CLOSE")
+end
 local beforeZoom = ui.mapViewport.tile
 if not button("ZOOM IN") then
 	tapButton("MAP TOOLS")
+end
+for _ = 1, 12 do
+	if button("ZOOM IN") then
+		break
+	end
+	tapButton("NEXT")
 end
 tapButton("ZOOM IN")
 assert(ui.mapViewport.tile > beforeZoom, "Queued native zoom input did not zoom the wrapped map")
@@ -224,25 +243,75 @@ local periodX = ui.mapViewport.periodX
 ui.panX = periodX - 2
 draw()
 local beforePan = ui.panX
-local edge = assert(button("MAP RIGHT"), "Wrapped map has no right pan target")
+local edge = assert(button("MAP RIGHT EDGE"), "Wrapped map has no right pan target")
 local edgeX, edgeY = targetPoint(edge)
+local panCalls = 0
+local nativePan = ui.pan
+ui.pan = function(self, ...)
+	panCalls = panCalls + 1
+	return nativePan(self, ...)
+end
 tap(edgeX, edgeY)
-assert(ui.panX ~= beforePan, "Queued native edge input did not pan the wrapped map")
+assert(panCalls == 1, "Queued native edge input did not invoke map panning")
+assert(ui.panX == (beforePan + 3 * ui.mapViewport.tile) % ui.mapViewport.periodX)
+ui.pan = nativePan
 assert(ui.panX >= 0 and ui.panX < ui.mapViewport.periodX, "Wrapped pan escaped its display period")
 draw()
 
 -- Start movement through the actual inspector control, select a repeated target
 -- hex, and confirm through the real UI dispatch path into Actions.apply.
-local moveButton = assert(button("MOVE / ATTACK"), "Selected scout has no native move control")
+if not button("MOVE / ATTACK") then
+	tapButton("DETAILS")
+end
+for _ = 1, 20 do
+	if button("MOVE / ATTACK") then
+		break
+	end
+	tapButton("NEXT")
+end
+local moveButton = assert(
+	button("MOVE / ATTACK"),
+	"Selected scout has no native move control: "
+		.. textutils.serialize({
+			selected = ui.selected,
+			panel = ui.panel,
+			buttons = (function()
+				local t = {}
+				for _, b in ipairs(ui.r.buttons) do
+					t[#t + 1] = b.label
+				end
+				return t
+			end)(),
+		})
+)
 local moveX, moveY = targetPoint(moveButton)
 tap(moveX, moveY)
 draw()
 local seamTarget
-for _, target in ipairs(ui.hexTargets or {}) do
-	if target.tx == width and target.ty == 4 then
-		seamTarget = target
+for _ = 1, height do
+	local v = ui.mapViewport
+	for _, target in ipairs(ui.hexTargets or {}) do
+		local x, y = targetPoint(target)
+		if
+			target.tx == width
+			and target.ty == 4
+			and x >= v.x
+			and x < v.x + v.w
+			and y >= v.y
+			and y < v.y + v.h
+		then
+			seamTarget = target
+			break
+		end
+	end
+	if seamTarget then
 		break
 	end
+	local sourceY = ui.mapViewport.y
+		+ 3 * ui.mapViewport.tile * 0.75
+		+ ui.mapViewport.tile / 2
+		- ui.panY
+	tapButton(sourceY < ui.mapViewport.y and "MAP UP EDGE" or "MAP DOWN EDGE")
 end
 assert(seamTarget, "Canonical seam destination has no visible native hex target")
 local targetX, targetY = targetPoint(seamTarget)
@@ -293,7 +362,7 @@ AnimationFrame.paint(
 	ownView.world
 )
 assert(
-	math.abs(displayFrame.sprites[1].position.x - 0.75) < 0.001,
+	math.abs(displayFrame.sprites[1].position.x - (1 - ui.animationFrame.progress)) < 0.001,
 	"Seam movement animation took the long map path"
 )
 local cameraCenterX = (ui.panX + ui.mapViewport.w / 2) / ui.mapViewport.tile
@@ -305,6 +374,12 @@ assert(followDistance < 0.01, "Camera did not follow the nearby animated copy")
 
 if not button("WORLD OVERVIEW") then
 	tapButton("MAP TOOLS")
+end
+for _ = 1, 12 do
+	if button("WORLD OVERVIEW") then
+		break
+	end
+	tapButton("NEXT")
 end
 tapButton("WORLD OVERVIEW")
 local minimap = assert(button("MINIMAP"), "Native minimap has no pointer target")
@@ -328,7 +403,7 @@ end
 legacy.world.wrapX = nil
 assert(Saves.save(2, legacy), "Native legacy bounded campaign save failed")
 local legacySave = assert(Saves.load(2), "Native legacy campaign did not reload")
-Systems.migrate(legacySave)
+Systems.migrate(World.migrate(legacySave))
 assert(legacySave.world.wrapX == false, "Missing wrap flag did not migrate to bounded topology")
 assert(Hex.canonical(0, 4, legacySave) == nil, "Legacy missing-wrap save accepted a wrapped alias")
 assert(

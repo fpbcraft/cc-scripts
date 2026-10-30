@@ -20,6 +20,8 @@ local restoredCheckpoint
 local phase = "start"
 local lastView = {}
 local drawnText = {}
+local pageHistory = {}
+local lastPageKey
 local stopStep = 0
 local function wake()
 	os.queueEvent("term_resize")
@@ -615,6 +617,19 @@ dofile = function(path)
 				for _, button in ipairs(self.r.buttons or {}) do
 					lastView.buttons[#lastView.buttons + 1] = button.label
 				end
+				local pageKey = table.concat({
+					phase,
+					tostring(self.inspectorOffset),
+					tostring(self.siteSource),
+					tostring(self.productionCategory),
+				}, ":")
+				if pageKey ~= lastPageKey then
+					pageHistory[#pageHistory + 1] = lastView
+					if #pageHistory > 40 then
+						table.remove(pageHistory, 1)
+					end
+					lastPageKey = pageKey
+				end
 				drive(self, state, observer, options)
 			end
 			return view
@@ -636,6 +651,9 @@ local ok, why = pcall(function()
 		while true do
 			local event, id = os.pullEvent()
 			if event == "timer" and id == timeout then
+				local file = assert(fs.open("/specialty-session-pages.json", "w"))
+				file.write(textutils.serializeJSON(pageHistory))
+				file.close()
 				error(
 					"Specialty native session timed out: "
 						.. phase
