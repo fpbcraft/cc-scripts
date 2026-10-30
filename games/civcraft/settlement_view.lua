@@ -123,8 +123,13 @@ function V.drawDetails(ui, state, player, rect)
 	local rows = {}
 	if site then
 		rows[#rows + 1] = { text = "SITE " .. selectedIndex .. " AT " .. site.x .. "," .. site.y }
-		rows[#rows + 1] = { text = "FOOD " .. site.reasons[1]:match("Food yield: (.+)") }
-		rows[#rows + 1] = { text = "INDUSTRY " .. site.reasons[2]:match("Industry yield: (.+)") }
+		rows[#rows + 1] =
+			{ text = "NATURAL TILE FOOD " .. site.reasons[1]:match("Food yield: (.+)") }
+		rows[#rows + 1] =
+			{ text = "NATURAL TILE INDUSTRY " .. site.reasons[2]:match("Industry yield: (.+)") }
+		rows[#rows + 1] = {
+			text = "These are natural tile yields before founding. City-center output follows separate rules.",
+		}
 		rows[#rows + 1] = { text = site.reasons[3] }
 		if site.capacity.active then
 			rows[#rows + 1] = {

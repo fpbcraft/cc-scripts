@@ -62,7 +62,7 @@ local mechanics = {
 	{
 		id = "settlement",
 		name = "SETTLEMENT SITES",
-		text = "Select one of your settlers to see up to three legal settlement sites ranked from your explored map. Markers show the same canonical hex on every visible copy of a wrapped map. Food, industry, observed water capacity and known resources explain each site; conditional specialty opportunities are suggestions only. Fog may hide better terrain, rivals or resources, so estimates can be incomplete. Opening a suggestion keeps the settler selected and never moves it or founds a city. Founding still requires the separate FOUND CITY action.",
+		text = "Select one of your settlers to see up to three legal settlement sites ranked from your explored map. Markers show the same canonical hex on every visible copy of a wrapped map. Natural tile food and industry before founding, observed water capacity and known resources explain each site. City-center output follows separate rules; conditional specialty opportunities are suggestions only. Fog may hide better terrain, rivals or resources, so estimates can be incomplete. Opening a suggestion keeps the settler selected and never moves it or founds a city. Founding still requires the separate FOUND CITY action.",
 	},
 	{
 		id = "combat",
