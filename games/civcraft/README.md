@@ -41,6 +41,14 @@ For `Too long without yielding` during world loading or saving, update the full
 program installation: the roadmap branch now includes a cooperative streaming
 save writer and visibility checkpoints. Existing saves remain readable.
 
+A diagnostic run records the CraftOS host version and display dimensions,
+repeating them when the log rotates.
+`gc.begin`/`gc.end` distinguish a full collection from
+`yield.wait.begin`/`yield.wait.end`. Graphics uploads record each strip and the
+freeze/unfreeze calls separately. An unmatched begin line locates the operation
+that had not returned; elapsed values help distinguish slow work from waiting.
+Keep both log files after a recurrence, before starting another session.
+
 Logs are disabled during normal play. A last `*.begin` without its matching
 `*.end` helps identify the stalled operation; it does not by itself prove its cause.
 

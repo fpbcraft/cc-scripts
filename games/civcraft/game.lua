@@ -18,11 +18,18 @@ for _, arg in ipairs(args) do
 		debugging = true
 	end
 end
+local traceRuntime, traceDisplay
 local function trace(stage, detail)
 	if not debugging then
 		return
 	end
+	if stage == "session.runtime" then
+		traceRuntime = detail
+	elseif stage == "display.runtime" then
+		traceDisplay = detail
+	end
 	local path = "/games/civcraft/data/debug.log"
+	local newSegment = not fs.exists(path)
 	if not fs.exists("/games/civcraft/data") then
 		fs.makeDir("/games/civcraft/data")
 	end
@@ -31,15 +38,25 @@ local function trace(stage, detail)
 			fs.delete(path .. ".previous")
 		end
 		fs.move(path, path .. ".previous")
+		newSegment = true
 	end
 	local file = fs.open(path, "a")
 	if file then
 		local now = os.epoch and os.epoch("utc") or math.floor(os.clock() * 1000)
+		if newSegment then
+			if traceRuntime and stage ~= "session.runtime" then
+				file.writeLine(tostring(now) .. " session.runtime " .. traceRuntime)
+			end
+			if traceDisplay and stage ~= "display.runtime" then
+				file.writeLine(tostring(now) .. " display.runtime " .. traceDisplay)
+			end
+		end
 		file.writeLine(tostring(now) .. " " .. stage .. " " .. tostring(detail or ""))
 		file.close()
 	end
 end
 trace("session.begin", MODE)
+trace("session.runtime", tostring(_G._HOST) .. " lua=" .. _VERSION .. " diagnostics=2")
 local slot = 1
 local mapTypes = { "continents", "archipelago", "pangaea", "highlands" }
 local function modem()
@@ -94,7 +111,7 @@ local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
 local Presentation = dofile("/games/civcraft/presentation.lua")
 local Snapshots = dofile("/games/civcraft/snapshots.lua")
 local view
-local bootstrapWork = { trace = trace }
+local bootstrapWork = { trace = debugging and trace or nil }
 local function checkpoint()
 	Cooperative.checkpoint(view and view.r or bootstrapWork, false, true)
 end
@@ -811,6 +828,7 @@ local function dispatch(action, params)
 		rednet.send(hostId, req, PROTOCOL)
 	end
 end
+trace("display.open.begin")
 view = UI.new(display, function(action, params)
 	if action == "audio" or action == "music" or action == "volume" then
 		dispatch(action, params)
@@ -827,6 +845,7 @@ view = UI.new(display, function(action, params)
 		dispatch(action, params)
 	end
 end)
+trace("display.open.end")
 if view.r and debugging then
 	view.r.trace = trace
 end
