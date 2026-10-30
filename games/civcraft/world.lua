@@ -364,16 +364,119 @@ function W.territory(state, hex)
 	if not w then
 		return result
 	end
-	for y = 1, w.height do
-		if W.checkpoint then
-			W.checkpoint()
-		end
-		for x = 1, w.width do
-			local city = W.territoryCity(state, hex, x, y)
-			if city then
-				result[key(x, y)] = city.owner
+	local function fullScan()
+		for y = 1, w.height do
+			if W.checkpoint then
+				W.checkpoint()
+			end
+			for x = 1, w.width do
+				local city = W.territoryCity(state, hex, x, y)
+				if city then
+					result[key(x, y)] = city.owner
+				end
 			end
 		end
+		return result
+	end
+	local function integer(value)
+		return type(value) == "number"
+			and value == value
+			and value ~= math.huge
+			and value ~= -math.huge
+			and value == math.floor(value)
+	end
+	if
+		not integer(w.width)
+		or w.width < 1
+		or not integer(w.height)
+		or w.height < 1
+		or type(hex) ~= "table"
+		or type(hex.distance) ~= "function"
+		or type(hex.withinRadius) ~= "function"
+		or type(hex.canonical) ~= "function"
+	then
+		return fullScan()
+	end
+	local winners = {}
+	local visited = 0
+	local function add(city, x, y, distance)
+		if distance == nil then
+			return
+		end
+		local tileKey = key(x, y)
+		local previous = winners[tileKey]
+		if
+			not previous
+			or distance < previous.distance
+			or (distance == previous.distance and (city.id or 0) < (previous.city.id or 0))
+		then
+			winners[tileKey] = { city = city, distance = distance }
+		end
+	end
+	for _, city in ipairs(state.cities or {}) do
+		if type(city) ~= "table" or not integer(city.x) or not integer(city.y) then
+			return fullScan()
+		end
+		local validOrigin, canonicalX = pcall(hex.canonical, city.x, city.y, state)
+		if not validOrigin or not canonicalX then
+			return fullScan()
+		end
+		if type(city.claimed) == "table" then
+			if getmetatable(city.claimed) ~= nil then
+				return fullScan()
+			end
+			for tileKey, claimed in pairs(city.claimed) do
+				visited = visited + 1
+				if W.checkpoint and visited % 256 == 0 then
+					W.checkpoint()
+				end
+				if claimed and type(tileKey) == "string" then
+					local xText, yText = tileKey:match("^(%d+):(%d+)$")
+					local x, y = tonumber(xText), tonumber(yText)
+					if
+						x
+						and y
+						and tostring(x) == xText
+						and tostring(y) == yText
+						and x >= 1
+						and x <= w.width
+						and y >= 1
+						and y <= w.height
+					then
+						add(city, x, y, hex.distance(x, y, city.x, city.y, state))
+					end
+				end
+			end
+		else
+			local ok, positions = pcall(hex.withinRadius, city.x, city.y, radius(city), state)
+			if not ok or type(positions) ~= "table" then
+				return fullScan()
+			end
+			for _, position in ipairs(positions) do
+				visited = visited + 1
+				if W.checkpoint and visited % 256 == 0 then
+					W.checkpoint()
+				end
+				if
+					type(position) ~= "table"
+					or not integer(position.x)
+					or not integer(position.y)
+					or position.x < 1
+					or position.x > w.width
+					or position.y < 1
+					or position.y > w.height
+				then
+					return fullScan()
+				end
+				local distance = hex.distance(position.x, position.y, city.x, city.y, state)
+				if distance <= radius(city) then
+					add(city, position.x, position.y, distance)
+				end
+			end
+		end
+	end
+	for tileKey, winner in pairs(winners) do
+		result[tileKey] = winner.city.owner
 	end
 	return result
 end

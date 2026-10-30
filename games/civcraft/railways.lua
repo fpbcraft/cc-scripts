@@ -64,14 +64,25 @@ function R.network(state, p)
 	if not state.world then
 		return result
 	end
-	local owned = World.territory(state, Hex)
-	local visited = {}
 	local stations = {}
+	local stationCount, hasStationRail = 0, false
 	for _, city in ipairs(state.cities) do
 		if city.owner == p.id and Sites.effectiveBuilding(state, city, "station") then
-			stations[World.key(city.x, city.y)] = city
+			local stationKey = World.key(city.x, city.y)
+			if not stations[stationKey] then
+				stationCount = stationCount + 1
+			end
+			stations[stationKey] = city
+			if (state.world.rails or {})[stationKey] then
+				hasStationRail = true
+			end
 		end
 	end
+	if stationCount < 2 or not hasStationRail then
+		return result
+	end
+	local owned = World.territory(state, Hex)
+	local visited = {}
 	for _, city in ipairs(state.cities) do
 		if stations[World.key(city.x, city.y)] then
 			local start = World.key(city.x, city.y)
