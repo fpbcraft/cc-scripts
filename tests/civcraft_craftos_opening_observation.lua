@@ -120,6 +120,12 @@ local function workflow(view, state, observer, options)
 		})
 		stage = "viewport"
 	end
+	if stage == "viewport" and view.panel ~= "context" then
+		if not tap(view, "CLOSE") then
+			tap(view, "NEXT")
+		end
+		return
+	end
 	if stage == "viewport" and view.mapViewport then
 		local v = view.mapViewport
 		local x, y = point(view, v.x + v.w / 2, v.y + v.h / 2)
@@ -243,7 +249,11 @@ local function workflow(view, state, observer, options)
 			return
 		end
 	end
-	local signature = tostring(state.round) .. ":" .. tostring(player.ready)
+	local signature = tostring(actor)
+		.. ":"
+		.. tostring(state.round)
+		.. ":"
+		.. tostring(player.ready)
 	if lastDecision ~= signature then
 		lastDecision = signature
 		record("end_turn_requested", { round = state.round, cities = #cities })
@@ -255,6 +265,15 @@ dofile = function(path)
 	local module = native(path)
 	if path == "/games/civcraft/match_lifecycle.lua" and not module.openingObserved then
 		module.openingObserved = true
+		local initialize = module.initialize
+		module.initialize = function(state, ...)
+			state.mapSeed, state.mapSize = 319497, "compact"
+			assert(
+				#state.players == 2 and not state.players[1].ai and state.players[2].ai,
+				"Expected one human and one AI"
+			)
+			return initialize(state, ...)
+		end
 		local lobby = module.newLobby
 		module.newLobby = function(...)
 			local state = lobby(...)
@@ -395,7 +414,7 @@ record("begin", {
 local deadline = os.startTimer(240)
 local ok, why = pcall(function()
 	parallel.waitForAny(function()
-		assert(loadfile("/games/civcraft/game.lua", "t", _ENV))("local", "--new", "--debug")
+		assert(loadfile("/games/civcraft/game.lua", "t", _ENV))("host", "--new", "--debug")
 	end, function()
 		while true do
 			local event, timer = os.pullEvent()
