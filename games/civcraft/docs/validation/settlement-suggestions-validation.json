@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "candidate": "07100bae956626fccbeda669f42df3faa6da1971",
+  "scope": "Observer-only Settler advice, shared founding legality, UI/input and save/network correctness.",
+  "standalone": {
+    "source": "ea021a87b4d956f4c9444c84e8fb9e6bc8b01301",
+    "passed": 83,
+    "failed": 0,
+    "followup": "07100ba changes yield labels/help only; style, syntax, settlement UI test and exact installed scenario pass."
+  },
+  "parity": {
+    "passed": 17,
+    "skipped": 0
+  },
+  "nativeFocused": {
+    "passed": 5,
+    "scope": [
+      "suggestion model",
+      "suggestion UI",
+      "actions",
+      "unit badges",
+      "wrap UI"
+    ]
+  },
+  "normalProgram": {
+    "hostHardwareGUI": "PASS lkgt1hi3",
+    "hostTextAllInputs": "PASS 8cpq0318",
+    "hostMonitorTouchAllInputs": "PASS ngilvsoy",
+    "hotseatHardwareGUIAllInputs": "PASS fqzpudli",
+    "assertions": [
+      "Read wrapped food/industry/capacity/spacing/resource/conditional specialty/knowledge explanations",
+      "Show on Map and canonical marker input",
+      "Settler identity/location/budget preserved during advice",
+      "No game orders dispatched during advice",
+      "Private advice cleared at hotseat handoff",
+      "Ordinary founding, specialty production and save/restart continue"
+    ]
+  },
+  "network": {
+    "normal": "PASS 67_jiw3j, all three computers",
+    "reversed": "PASS 92hurelv, all three computers"
+  },
+  "installer": {
+    "source": "07100bae956626fccbeda669f42df3faa6da1971",
+    "command": "python3 tests/run_civcraft_native_session.py --installed-ref 07100bae956626fccbeda669f42df3faa6da1971 --default-specialization --host --settlement-suggestions --unit-actions --unit-badges --contact-hud --quick-research --seed 319497",
+    "result": "PASS n41z7y6c",
+    "originalAndMigratedSavesPreserved": true,
+    "savedRound": 6,
+    "resumedRound": 9
+  },
+  "modelRuntime": {
+    "scope": "Controlled fully observed V5 Huge 96x60, R100, 40 cities/200 units, top5",
+    "queryMillis": 726,
+    "checkpoints": 150,
+    "projectionStructurallyUnchanged": true
+  },
+  "limitations": [
+    "Advisory score uses observed natural tile yields; it is not a city-output or competitive-balance forecast.",
+    "Future site bonuses are conditional on ownership, research, focus and placement.",
+    "Physical Minecraft/monitor/server and iPad validation were not performed.",
+    "No balance experiments, tournaments, searches or calibration."
+  ],
+  "fixtureCorrections": [
+    "Rendered-text observation reattaches after display settings replace the renderer.",
+    "Opening playback uses the actual Skip control before marker input.",
+    "Compact maps navigate ranked sites if markers are obscured; wide displays use the inline inspector.",
+    "Failed fixture attempts were not counted as passes."
+  ]
+}
