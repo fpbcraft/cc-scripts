@@ -161,8 +161,44 @@ assert(viewport.wrapX and viewport.world.wrapX, "Native viewport lacks cylinder 
 assert(viewport.world.width == width and viewport.world.height == height)
 assert(viewport.w > viewport.periodX, "Native viewport does not expose multiple cylinder copies")
 
+-- Keep the owned city row comfortably inside the map viewport before testing
+-- repeated hit targets; native inspector height varies by terminal size.
+ui.panY = math.max(
+	0,
+	math.min(viewport.maxY, (2 - 1) * viewport.tile * 0.75 + viewport.tile / 2 - viewport.h / 2)
+)
+draw()
 local cityCopies = findCityCopies()
-assert(#cityCopies > 1, "Repeated native city banners were not produced")
+if #cityCopies <= 1 then
+	local cityTileCopies = 0
+	local cityTiles = {}
+	for _, target in ipairs(ui.hexTargets or {}) do
+		if target.tx == 2 and target.ty == 2 then
+			cityTileCopies = cityTileCopies + 1
+			cityTiles[#cityTiles + 1] = string.format("%.1f,%.1f", target.x, target.y)
+		end
+	end
+	local projectedCities = {}
+	for _, city in ipairs(ui.state and ui.state.cities or {}) do
+		projectedCities[#projectedCities + 1] =
+			table.concat({ city.id or "?", city.x or "?", city.y or "?", city.name or "?" }, ":")
+	end
+	error(
+		string.format(
+			"Repeated native city banners were not produced (copies=%d, cityTiles=%d [%s], "
+				.. "viewport=%dx%d period=%.1f pan=%.1f,%.1f city=%s)",
+			#cityCopies,
+			cityTileCopies,
+			table.concat(cityTiles, ";"),
+			viewport.w,
+			viewport.h,
+			viewport.periodX,
+			ui.panX,
+			ui.panY,
+			table.concat(projectedCities, ";")
+		)
+	)
+end
 local cityX, cityY = targetPoint(cityCopies[#cityCopies])
 tap(cityX, cityY)
 assert(ui.selected.kind == "city" and ui.selected.x == 2 and ui.selected.y == 2)
