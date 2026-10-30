@@ -38,6 +38,7 @@ local unseenSiteChecked = false
 local foreignProjectID, foreignProjectProgress
 local autoBuilderID, autoBuilderX, autoBuilderY
 local autoBuilderVisibleKey
+local autoObserver, autoObserverX, autoObserverY
 local target, siteID, projectID, campaignID, restarted = nil, nil, nil, nil, false
 local raceFirst = reverse and 2 or 1
 local savedProgress
@@ -479,7 +480,16 @@ local function configureFixture()
 	local observer = assert(player(authoritative, 2))
 	local Works = env.dofile("/games/civcraft/tile_improvements.lua")
 	local Stacks = env.dofile("/games/civcraft/unit_stacks.lua")
-	local builderSpot, fallbackSpot
+	for _, candidate in ipairs(authoritative.units) do
+		if candidate.owner == 2 and not Stacks.isCivilian(candidate) then
+			autoObserver = candidate
+			break
+		end
+	end
+	assert(autoObserver, "Builder privacy fixture needs a peaceful observer unit")
+	autoObserverX, autoObserverY = autoObserver.x, autoObserver.y
+	local vision = (Systems.units[autoObserver.kind] or {}).vision or 2
+	local builderSpots = {}
 	for y = math.max(1, builderCity.y - 3), math.min(authoritative.world.height, builderCity.y + 3) do
 		for x = math.max(1, builderCity.x - 3), math.min(authoritative.world.width, builderCity.x + 3) do
 			local landOwner = World.territoryCity(authoritative, Hex, x, y)
@@ -492,34 +502,61 @@ local function configureFixture()
 					if
 						Works.canPlace(authoritative, player(authoritative, 1), kind, x, y, Systems)
 					then
-						local spot = { x = x, y = y }
-						if
-							observer.visible[World.key(x, y)]
-							and builderCity.worked
-							and builderCity.worked[World.key(x, y)]
-						then
-							builderSpot = spot
-						else
-							if observer.visible[World.key(x, y)] then
-								fallbackSpot = fallbackSpot or spot
-							end
-						end
+						builderSpots[#builderSpots + 1] = {
+							position = { x = x, y = y },
+							worked = builderCity.worked
+								and builderCity.worked[World.key(x, y)] == true,
+						}
 						break
 					end
 				end
 			end
-			if builderSpot then
-				break
+		end
+	end
+	table.sort(builderSpots, function(a, b)
+		if a.worked ~= b.worked then
+			return a.worked
+		end
+		return Hex.distance(a.position.x, a.position.y, target.x, target.y, authoritative)
+			> Hex.distance(b.position.x, b.position.y, target.x, target.y, authoritative)
+	end)
+	local function observerPosition(spot)
+		for oy = math.max(1, spot.y - vision), math.min(authoritative.world.height, spot.y + vision) do
+			for ox = math.max(1, spot.x - vision), math.min(authoritative.world.width, spot.x + vision) do
+				local occupant = Stacks.at(authoritative.units, ox, oy)
+				local isCity = false
+				for _, cityRecord in ipairs(authoritative.cities) do
+					if cityRecord.x == ox and cityRecord.y == oy then
+						isCity = true
+						break
+					end
+				end
+				if
+					Hex.distance(spot.x, spot.y, ox, oy, authoritative) <= vision
+					and Hex.distance(target.x, target.y, ox, oy, authoritative) > vision
+					and (ox ~= spot.x or oy ~= spot.y)
+					and (ox ~= autoObserver.x or oy ~= autoObserver.y)
+					and (not occupant or occupant == autoObserver)
+					and not isCity
+					and Hex.terrain(ox, oy, authoritative) ~= "water"
+					and Hex.terrain(ox, oy, authoritative) ~= "mountain"
+				then
+					return { x = ox, y = oy }
+				end
 			end
 		end
-		if builderSpot then
+	end
+	local builderSpot, observerSpot
+	for _, candidate in ipairs(builderSpots) do
+		observerSpot = observerPosition(candidate.position)
+		if observerSpot then
+			builderSpot = candidate.position
 			break
 		end
 	end
-	builderSpot = builderSpot or fallbackSpot
 	assert(
-		builderSpot,
-		"Builder fixture needs a legal owned improvement tile already visible to the rival"
+		builderSpot and observerSpot,
+		"Builder fixture needs a legal Builder tile and a safe observer location"
 	)
 	autoBuilderID = authoritative.nextId
 	authoritative.nextId = authoritative.nextId + 1
@@ -537,6 +574,11 @@ local function configureFixture()
 		moved = true,
 		hp = 100,
 	}
+	autoObserver.x, autoObserver.y = observerSpot.x, observerSpot.y
+	World.reveal(authoritative, Hex, Systems)
+	autoBuilderVisibleKey = World.key(autoBuilderX, autoBuilderY)
+	assert(observer.visible[autoBuilderVisibleKey], "Observer unit must reveal the Builder tile")
+	assert(not observer.visible[World.key(target.x, target.y)], "Observer must preserve target fog")
 	local BuilderPlans = env.dofile("/games/civcraft/ai_builders.lua")
 	local initialPlan = BuilderPlans.order(
 		assert(World.forPlayer(authoritative, 1)),
@@ -545,11 +587,6 @@ local function configureFixture()
 		Systems
 	)
 	assert(initialPlan, "Builder fixture needs a useful safe target in observed owned land")
-	autoBuilderVisibleKey = World.key(autoBuilderX, autoBuilderY)
-	assert(
-		observer.visible[autoBuilderVisibleKey],
-		"Builder tile visibility must come from the map"
-	)
 	campaignID = authoritative.campaignID
 end
 local function hostDraw(ui, state)
@@ -711,6 +748,14 @@ local function hostDraw(ui, state)
 	elseif phase == "builderStop" and stepDone(1, "builderStop", true) then
 		local builder = assert(unit(authoritative, autoBuilderID))
 		assert(not builder.autoWork and not builder.autoWorkPaused and not builder.workQueue)
+		autoObserver.x, autoObserver.y = autoObserverX, autoObserverY
+		local Hex = env.dofile("/games/civcraft/hex.lua")
+		local World = env.dofile("/games/civcraft/world.lua")
+		World.reveal(authoritative, Hex, env.dofile("/games/civcraft/systems.lua"))
+		assert(
+			not player(authoritative, 2).visible[World.key(target.x, target.y)],
+			"Restoring the observer must preserve the later hidden-site scenario"
+		)
 		local request =
 			{ city = target.city, kind = "works", x = target.x, y = target.y, playerID = 1 }
 		step(raceFirst, "race" .. raceFirst, "placeSite", request)
