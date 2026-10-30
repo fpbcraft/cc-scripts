@@ -425,3 +425,15 @@ remain in the isolated profile. The retained summary is
 [`docs/validation/founders-runtime-validation.json`](docs/validation/founders-runtime-validation.json).
 These are controlled desktop measurements, not AI-turn throughput, played campaign
 balance, iPad or physical Minecraft/monitor/rednet/server evidence.
+
+## Settler settlement advice
+
+Add `--settlement-suggestions` to the native session runner to exercise the real
+opening Settler's advisory list, paginated explanations, Show on Map and canonical
+marker input before continuing ordinary founding and save/restart. Combine it
+with `--host`, `--gui`, `--monitor` or `--installed-ref` as appropriate. The fixture
+asserts unchanged Settler position/budget and zero game orders during advice;
+hotseat runs also verify private advice is cleared at handoff. Display-setting
+changes rebuild the renderer, so the text observer reattaches to each new canvas.
+Exact scope and limits are retained in
+[`docs/validation/settlement-suggestions-validation.json`](docs/validation/settlement-suggestions-validation.json).
