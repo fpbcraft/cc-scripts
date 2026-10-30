@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "candidate": "986b26cb089deade61c2cc6d91c04a70ad5b3595",
+  "gameplaySource": "ffe57aeb4a50ed5b7334657a038d734ddab28e7c",
+  "scope": "Opt-in saved human Builder automation through existing observed-view planner and authoritative work/actions.",
+  "standalone": {
+    "source": "ffe57aeb4a50ed5b7334657a038d734ddab28e7c",
+    "passed": 83,
+    "failed": 0,
+    "complete600WorldRegression": "passed"
+  },
+  "styleSyntax": "passed on integrated gameplay and final native test changes",
+  "parity": {
+    "passed": 17,
+    "skipped": 0
+  },
+  "nativeFocused": {
+    "profile": "52rxcl17",
+    "passed": 4,
+    "tests": [
+      "Builder",
+      "queued routes",
+      "actions",
+      "unit actions"
+    ]
+  },
+  "normalProgram": {
+    "text": "PASS 31pgjjz_",
+    "hardwareGUI": "PASS bw1hd_rc",
+    "monitorTouch": "PASS q7zfam0x",
+    "assertions": [
+      "Auto/Pause/Resume clicked via actual native input",
+      "Generated task provenance and paused intent",
+      "Save/Exit through actual controls",
+      "Same campaign and Builder intent restored in fresh process",
+      "Actual turns complete an improvement and consume a charge"
+    ],
+    "fixture": "V5 generated campaign; capitals founded through ordinary Actions.apply; one starting Warrior converted to a two-charge Builder; research/open owned tile and idle production supplied. Movement initially spent so control tests observe pending work. No improvement or charge debit fabricated.",
+    "monitorLimitation": "Auto controls and turn/save controls use monitor_touch; Q keyboard opens pause. Not a touch-only pause-menu claim."
+  },
+  "installer": {
+    "source": "0f67fa66369e24c5b8b0c2320388e71c0cb5dbd6",
+    "profile": "v9x40vip",
+    "result": "passed, two fresh processes including automatic completed work",
+    "command": "python3 tests/run_civcraft_native_builder_auto.py --installed-ref 0f67fa66369e24c5b8b0c2320388e71c0cb5dbd6"
+  },
+  "network": {
+    "normal": "PASS znl2qpze all three computers",
+    "reversed": "PASS m7t4psuq all three computers",
+    "assertions": [
+      "Owner enable/pause/resume/stop acknowledgements plus matching snapshots",
+      "Spoofed playerID cannot control another player Builder",
+      "Rival sees actual Builder but no private auto intent/reason/queue",
+      "Existing specialty contention, restart and rejoin cases retained"
+    ],
+    "fixture": "Controlled charged Builder and peaceful observer-unit position use ordinary World.reveal; observer restored after auto tests. No direct visibility injection."
+  },
+  "failedAttempts": [
+    "Native fixture setup/env/title/context/pagination/inline layout corrections; failed or intentionally stopped attempts not counted as passes.",
+    "Network fixture site-project assumption, visibility precondition, acknowledgement key and arrival-order gating corrected."
+  ],
+  "limitations": [
+    "Physical Minecraft/CC:Tweaked and iPad not tested.",
+    "No balance experiments or calibration.",
+    "Gameplay source unchanged after full-suite/parity results; subsequent commits only native tests/documentation."
+  ]
+}
