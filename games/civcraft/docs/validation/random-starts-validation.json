@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "candidate": "4a537bba7106bfd44fe6c5b63980558788b871ac",
+  "scope": "Generation version 5 viable-site variety and seeded player assignment; no balance calibration.",
+  "standalone": {
+    "source": "9110cffa5a350da0b1b4ea3e392ad1e4ab131f5f",
+    "passed": 82,
+    "failed": 1,
+    "complete600WorldRegression": "passed",
+    "failure": "Progression fixture expected sole win, but both Scholars legitimately complete End Expedition at R94.",
+    "followup": {
+      "source": "4a537bba7106bfd44fe6c5b63980558788b871ac",
+      "change": "Test-only: require expected route for each nonempty winner; retain deadline and both Age6 checks.",
+      "progression": "passed: End Expedition R94, Industrial R120",
+      "styleAndSyntax": "passed"
+    }
+  },
+  "parity": {
+    "source": "9110cffa5a350da0b1b4ea3e392ad1e4ab131f5f",
+    "passed": 17,
+    "skipped": 0
+  },
+  "nativeFocused": {
+    "profile": "w0gpt454",
+    "passed": 5,
+    "tests": [
+      "world",
+      "lifecycle",
+      "terrain yields",
+      "Settler opening",
+      "topology"
+    ]
+  },
+  "normalProgram": {
+    "hostText": "PASS 520vegjf",
+    "hotseatHardwareGUI": "PASS bf32e_i_",
+    "flags": [
+      "default-specialization",
+      "settlement-suggestions",
+      "unit-actions",
+      "unit-badges",
+      "contact-hud",
+      "quick-research"
+    ],
+    "seed": 319497,
+    "specialtySaveRestart": "R6 to R9 passed"
+  },
+  "network": {
+    "normal": "PASS wc3rs4ko, all three computers",
+    "reversed": "PASS ri8zqfhs, all three computers"
+  },
+  "limitations": [
+    "Physical Minecraft/CC:Tweaked and iPad not tested.",
+    "No balance experiments or statistical fairness claim.",
+    "Existing serialized worlds retain starts and generation versions."
+  ],
+  "installer": {
+    "source": "4a537bba7106bfd44fe6c5b63980558788b871ac",
+    "profile": "lnok3bsr",
+    "result": "passed, R6 to R8; migrated and original campaign fixtures preserved",
+    "command": "python3 tests/run_civcraft_native_session.py --host --default-specialization --seed 319497 --settlement-suggestions --unit-actions --unit-badges --contact-hud --quick-research --installed-ref 4a537bba7106bfd44fe6c5b63980558788b871ac"
+  }
+}
