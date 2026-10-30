@@ -1,5 +1,10 @@
 -- Three computers on an isolated emulated-modem network; generated campaigns only.
-local reverseRace = ({ ... })[1] == "--reverse-race"
+local reverseRace, observeTimings = false, false
+for _, flag in ipairs({ ... }) do
+	reverseRace = reverseRace or flag == "--reverse-race"
+	observeTimings = observeTimings or flag == "--timings"
+end
+local timingSamples = {}
 local raceReleased = false
 local emulator = assert(_G.periphemu, "Run this test in CraftOS-PC")
 local id = os.getComputerID()
@@ -106,8 +111,26 @@ function env.rednet.receive(filter, timeout)
 		elseif sender == 0 then
 			if packet.type == "state" then
 				checkPrivate(packet.state)
+				for _, sample in pairs(timingSamples) do
+					local unit = unitFor(packet.state, id)
+					if
+						not sample.snapshotMillis
+						and unit
+						and unit.id == sample.unitID
+						and unit.x == sample.x
+						and unit.y == sample.y
+						and unit.movesLeft == sample.budget
+					then
+						sample.snapshotMillis = os.epoch("utc") - sample.sentAt
+					end
+				end
 			elseif packet.type == "result" and commandTag then
 				results[commandTag] = packet
+				local sample = timingSamples[commandTag]
+				if sample and not sample.ackMillis then
+					assert(packet.ok, "Timed movement rejected")
+					sample.ackMillis = os.epoch("utc") - sample.sentAt
+				end
 			end
 		end
 	end
@@ -190,6 +213,19 @@ local function clientStep(ui, state, unit)
 				action, values =
 					"standby", { unitID = unit.id, x = unit.x, y = unit.y, value = false }
 			end
+			if
+				observeTimings
+				and id == 2
+				and (step.token == "spendBeforeMerge" or step.token == "peacefulConcurrentMove")
+			then
+				timingSamples[step.token] = {
+					sentAt = os.epoch("utc"),
+					unitID = unit.id,
+					x = values.x,
+					y = values.y,
+					budget = step.budget,
+				}
+			end
 			issue(ui, action, values, step.token)
 		elseif
 			stepReported ~= step.token
@@ -205,6 +241,20 @@ local function clientStep(ui, state, unit)
 			if step.action ~= "diplomaticOffer" or peaceID then
 				stepReported = step.token
 				local result = results[step.token]
+				local timing = timingSamples[step.token]
+				if timing then
+					assert(
+						timing.ackMillis and timing.snapshotMillis,
+						"Timed movement needs independent acknowledgement and snapshot"
+					)
+					local file = assert(fs.open("/civcraft-network-timings.json", "w"))
+					file.write(textutils.serializeJSON({
+						computer = id,
+						reverseRace = reverseRace,
+						samples = timingSamples,
+					}))
+					file.close()
+				end
 				sendControl(0, "stepResult" .. id, {
 					token = step.token,
 					ok = result.ok,
