@@ -20,9 +20,9 @@ fertility-ranked site. A seed, player count, map settings, and player order
 reproduce the same starts; different seeds can choose different viable
 openings. Existing saves keep their original starts.
 
-When no qualifying common landmass fits all players, the fallback chooses the
-best available nonpolar opening and constructs one compact shared starting
-land patch with six-hex spacing. Overlapping radius-three patches connect the
+When no qualifying common landmass fits all players, the fallback chooses a
+nonpolar opening within four score points of the best available and constructs
+one compact shared starting land patch with six-hex spacing. Overlapping radius-three patches connect the
 players without filling distant ocean corridors. Each opening is expanded to
 30 connected passable tiles within radius four. This local fallback can join
 nearby island fragments, while leaving the rest of archipelago geography
