@@ -314,9 +314,9 @@ local function frame(ui, state, operations, name)
 	end
 	ui:draw(projectedSnapshot, state.players[1].id, { screen = "game", report = false })
 	local elapsed = os.epoch("utc") - started
-	operations[#operations + 1] = { name = name, elapsedMillis = elapsed }
+	operations[#operations + 1] = { name = name, elapsedMillis = elapsed, kind = "frame" }
 	if elapsed > maximum.elapsedMillis then
-		maximum = { name = name, elapsedMillis = elapsed }
+		maximum = { name = name, elapsedMillis = elapsed, kind = "frame" }
 	end
 	progress("end " .. name .. " elapsed=" .. elapsed)
 	return elapsed
@@ -506,8 +506,8 @@ for profileIndex, profile in ipairs(profiles) do
 		assert(ui.mapViewport and ui.mapViewport.world.width == expectedWidth)
 		if backend == "text" then
 			assert(ui.r.mode == "text", "Text backend did not use the native text renderer")
-		elseif backend == "monitor" then
-			assert(ui.r.mode == "graphics", "Monitor backend did not use native graphics mode")
+		else
+			assert(ui.r.mode == "graphics", "GUI/monitor backend did not use native graphics mode")
 		end
 		local firstCity = state.cities[1]
 		ui:focus("city", firstCity)
@@ -724,7 +724,7 @@ for profileIndex, profile in ipairs(profiles) do
 			gcMaximumMillis = ui.r.gcMaxMillis or 0,
 		}
 		for _, operation in ipairs(operations) do
-			if operation.name:find("render", 1, true) or operation.name == "drag-render" then
+			if operation.kind == "frame" then
 				scenario.frames = scenario.frames + 1
 				scenario.maximumFrameMillis =
 					math.max(scenario.maximumFrameMillis, operation.elapsedMillis)

@@ -129,6 +129,9 @@ assert actual == expected, "Native report is missing a fixed profile/map-size ca
 for item in report["scenarios"]:
     assert item["cities"] == 40 and item["units"] == 200 and item["round"] == 100
     assert item["frames"] >= 4 and item["savedBytes"] > 0
+    assert item["frames"] == sum(op.get("kind") == "frame" for op in item["operations"])
+    assert item["maximumFrameMillis"] == max(op["elapsedMillis"] for op in item["operations"] if op.get("kind") == "frame")
+    assert item["renderer"] == ("text" if args.backend == "text" else "graphics")
     assert (item["width"], item["height"]) == (
         (96, 60) if item["size"] == "huge" else (120, 76)
     )
