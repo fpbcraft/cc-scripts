@@ -1,6 +1,7 @@
 local Animations = dofile("/games/civcraft/animations.lua")
 local Preferences = dofile("/games/civcraft/animation_preferences.lua")
 local Summary = dofile("/games/civcraft/event_summary.lua")
+local DisplayGeometry = dofile("/games/civcraft/display_geometry.lua")
 local Playback = {}
 
 function Playback.attach(ui)
@@ -114,7 +115,7 @@ function Playback.endTurn(ui)
 	end
 end
 
-function Playback.watch(ui, events, follow)
+function Playback.watch(ui, events, follow, state)
 	if not ui.playback then
 		return
 	end
@@ -127,7 +128,11 @@ function Playback.watch(ui, events, follow)
 			or event.paths and event.paths[1] and event.paths[1][1]
 		local viewport = ui.mapViewport
 		if point and viewport then
-			ui.panX = (point.x - 0.5 + ((point.y - 1) % 2) * 0.5) * viewport.tile - viewport.w / 2
+			local world = state or viewport.world or viewport
+			local centerX = point.x - 0.5 + ((point.y - 1) % 2) * 0.5
+			local referenceX = ((ui.panX or 0) + viewport.w / 2) / viewport.tile
+			centerX = DisplayGeometry.nearestX(centerX, referenceX, world)
+			ui.panX = centerX * viewport.tile - viewport.w / 2
 			ui.panY = ((point.y - 1) * 0.75 + 0.5) * viewport.tile - viewport.h / 2
 		end
 	end
