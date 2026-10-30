@@ -16,6 +16,7 @@ local Cooperative = module("cooperative")
 local Hex = module("hex")
 local Match = module("match_lifecycle")
 local Saves = module("saves")
+local Presentation = module("presentation")
 local Systems = module("systems")
 local UI = module("ui")
 local World = module("world")
@@ -37,8 +38,14 @@ local report = {
 	fixture = { rounds = 100, cities = 40, units = 200, players = 4, mapType = "continents" },
 }
 local maximum = { name = "none", elapsedMillis = 0 }
+local function progress(stage)
+	local file = assert(fs.open("/founders-stress-progress.log", "a"))
+	file.writeLine(tostring(os.epoch("utc")) .. " " .. stage)
+	file.close()
+end
 
 local function measured(operations, name, fn)
+	progress("begin " .. name)
 	local started = os.epoch("utc")
 	local result = table.pack(fn())
 	local elapsed = os.epoch("utc") - started
@@ -46,6 +53,7 @@ local function measured(operations, name, fn)
 	if elapsed > maximum.elapsedMillis then
 		maximum = { name = name, elapsedMillis = elapsed }
 	end
+	progress("end " .. name .. " elapsed=" .. elapsed)
 	return table.unpack(result, 1, result.n)
 end
 
@@ -159,6 +167,8 @@ local function newState(profile, size, scenarioIndex)
 			observer.visible[key], observer.explored[key] = true, true
 		end
 	end
+	-- This controlled R100 state has no retained opening playback.
+	state.eventJournal = nil
 	return state
 end
 
@@ -228,25 +238,36 @@ local function tapButton(ui, label, draw, operations)
 	draw()
 end
 
+local projectedState, projectedSnapshot
 local function frame(ui, state, operations, name)
+	progress("begin " .. name)
 	local started = os.epoch("utc")
-	ui:draw(World.forPlayer(state, state.players[1].id), state.players[1].id, { screen = "game" })
+	if projectedState ~= state then
+		projectedSnapshot = measured(operations, "observer-projection", function()
+			return Presentation.capture(state, state.players[1].id)
+		end)
+		projectedState = state
+	end
+	ui:draw(projectedSnapshot, state.players[1].id, { screen = "game", report = false })
 	local elapsed = os.epoch("utc") - started
 	operations[#operations + 1] = { name = name, elapsedMillis = elapsed }
 	if elapsed > maximum.elapsedMillis then
 		maximum = { name = name, elapsedMillis = elapsed }
 	end
+	progress("end " .. name .. " elapsed=" .. elapsed)
 	return elapsed
 end
 
 for profileIndex, profile in ipairs(profiles) do
 	for sizeIndex, size in ipairs(sizes) do
+		progress("scenario " .. profile.name .. " " .. size)
 		local operations = {}
 		local scenarioIndex = (profileIndex - 1) * #sizes + sizeIndex
 		local state = measured(operations, "generate-and-prepare", function()
 			return newState(profile, size, scenarioIndex)
 		end)
-		local expectedWidth, expectedHeight = World.dimensions(size, state)
+		local dimensions = World.dimensions(size, state)
+		local expectedWidth, expectedHeight = dimensions[1], dimensions[2]
 		assert(state.world.width == expectedWidth and state.world.height == expectedHeight)
 		local acceptedDimensions = {
 			huge = { 96, 60 },
@@ -304,14 +325,47 @@ for profileIndex, profile in ipairs(profiles) do
 				break
 			end
 		end
-		assert(banner, "Native viewport did not produce a city banner target")
-		measured(operations, "input:city-banner", function()
+		assert(
+			banner,
+			"Native viewport did not produce a city banner target: "
+				.. textutils.serialize({
+					profile = profile.name,
+					size = size,
+					city = firstCity.id,
+					x = firstCity.x,
+					y = firstCity.y,
+					viewport = ui.mapViewport,
+					panX = ui.panX,
+					panY = ui.panY,
+					targets = ui.cityBannerTargets,
+				})
+		)
+		local v = ui.mapViewport
+		local left, top = math.max(banner.x, v.x), math.max(banner.y, v.y)
+		local right = math.min(banner.x + banner.w, v.x + v.w)
+		local bottom = math.min(banner.y + banner.h, v.y + v.h)
+		assert(right > left and bottom > top, "City banner has no visible clickable area")
+		local clickX, clickY = (left + right) / 2, (top + bottom) / 2
+		if ui.r.mode == "text" then
+			clickX, clickY = math.ceil(left / 2) * 2, math.ceil(top / 3) * 3
 			assert(
-				tap(ui, banner.x + banner.w / 2, banner.y + banner.h / 2),
-				"Native city banner input was not handled"
+				clickX < right and clickY < bottom,
+				"Clipped city banner has no native text input cell"
 			)
+		end
+		measured(operations, "input:city-banner", function()
+			assert(tap(ui, clickX, clickY), "Native city banner input was not handled")
 		end)
-		assert(ui.selected.kind == "city" and ui.selected.x == firstCity.x)
+		assert(
+			ui.selected.kind == "city" and ui.selected.x == firstCity.x,
+			"Visible banner input selected a different actor: "
+				.. textutils.serialize({
+					selected = ui.selected,
+					banner = banner,
+					point = { clickX, clickY },
+					viewport = v,
+				})
+		)
 		draw("city-selection-render")
 
 		local beforeZoom = ui.mapViewport.tile
