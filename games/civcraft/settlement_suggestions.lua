@@ -5,6 +5,8 @@ local Founding = dofile("/games/civcraft/founding.lua")
 local Sites = dofile("/games/civcraft/specialty_sites.lua")
 local Biomes = dofile("/games/civcraft/biomes.lua")
 local Content = dofile("/games/civcraft/content.lua")
+local Capacity = dofile("/games/civcraft/settlement_capacity.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Suggestions = {}
 local MAX_RESULTS = 256
 
@@ -13,68 +15,96 @@ local function known(view, x, y)
 	return (view.world.tiles or {})[key] ~= nil
 end
 
-local function opportunity(view, player, kind, x, y)
-	local function matches(point)
-		if not known(view, point.x, point.y) then
-			return false
-		end
-		local key = World.key(point.x, point.y)
-		local terrain = view.world.geography and view.world.geography[key]
-		local name = view.world.tiles[key]
-		terrain = terrain or (name and Biomes.legacy(name))
-		local resource = (view.world.resources or {})[key]
-		if kind == "works" and terrain and terrain.elevation == "hill" then
-			return "explored hill"
-		end
-		if kind == "knowledge" and terrain and terrain.elevation == "mountain" then
-			return "explored mountain"
-		end
-		if
-			kind == "freight"
-			and terrain
-			and (terrain.biome == "coast" or terrain.biome == "ocean")
-		then
-			return "explored coast or ocean"
-		end
-		if
-			kind == "works" and (resource == "iron" or resource == "copper" or resource == "zinc")
-		then
-			local tech = (Content.resources[resource] or {}).tech
-			return (not tech or (player.techs or {})[tech] == true) and ("revealed " .. resource)
-		end
-		return kind == "knowledge"
-				and (resource == "redstone" or resource == "diamond")
-				and ((not (Content.resources[resource] or {}).tech) or (player.techs or {})[(
-					Content.resources[resource] or {}
-				).tech] == true)
-				and ("revealed " .. resource)
-			or kind == "freight"
-				and ((view.world.rails or {})[key] or (view.world.roads or {})[key])
-				and "known road or rail"
+local function capacityFor(view, x, y, buildings)
+	if not ContentRules.hasDevelopment(view) then
+		return {
+			active = false,
+			base = 0,
+			waterBonus = 0,
+			infrastructure = 0,
+			observedMinimum = 0,
+			sources = {},
+		}
 	end
-	local ownName = view.world.tiles[World.key(x, y)]
-	local own = view.world.geography and view.world.geography[World.key(x, y)]
-	local tile = own or (ownName and Biomes.legacy(ownName))
-	if tile and kind == "works" and tile.elevation == "hill" then
-		return "explored city-site hill"
-	end
+	local observed = {
+		world = {
+			width = view.world.width,
+			height = view.world.height,
+			wrapX = view.world.wrapX == true,
+			tiles = {},
+		},
+	}
 	for _, point in ipairs(Hex.neighbours(x, y, view)) do
-		local evidence = matches(point)
-		if evidence then
-			return evidence
+		local key = World.key(point.x, point.y)
+		if known(view, point.x, point.y) then
+			observed.world.tiles[key] = view.world.tiles[key]
 		end
 	end
-	local key = World.key(x, y)
-	local resource = (view.world.resources or {})[key]
-	if kind == "knowledge" and (resource == "redstone" or resource == "diamond") then
-		local tech = (Content.resources[resource] or {}).tech
-		return (not tech or (player.techs or {})[tech] == true) and ("revealed " .. resource)
-	end
-	if kind == "freight" then
-		return ((view.world.rails or {})[key] == true or (view.world.roads or {})[key] == true)
-			and "known road or rail"
+	local details = Capacity.details(observed, { x = x, y = y, buildings = {} }, buildings)
+	return {
+		active = true,
+		base = details.base,
+		waterBonus = details.water,
+		infrastructure = details.infrastructure,
+		observedMinimum = details.total,
+		sources = details.sources,
+	}
+end
+
+local function cityCenter(view, x, y)
+	for _, city in ipairs(view.cities or {}) do
+		if city.x == x and city.y == y then
+			return true
+		end
 	end
 	return false
+end
+
+local function futureSpecialties(view, player, x, y)
+	local result, foundKind = {}, {}
+	if not Sites.enabled(view) then
+		return result
+	end
+	for _, point in ipairs(Hex.withinRadius(x, y, 3, view)) do
+		local distance = Hex.distance(x, y, point.x, point.y, view)
+		local key = World.key(point.x, point.y)
+		if
+			distance > 0
+			and known(view, point.x, point.y)
+			and not cityCenter(view, point.x, point.y)
+			and not (view.world.landmarks or {})[key]
+			and not (view.world.improvements or {})[key]
+			and not Sites.at(view, point.x, point.y)
+		then
+			local tile = Biomes.tile(view.world, point.x, point.y)
+			if tile.elevation ~= "mountain" and tile.biome ~= "coast" and tile.biome ~= "ocean" then
+				for _, kind in ipairs(Sites.order) do
+					local bonus = Sites.bonus(view, player, kind, point.x, point.y)
+					if bonus > 0 and not foundKind[kind] then
+						local definition = Sites.definitions[kind]
+						foundKind[kind] = true
+						result[#result + 1] = {
+							kind = kind,
+							name = definition.name,
+							output = definition.output,
+							tech = definition.tech,
+							bonus = bonus,
+							x = point.x,
+							y = point.y,
+							distance = distance,
+							conditional = true,
+							evidence = "Canonical site bonus observed at "
+								.. point.x
+								.. ":"
+								.. point.y,
+							caveat = "Observed bonus only; future ownership, tech, focus and placement may prevent assignment.",
+						}
+					end
+				end
+			end
+		end
+	end
+	return result
 end
 
 function Suggestions.forSettler(view, observerId, settler, systems, limit)
@@ -114,79 +144,12 @@ function Suggestions.forSettler(view, observerId, settler, systems, limit)
 				end
 				if legal then
 					local yields = World.yields(view.world, x, y, view)
-					local spacing = math.huge
-					for _, city in ipairs(view.cities or {}) do
-						spacing = math.min(spacing, Hex.distance(x, y, city.x, city.y, view))
-					end
-					if spacing == math.huge then
-						spacing = 0
-					end
-					local water = false
-					for _, point in ipairs(Hex.neighbours(x, y, view)) do
-						if
-							known(view, point.x, point.y)
-							and Hex.terrain(point.x, point.y, view) == "water"
-						then
-							water = true
-							break
-						end
-					end
-					local resources = {}
-					for _, point in ipairs(Hex.neighbours(x, y, view)) do
-						local resource = (view.world.resources or {})[World.key(point.x, point.y)]
-						if resource then
-							resources[#resources + 1] = resource
-						end
-					end
-					table.sort(resources)
-					local future, reasons =
-						{}, {
-							"Food yield: " .. yields.food,
-							"Industry yield: " .. yields.industry,
-							water and "Adjacent explored water adds 1 city capacity" or "No adjacent explored water capacity bonus",
-							spacing == 0 and "No known cities affect spacing" or "Nearest known city is " .. spacing .. " hexes away",
-						}
-					for _, resource in ipairs(resources) do
-						reasons[#reasons + 1] = "Adjacent explored resource: " .. resource
-					end
-					if Sites.enabled(view) then
-						for _, kind in ipairs(Sites.order) do
-							local evidence = opportunity(view, player, kind, x, y)
-							if evidence then
-								local definition = Sites.definitions[kind]
-								future[#future + 1] = {
-									kind = kind,
-									name = definition.name,
-									output = definition.output,
-									tech = definition.tech,
-									evidence = evidence,
-									conditional = true,
-								}
-								reasons[#reasons + 1] = definition.name
-									.. " may be a future opportunity ("
-									.. evidence
-									.. "); eligibility and placement are not guaranteed"
-							end
-						end
-					end
-					local score = yields.food * 2
-						+ yields.industry
-						+ (water and 1 or 0)
-						+ math.min(#resources, 3)
 					found[#found + 1] = {
 						x = x,
 						y = y,
-						score = score,
-						reasons = reasons,
-						incompleteKnowledge = true,
-						capacity = {
-							base = 4,
-							waterBonus = water and 1 or 0,
-							observedMinimum = 4 + (water and 1 or 0),
-						},
-						resources = resources,
-						specialties = future,
-						knowledgeNote = "Uses explored observations only; values may be incomplete or remembered.",
+						score = yields.food * 2 + yields.industry,
+						food = yields.food,
+						industry = yields.industry,
 					}
 				end
 			end
@@ -200,6 +163,63 @@ function Suggestions.forSettler(view, observerId, settler, systems, limit)
 	end)
 	while #found > limit do
 		found[#found] = nil
+	end
+	for index, candidate in ipairs(found) do
+		if systems and systems.checkpoint and index % 16 == 0 then
+			systems.checkpoint()
+		end
+		local spacing, nearest = math.huge, nil
+		for _, city in ipairs(view.cities or {}) do
+			local distance = Hex.distance(candidate.x, candidate.y, city.x, city.y, view)
+			if distance < spacing then
+				spacing, nearest = distance, city
+			end
+		end
+		if spacing == math.huge then
+			spacing = 0
+		end
+		local resources = {}
+		for _, point in ipairs(Hex.neighbours(candidate.x, candidate.y, view)) do
+			local resource = (view.world.resources or {})[World.key(point.x, point.y)]
+			if known(view, point.x, point.y) and resource then
+				resources[#resources + 1] = resource
+			end
+		end
+		table.sort(resources)
+		local capacity = capacityFor(
+			view,
+			candidate.x,
+			candidate.y,
+			systems and systems.buildings or Content.buildings
+		)
+		local reasons = {
+			"Food yield: " .. candidate.food,
+			"Industry yield: " .. candidate.industry,
+			capacity.active and "Observed city capacity: " .. capacity.observedMinimum
+				or "City capacity is not active in this campaign profile",
+			spacing == 0 and "No known cities affect spacing"
+				or "Nearest known city is " .. spacing .. " hexes away",
+		}
+		for _, resource in ipairs(resources) do
+			reasons[#reasons + 1] = "Adjacent explored resource: " .. resource
+		end
+		local specialties = futureSpecialties(view, player, candidate.x, candidate.y)
+		for _, specialty in ipairs(specialties) do
+			reasons[#reasons + 1] = specialty.name
+				.. " may be a future opportunity near "
+				.. specialty.x
+				.. ":"
+				.. specialty.y
+		end
+		candidate.capacity = capacity
+		candidate.resources = resources
+		candidate.specialties = specialties
+		candidate.reasons = reasons
+		candidate.nearestCity = nearest and { id = nearest.id, distance = spacing } or nil
+		candidate.incompleteKnowledge = true
+		candidate.knowledgeNote =
+			"Uses explored observations only; values may be incomplete or remembered."
+		candidate.food, candidate.industry = nil, nil
 	end
 	return found
 end

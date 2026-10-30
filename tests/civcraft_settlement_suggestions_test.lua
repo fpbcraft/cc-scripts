@@ -7,6 +7,9 @@ local Hex = dofile("games/civcraft/hex.lua")
 local World = dofile("games/civcraft/world.lua")
 local Founding = dofile("games/civcraft/founding.lua")
 local Suggestions = dofile("games/civcraft/settlement_suggestions.lua")
+local Sites = dofile("games/civcraft/specialty_sites.lua")
+local Capacity = dofile("games/civcraft/settlement_capacity.lua")
+local Content = dofile("games/civcraft/content.lua")
 
 local function copy(value)
 	if type(value) ~= "table" then
@@ -90,6 +93,13 @@ local function fixture(wrap)
 		elevation = "hill",
 		feature = "none",
 	}
+	world.tiles["5:4"] = "water"
+	player.mapMemory.observations["5:4"].tile = "water"
+	player.mapMemory.observations["5:4"].geography = {
+		biome = "ocean",
+		elevation = "flat",
+		feature = "none",
+	}
 	return state, player
 end
 
@@ -121,9 +131,10 @@ assert(
 	sites[1].incompleteKnowledge and sites[1].knowledgeNote:find("explored observations", 1, true)
 )
 local worksOpportunity = false
+local waterCandidate = false
 for index, site in ipairs(sites) do
 	assert(player.explored[site.x .. ":" .. site.y])
-	assert(site.capacity.base == 4 and site.capacity.observedMinimum >= 4)
+	assert(site.capacity.active and site.capacity.base == 4)
 	assert(#site.reasons >= 4, "Candidate includes concrete explanation reasons")
 	local previous = sites[index - 1]
 	assert(
@@ -134,11 +145,33 @@ for index, site in ipairs(sites) do
 		"Candidates are ranked globally with stable coordinate ties"
 	)
 	for _, specialty in ipairs(site.specialties) do
-		assert(specialty.conditional and specialty.evidence)
+		assert(specialty.conditional and specialty.evidence and specialty.caveat)
+		assert(Hex.distance(site.x, site.y, specialty.x, specialty.y, view) <= 3)
+		assert(
+			site.x ~= specialty.x or site.y ~= specialty.y,
+			"Future site cannot be a city center"
+		)
+		assert(
+			specialty.x ~= 2 or specialty.y ~= 2,
+			"Known city centers are excluded as future sites"
+		)
+		assert(
+			Sites.bonus(view, view.players[1], specialty.kind, specialty.x, specialty.y)
+				== specialty.bonus,
+			"Future bonuses use canonical site rules"
+		)
 		worksOpportunity = worksOpportunity or specialty.kind == "works"
+	end
+	waterCandidate = waterCandidate
+		or (site.x == 6 and site.y == 4 and site.capacity.waterBonus == 1)
+	if site.x == 6 and site.y == 4 then
+		local canonical =
+			Capacity.details(view, { x = site.x, y = site.y, buildings = {} }, Content.buildings)
+		assert(site.capacity.observedMinimum == canonical.total)
 	end
 end
 assert(worksOpportunity, "M3 site roles use the explored geography contract")
+assert(waterCandidate, "Observed adjacent water uses canonical capacity rules")
 assert(not Founding.canFound(state, 1, 3, 2), "Three hex spacing is shared founding legality")
 assert(Founding.canFound(state, 1, 6, 4), "A separated land tile is legal")
 state.spawners = { { x = 6, y = 4, cleared = false } }
@@ -158,6 +191,31 @@ end
 local after = snapshot(World.forPlayer(state, 1))
 assert(before == after, "Hidden terrain and resources do not change suggestions")
 
+-- An unknown neighbor that is water in authority cannot grant observer capacity.
+state, player = fixture(false)
+state.world.tiles["9:6"] = "water"
+view = World.forPlayer(state, 1)
+local boundary
+for _, site in ipairs(Suggestions.forSettler(view, 1, state.units[1])) do
+	if site.x == 8 and site.y == 6 then
+		boundary = site
+	end
+end
+assert(boundary and boundary.capacity.waterBonus == 0, "Unknown water does not affect capacity")
+
+-- Canonical site previews ignore obvious tiles already unavailable for placement.
+state, player = fixture(false)
+view = World.forPlayer(state, 1)
+view.world.landmarks["7:4"] = { kind = "natural_wonder" }
+for _, site in ipairs(Suggestions.forSettler(view, 1, state.units[1])) do
+	for _, specialty in ipairs(site.specialties) do
+		assert(
+			specialty.x ~= 7 or specialty.y ~= 4,
+			"Landmark tiles are excluded from future specialty evidence"
+		)
+	end
+end
+
 -- Ordering is deterministic, and wrapped city spacing honors the cylinder.
 state = fixture(true)
 view = World.forPlayer(state, 1)
@@ -167,6 +225,7 @@ assert(not Founding.canFound(state, 1, 12, 2), "Wrapped city spacing rejects the
 state.contentRules = "baseline"
 local legacy = Suggestions.forSettler(World.forPlayer(state, 1), 1, state.units[1])
 for _, site in ipairs(legacy) do
+	assert(not site.capacity.active, "Older profiles do not advertise active city capacity")
 	assert(#site.specialties == 0, "Older profiles do not gain M3-only future site opportunities")
 end
 
