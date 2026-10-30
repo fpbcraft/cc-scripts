@@ -1,4 +1,5 @@
 -- Fixed native usability workflow, not a tournament or calibration policy.
+local sourceRevision, runtimeHost = _G.__openingSourceRevision, _G._HOST
 local native = dofile
 native("/games/civcraft/module_cache.lua").install(_ENV)
 native = dofile
@@ -104,7 +105,7 @@ local function workflow(view, state, observer, options)
 		local world = authoritative and authoritative.world or state.world
 		lastMetadata = true
 		record("campaign_metadata", {
-			sourceRevision = __openingSourceRevision,
+			sourceRevision = sourceRevision,
 			profile = state.contentRules,
 			seed = world.seed,
 			mapSize = world.size,
@@ -112,7 +113,7 @@ local function workflow(view, state, observer, options)
 			height = state.world.height,
 			wrapX = state.world.wrapX == true,
 			players = #state.players,
-			runtime = _HOST,
+			runtime = runtimeHost,
 			lua = _VERSION,
 			backend = view.r.mode,
 			canvasWidth = view.r.w,
@@ -137,8 +138,24 @@ local function workflow(view, state, observer, options)
 		os.queueEvent("mouse_drag", 2, x + 5, y + 2)
 		os.queueEvent("mouse_up", 2, x + 5, y + 2)
 		os.queueEvent("opening_input_complete")
-		stage = "menu"
+		stage = "zoom"
 		return
+	end
+	if stage == "zoom" then
+		if tap(view, "ZOOM IN") then
+			stage = "zoom-result"
+		elseif not tap(view, "MAP TOOLS") then
+			tap(view, "NEXT")
+		end
+		return
+	end
+	if stage == "zoom-result" then
+		assert(
+			view.zoomLevel and view.mapViewport.tile == view.zoomLevel,
+			"Zoom control did not update viewport"
+		)
+		record("zoom_result", { tile = view.mapViewport.tile, zoom = view.zoomLevel })
+		stage = "menu"
 	end
 	if stage == "menu" then
 		stage = "menu-open"
@@ -385,6 +402,10 @@ dofile = function(path)
 						panY = self.panY,
 						zoom = self.zoomLevel,
 					})
+					assert(
+						self.panX ~= viewportBefore.panX or self.panY ~= viewportBefore.panY,
+						"Map viewport did not move"
+					)
 					viewportBefore = nil
 				end
 				if stage == "menu-open" and options.paused and not queued then
@@ -404,8 +425,8 @@ dofile = function(path)
 	return module
 end
 record("begin", {
-	sourceRevision = __openingSourceRevision,
-	runtime = _HOST,
+	sourceRevision = sourceRevision,
+	runtime = runtimeHost,
 	seed = 319497,
 	profile = "balance5",
 	maxRounds = 40,
