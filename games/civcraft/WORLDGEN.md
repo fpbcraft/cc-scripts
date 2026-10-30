@@ -1,20 +1,24 @@
 # World generation contract
 
-New maps use deterministic generation version 4, adding opt-in horizontal
-topology to version 3's starting-region guarantees. Maps remain finite by
-default until the gameplay and interface integration is complete. Existing
-saved maps retain their serialized terrain, geography, starts, and generation
-version; migration
-does not rerun generation.
+New maps use deterministic generation version 5. Version 4 added recorded
+horizontal topology to version 3's starting-region guarantees; version 5 adds
+bounded, seed-deterministic variety to viable start sites and player seats.
+Campaigns default to horizontal wrapping, while saved maps retain their
+serialized terrain, geography, starts, and generation version. Migration does
+not rerun generation.
 
 The start placer measures land connectivity with CivCraft's recorded hex
 topology, treating water and mountains as impassable. It prefers a single
 connected landmass of at least 90 passable tiles that can fit every player at
 least six hexes apart. Candidate sites avoid the polar map bands, reject a
 radius-three opening with more than four snowy-plains tiles, and score nearby
-food, industry, workable land, and cold terrain. Starts are deterministic for
-a seed and player ordering; randomized player-to-site assignment is a separate
-follow-up.
+food, industry, workable land, and cold terrain. A private seeded stream
+perturbs site scores by at most four points, allowing close viable sites to
+vary without discarding fertility ranking. The selected sites are assigned to
+players in seeded order, so player one does not always receive the first
+fertility-ranked site. A seed, player count, map settings, and player order
+reproduce the same starts; different seeds can choose different viable
+openings. Existing saves keep their original starts.
 
 When no qualifying common landmass fits all players, the fallback chooses the
 best available nonpolar opening and constructs one compact shared starting
@@ -33,7 +37,10 @@ Fractal API reference](https://modiki.civfanatics.com/index.php/Fractal.Create_%
 documents a seeded fractal field and wrapping flags, but not the full world
 generation contract. The [Civ VI Shuffle map script
 mirror](https://github.com/mrobaczyk/civ6/blob/main/Base/Assets/Maps/Shuffle.lua)
-illustrates separate terrain generation and fertility-aware start placement.
+and its [starting-plot assignment helper](https://github.com/mrobaczyk/civ6/blob/main/Base/Assets/Maps/Utility/AssignStartingPlots.lua)
+illustrate separating terrain generation, fertility-aware site selection, and
+player assignment. They are reference scripts, not a claim that CivCraft
+replicates Firaxis' algorithm.
 The [DTU thesis on multiplayer map generation](https://www2.imm.dtu.dk/pubdb/edoc/imm6474.pdf)
 motivates checking connectivity, player distance, strategic access, and nearby
 productive tiles; its evolutionary optimization and aggregate metrics are not

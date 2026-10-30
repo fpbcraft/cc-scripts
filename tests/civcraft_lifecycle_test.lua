@@ -301,6 +301,22 @@ local function runFixture(count, seed)
 	Lifecycle.initialize(extracted)
 	referenceInitialize(reference)
 	equal(extracted, reference, "initialize[" .. count .. "," .. seed .. "]")
+	for index, participant in ipairs(extracted.players) do
+		local capital
+		for _, city in ipairs(extracted.cities) do
+			if city.capitalOf == participant.id then
+				capital = city
+				break
+			end
+		end
+		if capital then
+			local assignedStart = extracted.world.starts[index]
+			assert(
+				capital.x == assignedStart.x and capital.y == assignedStart.y,
+				"Lifecycle assigns each player's capital to their seeded start"
+			)
+		end
+	end
 
 	-- A second boundary catches stateful changes to production, movement,
 	-- fog-of-war, reports, hostiles and diplomacy that initialization cannot.
