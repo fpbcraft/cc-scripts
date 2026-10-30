@@ -12,7 +12,12 @@ parser.add_argument("--craftos", default=shutil.which("craftos") or "/Applicatio
 parser.add_argument("--reverse-race", action="store_true", help="Let client 2 win the initial collision")
 parser.add_argument("--timings", action="store_true", help="Observe independent command acknowledgement and updated snapshot timings")
 parser.add_argument("--v5-opening", action="store_true", help="Observe natural generated V5 host/guest/AI founding and network orders")
+parser.add_argument("--opening-rounds", type=int, default=3, help="V5 observation round bound (3..40)")
 args = parser.parse_args()
+if not 3 <= args.opening_rounds <= 40:
+    parser.error("--opening-rounds must be between 3 and 40")
+if not args.v5_opening and args.opening_rounds != 3:
+    parser.error("--opening-rounds requires --v5-opening")
 if args.v5_opening and args.reverse_race:
     parser.error("--reverse-race belongs to the controlled V3 fixture")
 if args.v5_opening:
@@ -23,6 +28,8 @@ print(f"Isolated profile: {profile}", flush=True)
 flags = (["--reverse-race"] if args.reverse_race else []) + (["--timings"] if args.timings else [])
 lua_test = "civcraft_craftos_opening_network.lua" if args.v5_opening else "civcraft_craftos_network.lua"
 computer_count = 2 if args.v5_opening else 3
+if args.v5_opening:
+    flags.append(str(args.opening_rounds))
 boot = 'assert(loadfile("/tests/' + lua_test + '"))(' + ", ".join(map(json.dumps, flags)) + ")"
 for identity in range(computer_count):
     root = profile / "computer" / str(identity)
@@ -61,6 +68,15 @@ if args.timings:
             sample = samples.get(token, {})
             if not all(isinstance(sample.get(key), (int, float)) for key in ("ackMillis", "snapshotMillis")):
                 failed = True
+        if args.v5_opening:
+            observed_rounds = sorted(int(key.split(":")[1]) for key in samples if key.startswith("round:"))
+            if not observed_rounds or observed_rounds[-1] != args.opening_rounds or observed_rounds != list(range(observed_rounds[0], args.opening_rounds + 1)):
+                failed = True
+                print("Missing or non-contiguous round observations:", observed_rounds)
+            for target in observed_rounds:
+                sample = samples["round:" + str(target)]
+                if not all(isinstance(sample.get(key), (int, float)) for key in ("ackMillis", "snapshotMillis")):
+                    failed = True
         print("Client timing observations:", json.dumps(timing, sort_keys=True))
     else:
         failed = True

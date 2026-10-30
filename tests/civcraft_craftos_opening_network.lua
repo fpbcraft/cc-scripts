@@ -1,4 +1,12 @@
 -- Natural generated V5 network opening; no terrain, resource, or technology grants.
+local roundLimit = 3
+for _, value in ipairs({ ... }) do
+	roundLimit = tonumber(value) or roundLimit
+end
+assert(
+	roundLimit >= 3 and roundLimit <= 40 and roundLimit % 1 == 0,
+	"Opening round bound must be 3..40"
+)
 local id = os.getComputerID()
 assert(id == 0 or id == 1, "Use dedicated computers 0 and 1")
 local emulator = assert(_G.periphemu, "Run in CraftOS-PC")
@@ -144,6 +152,9 @@ local function workflow(ui, state, options)
 		end
 		if pending.token then
 			samples[pending.token] = pending
+			if pending.targetRound then
+				samples["round:" .. pending.targetRound] = pending
+			end
 			writeTimings()
 			control(pending.token, { sample = pending })
 		end
@@ -175,7 +186,8 @@ local function workflow(ui, state, options)
 	if state.phase ~= "game" then
 		return
 	end
-	assert(state.round <= 10, "Initial network founding exceeded ten-round correctness bound")
+	assert(state.round <= roundLimit, "Network observation exceeded its round bound")
+	assert(ownCities(state) > 0 or state.round <= 10, "Initial founding exceeded ten rounds")
 	local p = assert(player(state, id))
 	if id == 1 and controls.finish then
 		complete = true
@@ -224,7 +236,7 @@ local function workflow(ui, state, options)
 		end
 		if
 			controls.measureEnd
-			and not samples.naturalOpeningRound
+			and not samples["round:" .. controls.measureEnd.targetRound]
 			and guestEndRound ~= state.round
 		then
 			guestEndRound = state.round
@@ -239,12 +251,18 @@ local function workflow(ui, state, options)
 			control("measureMove")
 		elseif controls.naturalOpeningMove and not endRequested then
 			endRequested = true
+			controls.naturalOpeningRound = nil
 			control("measureEnd", { targetRound = state.round + 1 })
 			if not p.ready then
 				issue(ui, "end")
 			end
 		elseif controls.naturalOpeningRound then
-			control("finish")
+			if state.round >= roundLimit then
+				control("finish")
+			else
+				endRequested = false
+				os.queueEvent("civcraft_state_changed")
+			end
 		end
 	elseif sentEndRound ~= state.round then
 		sentEndRound = state.round
@@ -269,6 +287,7 @@ env.dofile = function(path)
 				runtime = _G._HOST,
 				lua = _VERSION,
 				controlledTerrain = false,
+				roundLimit = roundLimit,
 			}
 			local file = assert(fs.open("/civcraft-network-metadata.json", "w"))
 			file.write(textutils.serializeJSON(metadata))
