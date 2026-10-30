@@ -20,7 +20,7 @@ local Systems = module("systems")
 local UI = module("ui")
 local World = module("world")
 
-local width, height = 4, 24
+local width, height = 3, 24
 local state = {
 	version = 6,
 	phase = "game",
@@ -159,7 +159,10 @@ draw()
 local viewport = assert(ui.mapViewport)
 assert(viewport.wrapX and viewport.world.wrapX, "Native viewport lacks cylinder geometry metadata")
 assert(viewport.world.width == width and viewport.world.height == height)
-assert(viewport.w > viewport.periodX, "Native viewport does not expose multiple cylinder copies")
+assert(
+	viewport.w >= viewport.periodX * 2,
+	"Native viewport does not expose two complete cylinder periods"
+)
 
 -- Keep the owned city row comfortably inside the map viewport before testing
 -- repeated hit targets; native inspector height varies by terminal size.
