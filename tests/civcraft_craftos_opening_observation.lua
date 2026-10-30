@@ -84,14 +84,11 @@ local function workflow(view, state, observer, options)
 	if options.paused and loadMenuRequested and not loadMenuCompleted then
 		if tap(view, "RESUME") then
 			loadMenuCompleted = true
-			record(
-				"menu_after_load",
-				{
-					millis = os.epoch("utc") - loadMenuSince,
-					round = state.round,
-					note = "Queued during round resolution; observed paused frame and Resume control",
-				}
-			)
+			record("menu_after_load", {
+				millis = os.epoch("utc") - loadMenuSince,
+				round = state.round,
+				note = "Queued during round resolution; observed paused frame and Resume control",
+			})
 		else
 			tap(view, "NEXT")
 		end
