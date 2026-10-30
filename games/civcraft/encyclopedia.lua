@@ -62,7 +62,7 @@ local mechanics = {
 	{
 		id = "settlement",
 		name = "SETTLEMENT SITES",
-		text = "Select one of your settlers to see up to three legal settlement sites ranked from your explored map. Markers show the same canonical hex on every visible copy of a wrapped map. Natural tile food and industry before founding, observed water capacity and known resources explain each site. City-center output follows separate rules; conditional specialty opportunities are suggestions only. Fog may hide better terrain, rivals or resources, so estimates can be incomplete. Opening a suggestion keeps the settler selected and never moves it or founds a city. Founding still requires the separate FOUND CITY action.",
+		text = "Select a Settler to see recommended city icons on the map. Recommendations update as explored land and known cities change. They value surrounding observed food, industry and resources, and remain at least four hexes from known cities and each other. Unknown land may reveal better sites. Tapping an icon preserves selection and sends no movement or founding order. Advisory spacing does not change the normal FOUND CITY rules.",
 	},
 	{
 		id = "combat",

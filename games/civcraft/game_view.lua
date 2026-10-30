@@ -585,9 +585,6 @@ function G.draw(ui, state, player)
 	elseif ui.panel == "inspector" then
 		modal(ui, rect)
 		Inspector.draw(ui, state, player, rect, true)
-	elseif ui.panel == "settlementSuggestions" then
-		modal(ui, rect)
-		SettlementView.drawDetails(ui, state, player, rect)
 	elseif ui.panel == "minimap" then
 		modal(ui, rect, true)
 		r:text(rect.x + 4, rect.y + 4, "WORLD OVERVIEW", 8, 1, rect.w - 45)
