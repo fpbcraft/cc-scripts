@@ -215,55 +215,48 @@ end
 
 local function unobstructedNativeMapPoint(ui)
 	local viewport = assert(ui.mapViewport)
-	for _, target in ipairs(ui.hexTargets or {}) do
-		local x, y = target.x + target.w / 2, target.y + target.h / 2
-		local sx, sy = screenPoint(ui.r, x, y)
-		local rx, ry = ui.r:touch(sx, sy)
-		local inside = rx
-			and ry
-			and rx >= viewport.x
-			and rx < viewport.x + viewport.w
-			and ry >= viewport.y
-			and ry < viewport.y + viewport.h
-			and Hex.contains(target.x, target.y, target.w, rx, ry)
-		if inside then
-			for _, button in ipairs(ui.r.buttons or {}) do
-				if
-					rx >= button.x
-					and rx < button.x + button.w
-					and ry >= button.y
-					and ry < button.y + button.h
-				then
-					inside = false
-					break
+	local seen = {}
+	for y = math.ceil(viewport.y), math.floor(viewport.y + viewport.h - 1) do
+		for x = math.ceil(viewport.x), math.floor(viewport.x + viewport.w - 1) do
+			local sx, sy = screenPoint(ui.r, x, y)
+			local key = sx .. ":" .. sy
+			if not seen[key] then
+				seen[key] = true
+				local rx, ry = ui.r:touch(sx, sy)
+				local inside = rx
+					and ry
+					and rx >= viewport.x
+					and rx < viewport.x + viewport.w
+					and ry >= viewport.y
+					and ry < viewport.y + viewport.h
+				for _, targets in ipairs({
+					ui.r.buttons or {},
+					ui.cityBannerTargets or {},
+					ui.unitBadgeTargets or {},
+					ui.unitIconTargets or {},
+				}) do
+					if not inside then
+						break
+					end
+					for _, obstruction in ipairs(targets) do
+						if
+							rx >= obstruction.x
+							and rx < obstruction.x + obstruction.w
+							and ry >= obstruction.y
+							and ry < obstruction.y + obstruction.h
+						then
+							inside = false
+							break
+						end
+					end
+				end
+				if inside then
+					return sx, sy, rx, ry
 				end
 			end
-		end
-		for _, targets in ipairs({
-			ui.cityBannerTargets or {},
-			ui.unitBadgeTargets or {},
-			ui.unitIconTargets or {},
-		}) do
-			for _, obstruction in ipairs(targets) do
-				if
-					rx >= obstruction.x
-					and rx < obstruction.x + obstruction.w
-					and ry >= obstruction.y
-					and ry < obstruction.y + obstruction.h
-				then
-					inside = false
-					break
-				end
-			end
-			if not inside then
-				break
-			end
-		end
-		if inside then
-			return sx, sy, rx, ry
 		end
 	end
-	error("Native map viewport has no unobstructed input cell for drag staging")
+	return nil
 end
 
 local function queuedEvent(name, ...)
@@ -624,6 +617,19 @@ for profileIndex, profile in ipairs(profiles) do
 		else
 			local view = ui.mapViewport
 			local sx, sy = unobstructedNativeMapPoint(ui)
+			for _ = 1, 8 do
+				if sx then
+					break
+				end
+				tapButton(ui, "MAP DOWN EDGE", function()
+					draw("drag-staging-pan")
+				end, operations)
+				sx, sy = unobstructedNativeMapPoint(ui)
+			end
+			assert(
+				sx,
+				"Native map viewport has no unobstructed input cell after actual edge panning"
+			)
 			local dragDistance = math.max(2, math.min(8, math.floor(view.w / 4)))
 			local dx, dy
 			for _, direction in ipairs({ sx < ui.r.w / 2 and 1 or -1, sx < ui.r.w / 2 and -1 or 1 }) do
