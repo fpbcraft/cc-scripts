@@ -1,5 +1,10 @@
 -- Dedicated isolated CraftOS profile: slot 1 is overwritten with controlled late-game data.
-local backend = ... or "text"
+local arguments = { ... }
+local backend = arguments[1] or "text"
+local profileFirstFrame = false
+for _, argument in ipairs(arguments) do
+	profileFirstFrame = profileFirstFrame or argument == "--profile-first-frame"
+end
 assert(backend == "text" or backend == "gui" or backend == "monitor", "Unknown backend")
 if backend == "monitor" then
 	assert(_G.periphemu.create("top", "monitor"), "Create a monitor in a fresh CraftOS profile")
@@ -34,6 +39,8 @@ local sizes = { "huge", "vast" }
 local report = {
 	backend = backend,
 	host = _G._HOST,
+	profileOnly = profileFirstFrame,
+	profileMode = profileFirstFrame and "first-frame" or nil,
 	scenarios = {},
 	fixture = { rounds = 100, cities = 40, units = 200, players = 4, mapType = "continents" },
 }
@@ -41,6 +48,13 @@ local maximum = { name = "none", elapsedMillis = 0 }
 local function progress(stage)
 	local file = assert(fs.open("/founders-stress-progress.log", "a"))
 	file.writeLine(tostring(os.epoch("utc")) .. " " .. stage)
+	file.close()
+end
+
+local function persistPartial(stage)
+	report.progressStage = stage
+	local file = assert(fs.open("/civcraft-founders-stress-partial.json", "w"))
+	file.write(textutils.serializeJSON(report))
 	file.close()
 end
 
@@ -199,6 +213,59 @@ local function screenPoint(renderer, x, y)
 	return math.floor(x / 2 + 1), math.floor(y / 3 + 1)
 end
 
+local function unobstructedNativeMapPoint(ui)
+	local viewport = assert(ui.mapViewport)
+	for _, target in ipairs(ui.hexTargets or {}) do
+		local x, y = target.x + target.w / 2, target.y + target.h / 2
+		local sx, sy = screenPoint(ui.r, x, y)
+		local rx, ry = ui.r:touch(sx, sy)
+		local inside = rx
+			and ry
+			and rx >= viewport.x
+			and rx < viewport.x + viewport.w
+			and ry >= viewport.y
+			and ry < viewport.y + viewport.h
+			and Hex.contains(target.x, target.y, target.w, rx, ry)
+		if inside then
+			for _, button in ipairs(ui.r.buttons or {}) do
+				if
+					rx >= button.x
+					and rx < button.x + button.w
+					and ry >= button.y
+					and ry < button.y + button.h
+				then
+					inside = false
+					break
+				end
+			end
+		end
+		for _, targets in ipairs({
+			ui.cityBannerTargets or {},
+			ui.unitBadgeTargets or {},
+			ui.unitIconTargets or {},
+		}) do
+			for _, obstruction in ipairs(targets) do
+				if
+					rx >= obstruction.x
+					and rx < obstruction.x + obstruction.w
+					and ry >= obstruction.y
+					and ry < obstruction.y + obstruction.h
+				then
+					inside = false
+					break
+				end
+			end
+			if not inside then
+				break
+			end
+		end
+		if inside then
+			return sx, sy, rx, ry
+		end
+	end
+	error("Native map viewport has no unobstructed input cell for drag staging")
+end
+
 local function queuedEvent(name, ...)
 	os.queueEvent(name, ...)
 	local event = table.pack(os.pullEvent(name))
@@ -239,6 +306,7 @@ local function tapButton(ui, label, draw, operations)
 end
 
 local projectedState, projectedSnapshot
+local presentationCaptures, presentationReuses = 0, 0
 local function frame(ui, state, operations, name)
 	progress("begin " .. name)
 	local started = os.epoch("utc")
@@ -247,6 +315,9 @@ local function frame(ui, state, operations, name)
 			return Presentation.capture(state, state.players[1].id)
 		end)
 		projectedState = state
+		presentationCaptures = presentationCaptures + 1
+	else
+		presentationReuses = presentationReuses + 1
 	end
 	ui:draw(projectedSnapshot, state.players[1].id, { screen = "game", report = false })
 	local elapsed = os.epoch("utc") - started
@@ -258,8 +329,64 @@ local function frame(ui, state, operations, name)
 	return elapsed
 end
 
+local function componentStats()
+	return {
+		clock = "os.epoch(utc), milliseconds",
+		inclusive = true,
+		components = {},
+		cooperative = {
+			work = { yields = 0, gcCycles = 0, gcTotalMillis = 0, gcMaximumMillis = 0 },
+			renderer = { yields = 0, gcCycles = 0, gcTotalMillis = 0, gcMaximumMillis = 0 },
+		},
+	}
+end
+
+local function instrumentComponent(target, field, label, stats)
+	local original = target[field]
+	assert(type(original) == "function", "Missing component draw function: " .. label)
+	local item = { calls = 0, totalMillis = 0, maximumMillis = 0 }
+	stats.components[label] = item
+	target[field] = function(...)
+		local started = os.epoch("utc")
+		local result = table.pack(pcall(original, ...))
+		local elapsed = os.epoch("utc") - started
+		item.calls = item.calls + 1
+		item.totalMillis = item.totalMillis + elapsed
+		item.maximumMillis = math.max(item.maximumMillis, elapsed)
+		if not result[1] then
+			error(result[2], 0)
+		end
+		return table.unpack(result, 2, result.n)
+	end
+end
+
+local function cooperativeTrace(stats, name)
+	return function(stage, detail)
+		local item = stats.cooperative[name]
+		if stage == "yield.begin" then
+			item.yields = item.yields + 1
+		elseif stage == "gc.end" then
+			local elapsed = tonumber(tostring(detail):match("elapsed=(%d+)")) or 0
+			item.gcCycles = item.gcCycles + 1
+			item.gcTotalMillis = item.gcTotalMillis + elapsed
+			item.gcMaximumMillis = math.max(item.gcMaximumMillis, elapsed)
+		end
+	end
+end
+
+local profileStats = profileFirstFrame and componentStats() or nil
+if profileStats then
+	work.trace = cooperativeTrace(profileStats, "work")
+end
+
 for profileIndex, profile in ipairs(profiles) do
+	if profileFirstFrame and profileIndex > 1 then
+		break
+	end
 	for sizeIndex, size in ipairs(sizes) do
+		if profileFirstFrame and sizeIndex > 1 then
+			break
+		end
 		progress("scenario " .. profile.name .. " " .. size)
 		local operations = {}
 		local scenarioIndex = (profileIndex - 1) * #sizes + sizeIndex
@@ -305,10 +432,79 @@ for profileIndex, profile in ipairs(profiles) do
 			error("The performance fixture must not mutate gameplay through UI commands")
 		end)
 		local playerID = state.players[1].id
+		if profileFirstFrame then
+			local GameView = module("game_view")
+			local MapView = module("map_view")
+			local Inspector = module("inspector")
+			local CityBanner = module("city_banner")
+			instrumentComponent(GameView, "draw", "GameView.draw", profileStats)
+			instrumentComponent(MapView, "draw", "MapView.draw", profileStats)
+			instrumentComponent(Inspector, "draw", "Inspector.draw", profileStats)
+			instrumentComponent(CityBanner, "model", "CityBanner.model", profileStats)
+			instrumentComponent(CityBanner, "layout", "CityBanner.layout", profileStats)
+			instrumentComponent(CityBanner, "draw", "CityBanner.draw", profileStats)
+			ui.r.trace = cooperativeTrace(profileStats, "renderer")
+			report.componentProfile = profileStats
+			report.scenarios[1] = {
+				profile = profile.name,
+				contentRules = profile.contentRules,
+				size = size,
+				width = expectedWidth,
+				height = expectedHeight,
+				wrapX = state.world.wrapX,
+				cities = #state.cities,
+				units = #state.units,
+				round = state.round,
+				stage = "state-prepared",
+			}
+			persistPartial("state-prepared")
+			projectedSnapshot = measured(operations, "observer-projection", function()
+				return Presentation.capture(state, playerID)
+			end)
+			projectedState = state
+			presentationCaptures = presentationCaptures + 1
+			report.presentationCaptures = presentationCaptures
+			persistPartial("presentation-ready")
+		end
 		local function draw(name)
 			return frame(ui, state, operations, name)
 		end
 		local initialElapsed = draw("initial-render")
+		if profileFirstFrame then
+			local scenario = report.scenarios[1]
+			scenario.stage = "first-frame-complete"
+			scenario.firstFrameMillis = initialElapsed
+			scenario.operations = operations
+			scenario.presentationReuses = presentationReuses
+			scenario.renderer = ui.r.mode
+			scenario.rendererYields = ui.r.yieldToken or 0
+			scenario.cooperativeYields = work.yieldToken or 0
+			scenario.gc = {
+				workCycles = work.gcCycles or 0,
+				workMaximumMillis = work.gcMaxMillis or 0,
+				rendererCycles = ui.r.gcCycles or 0,
+				rendererMaximumMillis = ui.r.gcMaxMillis or 0,
+				tracedWork = profileStats.cooperative.work,
+				tracedRenderer = profileStats.cooperative.renderer,
+			}
+			local partialMaximum = { name = "none", elapsedMillis = 0 }
+			for _, operation in ipairs(operations) do
+				if operation.elapsedMillis > partialMaximum.elapsedMillis then
+					partialMaximum = {
+						name = operation.name,
+						elapsedMillis = operation.elapsedMillis,
+					}
+				end
+			end
+			scenario.maximumOperation = partialMaximum
+			report.maximumOperation = maximum
+			report.checkpoints = work.work or 0
+			report.yields = work.yieldToken or 0
+			report.profileOnly = true
+			persistPartial("first-frame-complete")
+			ui:close()
+			return report
+		end
 		assert(ui.mapViewport and ui.mapViewport.world.width == expectedWidth)
 		if backend == "text" then
 			assert(ui.r.mode == "text", "Text backend did not use the native text renderer")
@@ -422,10 +618,25 @@ for profileIndex, profile in ipairs(profiles) do
 			draw("monitor-pan-render")
 		else
 			local view = ui.mapViewport
-			local fromX, fromY = view.x + view.w * 0.55, view.y + view.h * 0.45
-			local toX, toY = fromX - 18, fromY - 9
-			local sx, sy = screenPoint(ui.r, fromX, fromY)
-			local dx, dy = screenPoint(ui.r, toX, toY)
+			local sx, sy = unobstructedNativeMapPoint(ui)
+			local dragDistance = math.max(2, math.min(8, math.floor(view.w / 4)))
+			local dx, dy
+			for _, direction in ipairs({ sx < ui.r.w / 2 and 1 or -1, sx < ui.r.w / 2 and -1 or 1 }) do
+				local candidateX = sx + dragDistance * direction
+				local rx, ry = ui.r:touch(candidateX, sy)
+				if
+					rx
+					and ry
+					and rx >= view.x
+					and rx < view.x + view.w
+					and ry >= view.y
+					and ry < view.y + view.h
+				then
+					dx, dy = candidateX, sy
+					break
+				end
+			end
+			assert(dx, "Native map viewport has no in-bounds drag endpoint")
 			local beforePan = ui.panX
 			measured(operations, "input:mouse-drag", function()
 				local _, downButton, downX, downY = queuedEvent("mouse_click", 1, sx, sy)

@@ -19,6 +19,11 @@ parser.add_argument(
     help="Use the native text terminal, GUI terminal, or emulated Advanced Monitor",
 )
 parser.add_argument("--timeout", type=int, default=600, help="Maximum native run time in seconds")
+parser.add_argument(
+    "--profile-first-frame",
+    action="store_true",
+    help="Profile only the first V4 Huge frame; this is not the four-case stress matrix",
+)
 args = parser.parse_args()
 if args.timeout <= 0:
     parser.error("--timeout must be positive")
@@ -39,6 +44,8 @@ shutil.copyfile(
 )
 
 backend_arg = json.dumps(args.backend)
+if args.profile_first_frame:
+    backend_arg += ', "--profile-first-frame"'
 script = '''local ok, result = pcall(function()
 local env = dofile("/games/civcraft/_lib/fpb/loader.lua")
     .environment("/games/civcraft", _ENV, "game.lua")
@@ -60,14 +67,25 @@ if args.backend == "text":
 
 console_path = profile / "native-console.log"
 print(f"Isolated profile: {profile}", flush=True)
-with console_path.open("w") as console:
-    subprocess.run(
-        command,
-        stdout=console,
-        stderr=subprocess.STDOUT,
-        check=True,
-        timeout=args.timeout,
-    )
+try:
+    with console_path.open("w") as console:
+        subprocess.run(
+            command,
+            stdout=console,
+            stderr=subprocess.STDOUT,
+            check=True,
+            timeout=args.timeout,
+        )
+except subprocess.TimeoutExpired:
+    partial_path = root / "civcraft-founders-stress-partial.json"
+    if partial_path.exists():
+        print("Partial progress:")
+        print(json.dumps(json.loads(partial_path.read_text()), indent=2, sort_keys=True))
+    progress_path = root / "founders-stress-progress.log"
+    if progress_path.exists():
+        print(f"Progress log: {progress_path}")
+    print(f"Native console: {console_path}")
+    raise SystemExit(f"Native run exceeded {args.timeout} seconds")
 
 result_path = root / "civcraft-founders-stress-result.json"
 if not result_path.exists():
@@ -80,6 +98,26 @@ if not result.get("ok"):
     raise SystemExit(1)
 
 report = result["report"]
+if args.profile_first_frame:
+    assert report.get("profileOnly") is True, "First-frame run was not marked profile-only"
+    assert report.get("profileMode") == "first-frame"
+    assert len(report["scenarios"]) == 1, "First-frame profile must report exactly one case"
+    scenario = report["scenarios"][0]
+    assert (scenario["profile"], scenario["size"]) == ("founders-v4", "huge")
+    assert (scenario["width"], scenario["height"], scenario["wrapX"]) == (96, 60, False)
+    assert scenario["stage"] == "first-frame-complete"
+    assert scenario["firstFrameMillis"] >= 0 and scenario["presentationReuses"] == 1
+    component_profile = report.get("componentProfile", {})
+    components = component_profile.get("components", {})
+    assert {"GameView.draw", "MapView.draw", "Inspector.draw"}.issubset(components)
+    assert "CityBanner.draw" in components
+    assert "work" in component_profile.get("cooperative", {})
+    assert "renderer" in component_profile.get("cooperative", {})
+    print(json.dumps(report, indent=2, sort_keys=True))
+    print(f"Evidence: {result_path}")
+    raise SystemExit(0)
+
+assert report.get("profileOnly") is False, "Full matrix mode cannot be profile-only"
 expected = {
     ("founders-v4", "huge"),
     ("founders-v4", "vast"),
