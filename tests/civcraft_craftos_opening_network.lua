@@ -138,6 +138,9 @@ local function workflow(ui, state, options)
 		end
 		return
 	end
+	if not state then
+		return
+	end
 	if state.phase == "lobby" then
 		if id == 0 then
 			if not created then
