@@ -1,1 +1,1 @@
-return rawget(_ENV, "loadfileProbe")
+return _ENV.loadfileProbe

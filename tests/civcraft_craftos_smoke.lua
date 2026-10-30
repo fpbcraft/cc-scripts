@@ -77,19 +77,31 @@ draw()
 ui:focus("city", state.cities[1])
 ui.cityPanel = "production"
 draw()
+if click("DETAILS") then
+	draw()
+end
 assert(find("NO PRODUCTION"))
 draw()
 assert(state.cities[1].productionIdle)
 ui:focus("unit", state.units[1])
 draw()
+if click("DETAILS") then
+	draw()
+end
 assert(find("MOVE / ATTACK"))
 local target
 for _, destination in ipairs(ui.reachable) do
-	if not destination.attack and (not target or #destination.path > #target.path) then
+	local observed = true
+	for _, point in ipairs(destination.path or {}) do
+		if not state.players[1].visible[World.key(point.x, point.y)] then
+			observed = false
+		end
+	end
+	if observed and not destination.attack and (not target or #destination.path > #target.path) then
 		target = destination
 	end
 end
-assert(target, "Native UI offered no legal scout movement")
+assert(target and #target.path > 2, "Native UI must offer an observed multi-step scout route")
 ui:tile(target.x, target.y)
 draw()
 assert(click("CONFIRM"))
