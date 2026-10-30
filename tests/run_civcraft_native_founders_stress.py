@@ -91,5 +91,9 @@ assert actual == expected, "Native report is missing a fixed profile/map-size ca
 for item in report["scenarios"]:
     assert item["cities"] == 40 and item["units"] == 200 and item["round"] == 100
     assert item["frames"] >= 4 and item["savedBytes"] > 0
+    assert (item["width"], item["height"]) == (
+        (96, 60) if item["size"] == "huge" else (120, 76)
+    )
+    assert item["wrapX"] == (item["profile"] == "specialization-v5")
 print(json.dumps(report, indent=2, sort_keys=True))
 print(f"Evidence: {result_path}")

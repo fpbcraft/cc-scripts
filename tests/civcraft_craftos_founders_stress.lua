@@ -57,7 +57,7 @@ local function newState(profile, size, scenarioIndex)
 	state.mapSize = size
 	state.mapType = "continents"
 	state.mapSeed = 82471 + profile.seedOffset + scenarioIndex * 97
-	state.mapWrapX = false
+	state.mapWrapX = profile.contentRules == "balance5"
 	state.hostileMode = "off"
 	for index = 1, 4 do
 		state.players[index] = {
@@ -248,8 +248,18 @@ for profileIndex, profile in ipairs(profiles) do
 		end)
 		local expectedWidth, expectedHeight = World.dimensions(size, state)
 		assert(state.world.width == expectedWidth and state.world.height == expectedHeight)
+		local acceptedDimensions = {
+			huge = { 96, 60 },
+			vast = { 120, 76 },
+		}
+		assert(
+			expectedWidth == acceptedDimensions[size][1]
+				and expectedHeight == acceptedDimensions[size][2],
+			"Founders profiles must use their accepted expanded map dimensions"
+		)
 		assert(#state.cities == 40 and #state.units == 200)
-		assert(state.round == 100 and state.world.wrapX == false)
+		local expectedWrap = profile.contentRules == "balance5"
+		assert(state.round == 100 and state.world.wrapX == expectedWrap)
 		local expectedTiles = expectedWidth * expectedHeight
 		local observedTiles = 0
 		for _ in pairs(state.players[1].visible) do
@@ -421,6 +431,7 @@ for profileIndex, profile in ipairs(profiles) do
 			size = size,
 			width = expectedWidth,
 			height = expectedHeight,
+			wrapX = state.world.wrapX,
 			seed = state.world.seed,
 			cities = #state.cities,
 			units = #state.units,
