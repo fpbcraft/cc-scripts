@@ -61,7 +61,12 @@ if args.timings:
         print("Campaign metadata:", metadata_file.read_text())
     timing_file = profile / ("computer/1/civcraft-network-timings.json" if args.v5_opening else "computer/2/civcraft-network-timings.json")
     if timing_file.exists():
-        timing = json.loads(timing_file.read_text())
+        try:
+            timing = json.loads(timing_file.read_text())
+        except (ValueError, OSError) as error:
+            failed = True
+            timing = {"samples": {}}
+            print("Invalid timing observations:", error)
         samples = timing.get("samples", {})
         tokens = ("naturalOpeningMove", "naturalOpeningRound") if args.v5_opening else ("spendBeforeMerge", "peacefulConcurrentMove")
         for token in tokens:

@@ -153,7 +153,11 @@ local function workflow(ui, state, options)
 		if pending.token then
 			samples[pending.token] = pending
 			if pending.targetRound then
-				samples["round:" .. pending.targetRound] = pending
+				local roundSample = {}
+				for key, value in pairs(pending) do
+					roundSample[key] = value
+				end
+				samples["round:" .. pending.targetRound] = roundSample
 			end
 			writeTimings()
 			control(pending.token, { sample = pending })
