@@ -662,6 +662,50 @@ function I.draw(ui, state, player, rect, modal)
 		end
 		if stats.builder then
 			text("BUILDER CHARGES " .. (unit.charges or 0) .. " / 3", 13)
+			if unit.autoWork then
+				text(
+					"AUTO WORK: "
+						.. (unit.autoWorkPaused and "PAUSED / " .. unit.autoWorkPaused or "ACTIVE")
+				)
+			end
+			local autoControls = {}
+			if unit.autoWork then
+				autoControls[#autoControls + 1] = {
+					label = unit.autoWorkPaused and "RESUME AUTO WORK" or "PAUSE AUTO WORK",
+					run = function()
+						ui:command("autoWork", {
+							unitID = unit.id,
+							x = unit.x,
+							y = unit.y,
+							value = unit.autoWorkPaused and "resume" or "pause",
+						})
+					end,
+				}
+				autoControls[#autoControls + 1] = {
+					label = "STOP AUTO WORK",
+					run = function()
+						ui:command("autoWork", {
+							unitID = unit.id,
+							x = unit.x,
+							y = unit.y,
+							value = "stop",
+						})
+					end,
+				}
+			else
+				autoControls[1] = {
+					label = "AUTO WORK",
+					run = function()
+						ui:command("autoWork", {
+							unitID = unit.id,
+							x = unit.x,
+							y = unit.y,
+							value = true,
+						})
+					end,
+				}
+			end
+			rows[#rows + 1] = { buttons = autoControls }
 			if at(state.cities, unit.x, unit.y) then
 				text("CITY CENTER: move onto an owned land tile to improve it.", 8)
 			end

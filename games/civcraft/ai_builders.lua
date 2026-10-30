@@ -6,14 +6,20 @@ local Values = dofile("/games/civcraft/ai_economy_values.lua")
 local Builders = {}
 function Builders.order(view, player, unit, systems)
 	if WorkQueue.threat(view, player.id, unit.x, unit.y, systems) then
-		return nil
+		return nil, "Visible threat nearby"
 	end
 	local best, bestScore
+	local blockedByThreat
+	local checked = 0
 	for _, city in ipairs(view.cities or {}) do
 		if city.owner == player.id then
 			local context = Values.context(view, player, city, systems)
 			for _, tile in ipairs(systems.workable(view, city)) do
 				for _, kind in ipairs(Works.order) do
+					checked = checked + 1
+					if checked % 16 == 0 and systems.checkpoint then
+						systems.checkpoint()
+					end
 					local preview = Works.preview(view, player, unit, kind, tile.x, tile.y, systems)
 					if preview then
 						local path = unit.x == tile.x
@@ -26,6 +32,7 @@ function Builders.order(view, player, unit, systems)
 						for _, point in ipairs(path or {}) do
 							if WorkQueue.threat(view, player.id, point.x, point.y, systems) then
 								safe = false
+								blockedByThreat = "Visible threat on work route"
 								break
 							end
 						end
@@ -38,7 +45,7 @@ function Builders.order(view, player, unit, systems)
 							local score = Values.effects(gain, context)
 								* ((city.worked or {})[tile.key] and 2 or 1)
 								/ (1 + #path)
-							if not bestScore or score > bestScore then
+							if score > 0 and (not bestScore or score > bestScore) then
 								bestScore = score
 								best = {
 									action = "queueWork",
@@ -56,6 +63,6 @@ function Builders.order(view, player, unit, systems)
 			end
 		end
 	end
-	return best
+	return best, best and nil or blockedByThreat
 end
 return Builders

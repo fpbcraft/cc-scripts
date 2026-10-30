@@ -146,6 +146,11 @@ mechanics[#mechanics + 1] = {
 	text = "Scouts and explorers can automatically search for unexplored territory using legal, non-attacking routes. AUTO EXPLORE moves immediately if points remain and continues each new round. STOP EXPLORING or a manual order cancels it. It stops when no safe route or unexplored territory remains.",
 }
 mechanics[#mechanics + 1] = {
+	id = "builderauto",
+	name = "BUILDER AUTO WORK",
+	text = "AUTO WORK is an optional saved Builder order. It chooses useful legal improvements on observed owned land through the ordinary work queue and shared actions. PAUSE AUTO WORK keeps the order for later; RESUME rechecks current observations; STOP clears the intent and its generated task. Visible threats and unavailable work pause with a reason. Manual movement or a manual work queue takes control. Capture clears the previous owner's intent. Auto work never inspects hidden enemies or plans.",
+}
+mechanics[#mechanics + 1] = {
 	id = "audio",
 	name = "AUDIO",
 	text = "A connected speaker plays short interaction, movement, research, production and turn effects. The title screen plays an original note-based melody. Toggle AUDIO in the pause menu to mute or restore sound; the setting persists. No speaker means silent play.",
