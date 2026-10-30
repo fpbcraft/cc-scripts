@@ -491,8 +491,6 @@ for profileIndex, profile in ipairs(profiles) do
 				workMaximumMillis = work.gcMaxMillis or 0,
 				rendererCycles = ui.r.gcCycles or 0,
 				rendererMaximumMillis = ui.r.gcMaxMillis or 0,
-				tracedWork = profileStats.cooperative.work,
-				tracedRenderer = profileStats.cooperative.renderer,
 			}
 			local partialMaximum = { name = "none", elapsedMillis = 0 }
 			for _, operation in ipairs(operations) do
