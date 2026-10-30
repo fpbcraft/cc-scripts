@@ -18,12 +18,14 @@ colors = {
 }
 dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local UI = dofile("games/civcraft/ui.lua")
+local RenderUI = UI.new
 dofile("tests/helpers/civcraft_layout_only.lua")(UI)
 local Hex = dofile("games/civcraft/hex.lua")
 local World = dofile("games/civcraft/world.lua")
 local Systems = dofile("games/civcraft/systems.lua")
 local Presentation = dofile("games/civcraft/presentation.lua")
 local Suggestions = dofile("games/civcraft/settlement_suggestions.lua")
+local SettlementView = dofile("games/civcraft/settlement_view.lua")
 local originalCheckpoint = Systems.checkpoint
 
 local function fixture(wrap, contentRules)
@@ -235,6 +237,25 @@ assert(
 	tap(ui, inspectorButton.x + inspectorButton.w / 2, inspectorButton.y + inspectorButton.h / 2)
 )
 assert(ui.panel == "settlementSuggestions" and ui.selected.unitID == selectedID)
+ui.settlementSuggestionDetail =
+	{ x = ui.settlementSuggestions[1].x, y = ui.settlementSuggestions[1].y }
+ui.settlementSuggestionOffset = 100
+ui:draw(projected, 1, { screen = "game" })
+local showOnMap
+for _, button in ipairs(ui.r.buttons) do
+	if button.label == "SHOW ON MAP" then
+		showOnMap = button
+		break
+	end
+end
+assert(showOnMap, "Selected site has a paginated map focus control")
+local priorPanX, priorPanY = ui.panX, ui.panY
+assert(tap(ui, showOnMap.x + showOnMap.w / 2, showOnMap.y + showOnMap.h / 2))
+assert(ui.panel == "context" and ui.selected.unitID == selectedID)
+assert(
+	ui.panX ~= priorPanX or ui.panY ~= priorPanY,
+	"Map focus recenters without changing selection"
+)
 
 local boundedState = fixture(false)
 local small = UI.new(monitor(56, 28, false), function()
@@ -287,6 +308,118 @@ legacyUI:draw(legacyProjected, 1, { screen = "game" })
 local legacyDetails = table.concat(legacyLines, " "):upper()
 assert(legacyDetails:find("CITY CAPACITY IS NOT ACTIVE", 1, true))
 assert(not legacyDetails:find("CAPACITY AT LEAST 0", 1, true))
+
+local function explanationPagination(width, height, graphics)
+	local display = monitor(width, height, graphics)
+	local rendered = {}
+	local ui = RenderUI(display, function()
+		error("Settlement explanation controls cannot dispatch game commands")
+	end)
+	local state = Presentation.capture(fixture(false), 1)
+	state.observerID = 1
+	ui.selected = { kind = "unit", unitID = state.units[1].id }
+	local source = "Observed strategic access is incomplete because distant terrain, "
+		.. "ownership changes, future infrastructure, and later route discoveries may "
+		.. "substantially change which opportunities remain reachable."
+	local caveat = "Observed bonus only; future ownership, technology, city focus, "
+		.. "terrain placement, and specialty capacity may prevent assignment."
+	local site = {
+		x = 8,
+		y = 8,
+		reasons = {
+			"Food yield: 3.25 including nearby terrain and improvements",
+			"Industry yield: 2.75 including nearby terrain and improvements",
+			"Spacing: comfortably separated from existing cities",
+			"Expansion: several explored locations can support later growth",
+		},
+		capacity = { active = false },
+		resources = { "copper", "iron" },
+		specialties = {
+			{
+				name = "WORKS",
+				bonus = 2,
+				x = 9,
+				y = 8,
+				distance = 1,
+				tech = "writing",
+				caveat = caveat,
+			},
+			{
+				name = "FREIGHT",
+				bonus = 1,
+				x = 7,
+				y = 9,
+				distance = 2,
+				tech = "currency",
+				caveat = caveat,
+			},
+		},
+		knowledgeNote = source,
+	}
+	ui.settlementSuggestionCache = {
+		view = state,
+		observer = 1,
+		campaign = state.campaignID,
+		settlerID = state.units[1].id,
+		sites = { site },
+	}
+	ui.settlementSuggestions = { site }
+	ui.settlementSuggestionDetail = { x = site.x, y = site.y }
+	ui.panel = "settlementSuggestions"
+	local rect = { x = 2, y = 2, w = ui.r.w - 4, h = ui.r.h - 4 }
+	local originalText = ui.r.text
+	ui.r.text = function(self, x, y, value, color, scale, maxWidth)
+		if y >= rect.y + 21 and y < rect.y + rect.h - 12 then
+			local text = tostring(value)
+			assert(
+				self:textWidth(text, scale) <= maxWidth,
+				"Rendered explanation line fits the visible body width"
+			)
+			rendered[#rendered + 1] = text
+		end
+		return originalText(self, x, y, value, color, scale, maxWidth)
+	end
+	local page = 0
+	repeat
+		ui.r:begin()
+		SettlementView.drawDetails(ui, state, state.players[1], rect)
+		ui.r:finish()
+		page = page + 1
+		assert(page <= 80, "Explanation pagination remains bounded")
+		local nextButton
+		for _, button in ipairs(ui.r.buttons) do
+			if button.label == "NEXT" then
+				nextButton = button
+				break
+			end
+		end
+		if nextButton then
+			local previousOffset = ui.settlementSuggestionOffset
+			nextButton.fn()
+			if ui.settlementSuggestionOffset == previousOffset then
+				nextButton = nil
+			end
+		end
+	until not nextButton
+	local allText =
+		table.concat(rendered, " "):upper():gsub("%s+", " "):gsub(" PREV ", " "):gsub(" NEXT ", " ")
+	local function containsWhole(value)
+		local normalized = value:upper():gsub("%s+", " ")
+		assert(
+			allText:find(normalized, 1, true),
+			"Every wrapped explanation remains reachable: " .. normalized .. " in " .. allText
+		)
+	end
+	containsWhole(source)
+	containsWhole(caveat)
+	containsWhole("REQUIRES BOOKS & MAPS")
+	containsWhole("REQUIRES VILLAGE TRADING")
+	assert(page > 1, "Long explanations remain reachable across NEXT pages")
+	ui:close()
+end
+
+explanationPagination(56, 28, false)
+explanationPagination(36, 24, true)
 ui:close()
 small:close()
 legacyUI:close()

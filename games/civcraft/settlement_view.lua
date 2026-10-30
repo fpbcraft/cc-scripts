@@ -3,8 +3,24 @@ local Suggestions = dofile("/games/civcraft/settlement_suggestions.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local World = dofile("/games/civcraft/world.lua")
+local Content = dofile("/games/civcraft/content.lua")
+local DisplayGeometry = dofile("/games/civcraft/display_geometry.lua")
 local V = {}
 local LIMIT = 3
+
+local function wrapRows(renderer, rows, width)
+	local wrapped = {}
+	for _, row in ipairs(rows) do
+		if row.text then
+			for _, line in ipairs(Panels.wrap(renderer, row.text, width)) do
+				wrapped[#wrapped + 1] = { text = line, color = row.color }
+			end
+		else
+			wrapped[#wrapped + 1] = row
+		end
+	end
+	return wrapped
+end
 
 function V.current(ui, state, player)
 	local selected = ui.selected
@@ -128,6 +144,7 @@ function V.drawDetails(ui, state, player, rect)
 			rows[#rows + 1] = { text = "ADJACENT EXPLORED RESOURCE: " .. resource }
 		end
 		for _, specialty in ipairs(site.specialties or {}) do
+			local tech = Content.techs[specialty.tech]
 			rows[#rows + 1] = {
 				text = "POSSIBLE LATER: "
 					.. specialty.name
@@ -139,12 +156,48 @@ function V.drawDetails(ui, state, player, rect)
 					.. specialty.y
 					.. " ("
 					.. specialty.distance
-					.. " HEXES)",
+					.. " HEXES); REQUIRES "
+					.. (tech and tech.name or tostring(specialty.tech):upper()),
 			}
 			rows[#rows + 1] = { text = specialty.caveat }
 		end
 		rows[#rows + 1] = { text = site.knowledgeNote }
 		rows[#rows + 1] = { text = "Advisory only; no movement or founding order is sent." }
+		rows[#rows + 1] = {
+			buttons = {
+				{
+					label = "SHOW ON MAP",
+					run = function()
+						local viewport = ui.mapViewport
+						if viewport then
+							local displayX = DisplayGeometry.nearestX(
+								site.x,
+								(ui.panX + viewport.w / 2) / viewport.tile
+									+ 0.5
+									- ((site.y - 1) % 2) * 0.5,
+								state
+							)
+							local panX = (displayX - 0.5 + ((site.y - 1) % 2) * 0.5) * viewport.tile
+								- viewport.w / 2
+							ui.panX = viewport.wrapX
+									and ((panX % viewport.periodX) + viewport.periodX) % viewport.periodX
+								or math.max(0, math.min(viewport.maxX, panX))
+							ui.panY = math.max(
+								0,
+								math.min(
+									viewport.maxY,
+									(site.y - 1) * viewport.tile * 0.75
+										+ viewport.tile / 2
+										- viewport.h / 2
+								)
+							)
+						end
+						ui.panel = "context"
+						ui.settlementSuggestionDetail = nil
+					end,
+				},
+			},
+		}
 		rows[#rows + 1] = {
 			buttons = {
 				{
@@ -175,6 +228,7 @@ function V.drawDetails(ui, state, player, rect)
 		end
 		rows[#rows + 1] = { text = "No site is founded or moved automatically." }
 	end
+	rows = wrapRows(r, rows, rect.w - 21)
 	Panels.rows(
 		r,
 		{ x = rect.x + 5, y = rect.y + 18, w = rect.w - 10, h = rect.h - 24 },
