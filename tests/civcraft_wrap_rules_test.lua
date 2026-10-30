@@ -5,12 +5,17 @@ dofile = function(path)
 end
 dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local Actions = dofile("games/civcraft/actions.lua")
+local AI = dofile("games/civcraft/ai.lua")
 local Combat = dofile("games/civcraft/combat.lua")
+local Events = dofile("games/civcraft/events.lua")
 local Hex = dofile("games/civcraft/hex.lua")
 local Hostiles = dofile("games/civcraft/hostiles.lua")
+local Movement = dofile("games/civcraft/movement_budget.lua")
+local Queue = dofile("games/civcraft/queued_routes.lua")
 local Rails = dofile("games/civcraft/railways.lua")
 local Sites = dofile("games/civcraft/specialty_sites.lua")
 local Systems = dofile("games/civcraft/systems.lua")
+local Tactics = dofile("games/civcraft/ai_tactics.lua")
 local Villages = dofile("games/civcraft/villages.lua")
 local World = dofile("games/civcraft/world.lua")
 
@@ -193,6 +198,83 @@ assert(
 		and queuedUnit.moveQueue.path[3].x == 17,
 	"Queued paths and persisted goals use canonical seam coordinates"
 )
+
+local aiState = fixture(true)
+local aiPlayer = aiState.players[1]
+aiPlayer.ai = true
+aiPlayer.aiPlan = { campaign = { kind = "city", phase = "approach", x = 18, y = 4 } }
+aiState.units = {
+	{ id = 30, owner = 1, kind = "archer", x = 1, y = 4, movesLeft = 2, hp = 100 },
+	{ id = 31, owner = 2, kind = "warrior", x = 18, y = 4, movesLeft = 2, hp = 100 },
+}
+Systems.migrate(aiState)
+World.reveal(aiState, Hex, Systems)
+local observedView = AI.knowledge(aiState, aiPlayer)
+assert(
+	observedView.world.tiles[World.key(18, 4)] and not observedView.world.tiles[World.key(9, 9)],
+	"The AI gets observed seam terrain without hidden terrain"
+)
+local aiChoice = Tactics.ranked(observedView, aiPlayer, aiState.units[1], Systems)[1]
+assert(
+	aiChoice.request.action == "move"
+		and aiChoice.request.x == 18
+		and aiChoice.request.y == 4
+		and aiChoice.forecast,
+	"Observed AI tactical policy selects the visible seam attack"
+)
+
+if type(fs) == "table" and type(textutils) == "table" then
+	local Saves = dofile("games/civcraft/saves.lua")
+	local ok, reason = pcall(function()
+		Saves.delete(1)
+		assert(Saves.save(1, queued))
+		local restored = assert(Saves.load(1))
+		assert(restored.world.wrapX == true)
+		local restoredUnit = restored.units[1]
+		assert(
+			restoredUnit.x == 18
+				and restoredUnit.moveQueue.goals[1].x == 17
+				and restoredUnit.moveQueue.path[2].x == 18
+				and restoredUnit.moveQueue.path[3].x == 17,
+			"Saved queue retains canonical seam coordinates"
+		)
+		local savedOwnerEvents = Events.forPlayer(restored, 1)
+		local savedRivalEvents = Events.forPlayer(restored, 2)
+		assert(#savedOwnerEvents.entries > 0 and #savedRivalEvents.entries == 0)
+		restored.round = restored.round + 1
+		for _, unit in ipairs(restored.units) do
+			Movement.reset(
+				restored,
+				unit,
+				Systems.units[unit.kind],
+				restored.players[unit.owner],
+				Hex
+			)
+		end
+		World.reveal(restored, Hex, Systems)
+		Queue.run(restored, 1, Systems, Actions.apply)
+		assert(restoredUnit.x == 17 and restoredUnit.y == 4 and not restoredUnit.moveQueue)
+		local resumedEvents = Events.forPlayer(restored, 1)
+		local seamArrival, rivalMove = false, false
+		for _, event in ipairs(resumedEvents.entries) do
+			for _, path in ipairs(event.paths or {}) do
+				for _, point in ipairs(path) do
+					if point.x == 17 and point.y == 4 then
+						seamArrival = true
+					end
+				end
+			end
+		end
+		for _, event in ipairs(Events.forPlayer(restored, 2).entries) do
+			if event.type == "move" then
+				rivalMove = true
+			end
+		end
+		assert(seamArrival and not rivalMove, "Resumed route reveals only the owner's seam arrival")
+	end)
+	Saves.delete(1)
+	assert(ok, reason)
+end
 
 local escortState = fixture(true)
 escortState.units = {
