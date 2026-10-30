@@ -232,6 +232,7 @@ function UI:advanceTurn()
 end
 function UI:deselect()
 	self.settlementSuggestionCache = nil
+	self.settlementSuggestions = nil
 	self.settlementSuggestionDetail = nil
 	self.settlementSuggestionTargets = {}
 	self.placement = nil
@@ -555,6 +556,7 @@ function UI:draw(state, playerID, opts)
 		self.historyRequestID = (self.historyRequestID or 0) + 1
 		self.workCity = nil
 		self.settlementSuggestionCache = nil
+		self.settlementSuggestions = nil
 		self.settlementSuggestionDetail = nil
 		self.settlementSuggestionTargets = {}
 		self.worldReady = false
@@ -635,6 +637,10 @@ function UI:draw(state, playerID, opts)
 		or not state
 		or state.phase ~= "game"
 	then
+		self.settlementSuggestionCache = nil
+		self.settlementSuggestions = nil
+		self.settlementSuggestionDetail = nil
+		self.settlementSuggestionTargets = {}
 		self.placement = nil
 		self.reachable = {}
 		self.pendingMove = nil
@@ -1163,6 +1169,7 @@ function UI:draw(state, playerID, opts)
 end
 function UI:focus(kind, item)
 	self.settlementSuggestionCache = nil
+	self.settlementSuggestions = nil
 	self.settlementSuggestionDetail = nil
 	self.settlementSuggestionTargets = {}
 	self.lastUnitTap = nil
