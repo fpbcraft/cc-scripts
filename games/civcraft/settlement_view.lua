@@ -86,18 +86,22 @@ function V.drawMarkers(ui, state, player, tiles, rect, size, renderer)
 	for index, site in ipairs(sites) do
 		byKey[World.key(site.x, site.y)] = index
 	end
-	-- The city glyph has an eight-pixel raster even at its smallest scale.
-	local markerSize = 11
+	local markerSize = math.min(14, math.max(7, math.floor(size * 0.48)))
 	for _, tile in ipairs(tiles) do
 		local index = byKey[World.key(tile.x, tile.y)]
 		if index and tile.visibility ~= "hidden" then
 			local positions = {
+				{ tile.px + size * 0.5, tile.py + size * 0.5 },
+				{ tile.px + size * 0.25, tile.py + size * 0.5 },
+				{ tile.px + size * 0.75, tile.py + size * 0.5 },
 				{ tile.px + size * 0.25, tile.py + size * 0.25 },
 				{ tile.px + size * 0.75, tile.py + size * 0.25 },
 				{ tile.px + size * 0.25, tile.py + size * 0.75 },
 				{ tile.px + size * 0.75, tile.py + size * 0.75 },
 				{ tile.px + size * 0.5, tile.py + size * 0.25 },
 				{ tile.px + size * 0.5, tile.py + size * 0.75 },
+				{ tile.px + size * 0.5, tile.py + 1 },
+				{ tile.px + size * 0.5, tile.py + size - 1 },
 			}
 			for _, position in ipairs(positions) do
 				local x = math.floor(position[1] - markerSize / 2)
@@ -118,8 +122,7 @@ function V.drawMarkers(ui, state, player, tiles, rect, size, renderer)
 				end
 				if visible then
 					renderer:fill(x, y, markerSize, markerSize, 0)
-					renderer:outline(x, y, markerSize, markerSize, 18)
-					Icons.draw(renderer, "city", x + 1, y + 1, markerSize - 2, 13)
+					Icons.draw(renderer, "settlement", x, y, markerSize, 13)
 					target.site = sites[index]
 					target.index = index
 					target.settlerID = ui.selected.unitID

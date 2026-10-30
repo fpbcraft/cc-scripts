@@ -256,4 +256,39 @@ for _, site in ipairs(legacy) do
 	assert(#site.specialties == 0, "Older profiles do not gain M3-only future site opportunities")
 end
 
+-- A good center cannot outweigh an otherwise unproductive opening region.
+local regional = {
+	observerID = 1,
+	contentRules = "balance5",
+	players = { { id = 1, techs = {} } },
+	cities = {},
+	spawners = {},
+	world = { width = 30, height = 12, wrapX = false, tiles = {}, resources = {}, landmarks = {} },
+}
+for y = 2, 10 do
+	for x = 1, 8 do
+		regional.world.tiles[World.key(x, y)] = "mountain"
+	end
+	for x = 21, 28 do
+		regional.world.tiles[World.key(x, y)] = "plains"
+	end
+end
+regional.world.tiles["4:6"] = "hills"
+local regionalBest = Suggestions.forSettler(regional, 1, { owner = 1, kind = "settler" }, nil, 1)
+assert(
+	regionalBest[1] and regionalBest[1].x >= 21,
+	"Productive surrounding land outranks an isolated center"
+)
+state = fixture(true)
+view = World.forPlayer(state, 1)
+local wrapped = Suggestions.forSettler(view, 1, state.units[1])
+for index, site in ipairs(wrapped) do
+	for _, city in ipairs(view.cities) do
+		assert(Hex.distance(site.x, site.y, city.x, city.y, view) >= 4)
+	end
+	for prior = 1, index - 1 do
+		assert(Hex.distance(site.x, site.y, wrapped[prior].x, wrapped[prior].y, view) >= 4)
+	end
+end
+
 print("CIVCRAFT: explored settlement suggestions and shared founding legality passed")

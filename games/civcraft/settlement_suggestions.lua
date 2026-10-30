@@ -119,7 +119,7 @@ function Suggestions.observationSignature(view, observerId, settler, systems)
 	}
 	local function add(value)
 		if type(value) ~= "table" then
-			parts[#parts + 1] = type(value) .. ":" .. tostring(value)
+			parts[#parts + 1] = type(value):sub(1, 1) .. ":" .. tostring(value)
 			return
 		end
 		local keys = {}
@@ -144,16 +144,15 @@ function Suggestions.observationSignature(view, observerId, settler, systems)
 			if known(view, x, y) then
 				local key = World.key(x, y)
 				add(key)
-				for _, field in ipairs({
-					"tiles",
-					"geography",
-					"resources",
-					"improvements",
-					"observedOwners",
-					"landmarks",
-				}) do
-					add((world[field] or {})[key])
-				end
+				add(world.tiles[key])
+				local geography = (world.geography or {})[key] or {}
+				add(geography.biome)
+				add(geography.elevation)
+				add(geography.feature)
+				add((world.resources or {})[key])
+				add((world.improvements or {})[key])
+				add((world.observedOwners or {})[key])
+				add((world.landmarks or {})[key])
 				checked = checked + 1
 				if checked % 64 == 0 and systems and systems.checkpoint then
 					systems.checkpoint()
@@ -173,7 +172,7 @@ function Suggestions.observationSignature(view, observerId, settler, systems)
 	return table.concat(parts, "\31")
 end
 
-local function regionScore(view, x, y)
+local function regionScore(view, x, y, productivity)
 	local score, food, industry = 0, 0, 0
 	for _, point in ipairs(Hex.withinRadius(x, y, 3, view)) do
 		if known(view, point.x, point.y) then
@@ -182,7 +181,7 @@ local function regionScore(view, x, y)
 			-- Existing claims are less useful than fresh workable land for a new city.
 			local weight = (4 - Hex.distance(x, y, point.x, point.y, view))
 				* (owner ~= nil and 0.5 or 1)
-			local yields = World.yields(view.world, point.x, point.y, view)
+			local yields = productivity[key]
 			food = food + yields.food * weight
 			industry = industry + yields.industry * weight
 			score = score + (yields.food * 2 + yields.industry + (yields.science or 0)) * weight
@@ -212,6 +211,17 @@ function Suggestions.forSettler(view, observerId, settler, systems, limit)
 	end
 	limit = type(limit) == "number" and limit == math.floor(limit) and limit or MAX_RESULTS
 	limit = math.max(1, math.min(MAX_RESULTS, limit))
+	local productivity = {}
+	for y = 1, view.world.height do
+		if systems and systems.checkpoint then
+			systems.checkpoint()
+		end
+		for x = 1, view.world.width do
+			if known(view, x, y) then
+				productivity[World.key(x, y)] = World.yields(view.world, x, y, view)
+			end
+		end
+	end
 	local found, checked = {}, 0
 	for y = 1, view.world.height do
 		if systems and systems.checkpoint then
@@ -238,7 +248,7 @@ function Suggestions.forSettler(view, observerId, settler, systems, limit)
 					end
 				end
 				if legal then
-					local score, food, industry = regionScore(view, x, y)
+					local score, food, industry = regionScore(view, x, y, productivity)
 					found[#found + 1] = {
 						x = x,
 						y = y,
@@ -305,8 +315,8 @@ function Suggestions.forSettler(view, observerId, settler, systems, limit)
 			systems and systems.buildings or Content.buildings
 		)
 		local reasons = {
-			"Food yield: " .. candidate.food,
-			"Industry yield: " .. candidate.industry,
+			"Known regional food value: " .. candidate.food,
+			"Known regional industry value: " .. candidate.industry,
 			capacity.active and "Observed city capacity: " .. capacity.observedMinimum
 				or "City capacity is not active in this campaign profile",
 			spacing == 0 and "No known cities affect spacing"

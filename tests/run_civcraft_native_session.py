@@ -23,7 +23,7 @@ profile.add_argument(
 profile.add_argument("--landwork", action="store_true", help="Select Landwork V3 in the native lobby")
 profile.add_argument("--development", action="store_true", help="Select Development V2 in the native lobby")
 parser.add_argument("--seed", type=int, help="Use an explicit generated campaign seed for reproducible correctness checks")
-parser.add_argument("--settlement-suggestions", action="store_true", help="Exercise the opening Settler advisory list, explanations and map marker through native input")
+parser.add_argument("--settlement-suggestions", action="store_true", help="Exercise map-only recommendations, real exploration refresh and passive marker input")
 parser.add_argument("--host", action="store_true", help="Test a host/AI session instead of hotseat/AI")
 parser.add_argument("--contact-hud", action="store_true", help="Click the known-civilization HUD badge through native mouse events")
 parser.add_argument("--installed-ref", help="Download this published revision through the real GitHub installer before testing")

@@ -182,6 +182,14 @@ for _, graphics in ipairs({ false, true }) do
 	ui.zoomLevel = 8
 	local projected = drawSelected(ui, state)
 	local selectedID = ui.selected.unitID
+	if graphics then
+		local copies, repeated = {}, false
+		for _, target in ipairs(ui.settlementSuggestionTargets) do
+			copies[target.index] = (copies[target.index] or 0) + 1
+			repeated = repeated or copies[target.index] > 1
+		end
+		assert(repeated, "Wrapped visible copies retain recommendation icons")
+	end
 	local marker = assert(ui.settlementSuggestionTargets[1], "A recommendation icon is visible")
 	assert(tap(ui, marker.x + marker.w / 2, marker.y + marker.h / 2))
 	assert(ui.panel ~= "settlementSuggestions", "Icons never open a menu")

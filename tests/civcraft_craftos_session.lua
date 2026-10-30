@@ -123,6 +123,29 @@ local queued = false
 local function tap(view, label)
 	for _, button in ipairs(view.r.buttons) do
 		if button.label == label then
+			if stage == 5 and label == "NEXT" then
+				local key = table.concat({
+					tostring(view.panel),
+					tostring(view.selected.unitID),
+					tostring(view.inspectorOffset),
+					tostring(view.playerID),
+				}, ":")
+				if view.nativeNextKey == key then
+					view.nativeNextRepeats = (view.nativeNextRepeats or 0) + 1
+				else
+					view.nativeNextKey, view.nativeNextRepeats = key, 0
+				end
+				if view.nativeNextRepeats > 20 then
+					error("Native unit-order paging made no progress: " .. textutils.serialize({
+						panel = view.panel,
+						selected = view.selected,
+						offset = view.inspectorOffset,
+						player = view.playerID,
+						units = view.state.units,
+						turn = view:turnAction(),
+					}))
+				end
+			end
 			local x, y = button.x + button.w / 2, button.y + button.h / 2
 			if view.r.mode == "graphics" then
 				x, y = view.r.ox + x * view.r.sx, view.r.oy + y * view.r.sy
@@ -522,7 +545,13 @@ dofile = function(path)
 						self:command(request.action, request)
 						return
 					end
-					if not openingFocus[me.id] then
+					if
+						not openingFocus[me.id]
+						or self.selected.kind ~= "unit"
+						or self.selected.unitID ~= traveler.id
+						or self.selected.x ~= traveler.x
+						or self.selected.y ~= traveler.y
+					then
 						self:focus("unit", traveler)
 						self.panel = "inspector"
 						openingFocus[me.id] = true
