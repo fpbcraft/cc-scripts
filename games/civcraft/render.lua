@@ -266,6 +266,8 @@ function R:fitGraphics()
 end
 function R:resize()
 	self.scaledRows = nil
+	-- The native framebuffer must be fully uploaded after a resize.
+	self.lastGraphicsRows = nil
 	self.frameRows = nil
 	local cw, ch = self.m.getSize()
 	if cw ~= self.cw or ch ~= self.ch then
@@ -323,6 +325,14 @@ for color in pairs(R.palette) do
 	pixelColors[color] = string.char(color)
 end
 local Cooperative = dofile("/games/civcraft/cooperative.lua")
+local function emitTrace(self, stage, detail)
+	if self.trace then
+		local ok = pcall(self.trace, stage, detail)
+		if not ok then
+			self.traceFailures = (self.traceFailures or 0) + 1
+		end
+	end
+end
 function R:cooperate(force)
 	-- Drawing calls have very different costs: 128 sprites can take much longer
 	-- than 128 single-pixel strokes. Always sample time at renderer checkpoints.
@@ -1175,6 +1185,25 @@ function R:hit(x, y)
 	return false
 end
 function R:begin()
+	if self.trace then
+		local dimensions = self.mode
+			.. " text="
+			.. self.cw
+			.. "x"
+			.. self.ch
+			.. " virtual="
+			.. self.w
+			.. "x"
+			.. self.h
+			.. " pixels="
+			.. tostring(self.pw)
+			.. "x"
+			.. tostring(self.ph)
+		if dimensions ~= self.traceDimensions then
+			emitTrace(self, "display.runtime", dimensions)
+			self.traceDimensions = dimensions
+		end
+	end
 	if not self.layoutOnly then
 		self:cooperate(true)
 	end
@@ -1204,13 +1233,100 @@ function R:begin()
 		end
 	end
 end
+-- Large, single-call framebuffer uploads can monopolize slower CraftOS hosts.
+-- Compare completed rows and upload only changes, in bounded native calls. Each
+-- strip uses the documented drawPixels(x, y, rows, width, height) signature.
+function R:uploadGraphics(rows)
+	local previous = self.lastGraphicsRows or {}
+	local stripeHeight = math.max(1, math.min(32, math.floor(16384 / math.max(1, self.pw))))
+	local updates, dirtyRows = 0, 0
+	local frozen, freezeAttempted = false, false
+	local y = 1
+	local function clock()
+		return os.epoch and os.epoch("utc") or math.floor(os.clock() * 1000)
+	end
+	local function freeze(value)
+		local stage = value and "frame.freeze" or "frame.unfreeze"
+		if self.trace then
+			emitTrace(self, stage .. ".begin")
+		end
+		local started = self.trace and clock()
+		local ok, why = pcall(self.m.setFrozen, value)
+		if self.trace then
+			emitTrace(
+				self,
+				stage .. ".end",
+				"elapsed=" .. (clock() - started) .. " ok=" .. tostring(ok)
+			)
+		end
+		return ok, why
+	end
+	local function upload()
+		while y <= self.ph do
+			if rows[y] == previous[y] then
+				y = y + 1
+			else
+				local start = y
+				local stripe = {}
+				while y <= self.ph and #stripe < stripeHeight and rows[y] ~= previous[y] do
+					stripe[#stripe + 1] = rows[y]
+					y = y + 1
+				end
+				if not freezeAttempted and self.m.setFrozen then
+					freezeAttempted = true
+					frozen = freeze(true)
+				end
+				self:cooperate()
+				if self.trace then
+					emitTrace(
+						self,
+						"frame.upload.strip.begin",
+						"y=" .. (start - 1) .. " rows=" .. #stripe
+					)
+				end
+				local started = self.trace and clock()
+				self.m.drawPixels(0, start - 1, stripe, self.pw, #stripe)
+				if self.trace then
+					emitTrace(self, "frame.upload.strip.end", "elapsed=" .. (clock() - started))
+				end
+				updates = updates + 1
+				dirtyRows = dirtyRows + #stripe
+			end
+		end
+	end
+	local ok, err = pcall(upload)
+	if not ok then
+		self.lastGraphicsRows = nil
+	end
+	local cleanupOK, cleanupError = true, nil
+	if freezeAttempted then
+		local restored, why = freeze(false)
+		if frozen then
+			cleanupOK, cleanupError = restored, why
+		end
+	end
+	self.lastUploadStats = { calls = updates, rows = dirtyRows }
+	if not ok or not cleanupOK then
+		-- A native call may have changed only part of the display. A retry must
+		-- redraw every row, even if it requests the last successfully drawn frame.
+		self.lastGraphicsRows = nil
+		self.lastUploadStats.failed = true
+		local failure = not ok and err or cleanupError
+		if self.trace then
+			emitTrace(self, "frame.upload.error", tostring(failure))
+		end
+		error(failure, 0)
+	end
+	self.lastGraphicsRows = rows
+end
+
 function R:finish()
 	if self.layoutOnly then
 		return
 	end
 	if self.buffer then
 		if self.trace then
-			self.trace("frame.scale.begin")
+			emitTrace(self, "frame.scale.begin")
 		end
 		local rows = {}
 		local blank = string.rep(string.char(0), self.pw)
@@ -1260,11 +1376,14 @@ function R:finish()
 		end
 		self.scaledRows = expanded
 		if self.trace then
-			self.trace("frame.upload.begin")
+			emitTrace(self, "frame.scale.end")
 		end
-		self.m.drawPixels(0, 0, rows, self.pw, self.ph)
 		if self.trace then
-			self.trace("frame.upload.end")
+			emitTrace(self, "frame.upload.begin")
+		end
+		self:uploadGraphics(rows)
+		if self.trace then
+			emitTrace(self, "frame.upload.end")
 		end
 		self.buffer = nil
 	end

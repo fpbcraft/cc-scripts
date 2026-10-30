@@ -738,7 +738,8 @@ dofile = function(path)
 					"Contact navigation begins under the current human observer"
 				)
 				if contactBadgeStep == 0 then
-					local label
+					local label, direct
+					local targetPrefix = "CONTACT " .. target.name .. " / "
 					for _, candidate in ipairs(self.r.buttons) do
 						if
 							candidate.label == "KNOWN CIVILIZATIONS"
@@ -747,13 +748,19 @@ dofile = function(path)
 						then
 							label = candidate.label
 							break
+						elseif
+							candidate.label
+							and candidate.label:sub(1, #targetPrefix) == targetPrefix
+						then
+							direct = candidate.label
 						end
 					end
+					label = label or direct
 					assert(
 						label and tap(self, label),
-						"Native compact HUD shows a known-civilization contact entry"
+						"Native HUD shows a known-civilization menu or direct contact badge"
 					)
-					contactBadgeStep = 1
+					contactBadgeStep = label == direct and 2 or 1
 				elseif contactBadgeStep == 1 then
 					assert(self.panel == "factions", "The queued HUD event opens known Factions")
 					local talk = "TALK " .. target.name
