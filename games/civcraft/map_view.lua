@@ -10,6 +10,7 @@ local Icons = dofile("/games/civcraft/icons.lua")
 local Systems = dofile("/games/civcraft/systems.lua")
 local Terrain = dofile("/games/civcraft/terrain_view.lua")
 local World = dofile("/games/civcraft/world.lua")
+local DisplayGeometry = dofile("/games/civcraft/display_geometry.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local CityBanner = dofile("/games/civcraft/city_banner.lua")
 local QueuedRoutes = dofile("/games/civcraft/queued_routes.lua")
@@ -211,8 +212,8 @@ local function drawRouteSegments(r, segments, player, center, paused)
 		for index = 2, #points do
 			local point, previous = points[index], points[index - 1]
 			local pointHidden = World.known(player, point.x, point.y) == "hidden"
-			local ax, ay = center(previous)
-			local bx, by = center(point)
+			local ax, ay, previousX = center(previous)
+			local bx, by = center(point, previousX)
 			if previousHidden or pointHidden then
 				drawDottedPath(r, ax, ay, bx, by, 13)
 			elseif segment.estimated or previous.estimated or point.estimated then
@@ -243,8 +244,8 @@ local function drawPendingPath(r, path, player, center)
 	for index = 2, #path do
 		local point, previous = path[index], path[index - 1]
 		local pointHidden = World.known(player, point.x, point.y) == "hidden"
-		local ax, ay = center(previous)
-		local bx, by = center(point)
+		local ax, ay, previousX = center(previous)
+		local bx, by = center(point, previousX)
 		if previousHidden or pointHidden then
 			drawDottedPath(r, ax, ay, bx, by, 35)
 		else
@@ -438,7 +439,9 @@ function V.draw(ui, state, player, rect)
 	local cityLabels = {}
 	local size = ui.zoomLevel or math.max(12, math.min(24, math.floor(rect.h / 32) * 4))
 	local step = size * 0.75
-	local maxX = math.max(0, (width + 0.5) * size - rect.w)
+	local wrappedX = DisplayGeometry.isWrapped(state)
+	local periodX = width * size
+	local maxX = wrappedX and periodX or math.max(0, (width + 0.5) * size - rect.w)
 	local maxY = math.max(0, (height - 1) * step + size - rect.h)
 	if not ui.worldReady or ui.lastWorldKey ~= ui.worldKey then
 		ui.worldReady = true
@@ -460,17 +463,36 @@ function V.draw(ui, state, player, rect)
 					kind = c.kind and "unit" or "city",
 					unitID = c.kind and c.id or nil,
 				}
-				ui.panX = (c.x - 0.5) * size - rect.w / 2
+				local displayX = DisplayGeometry.nearestX(
+					c.x,
+					(ui.panX + rect.w / 2) / size + 0.5 - ((c.y - 1) % 2) * 0.5,
+					state
+				)
+				ui.panX = (displayX - 0.5 + ((c.y - 1) % 2) * 0.5) * size - rect.w / 2
 				ui.panY = (c.y - 0.5) * step - rect.h / 2
 				break
 			end
 		end
 	end
-	AnimationView.center(ui, rect, size)
-	ui.panX = math.max(0, math.min(maxX, ui.panX or 0))
+	AnimationView.center(ui, rect, size, state)
+	if wrappedX then
+		ui.panX = ((ui.panX or 0) % periodX + periodX) % periodX
+	else
+		ui.panX = math.max(0, math.min(maxX, ui.panX or 0))
+	end
 	ui.panY = math.max(0, math.min(maxY, ui.panY or 0))
-	ui.mapViewport =
-		{ x = rect.x, y = rect.y, w = rect.w, h = rect.h, tile = size, maxX = maxX, maxY = maxY }
+	ui.mapViewport = {
+		x = rect.x,
+		y = rect.y,
+		w = rect.w,
+		h = rect.h,
+		tile = size,
+		maxX = maxX,
+		maxY = maxY,
+		wrapX = wrappedX,
+		periodX = periodX,
+		world = { width = width, height = height, wrapX = wrappedX },
+	}
 	local citySignature = {}
 	local cityIndex, unitIndex, civilianIndex, unitGroups = {}, {}, {}, {}
 	local hiddenActors = ui.animationFrame and ui.animationFrame.hidden or {}
@@ -531,11 +553,14 @@ function V.draw(ui, state, player, rect)
 	r:withClip(rect, function()
 		local y0 = math.max(1, math.floor(ui.panY / step) - 1)
 		local y1 = math.min(height, math.ceil((ui.panY + rect.h) / step) + 1)
-		local x0 = math.max(1, math.floor(ui.panX / size))
-		local x1 = math.min(width, math.ceil((ui.panX + rect.w) / size) + 1)
+		local x0 = wrappedX and math.floor(ui.panX / size)
+			or math.max(1, math.floor(ui.panX / size))
+		local x1 = wrappedX and (math.ceil((ui.panX + rect.w) / size) + 1)
+			or math.min(width, math.ceil((ui.panX + rect.w) / size) + 1)
 		for y = y0, y1 do
-			for x = x0, x1 do
-				local px = rect.x + (x - 1) * size + ((y - 1) % 2) * size / 2 - ui.panX
+			for displayX = x0, x1 do
+				local x = wrappedX and ((displayX - 1) % width) + 1 or displayX
+				local px = rect.x + (displayX - 1) * size + ((y - 1) % 2) * size / 2 - ui.panX
 				local py = rect.y + (y - 1) * step - ui.panY
 				if
 					px + size > rect.x
@@ -638,9 +663,15 @@ function V.draw(ui, state, player, rect)
 			end
 		end
 		r = canvas
-		local function center(point)
-			return rect.x + (point.x - 0.5 + ((point.y - 1) % 2) * 0.5) * size - ui.panX,
-				rect.y + (point.y - 1) * step + size / 2 - ui.panY
+		local function center(point, referenceX)
+			local displayX = DisplayGeometry.nearestX(
+				point.x,
+				referenceX or (ui.panX + rect.w / 2) / size + 0.5 - ((point.y - 1) % 2) * 0.5,
+				state
+			)
+			return rect.x + (displayX - 0.5 + ((point.y - 1) % 2) * 0.5) * size - ui.panX,
+				rect.y + (point.y - 1) * step + size / 2 - ui.panY,
+				displayX
 		end
 		local queuedRoute = V.queuedRoute(ui, state, player)
 		if queuedRoute then
@@ -666,7 +697,7 @@ function V.draw(ui, state, player, rect)
 			r = t.visibility == "explored" and rememberedRenderer or canvas
 			if t.owner and t.visibility ~= "hidden" then
 				local vertices = Hex.vertices(px, py, size)
-				for side, n in ipairs(Hex.edgeNeighbours(x, y)) do
+				for side, n in ipairs(Hex.edgeNeighbours(x, y, state)) do
 					if World.observedOwner(state, player, n.x, n.y) ~= t.owner then
 						local a, b = vertices[side], vertices[side % 6 + 1]
 						-- Dark edging keeps bright ownership lines distinct on every biome.

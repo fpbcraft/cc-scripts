@@ -51,7 +51,8 @@ function Coordination.followup(view, player, unit, order, forecast, position, sy
 	end
 	table.sort(allies, function(a, b)
 		local aa, bb =
-			Hex.distance(a.x, a.y, order.x, order.y), Hex.distance(b.x, b.y, order.x, order.y)
+			Hex.distance(a.x, a.y, order.x, order.y, view),
+			Hex.distance(b.x, b.y, order.x, order.y, view)
 		return aa == bb and a.id < b.id or aa < bb
 	end)
 	local best = 0

@@ -1,5 +1,6 @@
 -- Convert an observer event into drawing primitives without simulation access.
 local Frame = {}
+local DisplayGeometry = dofile("/games/civcraft/display_geometry.lua")
 local function copy(value)
 	if type(value) ~= "table" then
 		return value
@@ -35,6 +36,18 @@ local function between(a, b, progress)
 	}
 end
 
+local function unwrappedPath(path, state)
+	local result = {}
+	for index, point in ipairs(path) do
+		local x = point.x
+		if index > 1 then
+			x = DisplayGeometry.nearestX(x, result[index - 1].x, state)
+		end
+		result[index] = { x = x, y = point.y }
+	end
+	return result
+end
+
 local function identity(actor)
 	if actor and actor.id then
 		return (actor.kind == "city" and "city:" or "unit:") .. actor.id
@@ -60,17 +73,22 @@ local function sprite(frame, actor, position, hp, opacity)
 	end
 end
 
-local function movement(frame, event, progress)
+local function movement(frame, event, progress, state)
 	local time = progress * duration(event)
 	for _, path in ipairs(event.paths or {}) do
+		local displayPath = unwrappedPath(path, state)
 		local seconds = math.max(1, #path - 1) * 0.12
 		if time <= seconds then
 			if #path == 1 then
-				sprite(frame, event.actor, center(path[1]))
+				sprite(frame, event.actor, center(displayPath[1]))
 			elseif #path > 1 then
 				local segment = math.min(#path - 1, math.floor(time / 0.12) + 1)
 				local amount = math.min(1, (time - (segment - 1) * 0.12) / 0.12)
-				sprite(frame, event.actor, between(path[segment], path[segment + 1], amount))
+				sprite(
+					frame,
+					event.actor,
+					between(displayPath[segment], displayPath[segment + 1], amount)
+				)
 			end
 			return
 		end
@@ -82,10 +100,17 @@ local function movement(frame, event, progress)
 	end
 end
 
-local function combat(frame, event, progress)
+local function combat(frame, event, progress, state)
 	local result = event.result or {}
 	local impacted = progress >= 0.5
 	local start, target = event.start, event.target
+	local displayTarget = target
+	if start and target then
+		displayTarget = {
+			x = DisplayGeometry.nearestX(target.x, start.x, state),
+			y = target.y,
+		}
+	end
 	if start and target then
 		local ranged = result.ranged or event.type == "cityStrike"
 		local advance = not ranged
@@ -95,7 +120,7 @@ local function combat(frame, event, progress)
 		if advance and impacted then
 			offset = 0.4 + (progress - 0.5) * 1.2
 		end
-		local position = ranged and center(start) or between(start, target, offset)
+		local position = ranged and center(start) or between(start, displayTarget, offset)
 		sprite(
 			frame,
 			event.actor,
@@ -105,7 +130,7 @@ local function combat(frame, event, progress)
 		)
 		if ranged and not impacted then
 			frame.projectile =
-				{ start = center(start), position = between(start, target, progress * 2) }
+				{ start = center(start), position = between(start, displayTarget, progress * 2) }
 		end
 	elseif start then
 		sprite(
@@ -120,7 +145,7 @@ local function combat(frame, event, progress)
 		sprite(
 			frame,
 			event.defender,
-			center(target),
+			center(displayTarget),
 			impacted and (result.defenderHP or result.cityHP) or nil,
 			impacted and result.defenderDied and (1 - progress) * 2 or 1
 		)
@@ -130,20 +155,20 @@ local function combat(frame, event, progress)
 		if impacted then
 			frame.effects[#frame.effects + 1] = {
 				kind = result.captured and "capture" or "impact",
-				position = center(target),
+				position = center(displayTarget),
 				progress = (progress - 0.5) * 2,
 			}
 		end
 	end
 end
 
-local function paint(frame, event, progress)
+local function paint(frame, event, progress, state)
 	hide(frame, event.actor)
 	if event.type == "move" then
-		movement(frame, event, progress)
+		movement(frame, event, progress, state)
 	elseif event.result then
 		hide(frame, event.defender)
-		combat(frame, event, progress)
+		combat(frame, event, progress, state)
 	elseif event.target then
 		if event.type == "disband" then
 			sprite(frame, event.actor, center(event.target), nil, 1 - progress)

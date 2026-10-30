@@ -59,17 +59,15 @@ function M.workable(state, city)
 	if not state.world or not city then
 		return tiles
 	end
-	for yy = math.max(1, city.y - 3), math.min(state.world.height, city.y + 3) do
-		for xx = math.max(1, city.x - 3), math.min(state.world.width, city.x + 3) do
-			if
-				not (xx == city.x and yy == city.y)
-				and World.terrain(state.world, xx, yy) ~= "mountain"
-				and Hex.distance(xx, yy, city.x, city.y) <= 3
-				and World.territoryCity(state, Hex, xx, yy) == city
-			then
-				local yield = World.yields(state.world, xx, yy, state)
-				tiles[#tiles + 1] = { x = xx, y = yy, key = World.key(xx, yy), yield = yield }
-			end
+	for _, position in ipairs(Hex.withinRadius(city.x, city.y, 3, state)) do
+		local xx, yy = position.x, position.y
+		if
+			not (xx == city.x and yy == city.y)
+			and World.terrain(state.world, xx, yy) ~= "mountain"
+			and World.territoryCity(state, Hex, xx, yy) == city
+		then
+			local yield = World.yields(state.world, xx, yy, state)
+			tiles[#tiles + 1] = { x = xx, y = yy, key = World.key(xx, yy), yield = yield }
 		end
 	end
 	table.sort(tiles, function(a, b)
@@ -145,7 +143,7 @@ function M.ensureWorkers(state, city, tiles)
 	city.worked, city.jobs = workerSelection(state, city, false, tiles)
 end
 function M.workTile(state, city, x, y)
-	if not city or not state.world or type(x) ~= "number" or type(y) ~= "number" then
+	if not city or not state.world or not Hex.inBounds(x, y, state) then
 		return false, "Invalid city or hex"
 	end
 	M.ensureWorkers(state, city)
@@ -833,14 +831,9 @@ function M.autoExplore(state, unit, hex)
 		for _, choice in ipairs(choices) do
 			if not choice.attack then
 				local discoveries = 0
-				for y = math.max(1, choice.y - vision), math.min(state.world.height, choice.y + vision) do
-					for x = math.max(1, choice.x - vision), math.min(state.world.width, choice.x + vision) do
-						if
-							not (player.explored or {})[World.key(x, y)]
-							and hex.distance(x, y, choice.x, choice.y) <= vision
-						then
-							discoveries = discoveries + 1
-						end
+				for _, position in ipairs(hex.withinRadius(choice.x, choice.y, vision, state)) do
+					if not (player.explored or {})[World.key(position.x, position.y)] then
+						discoveries = discoveries + 1
 					end
 				end
 				local score = discoveries / (choice.cost + 1)

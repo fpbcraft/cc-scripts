@@ -104,7 +104,7 @@ local function emergency(view, player, cities)
 					and not unit.villageGuard
 					and unit.kind ~= "settler"
 					and unit.kind ~= "builder"
-					and Hex.distance(city.x, city.y, unit.x, unit.y) <= 3
+					and Hex.distance(city.x, city.y, unit.x, unit.y, view) <= 3
 				then
 					return "defendCapital"
 				end

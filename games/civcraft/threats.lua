@@ -100,7 +100,7 @@ function Threats.at(map, x, y, unit, excluded)
 		if not excluded or not excluded[entry.actor.id] then
 			local reaches = false
 			for _, point in ipairs(entry.positions) do
-				local distance = Hex.distance(x, y, point.x, point.y)
+				local distance = Hex.distance(x, y, point.x, point.y, map.view)
 				local stats = map.systems.units[entry.actor.kind] or {}
 				local range = entry.city and 2
 					or MovementBudget.attackRange(map.view, point, stats, Hex)
@@ -186,11 +186,11 @@ function Threats.remember(view, player, systems)
 	return list
 end
 
-function Threats.uncertainty(player, x, y, round)
+function Threats.uncertainty(player, x, y, round, state)
 	local score = 0
 	for _, record in ipairs((player.aiPlan or {}).knownThreats or {}) do
 		local age = round - record.round
-		if age > 0 and age <= 4 and Hex.distance(x, y, record.x, record.y) <= 2 + age then
+		if age > 0 and age <= 4 and Hex.distance(x, y, record.x, record.y, state) <= 2 + age then
 			score = score + 8 / age
 		end
 	end

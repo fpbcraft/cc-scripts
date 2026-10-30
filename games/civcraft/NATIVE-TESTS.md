@@ -379,3 +379,49 @@ and freeze/unfreeze calls. Compare both retained log segments after a stall.
 failures; `civcraft_yield_trace_test.lua` separates simulated collection time
 from event waiting and verifies pending input order. Fault injection is not a
 reproduction on the target device.
+
+## Wrapped-map graphics and input
+
+Run the focused wrapped-map workflow in a graphics-capable CraftOS-PC build:
+
+```sh
+python3 tests/run_civcraft_native_wrap.py --gui
+python3 tests/run_civcraft_native_wrap.py --monitor
+```
+
+The fixture uses a three-column cylinder with enough visible width to show two
+complete periods. It queues native mouse or monitor-touch events through real UI
+controls to select repeated city banners and unit targets, zoom, pan, confirm a
+canonical seam movement and use the minimap. Assertions cover short-path playback
+and camera following, hidden-observer projections, native wrapped save/load and
+the normal world/system migration pipeline for an older missing-wrap save.
+Controlled terrain and actors isolate the seam; general campaign progression,
+installed runtime and multiplayer still require their separate drivers. Desktop
+CraftOS graphics do not prove iPad or physical Minecraft behavior.
+
+Specialty-session timeouts retain the last visible controls and text in the error,
+and up to 40 distinct recent menu pages in `/specialty-session-pages.json`. These
+are diagnostics; a timeout remains a failed scenario.
+
+## Controlled Founders late-state runtime
+
+```sh
+python3 tests/run_civcraft_native_founders_stress.py --backend text
+python3 tests/run_civcraft_native_founders_stress.py --backend gui
+python3 tests/run_civcraft_native_founders_stress.py --backend monitor
+python3 tests/run_civcraft_native_founders_stress.py --backend text --profile-first-frame
+```
+
+The full matrix checks V4 bounded and V5 wrapped Huge/Vast worlds with 40 cities,
+200 units and full-map observer visibility at a constructed round 100. It exercises
+native banner input, zoom, mouse drag or monitor pan, and save/reload. Each actual
+draw has an explicit frame record; the runner verifies frame counts, maxima and
+renderer backend. For hardware-backed graphics, use `--craftos` with a launcher
+that adds CraftOS-PC's `--hardware` option.
+
+The last command profiles only one V4 Huge frame, with inclusive component and
+GC timings; it does not pass the four-case matrix. Progress and partial reports
+remain in the isolated profile. The retained summary is
+[`docs/validation/founders-runtime-validation.json`](docs/validation/founders-runtime-validation.json).
+These are controlled desktop measurements, not AI-turn throughput, played campaign
+balance, iPad or physical Minecraft/monitor/rednet/server evidence.

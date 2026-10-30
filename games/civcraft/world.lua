@@ -202,10 +202,10 @@ function W.territoryCity(state, hex, x, y)
 		local dist
 		if city.claimed then
 			if city.claimed[tileKey] then
-				dist = hex.distance(x, y, city.x, city.y)
+				dist = hex.distance(x, y, city.x, city.y, state)
 			end
 		else
-			local candidate = hex.distance(x, y, city.x, city.y)
+			local candidate = hex.distance(x, y, city.x, city.y, state)
 			if candidate <= radius(city) then
 				dist = candidate
 			end
@@ -232,12 +232,8 @@ function W.ensureTerritories(state, hex, legacy)
 			local range = legacy and radius(city) or 1
 			city.claimed = {}
 			city.borderProgress = city.borderProgress or 0
-			for y = math.max(1, city.y - range), math.min(state.world.height, city.y + range) do
-				for x = math.max(1, city.x - range), math.min(state.world.width, city.x + range) do
-					if hex.distance(city.x, city.y, x, y) <= range then
-						city.claimed[key(x, y)] = true
-					end
-				end
+			for _, position in ipairs(hex.withinRadius(city.x, city.y, range, state)) do
+				city.claimed[key(position.x, position.y)] = true
 			end
 		end
 	end
@@ -254,27 +250,24 @@ function W.expandCity(state, hex, city)
 		return false
 	end
 	local candidates = {}
-	for y = math.max(1, city.y - 3), math.min(state.world.height, city.y + 3) do
-		for x = math.max(1, city.x - 3), math.min(state.world.width, city.x + 3) do
-			if
-				hex.distance(city.x, city.y, x, y) <= 3 and not W.territoryCity(state, hex, x, y)
-			then
-				local adjacent = false
-				for _, n in ipairs(hex.neighbours(x, y, state)) do
-					if city.claimed[key(n.x, n.y)] then
-						adjacent = true
-						break
-					end
+	for _, position in ipairs(hex.withinRadius(city.x, city.y, 3, state)) do
+		local x, y = position.x, position.y
+		if not W.territoryCity(state, hex, x, y) then
+			local adjacent = false
+			for _, n in ipairs(hex.neighbours(x, y, state)) do
+				if city.claimed[key(n.x, n.y)] then
+					adjacent = true
+					break
 				end
-				if adjacent then
-					local yield = W.yields(state.world, x, y, state)
-					candidates[#candidates + 1] = {
-						x = x,
-						y = y,
-						distance = hex.distance(city.x, city.y, x, y),
-						score = yield.food + yield.industry + yield.science,
-					}
-				end
+			end
+			if adjacent then
+				local yield = W.yields(state.world, x, y, state)
+				candidates[#candidates + 1] = {
+					x = x,
+					y = y,
+					distance = hex.distance(city.x, city.y, x, y, state),
+					score = yield.food + yield.industry + yield.science,
+				}
 			end
 		end
 	end
@@ -371,16 +364,119 @@ function W.territory(state, hex)
 	if not w then
 		return result
 	end
-	for y = 1, w.height do
-		if W.checkpoint then
-			W.checkpoint()
-		end
-		for x = 1, w.width do
-			local city = W.territoryCity(state, hex, x, y)
-			if city then
-				result[key(x, y)] = city.owner
+	local function fullScan()
+		for y = 1, w.height do
+			if W.checkpoint then
+				W.checkpoint()
+			end
+			for x = 1, w.width do
+				local city = W.territoryCity(state, hex, x, y)
+				if city then
+					result[key(x, y)] = city.owner
+				end
 			end
 		end
+		return result
+	end
+	local function integer(value)
+		return type(value) == "number"
+			and value == value
+			and value ~= math.huge
+			and value ~= -math.huge
+			and value == math.floor(value)
+	end
+	if
+		not integer(w.width)
+		or w.width < 1
+		or not integer(w.height)
+		or w.height < 1
+		or type(hex) ~= "table"
+		or type(hex.distance) ~= "function"
+		or type(hex.withinRadius) ~= "function"
+		or type(hex.canonical) ~= "function"
+	then
+		return fullScan()
+	end
+	local winners = {}
+	local visited = 0
+	local function add(city, x, y, distance)
+		if distance == nil then
+			return
+		end
+		local tileKey = key(x, y)
+		local previous = winners[tileKey]
+		if
+			not previous
+			or distance < previous.distance
+			or (distance == previous.distance and (city.id or 0) < (previous.city.id or 0))
+		then
+			winners[tileKey] = { city = city, distance = distance }
+		end
+	end
+	for _, city in ipairs(state.cities or {}) do
+		if type(city) ~= "table" or not integer(city.x) or not integer(city.y) then
+			return fullScan()
+		end
+		local validOrigin, canonicalX = pcall(hex.canonical, city.x, city.y, state)
+		if not validOrigin or not canonicalX then
+			return fullScan()
+		end
+		if type(city.claimed) == "table" then
+			if getmetatable(city.claimed) ~= nil then
+				return fullScan()
+			end
+			for tileKey, claimed in pairs(city.claimed) do
+				visited = visited + 1
+				if W.checkpoint and visited % 256 == 0 then
+					W.checkpoint()
+				end
+				if claimed and type(tileKey) == "string" then
+					local xText, yText = tileKey:match("^(%d+):(%d+)$")
+					local x, y = tonumber(xText), tonumber(yText)
+					if
+						x
+						and y
+						and tostring(x) == xText
+						and tostring(y) == yText
+						and x >= 1
+						and x <= w.width
+						and y >= 1
+						and y <= w.height
+					then
+						add(city, x, y, hex.distance(x, y, city.x, city.y, state))
+					end
+				end
+			end
+		else
+			local ok, positions = pcall(hex.withinRadius, city.x, city.y, radius(city), state)
+			if not ok or type(positions) ~= "table" then
+				return fullScan()
+			end
+			for _, position in ipairs(positions) do
+				visited = visited + 1
+				if W.checkpoint and visited % 256 == 0 then
+					W.checkpoint()
+				end
+				if
+					type(position) ~= "table"
+					or not integer(position.x)
+					or not integer(position.y)
+					or position.x < 1
+					or position.x > w.width
+					or position.y < 1
+					or position.y > w.height
+				then
+					return fullScan()
+				end
+				local distance = hex.distance(position.x, position.y, city.x, city.y, state)
+				if distance <= radius(city) then
+					add(city, position.x, position.y, distance)
+				end
+			end
+		end
+	end
+	for tileKey, winner in pairs(winners) do
+		result[tileKey] = winner.city.owner
 	end
 	return result
 end
@@ -426,14 +522,10 @@ function W.reveal(state, hex, systems, pendingNotices)
 		p.explored = p.explored or {}
 		local visible = {}
 		local function reveal(x, y, r)
-			for yy = math.max(1, y - r), math.min(world.height, y + r) do
-				for xx = math.max(1, x - r), math.min(world.width, x + r) do
-					if hex.distance(x, y, xx, yy) <= r then
-						local k = key(xx, yy)
-						visible[k] = true
-						p.explored[k] = true
-					end
-				end
+			for _, position in ipairs(hex.withinRadius(x, y, r, state)) do
+				local k = key(position.x, position.y)
+				visible[k] = true
+				p.explored[k] = true
 			end
 		end
 		for _, c in ipairs(state.cities or {}) do

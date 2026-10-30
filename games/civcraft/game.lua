@@ -147,7 +147,9 @@ local W, H = Hex.width, Hex.height
 local state
 local turnProgress = function() end
 local function newGame()
-	return Lifecycle.newLobby(newCampaignID(), ContentRules.default)
+	local lobby = Lifecycle.newLobby(newCampaignID(), ContentRules.default)
+	lobby.mapWrapX = true
+	return lobby
 end
 state = newGame()
 local hasHumanSave = false
@@ -250,6 +252,13 @@ local function apply(id, req)
 	local current, reason = Actions.validateIntent(state, req)
 	if not current then
 		return false, reason
+	end
+	if req.action == "mapWrapX" then
+		if state.phase ~= "lobby" or id ~= (state.players[1] or {}).id then
+			return false, "Host only"
+		end
+		state.mapWrapX = state.mapWrapX ~= true
+		return true
 	end
 	if req.action == "civ" then
 		return CampaignRules.selectCivilization(state, id, req, Systems.civs)
@@ -604,6 +613,13 @@ local function dispatch(action, params)
 		end
 		state.mapSize = mapSizes[current % #mapSizes + 1]
 		return
+	end
+	if action == "mapWrapX" and state.phase == "lobby" then
+		if not localHost then
+			return
+		end
+		state.mapWrapX = state.mapWrapX ~= true
+		return true
 	end
 	if action == "mapType" and state.phase == "lobby" then
 		local current = 1

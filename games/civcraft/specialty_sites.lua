@@ -238,7 +238,7 @@ local function geography(state, p, city, kind, x, y)
 	if not (p.techs or {})[Sites.definitions[kind].tech] then
 		return false, "Research " .. Sites.definitions[kind].tech
 	end
-	local distance = Hex.distance(city.x, city.y, x, y)
+	local distance = Hex.distance(city.x, city.y, x, y, state)
 	if distance < 1 or distance > 3 then
 		return false, "Site must be within three hexes"
 	end

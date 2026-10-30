@@ -28,7 +28,7 @@ function UnitMovement.walk(state, unit, path, systems, lastPoint)
 	for index = 2, finish do
 		local position = path[index]
 		assert(
-			Hex.distance(unit.x, unit.y, position.x, position.y) == 1,
+			Hex.distance(unit.x, unit.y, position.x, position.y, state) == 1,
 			"Nonadjacent approved route"
 		)
 		if

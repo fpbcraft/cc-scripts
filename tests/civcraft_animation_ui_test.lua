@@ -187,6 +187,34 @@ for _, graphics in ipairs({ false, true }) do
 	ui:close()
 end
 os.epoch = originalEpoch
+
+local followEvent = {
+	type = "move",
+	seq = 700,
+	round = 1,
+	actor = { id = 71, owner = 1, kind = "scout" },
+	paths = { { { x = 1, y = 1 }, { x = 2, y = 1 } } },
+}
+ui.mapViewport = {
+	tile = 10,
+	w = 80,
+	h = 40,
+	world = { width = 18, height = 12, wrapX = true },
+}
+ui.panX, ui.panY = 155, 0
+Playback.watch(ui, { followEvent }, true)
+assert(math.abs(ui.panX - 145) < 0.00001, "Wrapped event follow chooses the nearby repeated copy")
+assert(
+	followEvent.paths[1][1].x == 1,
+	"Event-follow camera movement keeps event coordinates canonical"
+)
+ui.mapViewport.world = { width = 18, height = 12 }
+ui.panX, ui.panY = 155, 0
+Playback.watch(ui, { followEvent }, true)
+assert(
+	math.abs(ui.panX + 35) < 0.00001,
+	"Playback follow keeps bounded behavior when wrap metadata is absent"
+)
 print(
 	"CIVCRAFT: text/graphics automatic playback, one sprite, feed controls, reduced motion and private handoffs passed."
 )

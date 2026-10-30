@@ -10,6 +10,7 @@ local Combat = dofile("/games/civcraft/combat.lua")
 local Conversation = dofile("/games/civcraft/conversation_view.lua")
 local GameView = dofile("/games/civcraft/game_view.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
+local DisplayGeometry = dofile("/games/civcraft/display_geometry.lua")
 local Panels = dofile("/games/civcraft/panels.lua")
 local Playback = dofile("/games/civcraft/playback_ui.lua")
 local Renderer = dofile("/games/civcraft/render.lua")
@@ -514,6 +515,7 @@ function UI:draw(state, playerID, opts)
 		world and world.width or 0,
 		world and world.height or 0,
 		world and world.mapType or "",
+		world and world.wrapX == true and "wrapped" or "bounded",
 	}, ":")
 	if not state or state.phase ~= "game" then
 		self.worldReady = false
@@ -884,8 +886,14 @@ function UI:draw(state, playerID, opts)
 					end
 				end
 			end
-			rows[#rows + 1] =
-				{ text = "MAP: " .. mapLabel(state) .. " / " .. (state.mapType or "continents") }
+			rows[#rows + 1] = {
+				text = "MAP: "
+					.. mapLabel(state)
+					.. " / "
+					.. (state.mapType or "continents")
+					.. " / "
+					.. (state.mapWrapX == true and "CYLINDER" or "BOUNDED"),
+			}
 			rows[#rows + 1] = {
 				buttons = {
 					{
@@ -898,6 +906,12 @@ function UI:draw(state, playerID, opts)
 						label = "MAP TYPE",
 						run = function()
 							self:command("mapType")
+						end,
+					},
+					{
+						label = state.mapWrapX == true and "CYLINDER" or "BOUNDED",
+						run = function()
+							self:command("mapWrapX")
 						end,
 					},
 				},
@@ -1037,7 +1051,9 @@ function UI:draw(state, playerID, opts)
 				.. " / "
 				.. tostring(state.mapType or "continents"):upper()
 				.. " / SEED "
-				.. tostring(state.mapSeed or 12345),
+				.. tostring(state.mapSeed or 12345)
+				.. " / "
+				.. (state.mapWrapX == true and "CYLINDER" or "BOUNDED"),
 			8,
 			1,
 			w - 25
@@ -1154,10 +1170,14 @@ function UI:focus(kind, item)
 		{ x = item.x, y = item.y, kind = kind, unitID = kind == "unit" and item.id or nil }
 	local v = self.mapViewport
 	if v then
-		self.panX = math.max(
-			0,
-			math.min(v.maxX, (item.x - 0.5 + ((item.y - 1) % 2) * 0.5) * v.tile - v.w / 2)
+		local displayX = DisplayGeometry.nearestX(
+			item.x,
+			(self.panX + v.w / 2) / v.tile + 0.5 - ((item.y - 1) % 2) * 0.5,
+			self.state
 		)
+		local panX = (displayX - 0.5 + ((item.y - 1) % 2) * 0.5) * v.tile - v.w / 2
+		self.panX = v.wrapX and ((panX % v.periodX) + v.periodX) % v.periodX
+			or math.max(0, math.min(v.maxX, panX))
 		self.panY =
 			math.max(0, math.min(v.maxY, (item.y - 1) * v.tile * 0.75 + v.tile / 2 - v.h / 2))
 	end
@@ -1437,7 +1457,9 @@ function UI:pan(dx, dy)
 	if not v then
 		return false
 	end
-	self.panX = math.max(0, math.min(v.maxX, (self.panX or 0) + dx))
+	local panX = (self.panX or 0) + dx
+	self.panX = v.wrapX and ((panX % v.periodX) + v.periodX) % v.periodX
+		or math.max(0, math.min(v.maxX, panX))
 	self.panY = math.max(0, math.min(v.maxY, (self.panY or 0) + dy))
 	return true
 end
@@ -1712,14 +1734,16 @@ function UI:tap(x, y)
 		-- banner, hit the actual rendered unit glyph (no extra bubble).
 		-- This retains independent selection of civilian/military stacks and
 		-- visible rival units, even when no circular callout is necessary.
-		local iconMatches = {}
+		local iconMatches, matchedUnits = {}, {}
 		for _, target in ipairs(self.unitIconTargets or {}) do
 			if
 				rx >= target.x
 				and rx < target.x + target.w
 				and ry >= target.y
 				and ry < target.y + target.h
+				and not matchedUnits[target.unit.id]
 			then
+				matchedUnits[target.unit.id] = true
 				local cx = target.glyphX + target.glyphW / 2
 				local cy = target.glyphY + target.glyphH / 2
 				iconMatches[#iconMatches + 1] = {

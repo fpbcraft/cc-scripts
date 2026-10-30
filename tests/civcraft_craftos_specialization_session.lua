@@ -18,6 +18,10 @@ local redevelopmentPreview = {}
 local uiText = {}
 local restoredCheckpoint
 local phase = "start"
+local lastView = {}
+local drawnText = {}
+local pageHistory = {}
+local lastPageKey
 local stopStep = 0
 local function wake()
 	os.queueEvent("term_resize")
@@ -569,6 +573,11 @@ dofile = function(path)
 		module.new = function(display, dispatch)
 			local view = new(display, dispatch)
 			local draw, pull = view.draw, view.r.pullEvent
+			local nativeText = view.r.text
+			view.r.text = function(canvas, x, y, value, ...)
+				drawnText[#drawnText + 1] = value
+				return nativeText(canvas, x, y, value, ...)
+			end
 			view.r.pullEvent = function(canvas)
 				local event = table.pack(pull(canvas))
 				if event[1] == "civcraft_specialty_input_complete" then
@@ -587,6 +596,7 @@ dofile = function(path)
 						end
 					end
 				end
+				drawnText = {}
 				draw(self, state, observer, options)
 				if self.pendingMove and self.pendingMove.sitePreview then
 					for _, button in ipairs(self.r.buttons or {}) do
@@ -595,6 +605,31 @@ dofile = function(path)
 						end
 					end
 				end
+				lastView = {
+					panel = self.panel,
+					cityPanel = self.cityPanel,
+					category = self.productionCategory,
+					source = self.siteSource,
+					buttons = {},
+					text = drawnText,
+					offset = self.inspectorOffset,
+				}
+				for _, button in ipairs(self.r.buttons or {}) do
+					lastView.buttons[#lastView.buttons + 1] = button.label
+				end
+				local pageKey = table.concat({
+					phase,
+					tostring(self.inspectorOffset),
+					tostring(self.siteSource),
+					tostring(self.productionCategory),
+				}, ":")
+				if pageKey ~= lastPageKey then
+					pageHistory[#pageHistory + 1] = lastView
+					if #pageHistory > 40 then
+						table.remove(pageHistory, 1)
+					end
+					lastPageKey = pageKey
+				end
 				drive(self, state, observer, options)
 			end
 			return view
@@ -602,7 +637,9 @@ dofile = function(path)
 	end
 	return module
 end
-local timeout = os.startTimer(70)
+-- Compact text layouts expose one production row per page. Keep the full
+-- placement/redevelopment/restart sequence bounded without expiring mid-page.
+local timeout = os.startTimer(180)
 local returned = false
 local ok, why = pcall(function()
 	parallel.waitForAny(function()
@@ -616,7 +653,15 @@ local ok, why = pcall(function()
 		while true do
 			local event, id = os.pullEvent()
 			if event == "timer" and id == timeout then
-				error("Specialty native session timed out: " .. phase)
+				local file = assert(fs.open("/specialty-session-pages.json", "w"))
+				file.write(textutils.serializeJSON(pageHistory))
+				file.close()
+				error(
+					"Specialty native session timed out: "
+						.. phase
+						.. " "
+						.. textutils.serialize(lastView)
+				)
 			end
 		end
 	end)

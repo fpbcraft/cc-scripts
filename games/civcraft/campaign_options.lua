@@ -42,6 +42,29 @@ function Options.draw(ui, state)
 			},
 		},
 	}
+	if state.phase == "lobby" then
+		rows[#rows + 1] = {
+			buttons = {
+				{
+					label = state.mapWrapX == true and "MAP WRAP: CYLINDER" or "MAP WRAP: BOUNDED",
+					run = function()
+						ui:command("mapWrapX")
+					end,
+				},
+			},
+		}
+		for _, line in
+			ipairs(
+				Panels.wrap(
+					r,
+					"New worlds can connect west and east. Vertical edges remain bounded; saved maps keep their recorded topology.",
+					r.w - 20
+				)
+			)
+		do
+			rows[#rows + 1] = { text = line }
+		end
+	end
 	for _, line in
 		ipairs(
 			Panels.wrap(

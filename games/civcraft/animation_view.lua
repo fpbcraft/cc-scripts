@@ -1,9 +1,33 @@
 -- Draw event-time observations even when current fog or entity membership changed.
 local FactionColors = dofile("/games/civcraft/faction_colors.lua")
 local Icons = dofile("/games/civcraft/icons.lua")
+local AnimationFrame = dofile("/games/civcraft/animation_frame.lua")
+local DisplayGeometry = dofile("/games/civcraft/display_geometry.lua")
 local View = {}
-function View.center(ui, rect, size)
+local function frameForDisplay(ui, state)
 	local frame = ui.animationFrame
+	if not frame or not frame.event or not DisplayGeometry.isWrapped(state) then
+		return frame
+	end
+	local display = {
+		hidden = frame.hidden,
+		sprites = {},
+		effects = {},
+		event = frame.event,
+		progress = frame.progress,
+		waiting = frame.waiting,
+	}
+	AnimationFrame.paint(display, frame.event, frame.progress, state)
+	if frame.waiting then
+		display.focus = display.effects[1] and display.effects[1].position
+			or display.sprites[1] and display.sprites[1].position
+		display.effects, display.projectile = {}, nil
+	end
+	return display
+end
+
+function View.center(ui, rect, size, state)
+	local frame = frameForDisplay(ui, state)
 	if not frame then
 		return
 	end
@@ -12,7 +36,9 @@ function View.center(ui, rect, size)
 		or frame.projectile and frame.projectile.position
 		or frame.sprites[1] and frame.sprites[1].position
 	if position then
-		ui.panX = position.x * size - rect.w / 2
+		local referenceX = ((ui.panX or 0) + rect.w / 2) / size
+		local x = DisplayGeometry.nearestX(position.x, referenceX, state)
+		ui.panX = x * size - rect.w / 2
 		ui.panY = position.y * size - rect.h / 2
 	end
 end
@@ -20,13 +46,19 @@ end
 local ownerColor = FactionColors.owner
 
 function View.draw(ui, state, rect, size)
-	local frame = ui.animationFrame
+	local frame = frameForDisplay(ui, state)
 	if not frame then
 		return
 	end
 	local r = ui.r
+	local referenceX = ((ui.panX or 0) + rect.w / 2) / size
+	local anchor = frame.focus
+		or frame.sprites[1] and frame.sprites[1].position
+		or frame.projectile and frame.projectile.position
+		or frame.effects[1] and frame.effects[1].position
+	local shift = anchor and DisplayGeometry.nearestX(anchor.x, referenceX, state) - anchor.x or 0
 	local function point(position)
-		return rect.x + position.x * size - ui.panX, rect.y + position.y * size - ui.panY
+		return rect.x + (position.x + shift) * size - ui.panX, rect.y + position.y * size - ui.panY
 	end
 	for _, sprite in ipairs(frame.sprites) do
 		local x, y = point(sprite.position)

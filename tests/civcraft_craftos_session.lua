@@ -13,6 +13,7 @@ local includeDevelopment = false
 local developmentProfile = "balance2"
 local includeDefaultSpecialization = false
 local defaultSpecializationVerified = false
+local fixtureSeed
 local includeConversation = false
 local includeContactHUD, contactBadgeStep, contactBadgeVerified = false, 0, false
 local contactFactionPages = 0
@@ -27,6 +28,9 @@ local includeRoutes = false
 local routeRecord
 local routeResumed = false
 for _, argument in ipairs({ ... }) do
+	if argument:match("^%-%-seed=") then
+		fixtureSeed = assert(tonumber(argument:sub(8)))
+	end
 	if argument == "--specialization" then
 		includeDevelopment = true
 		developmentProfile = "balance5"
@@ -242,6 +246,14 @@ end
 
 dofile = function(path)
 	local module = native(path)
+	if fixtureSeed and path == "/games/civcraft/match_lifecycle.lua" then
+		local newLobby = module.newLobby
+		module.newLobby = function(...)
+			local lobby = newLobby(...)
+			lobby.mapSeed = fixtureSeed
+			return lobby
+		end
+	end
 	if includeCouncil and path == "/games/civcraft/council.lua" then
 		local advance = module.advance
 		module.advance = function(state)

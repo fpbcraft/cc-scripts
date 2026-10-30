@@ -10,7 +10,7 @@ local function safe(view, player, x, y, systems)
 	for _, unit in ipairs(view.units or {}) do
 		if unit.owner ~= player.id and Diplomacy.canAttack(view, player.id, unit.owner) then
 			local stats = systems.units[unit.kind] or {}
-			if Hex.distance(x, y, unit.x, unit.y) <= math.max(2, stats.range or 0) then
+			if Hex.distance(x, y, unit.x, unit.y, view) <= math.max(2, stats.range or 0) then
 				return false
 			end
 		end
@@ -19,7 +19,7 @@ local function safe(view, player, x, y, systems)
 		if
 			city.owner ~= player.id
 			and Diplomacy.canAttack(view, player.id, city.owner)
-			and Hex.distance(x, y, city.x, city.y) <= 2
+			and Hex.distance(x, y, city.x, city.y, view) <= 2
 		then
 			return false
 		end
@@ -29,15 +29,13 @@ end
 
 local function sitesInRange(view, player, city, kind, systems, project, original)
 	local result = {}
-	for y = math.max(1, city.y - 3), math.min(view.world.height, city.y + 3) do
-		for x = math.max(1, city.x - 3), math.min(view.world.width, city.x + 3) do
-			if
-				Sites.canPlace(view, player, city, kind, x, y, project, original)
-				and safe(view, player, x, y, systems)
-			then
-				result[#result + 1] =
-					{ x = x, y = y, bonus = Sites.bonus(view, player, kind, x, y) }
-			end
+	for _, position in ipairs(Hex.withinRadius(city.x, city.y, 3, view)) do
+		local x, y = position.x, position.y
+		if
+			Sites.canPlace(view, player, city, kind, x, y, project, original)
+			and safe(view, player, x, y, systems)
+		then
+			result[#result + 1] = { x = x, y = y, bonus = Sites.bonus(view, player, kind, x, y) }
 		end
 	end
 	return result

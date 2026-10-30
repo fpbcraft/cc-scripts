@@ -5,6 +5,8 @@ end
 -- Match the installed program's shared internal module identities.
 dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local Animations = dofile("games/civcraft/animations.lua")
+local AnimationFrame = dofile("games/civcraft/animation_frame.lua")
+local AnimationView = dofile("games/civcraft/animation_view.lua")
 local Presentation = dofile("games/civcraft/presentation.lua")
 local World = dofile("games/civcraft/world.lua")
 
@@ -229,3 +231,76 @@ assert(not event.replayLeadIn, "Presentation metadata never mutates the saved ev
 print(
 	"CIVCRAFT: serial replay lead-ins, paused timing, fast/off preferences and event immutability passed."
 )
+
+-- Display interpolation may use repeated copies, but projected event coordinates stay canonical.
+local wrappedWorld = { width = 8, height = 6, wrapX = true }
+local seamMove = move(4, { { { x = 8, y = 1 }, { x = 1, y = 1 } } })
+local seamFrame = { hidden = {}, sprites = {}, effects = {} }
+AnimationFrame.paint(seamFrame, seamMove, 0.5, wrappedWorld)
+close(seamFrame.sprites[1].position.x, 8)
+assert(
+	seamMove.paths[1][1].x == 8 and seamMove.paths[1][2].x == 1,
+	"Wrapped display interpolation must not rewrite canonical observer events"
+)
+
+local boundedFrame = { hidden = {}, sprites = {}, effects = {} }
+AnimationFrame.paint(boundedFrame, seamMove, 0.5, { width = 8, height = 6 })
+close(boundedFrame.sprites[1].position.x, 4)
+
+local oddRowMove = move(5, { { { x = 8, y = 2 }, { x = 1, y = 2 } } })
+local oddRowFrame = { hidden = {}, sprites = {}, effects = {} }
+AnimationFrame.paint(oddRowFrame, oddRowMove, 0.5, wrappedWorld)
+close(oddRowFrame.sprites[1].position.x, 8.5)
+close(oddRowFrame.sprites[1].position.y, 1.25)
+
+local seamCombat = {
+	seq = 6,
+	round = 1,
+	type = "combat",
+	actor = actor,
+	start = { x = 8, y = 1 },
+	target = { x = 1, y = 1 },
+	defender = { id = 9, kind = "warrior", owner = 2, hp = 40 },
+	result = { ranged = true, attackerHP = 100, defenderHP = 40 },
+}
+local projectileFrame = { hidden = {}, sprites = {}, effects = {} }
+AnimationFrame.paint(projectileFrame, seamCombat, 0.2, wrappedWorld)
+assert(projectileFrame.projectile, "Wrapped ranged combat still paints a projectile")
+close(projectileFrame.projectile.start.x, 7.5)
+close(projectileFrame.projectile.position.x, 7.9)
+close(projectileFrame.sprites[2].position.x, 8.5)
+assert(
+	seamCombat.start.x == 8 and seamCombat.target.x == 1,
+	"Wrapped combat must retain canonical endpoints"
+)
+seamCombat.result.ranged = false
+seamCombat.result.defenderDied = true
+local meleeFrame = { hidden = {}, sprites = {}, effects = {} }
+AnimationFrame.paint(meleeFrame, seamCombat, 0.5, wrappedWorld)
+close(meleeFrame.sprites[1].position.x, 7.9)
+close(meleeFrame.sprites[2].position.x, 8.5)
+close(meleeFrame.effects[1].position.x, 8.5)
+seamCombat.result.ranged = true
+seamCombat.result.defenderDied = nil
+
+local followTimeline = Animations.new()
+followTimeline:play({ seamMove })
+local followFirst = followTimeline:frame(0, 1)
+local followNext = followTimeline:frame(0.06, 1)
+local followUI = { animationFrame = followFirst, panX = 0, panY = 0 }
+local rect = { x = 10, y = 5, w = 80, h = 40 }
+AnimationView.center(followUI, rect, 10, wrappedWorld)
+close(followUI.panX, 35)
+followUI.animationFrame = followNext
+AnimationView.center(followUI, rect, 10, wrappedWorld)
+close(followUI.panX, 40)
+local drawn
+followUI.r = {
+	fill = function(_, x, y)
+		drawn = drawn or { x, y }
+	end,
+}
+followUI.animationTime = 1
+AnimationView.draw(followUI, { world = wrappedWorld, players = { { id = 1 } } }, rect, 10)
+assert(drawn and drawn[1] == 49, "Animated sprite draws in the camera's repeated world copy")
+print("CIVCRAFT: wrapped animation interpolation uses short display paths and canonical events.")

@@ -507,8 +507,8 @@ function H.reachable(state, unit, owner, Systems, options)
 			if
 				u.owner ~= owner
 				and Diplomacy.canAttack(state, owner, u.owner)
-				and H.distance(unit.x, unit.y, u.x, u.y) <= stats.range
-				and H.distance(unit.x, unit.y, u.x, u.y) > 0
+				and H.distance(unit.x, unit.y, u.x, u.y, state) <= stats.range
+				and H.distance(unit.x, unit.y, u.x, u.y, state) > 0
 			then
 				local p = state.players or {}
 				local visible = false
