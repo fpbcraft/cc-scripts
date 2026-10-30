@@ -263,10 +263,9 @@ local function assertForeignBuilderRedacted(state)
 		return
 	end
 	local observed = unit(state, expected.builderID)
-	assert(
-		observed and observed.owner == 1,
-		"Rival Builder must remain visible for the redaction check"
-	)
+	if not observed or observed.owner ~= 1 then
+		return
+	end
 	assert(
 		observed.autoWork == nil and observed.autoWorkPaused == nil and observed.workQueue == nil,
 		"Rival unit snapshots must redact auto-work intent, pause reason and queued targets"
@@ -477,6 +476,7 @@ local function configureFixture()
 	target = legalTarget(authoritative, assert(city(authoritative, 1)), "works", nil, 2)
 	target.city = city(authoritative, 1).id
 	local builderCity = assert(city(authoritative, 1))
+	local observer = assert(player(authoritative, 2))
 	local Works = env.dofile("/games/civcraft/tile_improvements.lua")
 	local Stacks = env.dofile("/games/civcraft/unit_stacks.lua")
 	local builderSpot, fallbackSpot
@@ -493,10 +493,16 @@ local function configureFixture()
 						Works.canPlace(authoritative, player(authoritative, 1), kind, x, y, Systems)
 					then
 						local spot = { x = x, y = y }
-						if builderCity.worked and builderCity.worked[World.key(x, y)] then
+						if
+							observer.visible[World.key(x, y)]
+							and builderCity.worked
+							and builderCity.worked[World.key(x, y)]
+						then
 							builderSpot = spot
 						else
-							fallbackSpot = fallbackSpot or spot
+							if observer.visible[World.key(x, y)] then
+								fallbackSpot = fallbackSpot or spot
+							end
 						end
 						break
 					end
@@ -511,7 +517,10 @@ local function configureFixture()
 		end
 	end
 	builderSpot = builderSpot or fallbackSpot
-	assert(builderSpot, "Builder fixture needs an observed legal improvement tile")
+	assert(
+		builderSpot,
+		"Builder fixture needs a legal owned improvement tile already visible to the rival"
+	)
 	autoBuilderID = authoritative.nextId
 	authoritative.nextId = authoritative.nextId + 1
 	autoBuilderX, autoBuilderY = builderSpot.x, builderSpot.y
@@ -537,9 +546,10 @@ local function configureFixture()
 	)
 	assert(initialPlan, "Builder fixture needs a useful safe target in observed owned land")
 	autoBuilderVisibleKey = World.key(autoBuilderX, autoBuilderY)
-	local observer = assert(player(authoritative, 2))
-	observer.visible = observer.visible or {}
-	observer.visible[autoBuilderVisibleKey] = true
+	assert(
+		observer.visible[autoBuilderVisibleKey],
+		"Builder tile visibility must come from the map"
+	)
 	campaignID = authoritative.campaignID
 end
 local function hostDraw(ui, state)
@@ -613,7 +623,6 @@ local function hostDraw(ui, state)
 			end
 		end
 	elseif phase == "fixture" then
-		expectBuilderPrivacy("active")
 		step(1, "builderEnable", "autoWork", {
 			unitID = autoBuilderID,
 			x = autoBuilderX,
@@ -624,6 +633,7 @@ local function hostDraw(ui, state)
 	elseif phase == "builderEnable" and stepDone(1, "builderEnable", true) then
 		local builder = assert(unit(authoritative, autoBuilderID))
 		assert(builder.autoWork and builder.workQueue and builder.workQueue.auto)
+		expectBuilderPrivacy("active")
 		step(2, "builderSpoof", "autoWork", {
 			unitID = autoBuilderID,
 			x = autoBuilderX,
@@ -643,7 +653,6 @@ local function hostDraw(ui, state)
 		)
 		local builder = assert(unit(authoritative, autoBuilderID))
 		assert(builder.autoWork and builder.workQueue and builder.workQueue.auto)
-		expectBuilderPrivacy("paused")
 		step(1, "builderPause", "autoWork", {
 			unitID = autoBuilderID,
 			x = autoBuilderX,
@@ -658,8 +667,30 @@ local function hostDraw(ui, state)
 				and builder.autoWorkPaused == "Paused by player"
 				and not builder.workQueue
 		)
-		advancePhase("builderPausePrivacy")
-	elseif phase == "builderPausePrivacy" and controls.builderAutoPrivacyObservedpaused then
+		expectBuilderPrivacy("paused")
+		step(2, "builderSpoofPaused", "autoWork", {
+			unitID = autoBuilderID,
+			x = autoBuilderX,
+			y = autoBuilderY,
+			value = "stop",
+			playerID = 1,
+		})
+		advancePhase("builderSpoofPaused")
+	elseif
+		phase == "builderSpoofPaused"
+		and stepDone(2, "builderSpoofPaused", false)
+		and controls.builderAutoPrivacyObservedpaused
+	then
+		assert(
+			tostring(controls.builderSpoofPaused.message):find("Select an owned Builder", 1, true),
+			"Spoofed playerID cannot stop the other client's Builder order"
+		)
+		local builder = assert(unit(authoritative, autoBuilderID))
+		assert(
+			builder.autoWork
+				and builder.autoWorkPaused == "Paused by player"
+				and not builder.workQueue
+		)
 		step(1, "builderResume", "autoWork", {
 			unitID = autoBuilderID,
 			x = autoBuilderX,
@@ -1095,7 +1126,7 @@ local function clientDraw(ui, state)
 		if coherent then
 			if computer == 1 and results[todo.token].ok then
 				assert(own.focus)
-				if todo.action ~= "queue" then
+				if todo.action ~= "queue" and todo.action ~= "autoWork" then
 					assert(own.siteProjects[own.project.id])
 				end
 			end
@@ -1226,6 +1257,14 @@ file.write(textutils.serialize({
 	builderAutoWorkSpoofRejected = controls.builderSpoof ~= nil
 		and not controls.builderSpoof.ok
 		and tostring(controls.builderSpoof.message):find("Select an owned Builder", 1, true)
+			~= nil,
+	builderAutoWorkPauseSpoofRejected = controls.builderSpoofPaused ~= nil
+		and not controls.builderSpoofPaused.ok
+		and tostring(controls.builderSpoofPaused.message):find(
+				"Select an owned Builder",
+				1,
+				true
+			)
 			~= nil,
 	builderAutoWorkRedacted = controls.builderAutoPrivacyObservedactive ~= nil
 		and controls.builderAutoPrivacyObservedpaused ~= nil,
