@@ -14,7 +14,7 @@ function Work.threat(view, owner, x, y, systems)
 		if
 			Hostility.canAttack(view, owner, other.owner)
 			and (stats.strength or 0) > 0
-			and Hex.distance(x, y, other.x, other.y) <= math.max(2, stats.range or 1)
+			and Hex.distance(x, y, other.x, other.y, view) <= math.max(2, stats.range or 1)
 		then
 			return true
 		end
@@ -22,7 +22,7 @@ function Work.threat(view, owner, x, y, systems)
 	for _, city in ipairs(view.cities or {}) do
 		if
 			Hostility.canAttack(view, owner, city.owner)
-			and Hex.distance(x, y, city.x, city.y) <= 2
+			and Hex.distance(x, y, city.x, city.y, view) <= 2
 		then
 			return true
 		end

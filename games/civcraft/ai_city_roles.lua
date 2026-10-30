@@ -32,7 +32,7 @@ function CityRoles.choose(view, player, systems)
 		end
 		for _, other in ipairs(cities) do
 			score.infrastructure = score.infrastructure
-				- Hex.distance(city.x, city.y, other.x, other.y)
+				- Hex.distance(city.x, city.y, other.x, other.y, view)
 		end
 		scores[city.id], result[city.id] = score, "commerce"
 	end

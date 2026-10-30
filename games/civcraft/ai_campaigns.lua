@@ -163,7 +163,7 @@ function Campaigns.update(view, player, systems)
 		then
 			local score = 80
 				+ (city.capitalOf and 40 or 0)
-				- Hex.distance(home.x, home.y, city.x, city.y)
+				- Hex.distance(home.x, home.y, city.x, city.y, view)
 			if previous and previous.targetID == city.id then
 				score = score + 25
 			end
@@ -177,7 +177,7 @@ function Campaigns.update(view, player, systems)
 		for _, enemy in ipairs(view.units) do
 			if
 				Threats.opponent(view, player, enemy, systems)
-				and Hex.distance(city.x, city.y, enemy.x, enemy.y) <= 3
+				and Hex.distance(city.x, city.y, enemy.x, enemy.y, view) <= 3
 			then
 				defend = city
 				break
@@ -210,8 +210,8 @@ function Campaigns.update(view, player, systems)
 	if kind == "city" then
 		for _, city in ipairs(cities) do
 			if
-				Hex.distance(city.x, city.y, target.x, target.y)
-				< Hex.distance(home.x, home.y, target.x, target.y)
+				Hex.distance(city.x, city.y, target.x, target.y, view)
+				< Hex.distance(home.x, home.y, target.x, target.y, view)
 			then
 				home = city
 			end
@@ -228,7 +228,7 @@ function Campaigns.update(view, player, systems)
 	end
 	if kind == "city" and phase == "approach" then
 		for _, unit in ipairs(units) do
-			if Hex.distance(unit.x, unit.y, target.x, target.y) <= 2 then
+			if Hex.distance(unit.x, unit.y, target.x, target.y, view) <= 2 then
 				phase = "siege"
 			end
 		end

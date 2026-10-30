@@ -20,7 +20,10 @@ function Perception.pressure(state, observer, subject, hex, units)
 		local strength = (units[unit.kind] or {}).strength or 0
 		if unit.owner == subject and strength > 0 and visible(viewer, unit.x, unit.y) then
 			for _, city in ipairs(state.cities) do
-				if city.owner == observer and hex.distance(unit.x, unit.y, city.x, city.y) <= 3 then
+				if
+					city.owner == observer
+					and hex.distance(unit.x, unit.y, city.x, city.y, state) <= 3
+				then
 					pressure = pressure + strength
 					break
 				end
@@ -68,7 +71,7 @@ function Perception.settlement(state, city, hex)
 			for _, neighbor in ipairs(state.cities) do
 				if
 					neighbor.owner == observer.id
-					and hex.distance(city.x, city.y, neighbor.x, neighbor.y) <= 5
+					and hex.distance(city.x, city.y, neighbor.x, neighbor.y, state) <= 5
 				then
 					Memory.add(
 						state,
@@ -94,7 +97,7 @@ function Perception.protection(state, actor, x, y, hex)
 	for _, observer in ipairs(state.players) do
 		if observer.id ~= actor and visible(observer, x, y) then
 			for _, city in ipairs(state.cities) do
-				if city.owner == observer.id and hex.distance(x, y, city.x, city.y) <= 4 then
+				if city.owner == observer.id and hex.distance(x, y, city.x, city.y, state) <= 4 then
 					Memory.add(
 						state,
 						observer.id,

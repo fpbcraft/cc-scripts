@@ -82,7 +82,7 @@ function C.besieged(state, city, systems)
 					and (stats.strength or 0) > 0
 					and (stats.range or 1) <= 1
 					and not stats.naval
-					and Hex.distance(u.x, u.y, tile.x, tile.y) <= 1
+					and Hex.distance(u.x, u.y, tile.x, tile.y, state) <= 1
 				then
 					controlled = true
 					break
@@ -129,7 +129,7 @@ function C.restRecovery(state, unit, systems)
 			and other.owner == unit.owner
 			and (other.hp or 100) > 0
 			and (systems.units[other.kind] or {}).healer
-			and Hex.distance(unit.x, unit.y, other.x, other.y) <= 1
+			and Hex.distance(unit.x, unit.y, other.x, other.y, state) <= 1
 		then
 			result.support = 10
 			break
@@ -160,7 +160,10 @@ function C.round(state, systems)
 			end
 			if (systems.units[u.kind] or {}).healer then
 				for _, ally in ipairs(state.units) do
-					if ally.owner == u.owner and Hex.distance(u.x, u.y, ally.x, ally.y) <= 1 then
+					if
+						ally.owner == u.owner
+						and Hex.distance(u.x, u.y, ally.x, ally.y, state) <= 1
+					then
 						ally.hp = math.min(100, (ally.hp or 100) + 10)
 					end
 				end
@@ -473,7 +476,7 @@ function C.strike(state, city, x, y, systems)
 		return false, "City already attacked this round"
 	end
 	local enemy = Stacks.at(state.units, x, y)
-	if not enemy or enemy.owner == city.owner or Hex.distance(city.x, city.y, x, y) > 2 then
+	if not enemy or enemy.owner == city.owner or Hex.distance(city.x, city.y, x, y, state) > 2 then
 		return false, "Select an enemy unit within two hexes"
 	end
 	if not Diplomacy.canAttack(state, city.owner, enemy.owner) then

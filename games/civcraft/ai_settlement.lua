@@ -21,7 +21,7 @@ function Settlement.value(view, player, x, y, unit)
 	end
 	local home, homes = math.huge, 0
 	for _, city in ipairs(view.cities or {}) do
-		local distance = Hex.distance(x, y, city.x, city.y)
+		local distance = Hex.distance(x, y, city.x, city.y, view)
 		if distance < 3 then
 			return nil
 		end
@@ -44,12 +44,11 @@ function Settlement.value(view, player, x, y, unit)
 	local score = 25 - home * 1.5
 	local future = Difficulty.profile(player).futureSites
 	if future > 0 then
-		for yy = math.max(1, y - 2), math.min(view.world.height, y + 2) do
-			for xx = math.max(1, x - 3), math.min(view.world.width, x + 3) do
-				if Hex.distance(x, y, xx, yy) == 2 and view.world.tiles[World.key(xx, yy)] then
-					local yields = World.yields(view.world, xx, yy, view)
-					score = score + (yields.food + yields.industry + yields.science) * future
-				end
+		for _, position in ipairs(Hex.withinRadius(x, y, 2, view)) do
+			local xx, yy = position.x, position.y
+			if Hex.distance(x, y, xx, yy, view) == 2 and view.world.tiles[World.key(xx, yy)] then
+				local yields = World.yields(view.world, xx, yy, view)
+				score = score + (yields.food + yields.industry + yields.science) * future
 			end
 		end
 	end
@@ -68,14 +67,14 @@ function Settlement.value(view, player, x, y, unit)
 		end
 	end
 	for _, other in ipairs(view.units or {}) do
-		if other.owner ~= player.id and Hex.distance(x, y, other.x, other.y) <= 3 then
+		if other.owner ~= player.id and Hex.distance(x, y, other.x, other.y, view) <= 3 then
 			score = score - 15
 		end
 		local reserved = other.aiSettlement
 		if
 			other.id ~= (unit or {}).id
 			and reserved
-			and Hex.distance(x, y, reserved.x, reserved.y) < 3
+			and Hex.distance(x, y, reserved.x, reserved.y, view) < 3
 		then
 			return nil
 		end

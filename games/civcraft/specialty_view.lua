@@ -118,31 +118,28 @@ function View.targets(state, player, city, kind, sourceId)
 	if not Sites.enabled(state) then
 		return result
 	end
-	for y = math.max(1, city.y - 3), math.min(state.world.height, city.y + 3) do
-		for x = math.max(1, city.x - 3), math.min(state.world.width, city.x + 3) do
-			if Hex.distance(city.x, city.y, x, y) <= 3 then
-				local request = {
-					action = sourceId and "redevelopSite" or "placeSite",
-					city = city.id,
-					siteId = sourceId,
-					kind = kind,
-					x = x,
-					y = y,
-				}
-				local preview = Sites.preview(state, player, city, request)
-				if preview then
-					result[#result + 1] = {
-						x = x,
-						y = y,
-						cost = preview.cost,
-						sitePreview = preview,
-						signature = placementKey(state, city, request, preview),
-						campaign = state.campaignID,
-						industry = Systems.yields(player, city, state, Hex, nil, true).industry,
-						request = request,
-					}
-				end
-			end
+	for _, position in ipairs(Hex.withinRadius(city.x, city.y, 3, state)) do
+		local x, y = position.x, position.y
+		local request = {
+			action = sourceId and "redevelopSite" or "placeSite",
+			city = city.id,
+			siteId = sourceId,
+			kind = kind,
+			x = x,
+			y = y,
+		}
+		local preview = Sites.preview(state, player, city, request)
+		if preview then
+			result[#result + 1] = {
+				x = x,
+				y = y,
+				cost = preview.cost,
+				sitePreview = preview,
+				signature = placementKey(state, city, request, preview),
+				campaign = state.campaignID,
+				industry = Systems.yields(player, city, state, Hex, nil, true).industry,
+				request = request,
+			}
 		end
 	end
 	return result

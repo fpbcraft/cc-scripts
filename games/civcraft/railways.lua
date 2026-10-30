@@ -24,7 +24,7 @@ function R.canBuild(state, p, unit, x, y, systems)
 	then
 		return false
 	end
-	if Hex.distance(unit.x, unit.y, x, y) > 1 then
+	if Hex.distance(unit.x, unit.y, x, y, state) > 1 then
 		return false
 	end
 	local city = World.territoryCity(state, Hex, x, y)

@@ -20,10 +20,10 @@ function H.generate(state)
 	local candidates = {}
 	local world = state.world
 	for y = 2, world.height - 1 do
-		for x = 2, world.width - 1 do
+		for x = world.wrapX and 1 or 2, world.wrapX and world.width or world.width - 1 do
 			local safe = true
 			for _, s in ipairs(world.starts) do
-				if Hex.distance(x, y, s.x, s.y) < 5 then
+				if Hex.distance(x, y, s.x, s.y, state) < 5 then
 					safe = false
 				end
 			end
@@ -46,7 +46,7 @@ function H.generate(state)
 	for _, c in ipairs(candidates) do
 		local safe = true
 		for _, s in ipairs(state.spawners) do
-			if Hex.distance(s.x, s.y, c.x, c.y) < 4 then
+			if Hex.distance(s.x, s.y, c.x, c.y, state) < 4 then
 				safe = false
 			end
 		end
@@ -153,7 +153,7 @@ function H.round(state, systems)
 			for _, list in ipairs({ state.units, state.cities }) do
 				for _, v in ipairs(list) do
 					if v.owner ~= H.owner then
-						local d = Hex.distance(u.x, u.y, v.x, v.y)
+						local d = Hex.distance(u.x, u.y, v.x, v.y, state)
 						if d <= stats.vision and (not dist or d < dist) then
 							target = v
 							dist = d
@@ -167,8 +167,8 @@ function H.round(state, systems)
 					if (a.attack == true) ~= (b.attack == true) then
 						return a.attack == true
 					end
-					local da = Hex.distance(a.x, a.y, target.x, target.y)
-					local db = Hex.distance(b.x, b.y, target.x, target.y)
+					local da = Hex.distance(a.x, a.y, target.x, target.y, state)
+					local db = Hex.distance(b.x, b.y, target.x, target.y, state)
 					if da ~= db then
 						return da < db
 					end

@@ -202,10 +202,10 @@ function W.territoryCity(state, hex, x, y)
 		local dist
 		if city.claimed then
 			if city.claimed[tileKey] then
-				dist = hex.distance(x, y, city.x, city.y)
+				dist = hex.distance(x, y, city.x, city.y, state)
 			end
 		else
-			local candidate = hex.distance(x, y, city.x, city.y)
+			local candidate = hex.distance(x, y, city.x, city.y, state)
 			if candidate <= radius(city) then
 				dist = candidate
 			end
@@ -232,12 +232,8 @@ function W.ensureTerritories(state, hex, legacy)
 			local range = legacy and radius(city) or 1
 			city.claimed = {}
 			city.borderProgress = city.borderProgress or 0
-			for y = math.max(1, city.y - range), math.min(state.world.height, city.y + range) do
-				for x = math.max(1, city.x - range), math.min(state.world.width, city.x + range) do
-					if hex.distance(city.x, city.y, x, y) <= range then
-						city.claimed[key(x, y)] = true
-					end
-				end
+			for _, position in ipairs(hex.withinRadius(city.x, city.y, range, state)) do
+				city.claimed[key(position.x, position.y)] = true
 			end
 		end
 	end
@@ -254,27 +250,24 @@ function W.expandCity(state, hex, city)
 		return false
 	end
 	local candidates = {}
-	for y = math.max(1, city.y - 3), math.min(state.world.height, city.y + 3) do
-		for x = math.max(1, city.x - 3), math.min(state.world.width, city.x + 3) do
-			if
-				hex.distance(city.x, city.y, x, y) <= 3 and not W.territoryCity(state, hex, x, y)
-			then
-				local adjacent = false
-				for _, n in ipairs(hex.neighbours(x, y, state)) do
-					if city.claimed[key(n.x, n.y)] then
-						adjacent = true
-						break
-					end
+	for _, position in ipairs(hex.withinRadius(city.x, city.y, 3, state)) do
+		local x, y = position.x, position.y
+		if not W.territoryCity(state, hex, x, y) then
+			local adjacent = false
+			for _, n in ipairs(hex.neighbours(x, y, state)) do
+				if city.claimed[key(n.x, n.y)] then
+					adjacent = true
+					break
 				end
-				if adjacent then
-					local yield = W.yields(state.world, x, y, state)
-					candidates[#candidates + 1] = {
-						x = x,
-						y = y,
-						distance = hex.distance(city.x, city.y, x, y),
-						score = yield.food + yield.industry + yield.science,
-					}
-				end
+			end
+			if adjacent then
+				local yield = W.yields(state.world, x, y, state)
+				candidates[#candidates + 1] = {
+					x = x,
+					y = y,
+					distance = hex.distance(city.x, city.y, x, y, state),
+					score = yield.food + yield.industry + yield.science,
+				}
 			end
 		end
 	end
@@ -426,14 +419,10 @@ function W.reveal(state, hex, systems, pendingNotices)
 		p.explored = p.explored or {}
 		local visible = {}
 		local function reveal(x, y, r)
-			for yy = math.max(1, y - r), math.min(world.height, y + r) do
-				for xx = math.max(1, x - r), math.min(world.width, x + r) do
-					if hex.distance(x, y, xx, yy) <= r then
-						local k = key(xx, yy)
-						visible[k] = true
-						p.explored[k] = true
-					end
-				end
+			for _, position in ipairs(hex.withinRadius(x, y, r, state)) do
+				local k = key(position.x, position.y)
+				visible[k] = true
+				p.explored[k] = true
 			end
 		end
 		for _, c in ipairs(state.cities or {}) do

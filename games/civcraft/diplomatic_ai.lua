@@ -151,7 +151,7 @@ local function homeDistance(view, player, x, y)
 	local distance = math.huge
 	for _, city in ipairs(view.cities) do
 		if city.owner == player.id then
-			distance = math.min(distance, Hex.distance(x, y, city.x, city.y))
+			distance = math.min(distance, Hex.distance(x, y, city.x, city.y, view))
 		end
 	end
 	return distance
@@ -175,8 +175,8 @@ function AI.allows(view, player, unit, request)
 			end
 			local distance = homeDistance(view, player, unit.x, unit.y)
 			if distance == math.huge then
-				return Hex.distance(request.x, request.y, current.x, current.y)
-					> Hex.distance(unit.x, unit.y, current.x, current.y)
+				return Hex.distance(request.x, request.y, current.x, current.y, view)
+					> Hex.distance(unit.x, unit.y, current.x, current.y, view)
 			end
 			return homeDistance(view, player, request.x, request.y) < distance
 		end
@@ -207,7 +207,13 @@ function AI.pullbackOrder(view, player, unit, systems)
 			local value = (not destination or destination.owner ~= current.owner) and 100 or 0
 			local distance = homeDistance(view, player, move.x, move.y)
 			value = value
-				+ (distance == math.huge and Hex.distance(move.x, move.y, current.x, current.y) or -distance) * 3
+				+ (distance == math.huge and Hex.distance(
+					move.x,
+					move.y,
+					current.x,
+					current.y,
+					view
+				) or -distance) * 3
 				- move.cost * 0.1
 			if value > score then
 				best, score = request, value

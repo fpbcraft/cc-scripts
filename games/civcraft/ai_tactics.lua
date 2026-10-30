@@ -35,7 +35,7 @@ local function home(view, player, unit)
 	local best, distance
 	for _, city in ipairs(view.cities) do
 		if city.owner == player.id then
-			local d = Hex.distance(unit.x, unit.y, city.x, city.y)
+			local d = Hex.distance(unit.x, unit.y, city.x, city.y, view)
 			if not distance or d < distance then
 				best, distance = city, d
 			end
@@ -53,7 +53,7 @@ local function support(view, player, unit, x, y, systems)
 			other.id ~= unit.id
 			and other.owner == player.id
 			and (not ContentRules.isRedesign(view) or not other.actedThisRound)
-			and Hex.distance(x, y, other.x, other.y) <= 1
+			and Hex.distance(x, y, other.x, other.y, view) <= 1
 		then
 			value = value + math.min(10, 100 - (other.hp or 100)) * 2
 		end
@@ -78,7 +78,7 @@ function Tactics.ranked(view, player, unit, systems)
 	if campaign.kind == "city" and campaign.phase == "approach" and role.name ~= "naval" then
 		local index, distance
 		for i, point in ipairs(campaign.corridor or {}) do
-			local d = Hex.distance(unit.x, unit.y, point.x, point.y)
+			local d = Hex.distance(unit.x, unit.y, point.x, point.y, view)
 			if not distance or d < distance then
 				index, distance = i, d
 			end
@@ -107,7 +107,7 @@ function Tactics.ranked(view, player, unit, systems)
 				and not stats.naval
 				and (stats.healer or stats.siege or (stats.range or 1) > 1)
 			then
-				local d = Hex.distance(unit.x, unit.y, other.x, other.y)
+				local d = Hex.distance(unit.x, unit.y, other.x, other.y, view)
 				if not distance or d < distance then
 					closest, distance = other, d
 				end
@@ -116,7 +116,7 @@ function Tactics.ranked(view, player, unit, systems)
 		if closest then
 			local best, distanceToEnemy
 			for _, point in ipairs(Hex.neighbours(closest.x, closest.y, view)) do
-				local d = Hex.distance(point.x, point.y, campaign.x, campaign.y)
+				local d = Hex.distance(point.x, point.y, campaign.x, campaign.y, view)
 				if not distanceToEnemy or d < distanceToEnemy then
 					best, distanceToEnemy = point, d
 				end
@@ -135,8 +135,8 @@ function Tactics.ranked(view, player, unit, systems)
 		if (a.attack == true) ~= (b.attack == true) then
 			return a.attack == true
 		end
-		local aa = Hex.distance(a.x, a.y, target.x, target.y)
-		local bb = Hex.distance(b.x, b.y, target.x, target.y)
+		local aa = Hex.distance(a.x, a.y, target.x, target.y, view)
+		local bb = Hex.distance(b.x, b.y, target.x, target.y, view)
 		if exploring then
 			aa, bb = -frontier(view, a.x, a.y), -frontier(view, b.x, b.y)
 		end
@@ -217,8 +217,8 @@ function Tactics.ranked(view, player, unit, systems)
 			end
 		else
 			score = (
-				Hex.distance(unit.x, unit.y, target.x, target.y)
-				- Hex.distance(choice.x, choice.y, target.x, target.y)
+				Hex.distance(unit.x, unit.y, target.x, target.y, view)
+				- Hex.distance(choice.x, choice.y, target.x, target.y, view)
 			)
 					* 8
 				- choice.cost
@@ -258,7 +258,7 @@ function Tactics.ranked(view, player, unit, systems)
 		if risk.damage >= (position.hp or 100) then
 			score = score - 160
 		end
-		score = score - Threats.uncertainty(player, position.x, position.y, view.round or 1)
+		score = score - Threats.uncertainty(player, position.x, position.y, view.round or 1, view)
 		result[#result + 1] = {
 			request = {
 				action = "move",
@@ -297,7 +297,7 @@ function Tactics.cityStrike(view, player, city, systems)
 	for _, enemy in ipairs(view.units) do
 		if
 			Threats.opponent(view, player, enemy, systems)
-			and Hex.distance(city.x, city.y, enemy.x, enemy.y) <= 2
+			and Hex.distance(city.x, city.y, enemy.x, enemy.y, view) <= 2
 		then
 			local damage = Combat.damage(
 				Combat.cityPower(view, city, systems),

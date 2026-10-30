@@ -190,7 +190,7 @@ function Queue.run(state, owner, systems, apply, force)
 					goal = queue.goals[1]
 				end
 				local step = queue.path[queue.next]
-				if not step or Hex.distance(unit.x, unit.y, step.x, step.y) ~= 1 then
+				if not step or Hex.distance(unit.x, unit.y, step.x, step.y, state) ~= 1 then
 					pause(state, unit, queue, "Movement route changed")
 					break
 				end

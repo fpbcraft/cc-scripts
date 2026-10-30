@@ -10,24 +10,24 @@ V.types = {
 function V.generate(state)
 	local wanted = math.max(2, math.floor(state.world.width * state.world.height / 200))
 	for y = 3, state.world.height - 2 do
-		for x = 3, state.world.width - 2 do
+		for x = state.world.wrapX and 1 or 3, state.world.wrapX and state.world.width or state.world.width - 2 do
 			if wanted <= 0 then
 				return
 			end
 			local safe = true
 			for _, start in ipairs(state.world.starts or {}) do
-				if Hex.distance(x, y, start.x, start.y) < 5 then
+				if Hex.distance(x, y, start.x, start.y, state) < 5 then
 					safe = false
 					break
 				end
 			end
 			for _, s in ipairs(state.cities) do
-				if Hex.distance(x, y, s.x, s.y) < 5 then
+				if Hex.distance(x, y, s.x, s.y, state) < 5 then
 					safe = false
 				end
 			end
 			for _, s in ipairs(state.spawners or {}) do
-				if Hex.distance(x, y, s.x, s.y) < 3 then
+				if Hex.distance(x, y, s.x, s.y, state) < 3 then
 					safe = false
 				end
 			end
@@ -124,7 +124,7 @@ function V.defended(state, pid, x, y)
 		return
 	end
 	for _, city in ipairs(state.cities) do
-		if V.independent(city) and Hex.distance(city.x, city.y, x, y) <= 3 then
+		if V.independent(city) and Hex.distance(city.x, city.y, x, y, state) <= 3 then
 			city.influence = city.influence or {}
 			city.influence[pid] = (city.influence[pid] or 0) + 10
 		end
@@ -174,7 +174,7 @@ function V.round(state, systems, combat)
 					if
 						hostile
 						and target.attack
-						and Hex.distance(target.x, target.y, city.x, city.y) <= 2
+						and Hex.distance(target.x, target.y, city.x, city.y, state) <= 2
 					then
 						combat.attack(state, guard, target, systems)
 						break

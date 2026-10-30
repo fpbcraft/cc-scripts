@@ -534,7 +534,7 @@ local function apply(state, id, req, Systems)
 			return false, "Unsettleable terrain"
 		end
 		for _, v in ipairs(state.cities) do
-			if Hex.distance(v.x, v.y, x, y) < 3 then
+			if Hex.distance(v.x, v.y, x, y, state) < 3 then
 				return false, "Cities need 3 hex spacing"
 			end
 		end
