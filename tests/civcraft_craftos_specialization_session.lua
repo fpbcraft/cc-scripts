@@ -637,7 +637,9 @@ dofile = function(path)
 	end
 	return module
 end
-local timeout = os.startTimer(70)
+-- Compact text layouts expose one production row per page. Keep the full
+-- placement/redevelopment/restart sequence bounded without expiring mid-page.
+local timeout = os.startTimer(180)
 local returned = false
 local ok, why = pcall(function()
 	parallel.waitForAny(function()

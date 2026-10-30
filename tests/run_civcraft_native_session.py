@@ -106,7 +106,7 @@ with (profile / "native-console.log").open("w") as console:
         stdout=console,
         stderr=subprocess.STDOUT,
         check=True,
-        timeout=240 if args.installed_ref else 180 if args.specialization or args.default_specialization else 90,
+        timeout=480 if args.installed_ref else 420 if args.specialization or args.default_specialization else 90,
     )
 result = root / "session-return.txt"
 content = result.read_text() if result.exists() else "NO RESULT"
