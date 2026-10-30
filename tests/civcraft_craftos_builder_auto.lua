@@ -1,5 +1,12 @@
 -- Native Builder auto-work flow. The saved campaign fixture supplies a generated
 -- balance5 map, research, a city, and one charged Builder; no work is completed here.
+local monitor = false
+for _, argument in ipairs({ ... }) do
+	monitor = monitor or argument == "--monitor"
+end
+if monitor then
+	assert(_G.periphemu.create("top", "monitor"))
+end
 local native = dofile
 native("/games/civcraft/module_cache.lua").install(_ENV)
 native = dofile
@@ -28,8 +35,12 @@ local function tap(view, label)
 				x, y = x / 2 + 1, y / 3 + 1
 			end
 			queued = true
-			os.queueEvent("mouse_click", 1, math.floor(x), math.floor(y))
-			os.queueEvent("mouse_up", 1, math.floor(x), math.floor(y))
+			if monitor then
+				os.queueEvent("monitor_touch", "top", math.floor(x), math.floor(y))
+			else
+				os.queueEvent("mouse_click", 1, math.floor(x), math.floor(y))
+				os.queueEvent("mouse_up", 1, math.floor(x), math.floor(y))
+			end
 			os.queueEvent("builder_auto_input_complete")
 			return true
 		end
@@ -220,7 +231,14 @@ dofile = function(path)
 					wake()
 					return
 				end
-				if step < 3 and self.panel ~= "inspector" then
+				local wanted = step == 0 and "AUTO WORK"
+					or step == 1 and "PAUSE AUTO WORK"
+					or "RESUME AUTO WORK"
+				local inlineControl = false
+				for _, button in ipairs(self.r.buttons or {}) do
+					inlineControl = inlineControl or button.label == wanted
+				end
+				if step < 3 and self.panel ~= "inspector" and not inlineControl and not resume then
 					if not tap(self, "DETAILS") then
 						tap(self, "NEXT")
 					end
@@ -232,13 +250,13 @@ dofile = function(path)
 					assert(unit.kind == "builder", "Saved Builder identity must survive restart")
 					resumeVerified = true
 					step = 7
-				elseif step == 0 and self.panel == "inspector" then
+				elseif step == 0 then
 					if tap(self, "AUTO WORK") then
 						step = 1
 					else
 						tap(self, "NEXT")
 					end
-				elseif step == 1 and unit.autoWork and self.panel == "inspector" then
+				elseif step == 1 and unit.autoWork then
 					assert(
 						unit.workQueue and unit.workQueue.auto,
 						"Auto mode must create a provenance-marked queue"
@@ -248,12 +266,7 @@ dofile = function(path)
 					else
 						tap(self, "NEXT")
 					end
-				elseif
-					step == 2
-					and unit.autoWork
-					and unit.autoWorkPaused
-					and self.panel == "inspector"
-				then
+				elseif step == 2 and unit.autoWork and unit.autoWorkPaused then
 					if tap(self, "RESUME AUTO WORK") then
 						step = 3
 					else
@@ -350,5 +363,8 @@ else
 	assert(unit.autoWork and unit.workQueue and unit.workQueue.auto)
 	local marked = assert(Saves.load(1))
 	assert(marked.nativeBuilderAuto, "Restart marker must persist")
+end
+if monitor then
+	_G.periphemu.remove("top")
 end
 print("PASS: native Builder auto-work UI and saved intent")

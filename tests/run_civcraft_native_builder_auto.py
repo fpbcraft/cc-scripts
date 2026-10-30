@@ -13,8 +13,11 @@ parser.add_argument(
     default=shutil.which("craftos") or "/Applications/CraftOS-PC.app/Contents/MacOS/craftos",
 )
 parser.add_argument("--gui", action="store_true", help="Use the native GUI terminal")
+parser.add_argument("--monitor", action="store_true", help="Use a real emulated monitor and monitor_touch (requires --gui)")
 parser.add_argument("--installed-ref", help="Install this published Git ref before the native workflow")
 args = parser.parse_args()
+if args.monitor and not args.gui:
+    parser.error("--monitor requires --gui")
 repo = Path(__file__).resolve().parents[1]
 profile = Path(tempfile.mkdtemp(prefix="civcraft-builder-auto-"))
 print(f"Isolated profile: {profile}", flush=True)
@@ -37,7 +40,7 @@ for resume in (False, True):
 end)
 local f = assert(fs.open("/builder-auto-return.txt", "w"))
 f.write(ok and "PASS" or tostring(why)); f.close(); os.shutdown()''' % (
-        '"--resume"' if resume else '"--new"'
+        json.dumps("--resume" if resume else "--new") + (', "--monitor"' if args.monitor else "")
     )
     if args.installed_ref and not resume:
         install = "assert(shell.run(\"/bootstrap.lua\", %s, \"--no-startup\"), \"Installer failed\")\n" % json.dumps(args.installed_ref)
