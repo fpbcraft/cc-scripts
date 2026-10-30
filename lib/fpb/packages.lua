@@ -173,6 +173,7 @@ P.packages.civcraft = {
 		"ai_settlement.lua",
 		"founding.lua",
 		"settlement_suggestions.lua",
+		"settlement_view.lua",
 		"ai_workers.lua",
 		"ai_personalities.lua",
 		"ai_difficulty.lua",
