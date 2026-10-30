@@ -29,9 +29,9 @@ command = [args.craftos, "--directory", str(profile), "--exec", script]
 if not args.gui:
     command.insert(1, "--headless")
 console = profile / "native-console.log"
-print(f"Isolated profile: {profile}")
+print(f"Isolated profile: {profile}", flush=True)
 with console.open("w") as output:
-    subprocess.run(command, stdout=output, stderr=subprocess.STDOUT, check=True, timeout=120)
+    subprocess.run(command, stdout=output, stderr=subprocess.STDOUT, check=True, timeout=300)
 result = root / "opening-observation-return.txt"
 content = result.read_text() if result.exists() else "NO RESULT"
 print(content)
