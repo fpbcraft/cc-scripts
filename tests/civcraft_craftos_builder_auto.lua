@@ -1,6 +1,7 @@
 -- Native Builder auto-work flow. The saved campaign fixture supplies a generated
--- balance5 map, research, a city, and one charged Builder; no work is completed here.
+-- balance3 map, research, a city, and one charged Builder; no work is completed here.
 local native = dofile
+native("/games/civcraft/module_cache.lua").install(_ENV)
 local resume = ({ ... })[1] == "--resume"
 local queued, step, completed = false, 0, false
 local ownerID, builderID, campaignID
@@ -40,7 +41,7 @@ if not resume then
 	local Systems = dofile("/games/civcraft/systems.lua")
 	local Saves = dofile("/games/civcraft/saves.lua")
 	local Works = dofile("/games/civcraft/tile_improvements.lua")
-	local state = Lifecycle.newLobby("native-builder-auto", "balance5")
+	local state = Lifecycle.newLobby("native-builder-auto", "balance3")
 	state.mapSeed, state.mapSize, state.mapType, state.hostileMode =
 		20261030, "compact", "pangaea", "off"
 	ownerID = (os.getComputerID and os.getComputerID() or 0) * 16 + 1
@@ -48,7 +49,27 @@ if not resume then
 		{ id = ownerID, name = "BUILDER TEST", civ = "forge" },
 		{ id = ownerID + 1, name = "TEST AI", civ = "scholar", ai = true },
 	}
-	Lifecycle.initialize(state)
+	local Cooperative = dofile("/games/civcraft/cooperative.lua")
+	local World = dofile("/games/civcraft/world.lua")
+	local checkpointWork = {}
+	local function checkpoint()
+		Cooperative.checkpoint(checkpointWork, true, true)
+	end
+	World.checkpoint, Systems.checkpoint, Saves.checkpoint = checkpoint, checkpoint, checkpoint
+	local initialized = false
+	local setupTimer = os.startTimer(120)
+	parallel.waitForAny(function()
+		Lifecycle.initialize(state)
+		initialized = true
+	end, function()
+		while true do
+			local event, timer = os.pullEvent()
+			if event == "timer" and timer == setupTimer then
+				error("Builder fixture generation timed out")
+			end
+		end
+	end)
+	assert(initialized, "Generated Builder fixture did not initialize")
 	local player, capital, builder
 	for _, p in ipairs(state.players) do
 		for _, tech in ipairs({
@@ -84,7 +105,11 @@ if not resume then
 		candidateX = capital.x - 1
 	end
 	state.world.tiles[candidateX .. ":" .. candidateY] = "plains"
-	local World = dofile("/games/civcraft/world.lua")
+	state.world.geography[candidateX .. ":" .. candidateY] = {
+		biome = "plains",
+		elevation = "flat",
+		feature = "none",
+	}
 	World.reveal(state, dofile("/games/civcraft/hex.lua"), Systems)
 	assert(Works.canPlace(state, state.players[1], "farm", candidateX, candidateY, Systems))
 	state.nativeBuilderAuto = { ownerID = ownerID, builderID = builderID }
