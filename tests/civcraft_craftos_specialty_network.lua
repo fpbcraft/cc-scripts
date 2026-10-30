@@ -30,6 +30,7 @@ local createdOne, createdTwo, setup = false, false, false
 local sentStep, reportedStep, endedRound = nil, nil, nil
 local lastProductionObservation
 local snapshotSerial, sentExpectation = 0, nil
+local sentStateSerial = {}
 local publicSiteExpectationSnapshot
 local foreignProjectExpectationSnapshot
 local publicVisionGranted = false
@@ -258,7 +259,7 @@ local function assertForeignBuilderRedacted(state)
 		computer ~= 2
 		or not expected
 		or controls["builderAutoPrivacyObserved" .. expected.stage]
-		or snapshotSerial <= (controls.builderAutoPrivacySnapshot or 0)
+		or snapshotSerial < (expected.minimumSerial or math.huge)
 		or state.campaignID ~= expected.campaignID
 	then
 		return
@@ -310,6 +311,14 @@ function env.rednet.receive(filter, timeout)
 	return sender, packet, received
 end
 function env.rednet.send(to, packet, outgoing)
+	if
+		computer == 0
+		and outgoing == protocol
+		and type(packet) == "table"
+		and packet.type == "state"
+	then
+		sentStateSerial[to] = packet.serial
+	end
 	if outgoing == protocol and type(packet) == "table" then
 		trace(
 			"PACKET to "
@@ -414,6 +423,10 @@ local function expectBuilderPrivacy(stage)
 		builderID = autoBuilderID,
 		campaignID = campaignID,
 		stage = stage,
+		minimumSerial = assert(
+			sentStateSerial[2],
+			"Privacy check requires an emitted rival snapshot"
+		),
 	})
 end
 local function stepDone(id, token, accepted)
@@ -682,7 +695,7 @@ local function hostDraw(ui, state)
 	elseif
 		phase == "builderSpoof"
 		and stepDone(2, "builderSpoof", false)
-		and controls.builderAutoPrivacyObservedActive
+		and controls.builderAutoPrivacyObservedactive
 	then
 		assert(
 			tostring(controls.builderSpoof.message):find("Select an owned Builder", 1, true),
