@@ -1,0 +1,455 @@
+{
+  "schemaVersion": 1,
+  "scope": "Controlled native late-state rendering/input/save correctness and territory-query performance; no campaign simulation or balance evidence.",
+  "productionBaseline": "f3c9ec92bb29ed00e1a3c1ac2e7db17ca1adf49f",
+  "candidate": "c05d83a6e56256f89d0332f5c62a9dc24e82d61f",
+  "optimization": "0f6a3aafbb3195c3e365d781aa01c6749dfe2552",
+  "runtime": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+  "fixture": {
+    "rounds": 100,
+    "cities": 40,
+    "mapType": "continents",
+    "players": 4,
+    "units": 200
+  },
+  "comparison": {
+    "command": "python3 tests/run_civcraft_native_founders_stress.py --backend text --profile-first-frame",
+    "before": {
+      "firstFrameMillis": 18605,
+      "components": {
+        "clock": "os.epoch(utc), milliseconds",
+        "cooperative": {
+          "work": {
+            "gcMaximumMillis": 9,
+            "yields": 573,
+            "gcTotalMillis": 577,
+            "gcCycles": 573
+          },
+          "renderer": {
+            "gcMaximumMillis": 2,
+            "yields": 14,
+            "gcTotalMillis": 16,
+            "gcCycles": 14
+          }
+        },
+        "components": {
+          "MapView.draw": {
+            "maximumMillis": 1323,
+            "totalMillis": 1323,
+            "calls": 1
+          },
+          "Inspector.draw": {
+            "maximumMillis": 0,
+            "totalMillis": 0,
+            "calls": 1
+          },
+          "CityBanner.layout": {
+            "maximumMillis": 0,
+            "totalMillis": 0,
+            "calls": 1
+          },
+          "CityBanner.draw": {
+            "maximumMillis": 0,
+            "totalMillis": 0,
+            "calls": 1
+          },
+          "HUD.resources": {
+            "maximumMillis": 17280,
+            "totalMillis": 17280,
+            "calls": 1
+          },
+          "Systems.yields": {
+            "maximumMillis": 920,
+            "totalMillis": 14274,
+            "calls": 21
+          },
+          "World.territory": {
+            "maximumMillis": 571,
+            "totalMillis": 18208,
+            "calls": 54
+          },
+          "Railways.network": {
+            "maximumMillis": 571,
+            "totalMillis": 17880,
+            "calls": 53
+          },
+          "GameView.draw": {
+            "maximumMillis": 18604,
+            "totalMillis": 18604,
+            "calls": 1
+          },
+          "CityBanner.model": {
+            "maximumMillis": 654,
+            "totalMillis": 654,
+            "calls": 1
+          },
+          "Systems.economy": {
+            "maximumMillis": 17278,
+            "totalMillis": 17278,
+            "calls": 1
+          }
+        },
+        "inclusive": true
+      }
+    },
+    "after": {
+      "firstFrameMillis": 392,
+      "components": {
+        "components": {
+          "MapView.draw": {
+            "calls": 1,
+            "maximumMillis": 335,
+            "totalMillis": 335
+          },
+          "HUD.resources": {
+            "calls": 1,
+            "maximumMillis": 54,
+            "totalMillis": 54
+          },
+          "World.territory": {
+            "calls": 1,
+            "maximumMillis": 9,
+            "totalMillis": 9
+          },
+          "Systems.economy": {
+            "calls": 1,
+            "maximumMillis": 53,
+            "totalMillis": 53
+          },
+          "CityBanner.model": {
+            "calls": 1,
+            "maximumMillis": 3,
+            "totalMillis": 3
+          },
+          "GameView.draw": {
+            "calls": 1,
+            "maximumMillis": 390,
+            "totalMillis": 390
+          },
+          "CityBanner.draw": {
+            "calls": 1,
+            "maximumMillis": 0,
+            "totalMillis": 0
+          },
+          "CityBanner.layout": {
+            "calls": 1,
+            "maximumMillis": 0,
+            "totalMillis": 0
+          },
+          "Inspector.draw": {
+            "calls": 1,
+            "maximumMillis": 0,
+            "totalMillis": 0
+          },
+          "Railways.network": {
+            "calls": 53,
+            "maximumMillis": 0,
+            "totalMillis": 0
+          },
+          "Systems.yields": {
+            "calls": 21,
+            "maximumMillis": 3,
+            "totalMillis": 47
+          }
+        },
+        "cooperative": {
+          "renderer": {
+            "gcTotalMillis": 11,
+            "yields": 12,
+            "gcCycles": 12,
+            "gcMaximumMillis": 2
+          },
+          "work": {
+            "gcTotalMillis": 24,
+            "yields": 27,
+            "gcCycles": 27,
+            "gcMaximumMillis": 2
+          }
+        },
+        "clock": "os.epoch(utc), milliseconds",
+        "inclusive": true
+      }
+    },
+    "note": "Single-case inclusive component times cannot be added together; scene and collector policy unchanged."
+  },
+  "matrices": [
+    {
+      "backend": "text",
+      "command": "python3 tests/run_civcraft_native_founders_stress.py --backend text",
+      "scenarios": [
+        {
+          "profile": "founders-v4",
+          "contentRules": "balance4",
+          "size": "huge",
+          "width": 96,
+          "height": 60,
+          "wrapX": false,
+          "seed": 82568,
+          "round": 100,
+          "cities": 40,
+          "units": 200,
+          "renderer": "text",
+          "frames": 11,
+          "maximumFrameMillis": 436,
+          "savedBytes": 1887188,
+          "warmMaximumFrameMillis": 60,
+          "result": "PASS"
+        },
+        {
+          "profile": "founders-v4",
+          "contentRules": "balance4",
+          "size": "vast",
+          "width": 120,
+          "height": 76,
+          "wrapX": false,
+          "seed": 82665,
+          "round": 100,
+          "cities": 40,
+          "units": 200,
+          "renderer": "text",
+          "frames": 11,
+          "maximumFrameMillis": 655,
+          "savedBytes": 2172808,
+          "warmMaximumFrameMillis": 59,
+          "result": "PASS"
+        },
+        {
+          "profile": "specialization-v5",
+          "contentRules": "balance5",
+          "size": "huge",
+          "width": 96,
+          "height": 60,
+          "wrapX": true,
+          "seed": 83771,
+          "round": 100,
+          "cities": 40,
+          "units": 200,
+          "renderer": "text",
+          "frames": 11,
+          "maximumFrameMillis": 654,
+          "savedBytes": 1892136,
+          "warmMaximumFrameMillis": 84,
+          "result": "PASS"
+        },
+        {
+          "profile": "specialization-v5",
+          "contentRules": "balance5",
+          "size": "vast",
+          "width": 120,
+          "height": 76,
+          "wrapX": true,
+          "seed": 83868,
+          "round": 100,
+          "cities": 40,
+          "units": 200,
+          "renderer": "text",
+          "frames": 11,
+          "maximumFrameMillis": 983,
+          "savedBytes": 2183515,
+          "warmMaximumFrameMillis": 83,
+          "result": "PASS"
+        }
+      ]
+    },
+    {
+      "backend": "gui",
+      "command": "python3 tests/run_civcraft_native_founders_stress.py --backend gui --craftos /tmp/civcraft-hardware-runner",
+      "scenarios": [
+        {
+          "profile": "founders-v4",
+          "contentRules": "balance4",
+          "size": "huge",
+          "width": 96,
+          "height": 60,
+          "wrapX": false,
+          "seed": 82568,
+          "round": 100,
+          "cities": 40,
+          "units": 200,
+          "renderer": "graphics",
+          "frames": 8,
+          "maximumFrameMillis": 452,
+          "savedBytes": 1887188,
+          "warmMaximumFrameMillis": 64,
+          "result": "PASS"
+        },
+        {
+          "profile": "founders-v4",
+          "contentRules": "balance4",
+          "size": "vast",
+          "width": 120,
+          "height": 76,
+          "wrapX": false,
+          "seed": 82665,
+          "round": 100,
+          "cities": 40,
+          "units": 200,
+          "renderer": "graphics",
+          "frames": 8,
+          "maximumFrameMillis": 675,
+          "savedBytes": 2172808,
+          "warmMaximumFrameMillis": 67,
+          "result": "PASS"
+        },
+        {
+          "profile": "specialization-v5",
+          "contentRules": "balance5",
+          "size": "huge",
+          "width": 96,
+          "height": 60,
+          "wrapX": true,
+          "seed": 83771,
+          "round": 100,
+          "cities": 40,
+          "units": 200,
+          "renderer": "graphics",
+          "frames": 8,
+          "maximumFrameMillis": 713,
+          "savedBytes": 1892136,
+          "warmMaximumFrameMillis": 91,
+          "result": "PASS"
+        },
+        {
+          "profile": "specialization-v5",
+          "contentRules": "balance5",
+          "size": "vast",
+          "width": 120,
+          "height": 76,
+          "wrapX": true,
+          "seed": 83868,
+          "round": 100,
+          "cities": 40,
+          "units": 200,
+          "renderer": "graphics",
+          "frames": 8,
+          "maximumFrameMillis": 1089,
+          "savedBytes": 2183515,
+          "warmMaximumFrameMillis": 92,
+          "result": "PASS"
+        }
+      ]
+    },
+    {
+      "backend": "monitor",
+      "command": "python3 tests/run_civcraft_native_founders_stress.py --backend monitor --craftos /tmp/civcraft-hardware-runner",
+      "scenarios": [
+        {
+          "profile": "founders-v4",
+          "contentRules": "balance4",
+          "size": "huge",
+          "width": 96,
+          "height": 60,
+          "wrapX": false,
+          "seed": 82568,
+          "round": 100,
+          "cities": 40,
+          "units": 200,
+          "renderer": "graphics",
+          "frames": 6,
+          "maximumFrameMillis": 463,
+          "savedBytes": 1887188,
+          "warmMaximumFrameMillis": 82,
+          "result": "PASS"
+        },
+        {
+          "profile": "founders-v4",
+          "contentRules": "balance4",
+          "size": "vast",
+          "width": 120,
+          "height": 76,
+          "wrapX": false,
+          "seed": 82665,
+          "round": 100,
+          "cities": 40,
+          "units": 200,
+          "renderer": "graphics",
+          "frames": 6,
+          "maximumFrameMillis": 694,
+          "savedBytes": 2172808,
+          "warmMaximumFrameMillis": 78,
+          "result": "PASS"
+        },
+        {
+          "profile": "specialization-v5",
+          "contentRules": "balance5",
+          "size": "huge",
+          "width": 96,
+          "height": 60,
+          "wrapX": true,
+          "seed": 83771,
+          "round": 100,
+          "cities": 40,
+          "units": 200,
+          "renderer": "graphics",
+          "frames": 6,
+          "maximumFrameMillis": 728,
+          "savedBytes": 1892136,
+          "warmMaximumFrameMillis": 109,
+          "result": "PASS"
+        },
+        {
+          "profile": "specialization-v5",
+          "contentRules": "balance5",
+          "size": "vast",
+          "width": 120,
+          "height": 76,
+          "wrapX": true,
+          "seed": 83868,
+          "round": 100,
+          "cities": 40,
+          "units": 200,
+          "renderer": "graphics",
+          "frames": 6,
+          "maximumFrameMillis": 1084,
+          "savedBytes": 2183515,
+          "warmMaximumFrameMillis": 109,
+          "result": "PASS"
+        }
+      ]
+    }
+  ],
+  "standalone": {
+    "passed": 81,
+    "failed": 0,
+    "runtime": "Lua 5.3.6",
+    "scope": "all tests/civcraft*_test.lua"
+  },
+  "parity": {
+    "m1m2m3Passed": 10,
+    "luaJitPassed": 7,
+    "skipped": 0
+  },
+  "nativeRules": {
+    "passed": 6,
+    "tests": [
+      "territory_query",
+      "wrap_lifecycle",
+      "wrap_rules",
+      "settler_opening",
+      "specialty_sites",
+      "saves"
+    ]
+  },
+  "network": {
+    "normal": "PASS all three computers",
+    "reversed": "PASS all three computers",
+    "commands": [
+      "python3 tests/run_civcraft_native_specialty_network.py",
+      "python3 tests/run_civcraft_native_specialty_network.py --reverse-race"
+    ]
+  },
+  "installer": {
+    "result": "PASS",
+    "command": "python3 tests/run_civcraft_native_session.py --installed-ref c05d83a6e56256f89d0332f5c62a9dc24e82d61f --default-specialization --host --unit-actions --unit-badges --contact-hud --quick-research --seed 319497",
+    "savedRound": 6,
+    "resumedRound": 9,
+    "originalAndMigratedSavesPreserved": true
+  },
+  "limitations": [
+    "Constructed R100 states with full-map visibility, not played-to-late-game campaigns.",
+    "No AI-turn throughput, combat-load, physical Minecraft/monitor/rednet/server or iPad validation.",
+    "Hardware GUI/monitor use CraftOS-PC --hardware through an explicit launcher.",
+    "Earlier failing fixture and compact-paging deadlines remain documented in GitHub #70/#142/#149; no failed run is counted as a pass.",
+    "Balance experiments, tournaments, searches and calibration remain paused."
+  ]
+}

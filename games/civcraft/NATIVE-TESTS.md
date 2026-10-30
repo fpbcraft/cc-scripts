@@ -402,3 +402,26 @@ CraftOS graphics do not prove iPad or physical Minecraft behavior.
 Specialty-session timeouts retain the last visible controls and text in the error,
 and up to 40 distinct recent menu pages in `/specialty-session-pages.json`. These
 are diagnostics; a timeout remains a failed scenario.
+
+## Controlled Founders late-state runtime
+
+```sh
+python3 tests/run_civcraft_native_founders_stress.py --backend text
+python3 tests/run_civcraft_native_founders_stress.py --backend gui
+python3 tests/run_civcraft_native_founders_stress.py --backend monitor
+python3 tests/run_civcraft_native_founders_stress.py --backend text --profile-first-frame
+```
+
+The full matrix checks V4 bounded and V5 wrapped Huge/Vast worlds with 40 cities,
+200 units and full-map observer visibility at a constructed round 100. It exercises
+native banner input, zoom, mouse drag or monitor pan, and save/reload. Each actual
+draw has an explicit frame record; the runner verifies frame counts, maxima and
+renderer backend. For hardware-backed graphics, use `--craftos` with a launcher
+that adds CraftOS-PC's `--hardware` option.
+
+The last command profiles only one V4 Huge frame, with inclusive component and
+GC timings; it does not pass the four-case matrix. Progress and partial reports
+remain in the isolated profile. The retained summary is
+[`docs/validation/founders-runtime-validation.json`](docs/validation/founders-runtime-validation.json).
+These are controlled desktop measurements, not AI-turn throughput, played campaign
+balance, iPad or physical Minecraft/monitor/rednet/server evidence.
