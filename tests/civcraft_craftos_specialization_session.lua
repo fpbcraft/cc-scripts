@@ -18,6 +18,8 @@ local redevelopmentPreview = {}
 local uiText = {}
 local restoredCheckpoint
 local phase = "start"
+local lastView = {}
+local drawnText = {}
 local stopStep = 0
 local function wake()
 	os.queueEvent("term_resize")
@@ -569,6 +571,11 @@ dofile = function(path)
 		module.new = function(display, dispatch)
 			local view = new(display, dispatch)
 			local draw, pull = view.draw, view.r.pullEvent
+			local nativeText = view.r.text
+			view.r.text = function(canvas, x, y, value, ...)
+				drawnText[#drawnText + 1] = value
+				return nativeText(canvas, x, y, value, ...)
+			end
 			view.r.pullEvent = function(canvas)
 				local event = table.pack(pull(canvas))
 				if event[1] == "civcraft_specialty_input_complete" then
@@ -587,6 +594,7 @@ dofile = function(path)
 						end
 					end
 				end
+				drawnText = {}
 				draw(self, state, observer, options)
 				if self.pendingMove and self.pendingMove.sitePreview then
 					for _, button in ipairs(self.r.buttons or {}) do
@@ -594,6 +602,18 @@ dofile = function(path)
 							uiText[button.label] = true
 						end
 					end
+				end
+				lastView = {
+					panel = self.panel,
+					cityPanel = self.cityPanel,
+					category = self.productionCategory,
+					source = self.siteSource,
+					buttons = {},
+					text = drawnText,
+					offset = self.inspectorOffset,
+				}
+				for _, button in ipairs(self.r.buttons or {}) do
+					lastView.buttons[#lastView.buttons + 1] = button.label
 				end
 				drive(self, state, observer, options)
 			end
@@ -616,7 +636,12 @@ local ok, why = pcall(function()
 		while true do
 			local event, id = os.pullEvent()
 			if event == "timer" and id == timeout then
-				error("Specialty native session timed out: " .. phase)
+				error(
+					"Specialty native session timed out: "
+						.. phase
+						.. " "
+						.. textutils.serialize(lastView)
+				)
 			end
 		end
 	end)
