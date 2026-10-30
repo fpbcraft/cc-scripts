@@ -379,3 +379,26 @@ and freeze/unfreeze calls. Compare both retained log segments after a stall.
 failures; `civcraft_yield_trace_test.lua` separates simulated collection time
 from event waiting and verifies pending input order. Fault injection is not a
 reproduction on the target device.
+
+## Wrapped-map graphics and input
+
+Run the focused wrapped-map workflow in a graphics-capable CraftOS-PC build:
+
+```sh
+python3 tests/run_civcraft_native_wrap.py --gui
+python3 tests/run_civcraft_native_wrap.py --monitor
+```
+
+The fixture uses a three-column cylinder with enough visible width to show two
+complete periods. It queues native mouse or monitor-touch events through real UI
+controls to select repeated city banners and unit targets, zoom, pan, confirm a
+canonical seam movement and use the minimap. Assertions cover short-path playback
+and camera following, hidden-observer projections, native wrapped save/load and
+the normal world/system migration pipeline for an older missing-wrap save.
+Controlled terrain and actors isolate the seam; general campaign progression,
+installed runtime and multiplayer still require their separate drivers. Desktop
+CraftOS graphics do not prove iPad or physical Minecraft behavior.
+
+Specialty-session timeouts retain the last visible controls and text in the error,
+and up to 40 distinct recent menu pages in `/specialty-session-pages.json`. These
+are diagnostics; a timeout remains a failed scenario.

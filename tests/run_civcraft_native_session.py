@@ -22,6 +22,7 @@ profile.add_argument(
 )
 profile.add_argument("--landwork", action="store_true", help="Select Landwork V3 in the native lobby")
 profile.add_argument("--development", action="store_true", help="Select Development V2 in the native lobby")
+parser.add_argument("--seed", type=int, help="Use an explicit generated campaign seed for reproducible correctness checks")
 parser.add_argument("--host", action="store_true", help="Test a host/AI session instead of hotseat/AI")
 parser.add_argument("--contact-hud", action="store_true", help="Click the known-civilization HUD badge through native mouse events")
 parser.add_argument("--installed-ref", help="Download this published revision through the real GitHub installer before testing")
@@ -71,6 +72,8 @@ if args.unit_actions:
     flags.append("--unit-actions")
 if args.monitor:
     flags.append("--touch-monitor")
+if args.seed is not None:
+    flags.append(f"--seed={args.seed}")
 arguments = ", ".join(json.dumps(flag) for flag in flags)
 install = ""
 if args.installed_ref:
