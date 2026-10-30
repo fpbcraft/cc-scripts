@@ -8,6 +8,7 @@ local queued, stopped, actor, authoritative = false, false, nil, nil
 local pendingInput, lastDecision, lastMetadata
 local milestones, failures = {}, {}
 local viewportBefore
+local loadMenuRequested, loadMenuCompleted, loadMenuSince
 local function record(kind, fields)
 	fields = fields or {}
 	fields.kind, fields.stage = kind, stage
@@ -77,6 +78,22 @@ local function workflow(view, state, observer, options)
 			order(view, "addAI")
 		else
 			order(view, "start")
+		end
+		return
+	end
+	if options.paused and loadMenuRequested and not loadMenuCompleted then
+		if tap(view, "RESUME") then
+			loadMenuCompleted = true
+			record(
+				"menu_after_load",
+				{
+					millis = os.epoch("utc") - loadMenuSince,
+					round = state.round,
+					note = "Queued during round resolution; observed paused frame and Resume control",
+				}
+			)
+		else
+			tap(view, "NEXT")
 		end
 		return
 	end
@@ -282,6 +299,14 @@ dofile = function(path)
 	local module = native(path)
 	if path == "/games/civcraft/match_lifecycle.lua" and not module.openingObserved then
 		module.openingObserved = true
+		local advance = module.advance
+		module.advance = function(state, ...)
+			if not loadMenuRequested then
+				loadMenuRequested, loadMenuSince = true, os.epoch("utc")
+				os.queueEvent("key", keys.q)
+			end
+			return advance(state, ...)
+		end
 		local initialize = module.initialize
 		module.initialize = function(state, ...)
 			state.mapSeed, state.mapSize = 319497, "compact"
@@ -462,5 +487,6 @@ record("end", {
 })
 assert(ok, why)
 assert(stopped, "Opening workflow did not reach its explicit stopping bound")
+assert(loadMenuCompleted, "Menu input queued during round load was not observed and resumed")
 
 assert(#missing == 0, "Opening milestones missing: " .. table.concat(missing, ", "))
