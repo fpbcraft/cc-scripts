@@ -40,7 +40,7 @@ for index = 1, 600 do
 	local kind = W.types[math.floor((index - 1) / #sizes) % #W.types + 1]
 	local seed = (index * 7919 + 17) % 1000000
 	local world = W.generate(seed, size, index % 3 + 2, kind)
-	assert(world.generationVersion == 3 and world.geography)
+	assert(world.generationVersion == 4 and world.geography)
 	local n, open, land = 0, 0, 0
 	local landmarks = {}
 	for y = 1, world.height do
@@ -220,7 +220,7 @@ local state = {
 }
 local snapshot = W.forPlayer(state, 1)
 assert(
-	snapshot.world.generationVersion == 3
+	snapshot.world.generationVersion == 4
 		and snapshot.world.geography["2:2"]
 		and snapshot.world.geography["3:3"]
 )

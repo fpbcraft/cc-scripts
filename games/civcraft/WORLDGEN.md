@@ -1,11 +1,14 @@
 # World generation contract
 
-New maps use deterministic generation version 3. Existing saved maps retain
-their serialized terrain, geography, starts, and generation version; migration
+New maps use deterministic generation version 4, adding opt-in horizontal
+topology to version 3's starting-region guarantees. Maps remain finite by
+default until the gameplay and interface integration is complete. Existing
+saved maps retain their serialized terrain, geography, starts, and generation
+version; migration
 does not rerun generation.
 
-The start placer measures land connectivity with CivCraft's bounded hex
-neighbors, treating water and mountains as impassable. It prefers a single
+The start placer measures land connectivity with CivCraft's recorded hex
+topology, treating water and mountains as impassable. It prefers a single
 connected landmass of at least 90 passable tiles that can fit every player at
 least six hexes apart. Candidate sites avoid the polar map bands, reject a
 radius-three opening with more than four snowy-plains tiles, and score nearby

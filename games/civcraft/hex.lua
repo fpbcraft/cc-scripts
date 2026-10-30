@@ -6,51 +6,180 @@ local MovementBudget = dofile("/games/civcraft/movement_budget.lua")
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local EscortPaths = dofile("/games/civcraft/escort_paths.lua")
 local H = { width = 12, height = 8 }
+local function worldFor(state)
+	if state and state.world then
+		return state.world
+	end
+	return state and state.width and state or nil
+end
 local function dims(state)
-	local world = state and state.world
+	local world = worldFor(state)
 	return world and world.width or H.width, world and world.height or H.height
 end
+local function integer(value)
+	return type(value) == "number"
+		and value == value
+		and value ~= math.huge
+		and value ~= -math.huge
+		and value == math.floor(value)
+end
 function H.inBounds(x, y, state)
-	local w, h = dims(state)
-	return x >= 1 and x <= w and y >= 1 and y <= h
+	if not integer(x) or not integer(y) then
+		return false
+	end
+	local width, height = dims(state)
+	return x >= 1 and x <= width and y >= 1 and y <= height
+end
+function H.canonical(x, y, state)
+	if not integer(x) or not integer(y) then
+		return nil
+	end
+	local width, height = dims(state)
+	if y < 1 or y > height then
+		return nil
+	end
+	local world = worldFor(state)
+	if world and world.wrapX == true and width > 0 then
+		return ((x - 1) % width) + 1, y
+	end
+	if x < 1 or x > width then
+		return nil
+	end
+	return x, y
 end
 function H.toCube(x, y)
 	local q = x - 1 - math.floor((y - 1 - ((y - 1) % 2)) / 2)
 	local r = y - 1
 	return q, r, -q - r
 end
-function H.distance(x, y, xx, yy)
+local function cubeDistance(x, y, xx, yy)
 	local a, b, c = H.toCube(x, y)
 	local d, e, f = H.toCube(xx, yy)
 	return math.max(math.abs(a - d), math.abs(b - e), math.abs(c - f))
 end
+function H.distance(x, y, xx, yy, state)
+	if not state then
+		return cubeDistance(x, y, xx, yy)
+	end
+	local x1, y1 = H.canonical(x, y, state)
+	local x2, y2 = H.canonical(xx, yy, state)
+	if not x1 or not x2 then
+		return math.huge
+	end
+	local world = worldFor(state)
+	if not world or world.wrapX ~= true then
+		return cubeDistance(x1, y1, x2, y2)
+	end
+	local q1, r1 = H.toCube(x1, y1)
+	local q2, r2 = H.toCube(x2, y2)
+	local width = world.width
+	local base = math.floor((q1 - q2) / width)
+	local startS = -q1 - r1
+	local best = math.huge
+	for shift = base - 1, base + 2 do
+		local targetQ = q2 + shift * width
+		local targetS = -targetQ - r2
+		best = math.min(
+			best,
+			math.max(math.abs(q1 - targetQ), math.abs(r1 - r2), math.abs(startS - targetS))
+		)
+	end
+	return best
+end
 function H.neighbours(x, y, state)
-	local dirs = ((y - 1) % 2 == 0)
+	local startX, startY = H.canonical(x, y, state)
+	if not startX then
+		return {}
+	end
+	local dirs = ((startY - 1) % 2 == 0)
 			and { { -1, -1 }, { 0, -1 }, { -1, 0 }, { 1, 0 }, { -1, 1 }, {
 				0,
 				1,
 			} }
 		or { { 0, -1 }, { 1, -1 }, { -1, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } }
 	local out = {}
+	local seen = {}
 	for _, d in ipairs(dirs) do
-		local nx, ny = x + d[1], y + d[2]
-		if H.inBounds(nx, ny, state) then
+		local nx, ny = H.canonical(startX + d[1], startY + d[2], state)
+		local neighborKey = nx and (nx .. ":" .. ny)
+		if neighborKey and (nx ~= startX or ny ~= startY) and not seen[neighborKey] then
+			seen[neighborKey] = true
 			out[#out + 1] = { x = nx, y = ny }
 		end
 	end
 	return out
 end
+function H.withinRadius(x, y, radius, state)
+	local centerX, centerY = H.canonical(x, y, state)
+	if not centerX or not integer(radius) or radius < 0 then
+		return {}
+	end
+	local world = worldFor(state)
+	local width, height = dims(state)
+	local out, seen = {}, {}
+	local firstX, lastX
+	if world and world.wrapX == true then
+		if radius * 2 + 1 >= width then
+			firstX, lastX = 1, width
+		else
+			firstX, lastX = centerX - radius, centerX + radius
+		end
+	else
+		firstX, lastX = math.max(1, centerX - radius), math.min(width, centerX + radius)
+	end
+	for yy = math.max(1, centerY - radius), math.min(height, centerY + radius) do
+		for xx = firstX, lastX do
+			local canonicalX, canonicalY = H.canonical(xx, yy, state)
+			local tileKey = canonicalX and (canonicalX .. ":" .. canonicalY)
+			if
+				tileKey
+				and not seen[tileKey]
+				and H.distance(centerX, centerY, canonicalX, canonicalY, world or state)
+					<= radius
+			then
+				seen[tileKey] = true
+				out[#out + 1] = { x = canonicalX, y = canonicalY }
+			end
+		end
+	end
+	return out
+end
 -- Clockwise polygon edges: NE, E, SE, SW, W, NW. Includes map edges.
-function H.edgeNeighbours(x, y)
-	local shift = (y - 1) % 2
-	return {
-		{ x = x + shift, y = y - 1 },
-		{ x = x + 1, y = y },
-		{ x = x + shift, y = y + 1 },
-		{ x = x + shift - 1, y = y + 1 },
-		{ x = x - 1, y = y },
-		{ x = x + shift - 1, y = y - 1 },
+function H.edgeNeighbours(x, y, state)
+	if not state then
+		local shift = (y - 1) % 2
+		return {
+			{ x = x + shift, y = y - 1 },
+			{ x = x + 1, y = y },
+			{ x = x + shift, y = y + 1 },
+			{ x = x + shift - 1, y = y + 1 },
+			{ x = x - 1, y = y },
+			{ x = x + shift - 1, y = y - 1 },
+		}
+	end
+	local startX, startY = H.canonical(x, y, state)
+	if not startX then
+		return {}
+	end
+	local shift = (startY - 1) % 2
+	local offsets = {
+		{ shift, -1 },
+		{ 1, 0 },
+		{ shift, 1 },
+		{ shift - 1, 1 },
+		{ -1, 0 },
+		{ shift - 1, -1 },
 	}
+	local out = {}
+	local world = worldFor(state)
+	for _, offset in ipairs(offsets) do
+		local nx, ny = startX + offset[1], startY + offset[2]
+		if world and world.wrapX == true and ny >= 1 and ny <= world.height then
+			nx = ((nx - 1) % world.width) + 1
+		end
+		out[#out + 1] = { x = nx, y = ny }
+	end
+	return out
 end
 function H.vertices(x, y, size)
 	return {

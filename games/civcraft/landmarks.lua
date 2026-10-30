@@ -51,10 +51,10 @@ function L.generate(world, checkpoint)
 		if checkpoint then
 			checkpoint()
 		end
-		for x = 2, world.width - 1 do
+		for x = world.wrapX and 1 or 2, world.wrapX and world.width or world.width - 1 do
 			local safe = true
 			for _, p in ipairs(world.starts) do
-				if Hex.distance(x, y, p.x, p.y) < world.wonderSpawnBuffer then
+				if Hex.distance(x, y, p.x, p.y, world) < world.wonderSpawnBuffer then
 					safe = false
 					break
 				end
@@ -75,7 +75,7 @@ function L.generate(world, checkpoint)
 			if L.habitat(c.tile, id) then
 				local separation = math.huge
 				for _, p in ipairs(placed) do
-					separation = math.min(separation, Hex.distance(c.x, c.y, p.x, p.y))
+					separation = math.min(separation, Hex.distance(c.x, c.y, p.x, p.y, world))
 				end
 				if separation >= world.wonderSeparation then
 					-- Prefer dispersed regions; the shuffled tie break avoids common scanline rows.

@@ -3,6 +3,7 @@
 	/games/civcraft and /tests; its save slot 3 is used and left available to inspect.
 	No terminal, event, filesystem or peripheral API is mocked here.
 ]]
+dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local Actions = dofile("/games/civcraft/actions.lua")
 local AI = dofile("/games/civcraft/ai.lua")
 local Events = dofile("/games/civcraft/events.lua")
@@ -76,19 +77,31 @@ draw()
 ui:focus("city", state.cities[1])
 ui.cityPanel = "production"
 draw()
+if click("DETAILS") then
+	draw()
+end
 assert(find("NO PRODUCTION"))
 draw()
 assert(state.cities[1].productionIdle)
 ui:focus("unit", state.units[1])
 draw()
+if click("DETAILS") then
+	draw()
+end
 assert(find("MOVE / ATTACK"))
 local target
 for _, destination in ipairs(ui.reachable) do
-	if not destination.attack and (not target or #destination.path > #target.path) then
+	local observed = true
+	for _, point in ipairs(destination.path or {}) do
+		if not state.players[1].visible[World.key(point.x, point.y)] then
+			observed = false
+		end
+	end
+	if observed and not destination.attack and (not target or #destination.path > #target.path) then
 		target = destination
 	end
 end
-assert(target, "Native UI offered no legal scout movement")
+assert(target and #target.path > 2, "Native UI must offer an observed multi-step scout route")
 ui:tile(target.x, target.y)
 draw()
 assert(click("CONFIRM"))
@@ -130,9 +143,15 @@ assert(ui:animating() and click("SKIP"))
 assert(not ui:animating() and #ui.playback.feed > 0, "Skip retains the observed summary")
 state.players[2].ai = true
 AI.beginTurn(state, state.players[2])
+state.world.wrapX = true
 assert(Saves.save(3, state))
+state.world.wrapX = false
 local restored = Saves.load(3)
-assert(restored.campaignID == state.campaignID and restored.eventJournal.version == 1)
+assert(
+	restored.campaignID == state.campaignID
+		and restored.eventJournal.version == 1
+		and restored.world.wrapX == true
+)
 assert(Events.forPlayer(restored, 1).lastSeq == before.lastSeq)
 assert(restored.units[1].x == target.x and restored.units[1].y == target.y)
 assert(
