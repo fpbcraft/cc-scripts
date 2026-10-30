@@ -196,6 +196,7 @@ P.packages.civcraft = {
 		"diplomatic_offers.lua",
 		"diplomatic_ai.lua",
 		"diplomatic_perception.lua",
+		"display_geometry.lua",
 		"conversation_view.lua",
 		"council.lua",
 		"council_rules.lua",
