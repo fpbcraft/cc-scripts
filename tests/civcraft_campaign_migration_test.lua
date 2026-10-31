@@ -48,6 +48,7 @@ for _, old in ipairs({
 	assert(current.players[1].contentRules == Rules.current and current.resourceSchema == 1)
 	assert(current.players[1].stockpile.iron == 12 and current.players[1].stockpile.coal == 0)
 	assert(current.round == 9 and #current.cities == 1 and #current.units == 0)
+	assert(current.players[1].gold == 0, "Missing legacy treasury cannot grant money")
 	assert(saved.contentRules == (old or nil) and saved.ruleset == "legacy")
 	assert(saved.players[1].stockpile.coal == nil and saved.world.terrainYieldVersion == nil)
 	current.cities[1].buildings.library = true
@@ -56,6 +57,15 @@ for _, old in ipairs({
 	assert(again.contentRules == current.contentRules and again.players[1].stockpile.iron == 12)
 end
 for _, breakSave in ipairs({
+	function(s)
+		s.score = math.huge
+	end,
+	function(s)
+		s.cities[1].population = nil
+	end,
+	function(s)
+		s.cities[1].buildings.unknown = true
+	end,
 	function(s)
 		s.contentRules = "future-rules"
 	end,

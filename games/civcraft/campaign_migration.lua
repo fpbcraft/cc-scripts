@@ -14,6 +14,10 @@ local function copy(value, active, copies)
 				or type(value) == "boolean",
 			"Non-save value"
 		)
+		assert(
+			type(value) ~= "number" or value == value and math.abs(value) < math.huge,
+			"Nonfinite save value"
+		)
 		return value
 	end
 	assert(not active[value], "Cyclic save")
@@ -84,6 +88,21 @@ function Migration.load(saved)
 				)
 				if field == "units" then
 					assert(Systems.units[item.kind], "Unsupported saved unit")
+				else
+					assert(
+						integer(item.population) and item.population > 0,
+						"Missing or invalid saved population"
+					)
+					assert(
+						item.buildings == nil or type(item.buildings) == "table",
+						"Invalid saved buildings"
+					)
+					for building, built in pairs(item.buildings or {}) do
+						assert(
+							Systems.buildings[building] and type(built) == "boolean",
+							"Unsupported saved building"
+						)
+					end
 				end
 			end
 		end

@@ -1,22 +1,20 @@
-local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Rules = {
 	speeds = { "quick", "standard", "epic" },
 	presets = {
-		quick = { factor = 2 / 3, rounds = 120 },
-		standard = { factor = 1, rounds = 180 },
-		epic = { factor = 1.5, rounds = 270 },
+		quick = { factor = 2 / 3, rounds = 167 },
+		standard = { factor = 1, rounds = 250 },
+		epic = { factor = 1.5, rounds = 375 },
 	},
-	victories = { "conquest", "industrial", "expedition", "diplomatic", "score" },
+	victories = { "conquest", "expedition", "score" },
 }
 
 function Rules.rounds(context)
 	local preset = Rules.presets[context and context.gameSpeed] or Rules.presets.standard
-	return ContentRules.isRedesign(context) and math.ceil(250 * preset.factor) or preset.rounds
+	return preset.rounds
 end
 
-function Rules.availableVictories(state)
-	return ContentRules.isRedesign(state) and { "conquest", "expedition", "score" }
-		or Rules.victories
+function Rules.availableVictories()
+	return Rules.victories
 end
 
 function Rules.selectCivilization(state, actor, request, civilizations)
@@ -46,18 +44,10 @@ function Rules.cost(value, context)
 end
 
 function Rules.enabled(state, victory)
-	if ContentRules.isRedesign(state) then
-		if victory == "industrial" or victory == "diplomatic" then
-			return false
-		elseif victory == "score" then
-			return true
-		end
+	if victory == "score" then
+		return true
 	end
-	if
-		victory == "diplomatic"
-		and state.victoryRulesVersion ~= 2
-		and (not state.victories or state.victories.diplomatic == nil)
-	then
+	if victory ~= "conquest" and victory ~= "expedition" then
 		return false
 	end
 	return not state.victories or state.victories[victory] ~= false
@@ -95,14 +85,12 @@ function Rules.configure(state, id, request)
 		return true
 	elseif request.action == "toggleVictory" then
 		if
-			ContentRules.isRedesign(state)
-			and (
-				request.victory == "industrial"
-				or request.victory == "diplomatic"
-				or request.victory == "score"
-			)
+			request.victory == "industrial"
+			or request.victory == "diplomatic"
+			or request.victory == "score"
 		then
-			return false, "Redesign V1 uses Conquest and End Expedition, with Score at the deadline"
+			return false,
+				"The current rules use Conquest and End Expedition, with Score at the deadline"
 		end
 		local known = false
 		for _, victory in ipairs(Rules.victories) do

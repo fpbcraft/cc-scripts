@@ -61,9 +61,9 @@ for _, version in ipairs({ "baseline", "p1", "balance1", "balance2" }) do
 	local old, player, builder, city = fixture()
 	old.contentRules = version
 	S.migrate(old)
-	assert(not S.canRecruit(player, "builder", old, H, city))
-	assert(S.canBuild(player, city, "farm", old) and S.canBuild(player, city, "mine", old))
-	assert(not Works.complete(old, player, builder, "farm", S) and builder.charges == 3)
+	assert(old.contentRules == "balance5" and S.canRecruit(player, "builder", old, H, city))
+	assert(not S.canBuild(player, city, "farm", old) and not S.canBuild(player, city, "mine", old))
+	assert(Works.complete(old, player, builder, "farm", S) and builder.charges == 2)
 end
 local state, p, u, c = fixture()
 assert(S.canRecruit(p, "builder", state, H, c))

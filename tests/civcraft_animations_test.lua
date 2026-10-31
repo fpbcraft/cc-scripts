@@ -171,8 +171,8 @@ local state = {
 }
 local projected = World.forPlayer(state, 1)
 assert(
-	projected.players[1] == state.players[1],
-	"Test must cover actual aliased own-player projection"
+	projected.players[1] ~= state.players[1],
+	"Current owner projections are detached before animation capture"
 )
 local captured = Presentation.capture(state, 1)
 state.players[1].techs.farming = true

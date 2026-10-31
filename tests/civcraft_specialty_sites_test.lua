@@ -273,13 +273,14 @@ for _, corrupt in ipairs({
 	corrupt(bad)
 	assert(not pcall(Sites.validate, bad))
 end
--- Earlier campaigns never acquire the new gates or semantics from incidental data.
+-- Historical profile IDs migrate into the current specialty rules.
 for _, profile in ipairs({ "baseline", "p1", "balance1", "balance2", "balance3", "balance4" }) do
 	local old, player, city = fixture()
 	old.contentRules = profile
 	S.migrate(old)
-	assert(not Sites.enabled(old) and S.canBuild(player, city, "workshop", old))
-	assert(not A.apply(old, 0, { action = "placeSite", city = 1, kind = "works", x = 5, y = 4 }, S))
+	assert(old.contentRules == "balance5" and Sites.enabled(old))
+	assert(not S.canBuild(player, city, "workshop", old), "Current Works requirement applies")
+	assert(A.apply(old, 0, { action = "placeSite", city = 1, kind = "works", x = 5, y = 4 }, S))
 end
 if fs and textutils then
 	local Saves = dofile("/games/civcraft/saves.lua")

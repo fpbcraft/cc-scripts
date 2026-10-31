@@ -44,13 +44,14 @@ local function campaign()
 	return state, state.players[1], state.cities[1], state.units[1]
 end
 local state, p, city, u = campaign()
+city.capitalOf = 1
 for _, civ in ipairs(S.civs) do
-	local testPlayer = { civ = civ.id }
+	local testPlayer = { id = 1, civ = civ.id }
 	local center = S.centerYields(testPlayer, city)
 	assert(
 		center.food == 2
 			and center.industry == 1
-			and center.science == (civ.id == "scholar" and 3 or 1),
+			and center.science == (civ.id == "scholar" and 3 or 2),
 		"City center includes base science and civilization bonuses"
 	)
 end

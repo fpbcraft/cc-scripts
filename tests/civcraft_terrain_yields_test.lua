@@ -150,7 +150,7 @@ sameYield(World.yields(world, 4, 4), 1, 3, 0, "Damaged improvements add nothing"
 assert(Works.definitions.farm.food == 1 and Works.definitions.quarry.industry == 1)
 local center = Systems.centerYields({}, { buildings = {} }, nil)
 assert(
-	center.food == 2 and center.industry == 1 and center.science == 1 and center.gold == 0,
+	center.food == 2 and center.industry == 1 and center.science == 2 and center.gold == 0,
 	"City-center rules remain independent of tile yield migration"
 )
 

@@ -300,7 +300,7 @@ function M.migrate(state)
 		p.food = p.food or 0
 		p.wood = p.wood or 0
 		p.science = p.science or 0
-		p.gold = p.gold or 20
+		p.gold = p.gold or (state.phase == "lobby" and 20 or 0)
 		p.researchProgress = p.researchProgress or {}
 		local migrated, reason = ResourceStock.migrate(p.stockpile or {})
 		assert(migrated, tostring(reason) .. ". Delete/reset this save to continue.")

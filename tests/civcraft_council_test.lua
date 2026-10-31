@@ -95,8 +95,11 @@ assert(session.allocated == 6 and #session.members == 3 and session.closesRound 
 Council.advance(state)
 assert(state.council.nextSession == 2, "One opening per round")
 assert(not Campaign.enabled({}, "diplomatic"), "Legacy victories stay unchanged")
-assert(Campaign.enabled({ victories = { diplomatic = true } }, "diplomatic"))
-assert(Campaign.enabled(state, "diplomatic"))
+assert(not Campaign.enabled({ victories = { diplomatic = true } }, "diplomatic"))
+assert(
+	not Campaign.enabled(state, "diplomatic"),
+	"Council remains a mechanic, not a current victory"
+)
 state.players[1].ready = true
 state.units[1] =
 	{ id = 99, owner = -1, kind = "warrior", x = 4, y = 5, movesLeft = 0, attacksLeft = 0 }

@@ -21,11 +21,11 @@ assert(
 )
 local priorLobby = Lifecycle.newLobby("explicit-founders", "balance4")
 assert(
-	priorLobby.contentRules == "balance4"
+	priorLobby.contentRules == "balance5"
 		and priorLobby.roundLimit == 250
-		and not ContentRules.hasSpecialties(priorLobby)
+		and ContentRules.hasSpecialties(priorLobby)
 		and ContentRules.startsWithSettler(priorLobby),
-	"An explicitly selected Founders V4 campaign keeps its profile"
+	"Historical lobby IDs normalize to the single current ruleset"
 )
 local function fixture()
 	local world =
@@ -129,7 +129,10 @@ local draw = fixture()
 draw.phase, draw.round, draw.roundLimit = "game", 120, 120
 draw.victories = { score = false }
 Victory.check(draw, false)
-assert(draw.phase == "over" and draw.winner == "DRAW" and #draw.winnerIDs == 0)
+assert(
+	draw.phase == "over" and draw.victoryReason == "SCORE",
+	"Current deadline always resolves Score"
+)
 for _, victory in ipairs({ "conquest", "expedition", "industrial" }) do
 	local state = fixture()
 	state.phase = "game"
@@ -145,25 +148,28 @@ for _, victory in ipairs({ "conquest", "expedition", "industrial" }) do
 		state.players[1].industryTurns = 10
 	end
 	Victory.check(state, false)
-	assert(state.phase == "over" and state.winnerIDs[1] == 1, "Enabled victory still resolves")
+	if victory == "industrial" then
+		assert(state.phase == "game", "Retired victory cannot be re-enabled")
+	else
+		assert(state.phase == "over" and state.winnerIDs[1] == 1, "Enabled victory still resolves")
+	end
 end
 print(
 	"CIVCRAFT: duration scaling, authoritative campaign options, enabled victories, AI choices and legacy compatibility passed."
 )
 
--- Specialization is an explicit host choice; running/legacy campaigns stay pinned.
+-- Historical selection requests cannot restore an old engine.
 local specialization = fixture()
-assert(not Rules.configure(specialization, 2, { action = "contentRules", version = "balance5" }))
-assert(Rules.configure(specialization, 1, { action = "contentRules", version = "balance5" }))
-for _, player in ipairs(specialization.players) do
-	assert(player.contentRules == "balance5")
+for _, version in ipairs({
+	"baseline",
+	"p1",
+	"balance1",
+	"balance2",
+	"balance3",
+	"balance4",
+	"balance5",
+}) do
+	assert(not Rules.configure(specialization, 1, { action = "contentRules", version = version }))
+	assert(specialization.contentRules == "balance5")
 end
-assert(Rules.configure(specialization, 1, { action = "contentRules" }))
-assert(specialization.contentRules == nil)
-assert(Rules.configure(specialization, 1, { action = "contentRules", version = "balance4" }))
-assert(Rules.configure(specialization, 1, { action = "contentRules" }))
-assert(specialization.contentRules == "balance5")
-specialization.phase = "game"
-assert(not Rules.configure(specialization, 1, { action = "contentRules", version = "balance4" }))
-assert(specialization.contentRules == "balance5")
-print("PASS: host-only specialization selection, full profile cycle and started-campaign pinning")
+print("PASS: current rules cannot be changed into historical gameplay")

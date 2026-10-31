@@ -162,7 +162,10 @@ assert(
 )
 local legacy = {}
 Values.dependencies(S.buildings, "dragon", {}, 400, legacy, { contentRules = "balance4" })
-assert(legacy.academy, "Older dependency plans retain earlier prerequisites")
+assert(
+	legacy.portal and legacy.observatory and not legacy.academy,
+	"Historical IDs use the current End bridge"
+)
 -- Host changes outside observed geography cannot alter legal AI investments.
 state, p = fixture()
 view, known = snapshot(state, p)
