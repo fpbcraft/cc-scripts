@@ -100,6 +100,12 @@ function Stock.applyInflow(stock, plan)
 	if type(plan) ~= "table" then
 		return nil, "inflow plan must be a table"
 	end
+	for _, field in ipairs({ "accepted", "overflow" }) do
+		valid, reason = validateAmount(plan[field], "plan " .. field)
+		if not valid then
+			return nil, reason
+		end
+	end
 	local expected, planReason =
 		Stock.planInflow(stock, plan.resource, plan.accepted + plan.overflow)
 	if not expected then

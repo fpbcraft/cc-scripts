@@ -41,4 +41,33 @@ local invalidPlan = Stock.planInflow(unchanged, "iron", -1)
 equal(invalidPlan, nil)
 equal(unchanged.iron, 2, "rejected operations do not mutate source")
 
+for _, resource in ipairs(Stock.order) do
+	local cap = resource == "diamond" and 6 or 10
+	equal(Stock.caps[resource], cap)
+	local full = { [resource] = cap }
+	equal(Stock.planInflow(full, resource, 1).accepted, 0)
+	equal(
+		assert(Stock.applyInflow(full, assert(Stock.planInflow(full, resource, 1))))[resource],
+		cap
+	)
+end
+for _, malformed in ipairs({
+	{},
+	{ resource = "iron", before = 2, accepted = "1", overflow = 0 },
+	{ resource = "iron", before = 2, accepted = 1, overflow = -1 },
+	{ resource = "iron", before = 2, accepted = 0 / 0, overflow = 0 },
+	{ resource = "unknown", before = 0, accepted = 1, overflow = 0 },
+}) do
+	local ok, value = pcall(Stock.applyInflow, unchanged, malformed)
+	assert(ok and value == nil, "Malformed plans must reject without throwing")
+	equal(unchanged.iron, 2)
+end
+local stale = assert(Stock.planInflow({ iron = 2 }, "iron", 1))
+equal(Stock.applyInflow({ iron = 3 }, stale), nil, "Stale plan rejected")
+local source = { copper = 2, zinc = 0 }
+equal(Stock.debit(source, { copper = 1, zinc = 1 }), nil)
+equal(source.copper, 2, "Multi-input debit rejects atomically")
+for _, amount in ipairs({ math.huge, -math.huge, 0 / 0 }) do
+	equal(Stock.migrate({ iron = amount }), nil)
+end
 print("civcraft_resource_stock_test: ok")
