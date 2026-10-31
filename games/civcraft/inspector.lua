@@ -875,21 +875,7 @@ function I.draw(ui, state, player, rect, modal)
 				},
 			},
 		}
-		if unit.kind == "settler" then
-			local suggestions = ui.settlementSuggestions or {}
-			rows[#rows + 1] = {
-				buttons = {
-					{
-						label = "SETTLEMENT SITES " .. #suggestions,
-						run = function()
-							ui.settlementSuggestionDetail = nil
-							ui.settlementSuggestionOffset = 0
-							ui.panel = "settlementSuggestions"
-						end,
-					},
-				},
-			}
-		end
+
 		if unit.kind == "settler" and not at(state.cities, unit.x, unit.y) then
 			rows[#rows + 1] = {
 				buttons = {
