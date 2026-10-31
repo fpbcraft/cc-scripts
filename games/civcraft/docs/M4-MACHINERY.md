@@ -1,10 +1,17 @@
 # M4.1 resource lifecycle, machinery recipes and local stress
 
-Status: **implementation contract proposal; pending owner review**. This is a
-specification only. The table's numeric baselines are concrete proposals for a
-playable implementation, not accepted balance values, calibrated values, or
-claims about current behavior. M4 balance studies remain paused. This contract
-does not authorize implementation of M4.2 or calibration before review.
+Status: **accepted implementation contract**. The owner accepted PR #153's
+concrete coal, resource-cap, SU and fuel proposal on 2026-10-30. Numeric values
+are implementation baselines, not calibrated balance results. Implementation
+may proceed; balance experiments remain paused. Acceptance does not authorize
+merging later PRs or deployment.
+
+The owner's subsequent unreleased-game compatibility decision supersedes the
+historical-profile requirements below: use one current ruleset, automatically
+migrate/repair old saves where practical, and clearly require a user reset or
+deletion when a save cannot be safely repaired. See
+[ADR-0039](adr/0039-current-rules-and-save-migration.md). Save-schema versions
+are migration markers, not parallel historical gameplay engines.
 
 This record serves issue [#101](https://github.com/fpbcraft/cc-scripts/issues/101)
 and follows the accepted direction in [ADR-0009](adr/0009-building-families-and-operating-costs.md),
@@ -76,7 +83,7 @@ buildings, or hidden deposits.
 | Brass | No deposit; current effective Mixer consumes 1 copper + 1 zinc and adds 2 brass/round after Brassworking | 10 | Existing two-brass unit debit unchanged; M4 makes conversion selected | Existing paid exchange after Brassworking and market/village access |
 | Horses (compatibility) | Existing worldgen deposit: +1/round on owned tile, no tech gate | 10 | No current unit consumer; do not add one in M4 | No exchange; existing diplomacy trades remain |
 | Saltpeter (compatibility) | No current worldgen source; old saved value may exist | 10 | No current unit consumer; do not add one in M4 | No exchange; existing diplomacy trades remain |
-| Coal (new) | Proposed generated deposit, +1/round after `steampower`; placement biome and density remain an owner choice; reveal follows current visible/remembered deposit observation | 10 | Steam Plant burns 1/round when active | Paid exchange after Currency and `steampower`; owned deposit |
+| Coal (new) | Proposed generated deposit, +1/round after `steampower`; iron terrain eligibility (hill/mountain outside snowy_plains), relative placement weight 16 with total resource density unchanged; reveal follows current visible/remembered deposit observation | 10 | Steam Plant burns 1/round when active | Paid exchange after Currency and `steampower`; owned deposit |
 
 The M4 profile should append `horses`, `saltpeter`, and `coal` to
 `resourceOrder` so existing HUD and diplomacy selectors can show their stock
@@ -192,9 +199,10 @@ resolve atomically; they have no partial progress.
 
 M3's V5 family mapping and prerequisite edges remain unchanged. M4 changes only
 operating effects and adds selected resource/power conditions. Apply these
-proposed caps and machine rules only in the new profile. Propose a new
-`balance6` profile based on V5; preserve `balance5` semantics and default until a
-separate authorization changes them. `farm` and `mine` remain retired in Builder
+accepted caps and machine rules to the single current ruleset when the combined
+M4 implementation/native gate passes. Historical profile IDs are migration
+inputs, not selectable or executable old rule engines. Do not activate an
+incomplete machinery implementation. `farm` and `mine` remain retired in Builder
 profiles; `councilhall` remains retired; the End
 sequence remains `observatory -> eyes -> equipment -> dragon` with the M3
 temporary bridge and existing costs/tech gates. None of these End projects
@@ -219,13 +227,14 @@ fuel, or resources are absent.
 
 ## Proposed versioned state, actions and queries
 
-Names here are a proposed contract, not existing APIs. Introduce
+Names here are the accepted contract, not already implemented APIs. Introduce
 `resourceSchema = 1` and `machinerySchema = 1` at campaign state level, with
-explicit migration. The proposed profile identity is `balance6`, based on
-`balance5`; never reinterpret an existing profile or save in place. Keep the
-existing campaign/ruleset identity and M3 schema;
-do not bump or reinterpret historical saves until the migration plan is
-implemented. Suggested state:
+explicit migration. Build on the current M3 mechanics and migrate historical
+profile IDs to the one supported current ruleset. A format/schema identifier
+may change to drive migration, but must not retain old gameplay branches.
+Validate the full migrated candidate before replacing a save. Unsupported or
+malformed saves need a clear reset/delete instruction rather than silent
+delete, resource grants, or a partially loaded campaign. Suggested state:
 
 ```lua
 state.resourceSchema = 1
@@ -329,12 +338,32 @@ These are correctness/runtime cases, not balance experiments. Do not run
 tournaments, parameter sweeps, price tuning, comparative pacing studies, or
 calibration until the user explicitly resumes those studies.
 
-## Review choices left open
+## Acceptance and coal placement
 
-The ADRs fix the system shape but do not accept concrete stock caps, SU values,
-or priorities. Those figures are an implementable proposal, not calibrated
-values. Coal is a proposed new resource; its biome eligibility and map density
-remain explicit owner choices. The Steam Plant's demand-driven coal rule is also
-a concrete proposal for review. No orphan intermediate resources are proposed.
-Do not label these choices accepted or calibrated, and do not dispatch the
-dependent implementation issue until the contract is reviewed.
+The owner accepted the concrete stock caps, SU values, machine priorities and
+demand-driven Steam Plant coal rule as implementation baselines, not calibrated
+values. Coal is accepted as a new resource. The owner additionally selected iron terrain eligibility (hill/mountain
+elevation outside snowy_plains), relative placement weight 16, and unchanged
+total world resource density. This resolves the table's previously unspecified
+placement detail. All M4 implementation tasks may proceed when their code
+dependencies are satisfied. Historical gameplay
+compatibility requirements are superseded by ADR-0039; migration validation,
+privacy, conservation, useful unpowered basics and the End bridge still apply.
+
+## Shared material reservation backend
+
+`resource_reservations.lua` operates on a copied post-extraction stock snapshot.
+`begin` creates an ephemeral session, `reserve` accepts authoritative operation
+input/output descriptors in ascending priority, city ID and building ID order,
+and `result` returns detached stocks, reservations and pause reasons. `plan`
+validates and sorts a batch through the same incremental engine. Descriptors are
+internal rule outputs, not client-defined recipes. Inputs come only from the
+snapshot; reserved outputs never replenish them. Complete output room is checked
+before any debit, and paused operations reserve nothing.
+
+The economy forecast and production share this backend. The pre-activation
+mixer adapter still supplies its existing brass conversion descriptor; #103
+replaces that adapter's selection/gating with persisted choices and local SU/fuel
+checks through the same session API. #104–#106 provide controls and combined
+activation/native delivery. This backend alone does not activate the complete
+M4 machinery rules, add recipes, serialize derived status, or resume balance work.

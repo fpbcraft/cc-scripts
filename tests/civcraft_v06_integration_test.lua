@@ -24,7 +24,7 @@ local state = {
 			id = 1,
 			name = "A",
 			civ = "verdant",
-			techs = { agriculture = true },
+			techs = { agriculture = true, writing = true },
 			food = 0,
 			wood = 0,
 			science = 0,
@@ -88,16 +88,16 @@ assert(
 	"Citizens cannot be assigned beyond the city boundary"
 )
 local oldWood = player.wood
-assert(Systems.queue(player, city, "building", "farm", state, Hex))
-assert(not city.buildings.farm, "Queueing production may not instantly finish a building")
+assert(Systems.queue(player, city, "building", "library", state, Hex))
+assert(not city.buildings.library, "Queueing production may not instantly finish a building")
 assert(player.wood == oldWood, "Standard projects never spend stored industry")
-local cost = Systems.projectCost("building", "farm")
+local cost = Systems.projectCost("building", "library")
 local turns = 0
-while not city.buildings.farm and turns < 50 do
+while not city.buildings.library and turns < 50 do
 	turns = turns + 1
 	Systems.production(state, Hex)
 end
-assert(turns > 0 and city.buildings.farm, "Building must finish via per-turn production")
+assert(turns > 0 and city.buildings.library, "Building must finish via per-turn production")
 assert(Systems.research(player, "mining"), "An unlocked technology may be selected")
 assert(
 	not player.techs.mining and player.researchTarget == "mining",

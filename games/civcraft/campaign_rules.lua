@@ -1,22 +1,20 @@
-local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Rules = {
 	speeds = { "quick", "standard", "epic" },
 	presets = {
-		quick = { factor = 2 / 3, rounds = 120 },
-		standard = { factor = 1, rounds = 180 },
-		epic = { factor = 1.5, rounds = 270 },
+		quick = { factor = 2 / 3, rounds = 167 },
+		standard = { factor = 1, rounds = 250 },
+		epic = { factor = 1.5, rounds = 375 },
 	},
-	victories = { "conquest", "industrial", "expedition", "diplomatic", "score" },
+	victories = { "conquest", "expedition", "score" },
 }
 
 function Rules.rounds(context)
 	local preset = Rules.presets[context and context.gameSpeed] or Rules.presets.standard
-	return ContentRules.isRedesign(context) and math.ceil(250 * preset.factor) or preset.rounds
+	return preset.rounds
 end
 
-function Rules.availableVictories(state)
-	return ContentRules.isRedesign(state) and { "conquest", "expedition", "score" }
-		or Rules.victories
+function Rules.availableVictories()
+	return Rules.victories
 end
 
 function Rules.selectCivilization(state, actor, request, civilizations)
@@ -46,18 +44,10 @@ function Rules.cost(value, context)
 end
 
 function Rules.enabled(state, victory)
-	if ContentRules.isRedesign(state) then
-		if victory == "industrial" or victory == "diplomatic" then
-			return false
-		elseif victory == "score" then
-			return true
-		end
+	if victory == "score" then
+		return true
 	end
-	if
-		victory == "diplomatic"
-		and state.victoryRulesVersion ~= 2
-		and (not state.victories or state.victories.diplomatic == nil)
-	then
+	if victory ~= "conquest" and victory ~= "expedition" then
 		return false
 	end
 	return not state.victories or state.victories[victory] ~= false
@@ -71,36 +61,7 @@ function Rules.configure(state, id, request)
 		return false, "Host only"
 	end
 	if request.action == "contentRules" then
-		local version = request.version
-		if version == nil then
-			version = state.contentRules == "p1" and "balance1"
-				or state.contentRules == "balance1" and "balance2"
-				or state.contentRules == "balance2" and "balance3"
-				or state.contentRules == "balance3" and "balance4"
-				or state.contentRules == "balance4" and "balance5"
-				or state.contentRules == "balance5" and "baseline"
-				or "p1"
-		end
-		if
-			version ~= "baseline"
-			and version ~= "p1"
-			and version ~= "balance1"
-			and version ~= "balance2"
-			and version ~= "balance3"
-			and version ~= "balance4"
-			and version ~= "balance5"
-		then
-			return false, "Unknown content economy"
-		end
-		if ContentRules.isRedesign({ contentRules = version }) and state.ruleset == "legacy" then
-			return false, "Start a new campaign to use Redesign V1"
-		end
-		state.contentRules = version ~= "baseline" and version or nil
-		state.roundLimit = Rules.rounds(state)
-		for _, player in ipairs(state.players) do
-			player.contentRules = state.contentRules
-		end
-		return true, ContentRules.label(state)
+		return false, "Specialization V5 is the current ruleset and cannot be changed"
 	end
 	if request.action == "gameSpeed" then
 		local nextSpeed = request.speed
@@ -124,14 +85,12 @@ function Rules.configure(state, id, request)
 		return true
 	elseif request.action == "toggleVictory" then
 		if
-			ContentRules.isRedesign(state)
-			and (
-				request.victory == "industrial"
-				or request.victory == "diplomatic"
-				or request.victory == "score"
-			)
+			request.victory == "industrial"
+			or request.victory == "diplomatic"
+			or request.victory == "score"
 		then
-			return false, "Redesign V1 uses Conquest and End Expedition, with Score at the deadline"
+			return false,
+				"The current rules use Conquest and End Expedition, with Score at the deadline"
 		end
 		local known = false
 		for _, victory in ipairs(Rules.victories) do

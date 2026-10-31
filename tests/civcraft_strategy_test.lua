@@ -90,10 +90,13 @@ assert(plan.reviewReason == "decisiveTechnology")
 view.players[2].industryTurns = 7
 view.round = 15
 Strategy.review(view, player, 13)
-assert(plan.reviewReason == "rivalVictory" and plan.emergency == "contestVictory")
+assert(
+	plan.reviewReason ~= "rivalVictory" and plan.emergency ~= "contestVictory",
+	"Retired Industrial progress cannot create a victory alarm"
+)
 view.round = 16
 Strategy.review(view, player, 13)
-assert(plan.lastReviewRound == 15, "An unchanged public warning does not force repeated reviews")
+assert(plan.lastReviewRound == 14, "Retired progress does not force repeated reviews")
 Strategy.signal(player, "newWar")
 Strategy.review(view, player, 13)
 assert(plan.reviewReason == "newWar" and player.strategySignal == nil)
@@ -110,7 +113,12 @@ for i = 2, 8 do
 end
 Strategy.signal(player, "resourceShock")
 Strategy.review(view, player, 13)
-assert(plan.primary == "industrial" and plan.revision == 2 and plan.revisionRound == 16)
+assert(
+	plan.primary ~= "industrial"
+		and plan.lastReviewRound == 16
+		and plan.reviewReason == "resourceShock",
+	"Reassessment must use a current goal"
+)
 
 local hiddenState = {
 	phase = "game",
@@ -150,8 +158,8 @@ view.players[1] = restored
 view.round = 17
 local continued = Strategy.review(view, restored, 13)
 assert(
-	continued.primary == "industrial"
-		and continued.revision == 2
+	continued.primary == plan.primary
+		and continued.revision == plan.revision
 		and continued.lastReviewRound == 16
 )
 for id in pairs(Systems.techs) do

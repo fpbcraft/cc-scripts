@@ -56,8 +56,8 @@ assert(Banner.model(state, p, c, S).production == "WAIT")
 state.contentRules = "p1"
 p.contentRules = "p1"
 assert(
-	Banner.model(state, p, c, S).production ~= "WAIT",
-	"Old profiles do not require population two for Settlers"
+	Banner.model(state, p, c, S).production == "WAIT",
+	"Historical profile labels cannot bypass current Settler population requirements"
 )
 state.contentRules = "balance4"
 p.contentRules = "balance4"

@@ -44,13 +44,14 @@ local function campaign()
 	return state, state.players[1], state.cities[1], state.units[1]
 end
 local state, p, city, u = campaign()
+city.capitalOf = 1
 for _, civ in ipairs(S.civs) do
-	local testPlayer = { civ = civ.id }
+	local testPlayer = { id = 1, civ = civ.id }
 	local center = S.centerYields(testPlayer, city)
 	assert(
 		center.food == 2
 			and center.industry == 1
-			and center.science == (civ.id == "scholar" and 3 or 1),
+			and center.science == (civ.id == "scholar" and 3 or 2),
 		"City center includes base science and civilization bonuses"
 	)
 end
@@ -161,6 +162,7 @@ assert(not C.attack(state, u, { x = 5, y = 3, cost = 1 }, S), "One attack per ro
 u.healing = true
 local hp = u.hp
 state.round = 2
+u.actedThisRound = false
 C.round(state, S)
 assert(u.hp > hp and u.hp <= 100, "Fortified units heal")
 local town = { id = 2, owner = 2, x = 8, y = 3, population = 4, buildings = { walls = true } }
@@ -200,6 +202,9 @@ end
 state, p, city, u = campaign()
 state.world.resources[W.key(city.x, city.y)] = "iron"
 S.production(state, H)
+assert(p.stockpile.iron == 0, "Iron requires Bronze")
+p.techs.bronze = true
+S.production(state, H)
 assert(p.stockpile.iron == 1, "Owned strategic deposits accrue stock")
 u.kind = "scout"
 u.movesLeft = 3
@@ -213,23 +218,30 @@ assert(
 )
 state, p, city, u = campaign()
 assert(
-	S.projectCost("unit", "scout", p) == 5 and S.projectCost("unit", "settler", p) == 12,
-	"Early exploration and expansion are cheaper"
+	S.projectCost("unit", "scout", p) == 15 and S.projectCost("unit", "settler", p) == 28,
+	"Current exploration and expansion costs apply after migration"
 )
 assert(S.research(p, "mining") and S.queue(p, city, "unit", "scout", state, H))
 S.production(state, H)
 assert(city.project, "Scout takes more than one starting round")
-S.production(state, H)
-assert(not city.project and not p.techs.mining, "A scout finishes before the first technology")
+for _ = 1, 60 do
+	if not city.project then
+		break
+	end
+	S.production(state, H)
+end
+assert(not city.project, "Scout completes through accumulated production")
 assert(S.queue(p, city, "unit", "settler", state, H))
-for i = 1, 4 do
+for _ = 1, 60 do
+	if not city.project then
+		break
+	end
 	S.production(state, H)
 end
 assert(
-	p.settlersTrained == 1 and S.projectCost("unit", "settler", p) == 17,
+	p.settlersTrained == 1 and S.projectCost("unit", "settler", p) == 36,
 	"Completed settlers increase the next cost empire-wide"
 )
-assert(not p.techs.mining, "First research is slower than early expansion")
 for i = #state.units, 1, -1 do
 	if state.units[i].kind == "settler" then
 		table.remove(state.units, i)
@@ -237,15 +249,16 @@ for i = #state.units, 1, -1 do
 end
 S.migrate(state)
 assert(
-	p.settlersTrained == 1 and S.projectCost("unit", "settler", p) == 17,
+	p.settlersTrained == 1 and S.projectCost("unit", "settler", p) == 36,
 	"Loss and migration never reduce the trained count"
 )
+city.population = 3
 assert(S.queue(p, city, "unit", "settler", state, H))
 assert(p.settlersTrained == 1, "Queueing does not charge the next settler cost")
 assert(S.queue(p, city, "unit", "scout", state, H))
 assert(p.settlersTrained == 1, "Changing a project does not increment trained settlers")
 local other = state.players[2]
-assert(S.projectCost("unit", "settler", other) == 12, "Each empire has its own settler scaling")
+assert(S.projectCost("unit", "settler", other) == 28, "Each empire has its own settler scaling")
 for i = 1, S.techCost("mining") do
 	S.production(state, H)
 end
@@ -257,7 +270,7 @@ local second = { id = 9, owner = 1, x = 8, y = 4, population = 2, buildings = {}
 state.cities[2] = second
 S.migrate(state)
 for _, c in ipairs(state.cities) do
-	c.project = { kind = "unit", id = "settler", progress = 11 }
+	c.project = { kind = "unit", id = "settler", progress = 27 }
 end
 S.production(state, H)
 assert(

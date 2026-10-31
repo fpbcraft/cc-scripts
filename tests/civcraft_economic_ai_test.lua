@@ -139,19 +139,25 @@ end
 state.cities[2] = { id = 2, owner = 1, x = 8, y = 5, population = 2, buildings = {} }
 state.cities[3] = { id = 3, owner = 1, x = 13, y = 5, population = 2, buildings = {} }
 Systems.migrate(state)
--- No positive military or expansion demand: preserve deliberate idle, then resume for a new need.
+-- Current civilian fallback recovers scarce funds, then resumes construction for a new need.
 for i = 1, 6 do
 	state.units[i] = { id = i + 2, owner = 1, kind = "diamondguard", x = 10 + i % 5, y = 9 }
 end
 state.units[7] = { id = 12, owner = 1, kind = "scout", x = 12, y = 10 }
 player.gold = 0
 city.productionIdle = true
-assert(not AI.choose(state, player, city, Systems))
-city.buildings.library = nil
-player.techs.writing = true
 assert(
 	AI.choose(state, player, city, Systems)
-		and city.project.id == "library"
+		and city.project.kind == "project"
+		and city.project.id == "trade"
+)
+assert(Systems.queue(player, city, "none", nil, state, Hex))
+city.buildings.market = nil
+player.gold = 100
+player.techs.currency = true
+assert(
+	AI.choose(state, player, city, Systems)
+		and city.project.id == "market"
 		and not city.productionIdle
 )
 
@@ -253,13 +259,12 @@ for i, point in ipairs({ { 7, 3 }, { 11, 3 }, { 7, 8 }, { 13, 8 } }) do
 end
 Systems.migrate(state)
 AI.beginTurn(state, player, Systems)
-local roles = {}
+local roles, count = {}, 0
 for _, role in pairs(player.aiPlan.citySpecializations) do
-	roles[role] = true
+	assert(role == "science" or role == "industry" or role == "commerce")
+	roles[role], count = true, count + 1
 end
-assert(
-	roles.science and roles.industry and roles.military and roles.commerce and roles.infrastructure
-)
+assert(count == 5 and roles.industry, "Every city receives a current specialty role")
 local persistedRoles = player.aiPlan.citySpecializations
 state.round = 2
 AI.beginTurn(state, player, Systems)

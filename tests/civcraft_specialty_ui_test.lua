@@ -65,9 +65,11 @@ local astronomy = table.concat(Research.paragraphs(S, "astronomy", p), " ")
 assert(astronomy:find("Nether Portal only", 1, true))
 local original = fixture()
 original.contentRules = "balance4"
+local foundCurrent = false
 for _, entry in ipairs(Codex.entries("mechanics", original)) do
-	assert(entry.id ~= "specialties")
+	foundCurrent = foundCurrent or entry.id == "specialties"
 end
+assert(foundCurrent, "The current rules expose specialty help for migrated profile labels")
 assert(View.symbols.works == "W" and View.symbols.knowledge == "K" and View.symbols.freight == "F")
 local rows = {}
 local texts = {}

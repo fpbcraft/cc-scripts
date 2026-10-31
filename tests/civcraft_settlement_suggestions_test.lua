@@ -249,11 +249,16 @@ view = World.forPlayer(state, 1)
 local first = snapshot(view)
 assert(first == snapshot(view), "Ranking has deterministic score and coordinate ties")
 assert(not Founding.canFound(state, 1, 12, 2), "Wrapped city spacing rejects the seam neighbor")
+local current = Suggestions.forSettler(World.forPlayer(state, 1), 1, state.units[1])
 state.contentRules = "baseline"
 local legacy = Suggestions.forSettler(World.forPlayer(state, 1), 1, state.units[1])
-for _, site in ipairs(legacy) do
-	assert(not site.capacity.active, "Older profiles do not advertise active city capacity")
-	assert(#site.specialties == 0, "Older profiles do not gain M3-only future site opportunities")
+assert(#legacy == #current)
+for i, site in ipairs(legacy) do
+	assert(site.capacity.active, "Historical labels use current capacity")
+	assert(
+		#site.specialties == #current[i].specialties,
+		"Historical labels use current opportunities"
+	)
 end
 
 -- A good center cannot outweigh an otherwise unproductive opening region.

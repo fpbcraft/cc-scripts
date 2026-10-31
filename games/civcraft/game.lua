@@ -101,6 +101,14 @@ local Actors = dofile("/games/civcraft/actor_lifecycle.lua")
 local World = dofile("/games/civcraft/world.lua")
 local mapSizes = World.sizeOrder
 local Saves = dofile("/games/civcraft/saves.lua")
+local CampaignMigration = dofile("/games/civcraft/campaign_migration.lua")
+local function migrateLoaded(loaded)
+	local candidate, reason = CampaignMigration.load(loaded)
+	if not candidate then
+		error(tostring(reason) .. " File: " .. (localMode and Saves.path(slot) or SAVE), 0)
+	end
+	return candidate
+end
 local Cooperative = dofile("/games/civcraft/cooperative.lua")
 local Audio = dofile("/games/civcraft/audio.lua")
 local Actions = dofile("/games/civcraft/actions.lua")
@@ -386,23 +394,25 @@ local hostId, localHost = nil, (MODE == "host" or localMode)
 local joinRequest
 if localHost then
 	if localMode then
-		local loaded = args[2] ~= "--new" and Saves.load(slot)
+		local loaded, reason
+		if args[2] ~= "--new" then
+			loaded, reason = Saves.load(slot)
+		end
+		assert(
+			not reason,
+			tostring(reason) .. ". Delete/reset " .. Saves.path(slot) .. " to continue."
+		)
 		if type(loaded) == "table" then
-			state = Systems.migrate(World.migrate(loaded))
+			state = migrateLoaded(loaded)
 			state.campaignID = state.campaignID or newCampaignID()
 			hasHumanSave = true
 		end
 	elseif fs.exists(SAVE) and args[2] ~= "--new" then
-		local h = fs.open(SAVE, "r")
-		if h then
-			local loaded = textutils.unserialize(h.readAll())
-			h.close()
-			if type(loaded) == "table" and loaded.version then
-				state = Systems.migrate(World.migrate(loaded))
-				state.campaignID = state.campaignID or newCampaignID()
-				hasHumanSave = true
-			end
-		end
+		local loaded, reason = Saves.readFile(SAVE)
+		assert(loaded, tostring(reason) .. ". Delete/reset " .. SAVE .. " to continue.")
+		state = migrateLoaded(loaded)
+		state.campaignID = state.campaignID or newCampaignID()
+		hasHumanSave = true
 	elseif args[2] == "--new" and fs.exists(SAVE) then
 		fs.delete(SAVE)
 	end
@@ -565,10 +575,14 @@ local function dispatch(action, params)
 		if choice and choice >= 1 and choice <= Saves.count then
 			slot = choice
 			deleteConfirm = nil
-			local loaded = Saves.load(slot)
+			local loaded, reason = Saves.load(slot)
+			assert(
+				not reason,
+				tostring(reason) .. ". Delete/reset " .. Saves.path(slot) .. " to continue."
+			)
 			hasHumanSave = type(loaded) == "table"
 			if hasHumanSave then
-				state = Systems.migrate(World.migrate(loaded))
+				state = migrateLoaded(loaded)
 				Diplomacy.migrate(state)
 				state.campaignID = state.campaignID or newCampaignID()
 				if state.world then

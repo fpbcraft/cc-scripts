@@ -166,8 +166,10 @@ for _, graphics in ipairs({ false, true }) do
 		tap("SUBMIT PROPOSAL")
 		assert(state.council.session.agenda[2].target == 2)
 		tap("STATUS")
-		tap("COUNCIL HALL CODEX")
-		assert(ui.panel == "encyclopedia" and ui.codex.entry.id == "councilhall")
+		draw()
+		for _, button in ipairs(ui.r.buttons) do
+			assert(button.label ~= "COUNCIL HALL CODEX", "Retired Hall is not advertised")
+		end
 		ui.panel = "council"
 		state.round = state.council.session.closesRound
 		Council.advance(state)

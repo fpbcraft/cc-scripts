@@ -1,6 +1,9 @@
 # World generation contract
 
-New maps use deterministic generation version 5. Version 4 added recorded
+New maps use deterministic generation version 6. Coal uses iron terrain eligibility
+(hills/mountains outside snowy plains), weight 16, inside the unchanged 17.5%
+total resource density. Version 6 changes deposit selection; it does not add
+coal to existing saved geography. Version 4 added recorded
 horizontal topology to version 3's starting-region guarantees; version 5 adds
 bounded, seed-deterministic variety to viable start sites and player seats.
 Campaigns default to horizontal wrapping, while saved maps retain their

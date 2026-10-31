@@ -82,15 +82,24 @@ HUD.resources(ui, state, player)
 bar = table.concat(lines, " ")
 assert(bar:find("123", 1, true) and not bar:find("234", 1, true) and not bar:find("+0", 1, true))
 world.resources["3:5"] = "iron"
+player.stockpile.iron = 9
 lines = {}
 HUD.resources(ui, state, player)
-assert(table.concat(lines, " "):find("123+1", 1, true), "Positive material rates remain visible")
+assert(table.concat(lines, " "):find("9+1", 1, true), "Positive material rates remain visible")
 renderer.button = function() end
 lines = {}
 HUD.ledger(ui, { x = 0, y = 0, w = 1000, h = 500 }, player)
 local ledger = table.concat(lines, " ")
 assert(not ledger:find("+0", 1, true) and not ledger:find("234", 1, true))
 assert(not ledger:find("987654", 1, true), "The ledger also presents science as a rate")
+player.techs.steampower = true
+player.stockpile.coal = 10
+world.resources["3:5"] = "coal"
+lines = {}
+HUD.ledger(ui, { x = 0, y = 0, w = 1000, h = 500 }, player)
+local capped = table.concat(lines, " ")
+assert(capped:find("COAL 10/10", 1, true))
+assert(capped:find("1 COAL LOST/TURN", 1, true), "Ledger explains capped extraction overflow")
 player.visible = { [World.key(3, 5)] = true }
 state.units = {
 	{ owner = 2, kind = "scout", x = 3, y = 5 },

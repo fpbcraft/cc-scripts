@@ -12,11 +12,11 @@ local H = assert(loadfile("games/civcraft/hex.lua"))()
 local S = assert(loadfile("games/civcraft/systems.lua"))()
 dofile = oldDofile
 local expectedSizes = {
-	compact = { 24, 16 },
-	standard = { 40, 26 },
-	large = { 56, 36 },
-	huge = { 72, 46 },
-	vast = { 96, 60 },
+	compact = { 32, 22 },
+	standard = { 56, 36 },
+	large = { 72, 46 },
+	huge = { 96, 60 },
+	vast = { 120, 76 },
 }
 for size, dimensions in pairs(expectedSizes) do
 	assert(W.sizes[size][1] == dimensions[1] and W.sizes[size][2] == dimensions[2])
@@ -61,7 +61,7 @@ for k, v in pairs(islands.tiles) do
 	end
 end
 assert(differing > 30, "Map presets produce distinct geography")
-assert(a.width == 40 and a.height == 26)
+assert(a.width == 56 and a.height == 36)
 for y = 1, a.height do
 	for x = 1, a.width do
 		assert(a.tiles[W.key(x, y)] == b.tiles[W.key(x, y)])
@@ -109,7 +109,7 @@ end
 
 -- Fixed regression for the former polar-corner starts on the expanded map.
 local opening = W.generate(12345, "standard", 4, "continents", { contentRules = "balance4" })
-assert(opening.generationVersion == 5)
+assert(opening.generationVersion == 6)
 local function openingTiles(world, start, radius)
 	local count, snow = 0, 0
 	local reached = { [W.key(start.x, start.y)] = true }

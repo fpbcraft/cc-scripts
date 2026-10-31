@@ -129,7 +129,7 @@ function Biomes.eligible(tile, resource)
 	if resource == "stone" then
 		return rocky
 	end
-	if resource == "iron" then
+	if resource == "iron" or resource == "coal" then
 		return rocky and tile.biome ~= "snowy_plains"
 	end
 	if resource == "copper" or resource == "zinc" or resource == "redstone" then

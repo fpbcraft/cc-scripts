@@ -162,7 +162,10 @@ assert(
 )
 local legacy = {}
 Values.dependencies(S.buildings, "dragon", {}, 400, legacy, { contentRules = "balance4" })
-assert(legacy.academy, "Older dependency plans retain earlier prerequisites")
+assert(
+	legacy.portal and legacy.observatory and not legacy.academy,
+	"Historical IDs use the current End bridge"
+)
 -- Host changes outside observed geography cannot alter legal AI investments.
 state, p = fixture()
 view, known = snapshot(state, p)
@@ -182,9 +185,11 @@ assert(not Actions.apply(state, 0, stale, S))
 assert(state.nextSiteId == 1 and not state.cities[2].project)
 local original, oldPlayer = fixture("balance4")
 local oldView, oldKnown = snapshot(original, oldPlayer)
+local currentSites = false
 for _, choice in ipairs(Production.ranked(oldView, oldKnown, oldView.cities[1], S, false)) do
-	assert(choice.kind ~= "site")
+	currentSites = currentSites or choice.kind == "site"
 end
+assert(original.contentRules == "balance5" and currentSites, "Migrated AI plans current sites")
 -- Immediate survival investments remain alternatives to filling focus slots.
 state, p = fixture()
 state.cities[1].worked = {}

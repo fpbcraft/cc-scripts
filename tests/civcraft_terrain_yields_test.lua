@@ -75,7 +75,7 @@ assert(#scorerVersions > 0, "Generation evaluates terrain for start placement")
 for _, version in ipairs(scorerVersions) do
 	assert(version == "civ6-1", "Start scoring uses current rules")
 end
-assert(generated.generationVersion == 5, "Yield changes do not regenerate the map")
+assert(generated.generationVersion == 6, "Yield changes do not regenerate the map")
 
 local world = {
 	width = 12,
@@ -150,7 +150,7 @@ sameYield(World.yields(world, 4, 4), 1, 3, 0, "Damaged improvements add nothing"
 assert(Works.definitions.farm.food == 1 and Works.definitions.quarry.industry == 1)
 local center = Systems.centerYields({}, { buildings = {} }, nil)
 assert(
-	center.food == 2 and center.industry == 1 and center.science == 1 and center.gold == 0,
+	center.food == 2 and center.industry == 1 and center.science == 2 and center.gold == 0,
 	"City-center rules remain independent of tile yield migration"
 )
 

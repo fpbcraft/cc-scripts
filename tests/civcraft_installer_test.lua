@@ -136,7 +136,11 @@ for version = 3, 6 do
 					and restored.units[1].hp == 72
 			)
 			assert(restored.units[2].movesLeft == 1, "Migration refilled a mid-turn allowance")
-			assert(restored.gameSpeed == speed and restored.ruleset == ruleset)
+			assert(
+				restored.gameSpeed == speed
+					and restored.ruleset == "create"
+					and restored.contentRules == "balance5"
+			)
 			cases = cases + 1
 		end
 	end

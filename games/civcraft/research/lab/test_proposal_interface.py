@@ -36,9 +36,18 @@ def proposal_payload(runtime: Runtime, player_id: int = 0) -> tuple[list[dict], 
     )
 
 
+
+def found_capitals(runtime):
+    for player in runtime.state.players.values():
+        settler = next(u for u in runtime.state.units.values()
+                       if u.owner == player.id and u.kind == 'settler')
+        assert runtime.apply(player.id, {'action': 'found', 'unitID': settler.id,
+                                        'x': settler.x, 'y': settler.y})[0]
+    return runtime
+
 class ProposalInterfaceTests(unittest.TestCase):
     def test_detached_observation_is_not_mutated(self):
-        runtime = Runtime(config())
+        runtime = found_capitals(Runtime(config()))
         view = runtime.call(runtime.engine.observe, runtime.state, 0)
         encode = runtime.lua.globals().LAB_CANONICAL.encode
         proposals = runtime.lua.globals().dofile('/lab/proposals.lua')
@@ -47,7 +56,7 @@ class ProposalInterfaceTests(unittest.TestCase):
         self.assertEqual(before, runtime.call(encode, view))
 
     def test_finished_turn_excludes_ordinary_actions_but_keeps_council(self):
-        runtime = Runtime(config())
+        runtime = found_capitals(Runtime(config()))
         runtime.call(runtime.lua.eval('''function(state)
             for _, p in ipairs(state.players) do
                 p.techs.currency, p.techs.commerce, p.techs.bronze = true, true, true
@@ -70,7 +79,7 @@ class ProposalInterfaceTests(unittest.TestCase):
         self.assertTrue(runtime.apply(0, rival_proposal)[0])
 
     def test_waiting_war_actor_has_no_ordinary_candidates(self):
-        runtime = Runtime(config())
+        runtime = found_capitals(Runtime(config()))
         runtime.state.scheduler.groups = runtime.lua.table_from([
             {'order': [0, 1], 'active': 1}
         ], recursive=True)
@@ -79,7 +88,7 @@ class ProposalInterfaceTests(unittest.TestCase):
                              for c in candidates))
 
     def test_metadata_declares_non_exhaustive_families_and_limits(self):
-        runtime = Runtime(config())
+        runtime = found_capitals(Runtime(config()))
         proposals, coverage, metadata, _ = proposal_payload(runtime)
         self.assertGreater(len(proposals), 0)
         self.assertIn("not exhaustive", coverage)
@@ -89,7 +98,7 @@ class ProposalInterfaceTests(unittest.TestCase):
         self.assertIn("diplomaticOffer", metadata["unbounded"])
 
     def test_proposals_are_read_only_and_do_not_leak_rival_private_state(self):
-        runtime = Runtime(config())
+        runtime = found_capitals(Runtime(config()))
         before_hash = runtime.state_hash()
         before = proposal_payload(runtime)
         rival = runtime.state.players[2]
@@ -109,7 +118,7 @@ class ProposalInterfaceTests(unittest.TestCase):
         wanted = {"researchTech", "queue", "heal", "standby", "cancelRoute", "diplomaticTalk"}
         found = set()
         for action_name in wanted:
-            runtime = Runtime(config())
+            runtime = found_capitals(Runtime(config()))
             proposals, _, _, _ = proposal_payload(runtime)
             candidate = next((item for item in proposals if item["action"] == action_name), None)
             if candidate is None:

@@ -116,4 +116,4 @@ local function simulate(firstID, secondID, expected)
 end
 -- Victory preferences belong to fixed civilizations rather than computer ID parity.
 simulate(2, 4, "END EXPEDITION")
-simulate(1, 3, "INDUSTRIAL")
+simulate(1, 3, "END EXPEDITION")

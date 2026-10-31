@@ -61,9 +61,9 @@ for _, version in ipairs({ "baseline", "p1", "balance1", "balance2" }) do
 	local old, player, builder, city = fixture()
 	old.contentRules = version
 	S.migrate(old)
-	assert(not S.canRecruit(player, "builder", old, H, city))
-	assert(S.canBuild(player, city, "farm", old) and S.canBuild(player, city, "mine", old))
-	assert(not Works.complete(old, player, builder, "farm", S) and builder.charges == 3)
+	assert(old.contentRules == "balance5" and S.canRecruit(player, "builder", old, H, city))
+	assert(not S.canBuild(player, city, "farm", old) and not S.canBuild(player, city, "mine", old))
+	assert(Works.complete(old, player, builder, "farm", S) and builder.charges == 2)
 end
 local state, p, u, c = fixture()
 assert(S.canRecruit(p, "builder", state, H, c))
@@ -207,9 +207,18 @@ u.kind = "builder"
 u.charges = 0
 assert(not A.apply(state, 0, intentRequest, S) and not u.autoWork)
 u.charges = 3
-state.contentRules = "baseline"
-assert(not A.apply(state, 0, intentRequest, S) and not u.autoWork)
-state.contentRules = "balance3"
+do
+	local old, _, traveler = fixture()
+	old.contentRules = "baseline"
+	assert(A.apply(old, 0, {
+		action = "autoWork",
+		unitID = traveler.id,
+		x = traveler.x,
+		y = traveler.y,
+		value = true,
+	}, S) and traveler.autoWork)
+end
+state.contentRules = "balance5"
 u.moved, u.movesLeft = true, 0
 assert(A.apply(state, 0, { action = "autoWork", unitID = u.id, x = u.x, y = u.y, value = true }, S))
 assert(u.autoWork and u.workQueue and u.workQueue.auto, "Auto mode must create a tagged saved task")

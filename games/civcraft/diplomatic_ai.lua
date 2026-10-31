@@ -6,6 +6,7 @@ local Hex = dofile("/games/civcraft/hex.lua")
 local World = dofile("/games/civcraft/world.lua")
 local CouncilAI = dofile("/games/civcraft/council_ai.lua")
 local CouncilRules = dofile("/games/civcraft/council_rules.lua")
+local Stock = dofile("/games/civcraft/resource_stock.lua")
 local AI = {}
 local function strength(view, owner, systems)
 	local total = 0
@@ -75,6 +76,18 @@ function AI.evaluate(view, player, offer, systems)
 				and ((player.stockpile or {})[terms.askResource] or 0) < terms.askAmount
 		then
 			return "reject", "The requested payment exceeds our available supplies"
+		end
+		local costs = {}
+		if terms.askAmount > 0 then
+			costs[terms.askResource] = terms.askAmount
+		end
+		local reserved = Stock.debit(player.stockpile or {}, costs)
+		if
+			not reserved
+			or terms.giveAmount > 0
+				and not Stock.planOutput(reserved, terms.giveResource, terms.giveAmount)
+		then
+			return "reject", "The offered material exceeds our stock capacity"
 		end
 		utility = terms.gold
 			- terms.requestGold

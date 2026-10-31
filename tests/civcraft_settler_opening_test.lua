@@ -122,10 +122,10 @@ assert(ownCities(state, 1)[1].project, "AI must choose first-city production in 
 assert(#ownCities(state, 0) == 0, "AI processing cannot auto-found the human capital")
 for _, version in ipairs({ "baseline", "p1", "balance1", "balance2", "balance3" }) do
 	local old = fixture(version)
-	assert(old.world.width == 24 and old.world.height == 16)
+	assert(old.world.width == 32 and old.world.height == 22)
 	assert(
-		#ownCities(old, 0) == 1 and not settler(old, 0),
-		"Earlier profiles retain their founded-city opening"
+		#ownCities(old, 0) == 0 and settler(old, 0),
+		"Historical lobby IDs use the current manual-founding opening"
 	)
 end
 if fs and textutils then

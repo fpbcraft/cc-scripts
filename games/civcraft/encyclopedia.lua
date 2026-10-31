@@ -163,7 +163,7 @@ mechanics[#mechanics + 1] = {
 mechanics[#mechanics + 1] = {
 	id = "materials",
 	name = "MATERIALS AND TRADE",
-	text = "Iron, copper, zinc, redstone and diamond deposits produce one stock per round once claimed and researched. Brass comes from heated mixing. Specialized units consume two stock on completion. A trading hall, or a discovered independent village with 20 influence, enables material purchases in the resource ledger: 20 gold per stock. Research the material technology first.",
+	text = "Iron, copper, zinc, redstone, diamond and coal deposits produce one stock per round once claimed and researched. Coal requires Steam Power. Each owned deposit is counted once, even across overlapping cities. Stocks cap at 10 (diamond 6); valid older stocks above cap are retained, but further inflow is lost. The resource ledger shows capped rates and overflow. Brass comes from heated mixing and needs room for its complete output. Specialized units consume two stock on completion. A trading hall, or a discovered independent village with 20 influence, enables material purchases in the resource ledger: 20 gold per stock. Research the material technology first. Imports require room for the complete stock. Diplomatic trades reserve both sides before transfer and reject the entire deal if a recipient would exceed cap; failed trades do not move gold or materials.",
 }
 mechanics[#mechanics + 1] = {
 	id = "rails",

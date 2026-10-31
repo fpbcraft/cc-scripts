@@ -5,6 +5,8 @@ local Landmarks = dofile("/games/civcraft/landmarks.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local Stock = dofile("/games/civcraft/resource_stock.lua")
+local Reservations = dofile("/games/civcraft/resource_reservations.lua")
 local E = {}
 function E.effects(city, state, systems)
 	local result = { food = 0, industry = 0, science = 0, gold = 0 }
@@ -61,7 +63,9 @@ function E.stocks(p)
 		p.stockpile[id] = p.stockpile[id] or 0
 	end
 end
-function E.rates(p, state, owned)
+function E.plan(p, state, owned)
+	local initial = assert(Stock.migrate(p.stockpile or {}))
+	local stock, overflow = assert(Stock.copy(initial)), {}
 	local rates = {}
 	for id in pairs(Content.resources) do
 		rates[id] = 0
@@ -76,28 +80,45 @@ function E.rates(p, state, owned)
 			rates[id] = rates[id] + 1
 		end
 	end
-	local copper = (p.stockpile or {}).copper or 0
-	local zinc = (p.stockpile or {}).zinc or 0
-	copper = copper + rates.copper
-	zinc = zinc + rates.zinc
+	for _, id in ipairs(Stock.order) do
+		local inflow = assert(Stock.planInflow(stock, id, rates[id] or 0))
+		stock = assert(Stock.applyInflow(stock, inflow))
+		overflow[id] = inflow.overflow
+	end
+	-- This adapter retains the pre-activation mixer choice. #103 supplies selected
+	-- operations and local SU/fuel gates through this same reservation engine.
+	local operations = {}
 	for _, city in ipairs(state.cities or {}) do
 		if
 			city.owner == p.id
 			and Sites.effectiveBuilding(state, city, "mixer")
 			and p.techs.brassworking
-			and copper > 0
-			and zinc > 0
 		then
-			copper = copper - 1
-			zinc = zinc - 1
-			rates.copper = rates.copper - 1
-			rates.zinc = rates.zinc - 1
-			rates.brass = rates.brass + 2
+			operations[#operations + 1] = {
+				owner = p.id,
+				cityID = city.id,
+				buildingID = "mixer",
+				priority = 3,
+				inputs = { copper = 1, zinc = 1 },
+				outputs = { brass = 2 },
+			}
 		end
 	end
-	return rates
+	local reservations = assert(Reservations.plan(stock, p.id, operations))
+	stock = reservations.stock
+	for _, id in ipairs(Stock.order) do
+		rates[id] = stock[id] - initial[id]
+	end
+	return { stock = stock, rates = rates, overflow = overflow, reservations = reservations }
+end
+function E.rates(p, state, owned)
+	return E.plan(p, state, owned).rates
 end
 function E.exchange(state, p, resource)
+	local gold = p.gold == nil and 0 or p.gold
+	if type(gold) ~= "number" or gold ~= gold or gold < 0 or gold == math.huge then
+		return false, "Invalid treasury"
+	end
 	if CouncilRules.embargoed(state, p.id) then
 		return false, "Council embargo prevents material exchange"
 	end
@@ -132,9 +153,17 @@ function E.exchange(state, p, resource)
 	if not market or (p.gold or 0) < price then
 		return false, "Need a trading hall or friendly village, and " .. price .. " gold"
 	end
-	E.stocks(p)
-	p.gold = p.gold - price
-	p.stockpile[resource] = p.stockpile[resource] + 1
+	local stock, reason = Stock.migrate(p.stockpile or {})
+	if not stock then
+		return false, reason
+	end
+	local plan
+	plan, reason = Stock.planOutput(stock, resource, 1)
+	if not plan then
+		return false, "Material is at its stock cap"
+	end
+	local result = assert(Stock.applyInflow(stock, plan))
+	p.gold, p.stockpile = p.gold - price, result
 	return true, "Traded " .. price .. " gold for 1 " .. resource
 end
 return E

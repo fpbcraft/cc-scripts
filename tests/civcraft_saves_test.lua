@@ -132,3 +132,14 @@ assert(
 	"Host saves use the same atomic writer"
 )
 print("CIVCRAFT: failed encoding/write/rename recovery and shared host save protection passed.")
+
+files["/games/civcraft/data/slots-migrated"] = nil
+files["/games/civcraft/data/local-save.dat"] = legacy
+files[Save.path(1)] = "{broken campaign"
+local corrupt, reason = Save.load(1)
+assert(not corrupt and reason:find("Invalid campaign data", 1, true))
+assert(files[Save.path(1)] == "{broken campaign", "Corrupt save is never silently removed")
+assert(Save.list()[1].occupied and Save.list()[1].error, "Corrupt slot needs an explicit reset")
+files[Save.path(1)] = "{world=7,name={},round={},phase={}}"
+assert(Save.list()[1].occupied, "Malformed metadata cannot crash the reset picker")
+print("CIVCRAFT: unreadable saves remain occupied and cannot resurrect legacy files")

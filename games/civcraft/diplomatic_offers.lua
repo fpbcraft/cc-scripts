@@ -1,6 +1,7 @@
 local Memory = dofile("/games/civcraft/diplomatic_memory.lua")
 local Events = dofile("/games/civcraft/events.lua")
 local Contacts = dofile("/games/civcraft/contacts.lua")
+local Stock = dofile("/games/civcraft/resource_stock.lua")
 local Offers = {}
 local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local labels = {
@@ -234,14 +235,45 @@ function Offers.find(state, id)
 	end
 end
 
-local function affordable(sender, recipient, terms)
-	return (sender.gold or 0) >= terms.gold
-		and (recipient.gold or 0) >= terms.requestGold
-		and (terms.giveAmount == 0 or ((sender.stockpile or {})[terms.giveResource] or 0) >= terms.giveAmount)
-		and (
-			terms.askAmount == 0
-			or ((recipient.stockpile or {})[terms.askResource] or 0) >= terms.askAmount
-		)
+local function tradePlan(sender, recipient, terms)
+	if type(terms) ~= "table" then
+		return nil, "Invalid trade terms"
+	end
+	for _, field in ipairs({ "gold", "requestGold", "giveAmount", "askAmount" }) do
+		if
+			integer(terms[field], nil, (field == "gold" or field == "requestGold") and 1000 or 99)
+			== nil
+		then
+			return nil, "Invalid trade amount"
+		end
+	end
+	local a = sender.gold == nil and 0 or sender.gold
+	local b = recipient.gold == nil and 0 or recipient.gold
+	for _, amount in ipairs({ a, b }) do
+		if type(amount) ~= "number" or amount ~= amount or amount < 0 or amount == math.huge then
+			return nil, "Invalid treasury"
+		end
+	end
+	if a < terms.gold or b < terms.requestGold then
+		return nil, "The exchange is no longer affordable"
+	end
+	local stocks, why = Stock.trade(
+		sender.stockpile or {},
+		recipient.stockpile or {},
+		terms.giveResource,
+		terms.giveAmount,
+		terms.askResource,
+		terms.askAmount
+	)
+	if not stocks then
+		return nil, why
+	end
+	return {
+		senderStock = stocks.first,
+		recipientStock = stocks.second,
+		senderGold = a - terms.gold + terms.requestGold,
+		recipientGold = b + terms.gold - terms.requestGold,
+	}
 end
 
 local function refusal(state, offer, reason)
@@ -280,6 +312,7 @@ function Offers.respond(state, actor, request, systems, diplomacy)
 		return true, "Offer rejected"
 	end
 	local sender, recipient, terms = player(state, offer.from), player(state, actor), offer.terms
+	local trade
 	if
 		(offer.kind == "trade" or offer.kind == "commerce")
 		and CouncilRules.embargoed(state, offer.from, actor)
@@ -290,8 +323,10 @@ function Offers.respond(state, actor, request, systems, diplomacy)
 		return false, "A signatory is no longer available"
 	end
 	if offer.kind == "trade" then
-		if not affordable(sender, recipient, terms) then
-			return false, "The exchange is no longer affordable"
+		local reason
+		trade, reason = tradePlan(sender, recipient, terms)
+		if not trade then
+			return false, reason
 		end
 	elseif offer.kind == "peace" then
 		if not diplomacy.war(state, sender.id, actor) then
@@ -317,21 +352,8 @@ function Offers.respond(state, actor, request, systems, diplomacy)
 	end
 	local data = Offers.ensure(state)
 	if offer.kind == "trade" then
-		sender.gold, recipient.gold =
-			(sender.gold or 0) - terms.gold + terms.requestGold,
-			(recipient.gold or 0) + terms.gold - terms.requestGold
-		sender.stockpile, recipient.stockpile = sender.stockpile or {}, recipient.stockpile or {}
-		for _, transfer in ipairs({
-			{ sender, recipient, terms.giveResource, terms.giveAmount },
-			{ recipient, sender, terms.askResource, terms.askAmount },
-		}) do
-			if transfer[4] > 0 then
-				transfer[1].stockpile[transfer[3]] = (transfer[1].stockpile[transfer[3]] or 0)
-					- transfer[4]
-				transfer[2].stockpile[transfer[3]] = (transfer[2].stockpile[transfer[3]] or 0)
-					+ transfer[4]
-			end
-		end
+		sender.gold, recipient.gold = trade.senderGold, trade.recipientGold
+		sender.stockpile, recipient.stockpile = trade.senderStock, trade.recipientStock
 	elseif offer.kind == "peace" then
 		diplomacy.war(state, sender.id, actor).endsRound = state.round + 1
 		data.armistices[#data.armistices + 1] = {

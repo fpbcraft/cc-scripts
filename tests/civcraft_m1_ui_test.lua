@@ -33,7 +33,7 @@ for _, version in ipairs({ "baseline", "p1", "balance1", "balance2", "balance3" 
 	end
 	if dofile("/games/civcraft/content_rules.lua").isRedesign(state) then
 		assert(
-			labels["ECONOMY " .. dofile("/games/civcraft/content_rules.lua").label(state)]
+			not labels["ECONOMY " .. dofile("/games/civcraft/content_rules.lua").label(state)]
 				and labels["SCORE DEADLINE"]
 		)
 		assert(labels["CONQUEST ON"] and labels["END EXPEDITION ON"])

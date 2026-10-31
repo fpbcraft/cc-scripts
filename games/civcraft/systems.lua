@@ -12,6 +12,7 @@ local Actions = dofile("/games/civcraft/actions.lua")
 local Combat = dofile("/games/civcraft/combat.lua")
 local Content = dofile("/games/civcraft/content.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local ResourceStock = dofile("/games/civcraft/resource_stock.lua")
 local Capacity = dofile("/games/civcraft/settlement_capacity.lua")
 local Projects = dofile("/games/civcraft/civilian_projects.lua")
 local Economy = dofile("/games/civcraft/economy.lua")
@@ -222,15 +223,32 @@ function M.nameCity(state, city)
 	end
 end
 function M.migrate(state)
-	ContentRules.validate(state.contentRules)
-	state.ruleset = state.ruleset or "legacy"
+	assert(type(state) == "table", "Invalid campaign save; delete/reset this save to continue")
+	local currentRules, rulesReason = ContentRules.migrateId(state.contentRules)
+	assert(currentRules, tostring(rulesReason) .. ". Delete/reset this save to continue.")
+	assert(
+		type(state.players or {}) == "table",
+		"Invalid players; delete/reset this save to continue"
+	)
+	assert(
+		type(state.cities or {}) == "table",
+		"Invalid cities; delete/reset this save to continue"
+	)
+	assert(type(state.units or {}) == "table", "Invalid units; delete/reset this save to continue")
+	for _, player in ipairs(state.players or {}) do
+		if player.stockpile ~= nil then
+			local valid, reason = ResourceStock.validate(player.stockpile)
+			assert(valid, tostring(reason) .. ". Delete/reset this save to continue.")
+		end
+	end
+	state.contentRules = currentRules
+	assert(
+		state.ruleset == nil or state.ruleset == "legacy" or state.ruleset == "create",
+		"Unsupported ruleset; delete/reset this save to continue"
+	)
+	state.ruleset = "create"
 	state.gameSpeed = state.gameSpeed or "standard"
-	state.roundLimit = state.roundLimit
-		or (
-			state.ruleset == "create"
-				and (ContentRules.isRedesign(state) and CampaignRules.rounds(state) or 180)
-			or 90
-		)
+	state.roundLimit = CampaignRules.rounds(state)
 	state.hostileMode = state.hostileMode or (state.ruleset == "create" and "standard" or "off")
 	if state.world then
 		state.world.landmarks = state.world.landmarks or {}
@@ -282,9 +300,11 @@ function M.migrate(state)
 		p.food = p.food or 0
 		p.wood = p.wood or 0
 		p.science = p.science or 0
-		p.gold = p.gold or 20
+		p.gold = p.gold or (state.phase == "lobby" and 20 or 0)
 		p.researchProgress = p.researchProgress or {}
-		Economy.stocks(p)
+		local migrated, reason = ResourceStock.migrate(p.stockpile or {})
+		assert(migrated, tostring(reason) .. ". Delete/reset this save to continue.")
+		p.stockpile = migrated
 	end
 	for _, c in ipairs(state.cities or {}) do
 		M.nameCity(state, c)
@@ -308,6 +328,7 @@ function M.migrate(state)
 	Queue.migrate(state)
 	Sites.validate(state)
 	state.version = 6
+	state.resourceSchema = 1
 	return state
 end
 function M.canResearch(p, id)
@@ -392,7 +413,9 @@ function M.economy(p, state)
 		end
 	end
 	local owned = World.territory(state, Hex)
-	result.strategic = Economy.rates(p, state, owned)
+	local materials = Economy.plan(p, state, owned)
+	result.strategic, result.resourceOverflow = materials.rates, materials.overflow
+	result.resourcePlan = materials.reservations
 	return result
 end
 function M.canBuild(p, c, id, state)
@@ -914,10 +937,9 @@ function M.production(state, hex)
 		end
 		p.researchProgress = p.researchProgress or {}
 		Economy.stocks(p)
-		local rates = Economy.rates(p, state, owned)
-		for id, rate in pairs(rates) do
-			p.stockpile[id] = p.stockpile[id] + rate
-		end
+		local materials = Economy.plan(p, state, owned)
+		p.stockpile = materials.stock
+		p.resourceOverflow = materials.overflow
 		local totalScience, projectGold = 0, 0
 		for _, c in ipairs(state.cities) do
 			if c.owner == p.id then

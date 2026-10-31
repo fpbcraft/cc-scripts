@@ -25,12 +25,14 @@ local function player(state, id)
 end
 
 function Lifecycle.newLobby(campaignID, contentRules)
+	local current, reason = ContentRules.migrateId(contentRules)
+	assert(current, reason)
 	return {
 		campaignID = campaignID,
 		version = 6,
 		ruleset = "create",
-		contentRules = contentRules ~= "baseline" and contentRules or nil,
-		roundLimit = CampaignRules.rounds({ contentRules = contentRules }),
+		contentRules = current,
+		roundLimit = CampaignRules.rounds({ contentRules = current }),
 		gameSpeed = "standard",
 		victoryRulesVersion = 2,
 		diplomacy = Diplomacy.new(),
@@ -112,6 +114,7 @@ function Lifecycle.initialize(state)
 			state.nextId = state.nextId + 1
 			addUnit(state, p.id, x + ((x < state.world.width / 2) and 1 or -1), y, "warrior")
 		end
+		p.gold = 20
 		p.food = 12
 		p.wood = 12
 		p.science = 0

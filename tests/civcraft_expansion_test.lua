@@ -109,6 +109,9 @@ assert(p.stockpile.diamond == 0)
 p.techs.deepmining = true
 S.production(state, H)
 assert(p.stockpile.diamond == 1 and p.stockpile.copper == 1)
+p.techs.engineering = true
+city.sites = { works = { id = 1, kind = "works", x = 4, y = 4 } }
+state.nextSiteId = 2
 p.techs.heatedmixing = true
 p.techs.brassworking = true
 assert(not S.canBuild(p, city, "mixer", state))
@@ -188,7 +191,9 @@ for _, d in ipairs(H.reachable(state, engineer, 1, S)) do
 	end
 end
 assert(destination and destination.cost == 0.25)
--- Three connected station cities; loops cannot multiply bonuses; a break resets victory.
+-- Three current Freight sites support station cities; loops cannot multiply bonuses.
+p.techs.currency = true
+p.techs.bank = true
 local second = {
 	id = 3,
 	owner = 1,
@@ -221,7 +226,12 @@ for x = 2, 10 do
 	c.claimed[W.key(x, 4)] = true
 	state.world.rails[W.key(x, 4)] = true
 end
+for i, ownedCity in ipairs({ city, second, third }) do
+	ownedCity.sites = { freight = { id = 20 + i, kind = "freight", x = ownedCity.x - 1, y = 4 } }
+end
+state.nextSiteId = 24
 S.migrate(state)
+W.reveal(state, H, S)
 local net = R.network(state, p)
 assert(net[1].size == 3)
 a = S.centerYields(p, city, state)
@@ -243,7 +253,7 @@ for round = 11, 20 do
 	state.round = round
 	Victory.check(state, true)
 end
-assert(state.phase == "over" and state.victoryReason == "INDUSTRIAL")
+assert(state.phase == "game" and p.industryTurns == 0, "Freight cannot revive Industrial victory")
 -- End, conquest, score, simultaneous victories and deadline compatibility.
 state, p, city = fixture()
 city.buildings.dragon = true
@@ -259,7 +269,7 @@ city.buildings.dragon = true
 Victory.check(state, true)
 assert(#state.winnerIDs == 2)
 state, p, city = fixture()
-state.round = 180
+state.round = state.roundLimit
 Victory.check(state, true)
 assert(state.phase == "over" and #state.winnerIDs == 2, "Equal development shares score victory")
 -- Mob camps respect the start buffer, spawn bounds, and replay guards.
@@ -407,9 +417,9 @@ S.migrate(state)
 S.migrate(state)
 W.migrate(state)
 assert(
-	state.ruleset == "legacy"
-		and state.roundLimit == 90
-		and state.hostileMode == "off"
+	state.ruleset == "create"
+		and state.roundLimit == 250
+		and state.hostileMode == "standard"
 		and state.spawners == nil
 		and state.world.tiles["12:7"] == original
 )

@@ -18,7 +18,7 @@ class DevelopmentTests(unittest.TestCase):
         restored.restore(payload)
         systems = restored.lua.globals().dofile('/games/civcraft/systems.lua')
         self.assertEqual(systems.projectCost('unit', 'settler', restored.state.players[1]), 28)
-        self.assertEqual(restored.state.contentRules, 'balance2')
+        self.assertEqual(restored.state.contentRules, 'balance5')
         self.assertEqual(restored.state_hash(), runtime.state_hash())
 
     @unittest.skipUnless(importlib.util.find_spec('lupa.luajit21'), 'Optional LuaJIT extension is not installed')
@@ -36,7 +36,7 @@ class DevelopmentTests(unittest.TestCase):
             accelerated.advance()
         accelerated.restore(reference.canonical_state())
         self.assertEqual(reference.observe(0), accelerated.observe(0))
-        self.assertEqual(accelerated.state.contentRules, 'balance2')
+        self.assertEqual(accelerated.state.contentRules, 'balance5')
 
     @unittest.skipUnless(importlib.util.find_spec('lupa.luajit21'), 'Optional LuaJIT extension is not installed')
     def test_builder_work_and_saved_queue_match_under_jit(self):
@@ -44,6 +44,10 @@ class DevelopmentTests(unittest.TestCase):
                   'players': [{'civilization': 'verdant'}, {'civilization': 'forge'}]}
         reference = Runtime(config | {'runtimeBackend': 'lua53'})
         accelerated = Runtime(config | {'runtimeBackend': 'luajit21'})
+        traveler = next(u for u in reference.state.units.values()
+                        if u.owner == 0 and u.kind == 'settler')
+        self.assertTrue(reference.apply(0, {'action': 'found', 'unitID': traveler.id,
+                                         'x': traveler.x, 'y': traveler.y})[0])
         prepare = reference.lua.eval("""function(state)
             local systems=dofile('/games/civcraft/systems.lua')
             local works=dofile('/games/civcraft/tile_improvements.lua')

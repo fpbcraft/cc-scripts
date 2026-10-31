@@ -95,8 +95,11 @@ assert(session.allocated == 6 and #session.members == 3 and session.closesRound 
 Council.advance(state)
 assert(state.council.nextSession == 2, "One opening per round")
 assert(not Campaign.enabled({}, "diplomatic"), "Legacy victories stay unchanged")
-assert(Campaign.enabled({ victories = { diplomatic = true } }, "diplomatic"))
-assert(Campaign.enabled(state, "diplomatic"))
+assert(not Campaign.enabled({ victories = { diplomatic = true } }, "diplomatic"))
+assert(
+	not Campaign.enabled(state, "diplomatic"),
+	"Council remains a mechanic, not a current victory"
+)
 state.players[1].ready = true
 state.units[1] =
 	{ id = 99, owner = -1, kind = "warrior", x = 4, y = 5, movesLeft = 0, attacksLeft = 0 }
@@ -126,7 +129,7 @@ assert(public.session.ownElection.candidate == false)
 assert(Council.public(state, -1).session.pledges[1].to == 0)
 assert(resolution(state, -1, 1, true) and resolution(state, 0, 1, true))
 close(state)
-assert(state.council.leader == 0 and state.council.victory.id == 0)
+assert(state.council.leader == 0 and state.council.victory == nil)
 assert(state.council.history[1].pledges == nil)
 assert(Council.public(state, 1).session.election[-1].candidate == 0)
 assert(Rules.exchangeCost(state) == 15)
@@ -312,7 +315,7 @@ for _, project in ipairs(ranked) do
 		hall = project
 	end
 end
-assert(hall and hall.score > 0, "Diplomatic AI can prepare its victory building")
+assert(not hall, "A stale Diplomatic plan cannot revive the retired Hall")
 
 state = fixture()
 Memory.add(state, -1, 0, "lastingCooperation", 180, 0, 30, "Long-term cooperation")

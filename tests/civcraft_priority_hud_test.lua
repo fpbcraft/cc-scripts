@@ -409,6 +409,10 @@ local function exerciseContacts(width, height, graphics, longHeader)
 
 	-- A read-only observer has no civilization identity, so no contact strip is shown.
 	draw(ui, currentState, 99)
+	assert(
+		ui.economy == nil and not button(ui, "RESOURCE LEDGER"),
+		"Read-only observers cannot request an owned economy or private resource ledger"
+	)
 	for _, candidate in ipairs(ui.r.buttons) do
 		assert(not candidate.label:find("TALK ", 1, true))
 	end

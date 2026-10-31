@@ -237,7 +237,12 @@ Physical Minecraft monitor/rednet validation remains open.
 
 ## M4 — Make machinery and materials operational choices
 
-Specification contract proposal: [M4.1 resources and local stress](M4-MACHINERY.md).
+Accepted implementation contract: [M4.1 resources and local stress](M4-MACHINERY.md).
+The owner accepted the concrete baseline and permits unreleased rules changes:
+[ADR-0039](adr/0039-current-rules-and-save-migration.md) requires one current
+ruleset with old-save migration or an explicit reset/delete instruction. Earlier
+historical-profile compatibility statements are superseded; save-schema
+validation, observation boundaries and complete native integration still apply.
 
 Goal: industrial cities choose useful processing under local SU constraints.
 

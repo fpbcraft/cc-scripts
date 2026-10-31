@@ -961,7 +961,7 @@ function I.draw(ui, state, player, rect, modal)
 			text(World.deposit(state.world, ui.selected.x, ui.selected.y) or "NO DEPOSIT")
 		end
 	end
-	if Sites.enabled(state) and not ui.selected.empty then
+	if state.world and Sites.enabled(state) and not ui.selected.empty then
 		local site = (state.world.specialtySites or {})[World.key(ui.selected.x, ui.selected.y)]
 		if site then
 			text(Sites.definitions[site.kind].name .. (site.inactive and " (INACTIVE)" or ""), 13)

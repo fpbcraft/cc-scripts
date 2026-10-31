@@ -12,7 +12,8 @@ specific mechanics still need detailed specifications and tests.
 Authority: the final Decision section includes later follow-ups and supersedes
 conflicting earlier alternatives or research proposals. Keep prior reasoning;
 record subsequent changes through explicit supersession rather than silently
-rewriting the user's choice. Existing campaign versions retain their semantics.
+rewriting the user's choice. [ADR-0039](0039-current-rules-and-save-migration.md) supersedes historical
+gameplay compatibility: one current ruleset with migration or explicit reset.
 
 [Implementation roadmap](../ROADMAP-balance.md) ·
 [Raw answers](../../research/lab/design_decision_answers.json)
@@ -92,3 +93,7 @@ rewriting the user's choice. Existing campaign versions retain their semantics.
   is not promised.
 - Distinguish accepted direction, a concrete implementation specification,
   completed code, automated tests and observed native gameplay evidence.
+
+## Subsequent accepted decisions
+
+- [ADR-0039: One current ruleset and explicit save migration](0039-current-rules-and-save-migration.md).
