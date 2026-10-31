@@ -56,7 +56,24 @@ for _, old in ipairs({
 	local again = assert(Migration.load(current))
 	assert(again.contentRules == current.contentRules and again.players[1].stockpile.iron == 12)
 end
+local savedPlan = fixture()
+savedPlan.players[1].aiPlan = { version = 999, primary = "industrial" }
+assert(assert(Migration.load(savedPlan)).players[1].aiPlan == nil)
+assert(savedPlan.players[1].aiPlan.version == 999)
+savedPlan.players[1].aiPlan = { version = 1, primary = "expedition" }
+assert(assert(Migration.load(savedPlan)).players[1].aiPlan.primary == "expedition")
+savedPlan.cities[1].project = { kind = "unit", id = "scout", progress = 7 }
+assert(assert(Migration.load(savedPlan)).cities[1].project.progress == 7)
 for _, breakSave in ipairs({
+	function(s)
+		s.version = -1
+	end,
+	function(s)
+		s.cities[1].project = { kind = "building", id = "farm" }
+	end,
+	function(s)
+		s.cities[1].project = { kind = "unknown", id = "scout" }
+	end,
 	function(s)
 		s.score = math.huge
 	end,

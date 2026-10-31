@@ -215,7 +215,7 @@ for _, version in ipairs({ false, "p1" }) do
 	state.units =
 		{ { id = 10, owner = 0, kind = "warrior", x = 9, y = 12, hp = 40, healing = true } }
 	C.round(state, S)
-	assert(state.units[1].hp == 40, "Original/P1 keep territory-only passive healing")
+	assert(state.units[1].hp == 50, "Historical IDs migrate to current neutral rest recovery")
 end
 state = fixture("balance1")
 state.diplomacy.wars = { { a = 0, b = 1, active = true } }

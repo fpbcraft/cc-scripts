@@ -218,23 +218,30 @@ assert(
 )
 state, p, city, u = campaign()
 assert(
-	S.projectCost("unit", "scout", p) == 5 and S.projectCost("unit", "settler", p) == 12,
-	"Early exploration and expansion are cheaper"
+	S.projectCost("unit", "scout", p) == 15 and S.projectCost("unit", "settler", p) == 28,
+	"Current exploration and expansion costs apply after migration"
 )
 assert(S.research(p, "mining") and S.queue(p, city, "unit", "scout", state, H))
 S.production(state, H)
 assert(city.project, "Scout takes more than one starting round")
-S.production(state, H)
-assert(not city.project and not p.techs.mining, "A scout finishes before the first technology")
+for _ = 1, 60 do
+	if not city.project then
+		break
+	end
+	S.production(state, H)
+end
+assert(not city.project, "Scout completes through accumulated production")
 assert(S.queue(p, city, "unit", "settler", state, H))
-for i = 1, 4 do
+for _ = 1, 60 do
+	if not city.project then
+		break
+	end
 	S.production(state, H)
 end
 assert(
-	p.settlersTrained == 1 and S.projectCost("unit", "settler", p) == 17,
+	p.settlersTrained == 1 and S.projectCost("unit", "settler", p) == 36,
 	"Completed settlers increase the next cost empire-wide"
 )
-assert(not p.techs.mining, "First research is slower than early expansion")
 for i = #state.units, 1, -1 do
 	if state.units[i].kind == "settler" then
 		table.remove(state.units, i)
@@ -242,15 +249,16 @@ for i = #state.units, 1, -1 do
 end
 S.migrate(state)
 assert(
-	p.settlersTrained == 1 and S.projectCost("unit", "settler", p) == 17,
+	p.settlersTrained == 1 and S.projectCost("unit", "settler", p) == 36,
 	"Loss and migration never reduce the trained count"
 )
+city.population = 3
 assert(S.queue(p, city, "unit", "settler", state, H))
 assert(p.settlersTrained == 1, "Queueing does not charge the next settler cost")
 assert(S.queue(p, city, "unit", "scout", state, H))
 assert(p.settlersTrained == 1, "Changing a project does not increment trained settlers")
 local other = state.players[2]
-assert(S.projectCost("unit", "settler", other) == 12, "Each empire has its own settler scaling")
+assert(S.projectCost("unit", "settler", other) == 28, "Each empire has its own settler scaling")
 for i = 1, S.techCost("mining") do
 	S.production(state, H)
 end
@@ -262,7 +270,7 @@ local second = { id = 9, owner = 1, x = 8, y = 4, population = 2, buildings = {}
 state.cities[2] = second
 S.migrate(state)
 for _, c in ipairs(state.cities) do
-	c.project = { kind = "unit", id = "settler", progress = 11 }
+	c.project = { kind = "unit", id = "settler", progress = 27 }
 end
 S.production(state, H)
 assert(

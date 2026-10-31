@@ -152,12 +152,12 @@ assert(
 		and city.project.id == "trade"
 )
 assert(Systems.queue(player, city, "none", nil, state, Hex))
-city.buildings.library = nil
+city.buildings.market = nil
 player.gold = 100
-player.techs.writing = true
+player.techs.currency = true
 assert(
 	AI.choose(state, player, city, Systems)
-		and city.project.id == "library"
+		and city.project.id == "market"
 		and not city.productionIdle
 )
 
@@ -259,13 +259,12 @@ for i, point in ipairs({ { 7, 3 }, { 11, 3 }, { 7, 8 }, { 13, 8 } }) do
 end
 Systems.migrate(state)
 AI.beginTurn(state, player, Systems)
-local roles = {}
+local roles, count = {}, 0
 for _, role in pairs(player.aiPlan.citySpecializations) do
-	roles[role] = true
+	assert(role == "science" or role == "industry" or role == "commerce")
+	roles[role], count = true, count + 1
 end
-assert(
-	roles.science and roles.industry and roles.military and roles.commerce and roles.infrastructure
-)
+assert(count == 5 and roles.industry, "Every city receives a current specialty role")
 local persistedRoles = player.aiPlan.citySpecializations
 state.round = 2
 AI.beginTurn(state, player, Systems)

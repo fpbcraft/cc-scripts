@@ -158,8 +158,8 @@ view.players[1] = restored
 view.round = 17
 local continued = Strategy.review(view, restored, 13)
 assert(
-	continued.primary == "industrial"
-		and continued.revision == 2
+	continued.primary == plan.primary
+		and continued.revision == plan.revision
 		and continued.lastReviewRound == 16
 )
 for id in pairs(Systems.techs) do

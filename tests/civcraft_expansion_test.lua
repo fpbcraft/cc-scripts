@@ -191,7 +191,9 @@ for _, d in ipairs(H.reachable(state, engineer, 1, S)) do
 	end
 end
 assert(destination and destination.cost == 0.25)
--- Three connected station cities; loops cannot multiply bonuses; a break resets victory.
+-- Three current Freight sites support station cities; loops cannot multiply bonuses.
+p.techs.currency = true
+p.techs.bank = true
 local second = {
 	id = 3,
 	owner = 1,
@@ -229,6 +231,7 @@ for i, ownedCity in ipairs({ city, second, third }) do
 end
 state.nextSiteId = 24
 S.migrate(state)
+W.reveal(state, H, S)
 local net = R.network(state, p)
 assert(net[1].size == 3)
 a = S.centerYields(p, city, state)
@@ -414,9 +417,9 @@ S.migrate(state)
 S.migrate(state)
 W.migrate(state)
 assert(
-	state.ruleset == "legacy"
-		and state.roundLimit == 90
-		and state.hostileMode == "off"
+	state.ruleset == "create"
+		and state.roundLimit == 250
+		and state.hostileMode == "standard"
 		and state.spawners == nil
 		and state.world.tiles["12:7"] == original
 )

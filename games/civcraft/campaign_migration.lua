@@ -4,6 +4,8 @@ local World = dofile("/games/civcraft/world.lua")
 local Diplomacy = dofile("/games/civcraft/diplomacy.lua")
 local Hex = dofile("/games/civcraft/hex.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local Strategy = dofile("/games/civcraft/ai_strategy.lua")
+local Projects = dofile("/games/civcraft/civilian_projects.lua")
 local Migration = {}
 local function copy(value, active, copies)
 	if type(value) ~= "table" then
@@ -54,7 +56,8 @@ function Migration.load(saved)
 		assert(type(saved) == "table", "Invalid saved campaign")
 		local state = copy(saved, {}, {})
 		assert(
-			state.version == nil or integer(state.version) and state.version <= 6,
+			state.version == nil
+				or integer(state.version) and state.version >= 0 and state.version <= 6,
 			"Unsupported save version"
 		)
 		assert(
@@ -74,6 +77,18 @@ function Migration.load(saved)
 		for _, p in ipairs(state.players) do
 			assert(integer(p.id) and not players[p.id], "Invalid player ID")
 			players[p.id] = true
+			local plan = p.aiPlan
+			if
+				plan
+				and (
+					type(plan) ~= "table"
+					or plan.version ~= Strategy.version
+					or state.contentRules ~= ContentRules.current
+					or not ({ conquest = true, expedition = true, score = true })[plan.primary]
+				)
+			then
+				p.aiPlan = nil
+			end
 		end
 		for _, field in ipairs({ "cities", "units" }) do
 			for _, item in ipairs(state[field]) do
@@ -97,6 +112,23 @@ function Migration.load(saved)
 						item.buildings == nil or type(item.buildings) == "table",
 						"Invalid saved buildings"
 					)
+					if item.project then
+						local project = item.project
+						assert(type(project) == "table", "Invalid saved project")
+						local catalogs = {
+							unit = Systems.units,
+							building = Systems.buildings,
+							wonder = Systems.wonders,
+							project = Projects.definitions,
+						}
+						if project.kind ~= "site" then
+							local record = (catalogs[project.kind] or {})[project.id]
+							assert(
+								record and ContentRules.available(record),
+								"Unsupported saved project"
+							)
+						end
+					end
 					for building, built in pairs(item.buildings or {}) do
 						assert(
 							Systems.buildings[building] and type(built) == "boolean",
