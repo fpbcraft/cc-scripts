@@ -83,7 +83,7 @@ buildings, or hidden deposits.
 | Brass | No deposit; current effective Mixer consumes 1 copper + 1 zinc and adds 2 brass/round after Brassworking | 10 | Existing two-brass unit debit unchanged; M4 makes conversion selected | Existing paid exchange after Brassworking and market/village access |
 | Horses (compatibility) | Existing worldgen deposit: +1/round on owned tile, no tech gate | 10 | No current unit consumer; do not add one in M4 | No exchange; existing diplomacy trades remain |
 | Saltpeter (compatibility) | No current worldgen source; old saved value may exist | 10 | No current unit consumer; do not add one in M4 | No exchange; existing diplomacy trades remain |
-| Coal (new) | Proposed generated deposit, +1/round after `steampower`; placement biome and density remain an owner choice; reveal follows current visible/remembered deposit observation | 10 | Steam Plant burns 1/round when active | Paid exchange after Currency and `steampower`; owned deposit |
+| Coal (new) | Proposed generated deposit, +1/round after `steampower`; iron terrain eligibility (hill/mountain outside snowy_plains), relative placement weight 16 with total resource density unchanged; reveal follows current visible/remembered deposit observation | 10 | Steam Plant burns 1/round when active | Paid exchange after Currency and `steampower`; owned deposit |
 
 The M4 profile should append `horses`, `saltpeter`, and `coal` to
 `resourceOrder` so existing HUD and diplomacy selectors can show their stock
@@ -338,13 +338,14 @@ These are correctness/runtime cases, not balance experiments. Do not run
 tournaments, parameter sweeps, price tuning, comparative pacing studies, or
 calibration until the user explicitly resumes those studies.
 
-## Acceptance and remaining generation detail
+## Acceptance and coal placement
 
 The owner accepted the concrete stock caps, SU values, machine priorities and
 demand-driven Steam Plant coal rule as implementation baselines, not calibrated
-values. Coal is accepted as a new resource. The table deliberately leaves its
-biome eligibility and map density unspecified; settle that bounded generation
-detail before implementing placement rather than inventing an accepted value.
-Other independent M4 implementation tasks can proceed. Historical gameplay
+values. Coal is accepted as a new resource. The owner additionally selected iron terrain eligibility (hill/mountain
+elevation outside snowy_plains), relative placement weight 16, and unchanged
+total world resource density. This resolves the table's previously unspecified
+placement detail. All M4 implementation tasks may proceed when their code
+dependencies are satisfied. Historical gameplay
 compatibility requirements are superseded by ADR-0039; migration validation,
 privacy, conservation, useful unpowered basics and the End bridge still apply.
