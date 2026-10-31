@@ -77,6 +77,14 @@ function Migration.load(saved)
 		for _, p in ipairs(state.players) do
 			assert(integer(p.id) and not players[p.id], "Invalid player ID")
 			players[p.id] = true
+			assert(
+				p.gold == nil
+					or type(p.gold) == "number"
+						and p.gold >= 0
+						and p.gold == p.gold
+						and p.gold < math.huge,
+				"Invalid saved treasury"
+			)
 			local plan = p.aiPlan
 			if
 				plan

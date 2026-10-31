@@ -73,6 +73,12 @@ savedPlan.cities[1].project = { kind = "unit", id = "scout", progress = 7 }
 assert(assert(Migration.load(savedPlan)).cities[1].project.progress == 7)
 for _, breakSave in ipairs({
 	function(s)
+		s.players[1].gold = "bad"
+	end,
+	function(s)
+		s.players[1].gold = -1
+	end,
+	function(s)
 		s.version = -1
 	end,
 	function(s)

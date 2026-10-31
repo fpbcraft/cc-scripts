@@ -139,6 +139,13 @@ sender.stockpile.coal, sender.techs.steampower = 0, nil
 assert(
 	not Economy.exchange(state, sender, "coal") and sender.gold == 80 and sender.stockpile.coal == 0
 )
+for _, invalid in ipairs({ -1, "bad", false, math.huge, 0 / 0 }) do
+	state, sender = fixture()
+	sender.gold = invalid
+	assert(not Economy.exchange(state, sender, "coal"), "Malformed treasury cannot buy materials")
+	assert(sender.stockpile.coal == 0)
+end
+
 print(
 	"CIVCRAFT: atomic capped imports, same-resource swaps, stale offers and private AI capacity passed"
 )

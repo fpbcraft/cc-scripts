@@ -110,6 +110,10 @@ function E.rates(p, state, owned)
 	return E.plan(p, state, owned).rates
 end
 function E.exchange(state, p, resource)
+	local gold = p.gold == nil and 0 or p.gold
+	if type(gold) ~= "number" or gold ~= gold or gold < 0 or gold == math.huge then
+		return false, "Invalid treasury"
+	end
 	if CouncilRules.embargoed(state, p.id) then
 		return false, "Council embargo prevents material exchange"
 	end

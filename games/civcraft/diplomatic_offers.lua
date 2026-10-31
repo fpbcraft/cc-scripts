@@ -247,7 +247,8 @@ local function tradePlan(sender, recipient, terms)
 			return nil, "Invalid trade amount"
 		end
 	end
-	local a, b = sender.gold or 0, recipient.gold or 0
+	local a = sender.gold == nil and 0 or sender.gold
+	local b = recipient.gold == nil and 0 or recipient.gold
 	for _, amount in ipairs({ a, b }) do
 		if type(amount) ~= "number" or amount ~= amount or amount < 0 or amount == math.huge then
 			return nil, "Invalid treasury"
