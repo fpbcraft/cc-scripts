@@ -13,7 +13,7 @@ local function fixture(count, seed)
 	assert(state.contentRules == "balance5" and state.roundLimit == 250)
 	state.mapSeed, state.mapSize, state.hostileMode, state.mapWrapX = seed, "compact", "off", true
 	for id = 1, count do
-		state.players[id] = { id = id, ai = false, ready = false }
+		state.players[id] = { id = id, name = "PLAYER " .. id, ai = false, ready = false }
 	end
 	Lifecycle.initialize(state)
 	return state
