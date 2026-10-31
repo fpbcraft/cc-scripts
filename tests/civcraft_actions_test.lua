@@ -194,7 +194,7 @@ assert(u.hp == 70)
 u.x = 15
 u.y = 9
 C.round(state, S)
-assert(u.hp == 75)
+assert(u.hp == 80, "Foreign territory without an active war uses neutral recovery")
 local healerKind
 for kind, stats in pairs(S.units) do
 	if stats.healer then
@@ -203,14 +203,16 @@ for kind, stats in pairs(S.units) do
 	end
 end
 assert(healerKind)
+u.hp = 60
 state.units[2] = { id = 4, owner = 1, kind = healerKind, x = 14, y = 9, hp = 100 }
 C.round(state, S)
-assert(u.hp == 90, "Enemy rest5 plus support10 applies outside owned territory")
+assert(u.hp == 80, "Neutral rest10 plus support10 applies outside owned territory")
 u.x, u.y = 3, 4
 state.units[2].x, state.units[2].y = 4, 4
+u.hp = 70
 u.actedThisRound, u.healing = true, false
 C.round(state, S)
-assert(u.hp == 90, "An acting unit receives neither rest nor support")
+assert(u.hp == 70, "An acting unit receives neither rest nor support")
 for kind, stats in pairs(S.units) do
 	if stats.healer then
 		for _, position in ipairs({ { 7, 4 }, { 15, 9 }, { 3, 4 } }) do
