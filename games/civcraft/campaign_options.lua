@@ -1,7 +1,6 @@
 local Panels = dofile("/games/civcraft/panels.lua")
 local Rules = dofile("/games/civcraft/campaign_rules.lua")
 local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
-local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Options = {}
 local names = {
 	diplomatic = "DIPLOMATIC",
@@ -31,16 +30,7 @@ function Options.draw(ui, state)
 			},
 		},
 		{ text = (state.roundLimit or 180) .. " ROUND LIMIT" },
-		{
-			buttons = {
-				{
-					label = "ECONOMY " .. ContentRules.label(state),
-					run = function()
-						ui:command("contentRules")
-					end,
-				},
-			},
-		},
+		{ text = "RULESET SPECIALIZATION V5" },
 	}
 	if state.phase == "lobby" then
 		rows[#rows + 1] = {

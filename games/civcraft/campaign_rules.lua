@@ -71,36 +71,7 @@ function Rules.configure(state, id, request)
 		return false, "Host only"
 	end
 	if request.action == "contentRules" then
-		local version = request.version
-		if version == nil then
-			version = state.contentRules == "p1" and "balance1"
-				or state.contentRules == "balance1" and "balance2"
-				or state.contentRules == "balance2" and "balance3"
-				or state.contentRules == "balance3" and "balance4"
-				or state.contentRules == "balance4" and "balance5"
-				or state.contentRules == "balance5" and "baseline"
-				or "p1"
-		end
-		if
-			version ~= "baseline"
-			and version ~= "p1"
-			and version ~= "balance1"
-			and version ~= "balance2"
-			and version ~= "balance3"
-			and version ~= "balance4"
-			and version ~= "balance5"
-		then
-			return false, "Unknown content economy"
-		end
-		if ContentRules.isRedesign({ contentRules = version }) and state.ruleset == "legacy" then
-			return false, "Start a new campaign to use Redesign V1"
-		end
-		state.contentRules = version ~= "baseline" and version or nil
-		state.roundLimit = Rules.rounds(state)
-		for _, player in ipairs(state.players) do
-			player.contentRules = state.contentRules
-		end
-		return true, ContentRules.label(state)
+		return false, "Specialization V5 is the current ruleset and cannot be changed"
 	end
 	if request.action == "gameSpeed" then
 		local nextSpeed = request.speed
