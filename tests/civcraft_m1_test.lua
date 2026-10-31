@@ -62,10 +62,10 @@ local function fixture(version)
 	return state, state.players[1], state.cities[1]
 end
 local state, p, city = fixture("balance1")
-assert(state.roundLimit == 250 and p.contentRules == "balance1")
-assert(CR.usesP1Economy(state) and not CR.isP1(state))
-assert(S.projectCost("unit", "scout", p) == 15 and S.projectCost("unit", "settler", p) == 40)
-assert(S.canBuild(p, city, "farm", state))
+assert(state.roundLimit == 250 and p.contentRules == "balance5")
+assert(CR.usesP1Economy(state) and CR.hasSpecialties(state))
+assert(S.projectCost("unit", "scout", p) == 15 and S.projectCost("unit", "settler", p) == 28)
+assert(not S.canBuild(p, city, "farm", state))
 city.buildings.library = true
 assert(S.canProject(p, city, "ponder"))
 p.techs.commerce = true
@@ -102,7 +102,7 @@ local old = fixture("p1")
 old.gameSpeed = "quick"
 old.roundLimit = nil
 S.migrate(old)
-assert(old.roundLimit == 180, "Old saves without deadlines retain their historic fallback")
+assert(old.roundLimit == 167, "Old saves normalize to the current selected-speed deadline")
 -- Removed routes cannot terminate a new campaign, even with injected old progress.
 p.industryTurns = 999
 p.techs.commerce = true
@@ -127,13 +127,13 @@ assert(state.victoryReason == "CONQUEST")
 state, p = fixture("p1")
 p.industryTurns = 999
 V.check(state, false)
-assert(state.victoryReason == "INDUSTRIAL")
+assert(state.phase == "game", "Old profile IDs cannot enable retired Industrial victory")
 state, p, city = fixture("p1")
 p.techs.commerce = true
 city.buildings.councilhall = true
 state.council = { victory = { id = 0, round = 1 } }
 V.check(state, false)
-assert(state.victoryReason == "DIPLOMATIC")
+assert(state.phase == "game", "Old profile IDs cannot enable retired Diplomatic victory")
 -- Each territory class, with no support, one/two supporters, action use, and HP caps.
 local checks = 0
 for _, territory in ipairs({ "owned", "neutral", "friendly", "enemy" }) do

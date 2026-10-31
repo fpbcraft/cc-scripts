@@ -139,14 +139,19 @@ end
 state.cities[2] = { id = 2, owner = 1, x = 8, y = 5, population = 2, buildings = {} }
 state.cities[3] = { id = 3, owner = 1, x = 13, y = 5, population = 2, buildings = {} }
 Systems.migrate(state)
--- No positive military or expansion demand: preserve deliberate idle, then resume for a new need.
+-- Current civilian fallback recovers scarce funds, then resumes construction for a new need.
 for i = 1, 6 do
 	state.units[i] = { id = i + 2, owner = 1, kind = "diamondguard", x = 10 + i % 5, y = 9 }
 end
 state.units[7] = { id = 12, owner = 1, kind = "scout", x = 12, y = 10 }
 player.gold = 0
 city.productionIdle = true
-assert(not AI.choose(state, player, city, Systems))
+assert(
+	AI.choose(state, player, city, Systems)
+		and city.project.kind == "project"
+		and city.project.id == "trade"
+)
+assert(Systems.queue(player, city, "none", nil, state, Hex))
 city.buildings.library = nil
 player.techs.writing = true
 assert(

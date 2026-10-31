@@ -181,20 +181,20 @@ local geography = copy(state.world)
 S.migrate(state)
 assert(u.movesLeft == 2 and city.productionIdle and city.projectProgress["unit:scout"] == 3)
 assert(equal(geography, state.world), "Rules migration rerolled the saved world")
--- Passive healing requires owned territory; healer support does not.
+-- Current rest recovery: neutral10, owned20, enemy5; acting units do not heal.
 state, u = fixture()
 u.hp = 40
 u.healing = true
 C.round(state, S)
-assert(u.hp == 40)
+assert(u.hp == 50)
 u.x = 3
 u.y = 4
 C.round(state, S)
-assert(u.hp == 60)
+assert(u.hp == 70)
 u.x = 15
 u.y = 9
 C.round(state, S)
-assert(u.hp == 60)
+assert(u.hp == 75)
 local healerKind
 for kind, stats in pairs(S.units) do
 	if stats.healer then
@@ -205,12 +205,12 @@ end
 assert(healerKind)
 state.units[2] = { id = 4, owner = 1, kind = healerKind, x = 14, y = 9, hp = 100 }
 C.round(state, S)
-assert(u.hp == 70, "Support healing works outside owned territory")
+assert(u.hp == 90, "Enemy rest5 plus support10 applies outside owned territory")
 u.x, u.y = 3, 4
 state.units[2].x, state.units[2].y = 4, 4
 u.actedThisRound, u.healing = true, false
 C.round(state, S)
-assert(u.hp == 80, "Support healing also works inside owned land")
+assert(u.hp == 90, "An acting unit receives neither rest nor support")
 for kind, stats in pairs(S.units) do
 	if stats.healer then
 		for _, position in ipairs({ { 7, 4 }, { 15, 9 }, { 3, 4 } }) do

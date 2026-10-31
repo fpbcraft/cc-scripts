@@ -90,10 +90,13 @@ assert(plan.reviewReason == "decisiveTechnology")
 view.players[2].industryTurns = 7
 view.round = 15
 Strategy.review(view, player, 13)
-assert(plan.reviewReason == "rivalVictory" and plan.emergency == "contestVictory")
+assert(
+	plan.reviewReason ~= "rivalVictory" and plan.emergency ~= "contestVictory",
+	"Retired Industrial progress cannot create a victory alarm"
+)
 view.round = 16
 Strategy.review(view, player, 13)
-assert(plan.lastReviewRound == 15, "An unchanged public warning does not force repeated reviews")
+assert(plan.lastReviewRound == 14, "Retired progress does not force repeated reviews")
 Strategy.signal(player, "newWar")
 Strategy.review(view, player, 13)
 assert(plan.reviewReason == "newWar" and player.strategySignal == nil)

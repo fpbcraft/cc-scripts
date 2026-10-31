@@ -162,6 +162,7 @@ assert(not C.attack(state, u, { x = 5, y = 3, cost = 1 }, S), "One attack per ro
 u.healing = true
 local hp = u.hp
 state.round = 2
+u.actedThisRound = false
 C.round(state, S)
 assert(u.hp > hp and u.hp <= 100, "Fortified units heal")
 local town = { id = 2, owner = 2, x = 8, y = 3, population = 4, buildings = { walls = true } }

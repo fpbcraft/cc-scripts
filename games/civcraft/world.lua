@@ -16,13 +16,6 @@ local Works = dofile("/games/civcraft/tile_improvements.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local W = {}
 W.sizes = {
-	compact = { 24, 16 },
-	standard = { 40, 26 },
-	large = { 56, 36 },
-	huge = { 72, 46 },
-	vast = { 96, 60 },
-}
-W.expandedSizes = {
 	compact = { 32, 22 },
 	standard = { 56, 36 },
 	large = { 72, 46 },
@@ -32,9 +25,10 @@ W.expandedSizes = {
 		76,
 	},
 }
-function W.dimensions(size, context)
-	local sizes = ContentRules.startsWithSettler(context) and W.expandedSizes or W.sizes
-	return sizes[size] or sizes.standard
+-- Compatibility name; there is only one current preset catalog.
+W.expandedSizes = W.sizes
+function W.dimensions(size)
+	return W.sizes[size] or W.sizes.standard
 end
 W.sizeOrder = { "compact", "standard", "large", "huge", "vast" }
 W.types = { "continents", "archipelago", "pangaea", "highlands" }

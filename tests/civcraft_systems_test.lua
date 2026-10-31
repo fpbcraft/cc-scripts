@@ -86,14 +86,17 @@ for i = 1, S.techCost("writing") do
 	S.production(state, H)
 end
 assert(p.techs.writing, "Prerequisite tech completed over turns")
-assert(S.build(p, city, "farm", state, H))
-assert(not city.buildings.farm, "Buildings must enter a production project")
+assert(S.build(p, city, "library", state, H))
+assert(not city.buildings.library, "Buildings must enter a production project")
 local beforeWood = p.wood
-assert(city.project.kind == "building" and city.project.id == "farm")
-for i = 1, 6 do
+assert(city.project.kind == "building" and city.project.id == "library")
+for _ = 1, S.projectCost("building", "library", p) do
+	if not city.project then
+		break
+	end
 	S.production(state, H)
 end
-assert(city.buildings.farm and not city.project, "Building finishes on turn boundary")
+assert(city.buildings.library and not city.project, "Building finishes on turn boundary")
 assert(p.wood >= beforeWood, "No instant building purchase")
 assert(not S.canRecruit(p, "horseman", state, H), "Units require technology")
 assert(S.research(p, "husbandry"))

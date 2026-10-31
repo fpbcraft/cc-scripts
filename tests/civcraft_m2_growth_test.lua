@@ -63,7 +63,7 @@ c.buildings = { farm = true }
 c.population = 3
 c.jobs.food = 3
 local g = S.growth(p, c, state)
-assert(g.surplus == 2 and g.foodGain == 1 and g.minimumTurns == 8 and g.capacity == 4)
+assert(g.surplus == 1 and g.foodGain == 0.5 and g.minimumTurns == 8 and g.capacity == 4)
 c.foodStore = 100
 c.growthAge = 0
 assert(S.growth(p, c, state).turns == 8, "Stored food must not bypass capacity's minimum time")

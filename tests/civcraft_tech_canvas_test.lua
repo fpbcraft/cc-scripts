@@ -140,15 +140,16 @@ for _, mode in ipairs({ "text", "graphics" }) do
 		compact.sidebarBounds and compact.dragMode == "graph" and not compact.detail,
 		"Sidebar and connected graph remain visible together"
 	)
+	compact.selected = "writing"
 	local found = false
 	for offset = 0, compact.pageMax do
 		compact.offset = offset
 		redraw()
 		for _, button in ipairs(buttons) do
-			if button.label == "CODEX WHEAT FARM" then
+			if button.label == "CODEX LIBRARY" then
 				button.fn()
 				assert(
-					picked == "buildings:farm",
+					picked == "buildings:library",
 					"Unlock link opens the corresponding Codex entry"
 				)
 				found = true

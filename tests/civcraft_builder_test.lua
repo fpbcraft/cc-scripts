@@ -208,7 +208,13 @@ u.charges = 0
 assert(not A.apply(state, 0, intentRequest, S) and not u.autoWork)
 u.charges = 3
 state.contentRules = "baseline"
-assert(not A.apply(state, 0, intentRequest, S) and not u.autoWork)
+assert(
+	A.apply(state, 0, intentRequest, S) and u.autoWork,
+	"Old labels cannot disable current auto work"
+)
+assert(
+	A.apply(state, 0, { action = "autoWork", unitID = u.id, x = u.x, y = u.y, value = "stop" }, S)
+)
 state.contentRules = "balance3"
 u.moved, u.movesLeft = true, 0
 assert(A.apply(state, 0, { action = "autoWork", unitID = u.id, x = u.x, y = u.y, value = true }, S))

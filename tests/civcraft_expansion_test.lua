@@ -109,6 +109,9 @@ assert(p.stockpile.diamond == 0)
 p.techs.deepmining = true
 S.production(state, H)
 assert(p.stockpile.diamond == 1 and p.stockpile.copper == 1)
+p.techs.engineering = true
+city.sites = { works = { id = 1, kind = "works", x = 4, y = 4 } }
+state.nextSiteId = 2
 p.techs.heatedmixing = true
 p.techs.brassworking = true
 assert(not S.canBuild(p, city, "mixer", state))
