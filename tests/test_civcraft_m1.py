@@ -18,7 +18,7 @@ class M1Tests(unittest.TestCase):
         runtime=fixture()
         rules=runtime.lua.globals().dofile('/games/civcraft/campaign_rules.lua')
         view=runtime.observe(0)
-        self.assertEqual(view['contentRules'],'balance1')
+        self.assertEqual(view['contentRules'],'balance5')
         self.assertEqual(view['roundLimit'],250)
         self.assertFalse(rules.enabled(runtime.state,'industrial'))
         self.assertFalse(rules.enabled(runtime.state,'diplomatic'))
@@ -26,7 +26,7 @@ class M1Tests(unittest.TestCase):
         for p in runtime.state.players.values():
             self.assertNotIn(p.aiPlan.primary,('industrial','diplomatic'))
 
-    def test_old_profile_restoration_does_not_select_new_rules(self):
+    def test_old_profile_restoration_uses_current_rules(self):
         original=fixture(version='p1')
         original.pump()
         payload=original.canonical_state()
@@ -34,8 +34,8 @@ class M1Tests(unittest.TestCase):
         resumed.restore(payload)
         systems=resumed.lua.globals().dofile('/games/civcraft/systems.lua')
         resumed.call(systems.migrate,resumed.state)
-        self.assertEqual(resumed.state.contentRules,'p1')
-        self.assertEqual(resumed.state.roundLimit,180)
+        self.assertEqual(resumed.state.contentRules,'balance5')
+        self.assertEqual(resumed.state.roundLimit,250)
         original.advance()
         resumed.advance()
         self.assertEqual(original.state_hash(),resumed.state_hash())

@@ -29,6 +29,13 @@ local function fixture()
 		units = {},
 	}
 end
+local fresh = Lifecycle.newLobby("fresh-treasury")
+fresh.players = { { id = 0, civ = "forge" }, { id = 1, civ = "scholar" } }
+Lifecycle.initialize(fresh)
+assert(
+	fresh.players[1].gold == 20 and fresh.players[2].gold == 20,
+	"Fresh campaigns explicitly initialize treasury before save migration"
+)
 for _, old in ipairs({
 	false,
 	"baseline",

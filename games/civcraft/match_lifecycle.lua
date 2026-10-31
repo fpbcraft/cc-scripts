@@ -114,6 +114,7 @@ function Lifecycle.initialize(state)
 			state.nextId = state.nextId + 1
 			addUnit(state, p.id, x + ((x < state.world.width / 2) and 1 or -1), y, "warrior")
 		end
+		p.gold = 20
 		p.food = 12
 		p.wood = 12
 		p.science = 0
