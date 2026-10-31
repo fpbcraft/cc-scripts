@@ -150,6 +150,7 @@ P.packages.civcraft = {
 		"command_queue.lua",
 		"combat_strength.lua",
 		"events.lua",
+		"resource_stock.lua",
 		"faction_colors.lua",
 		"snapshots.lua",
 		"unit_movement.lua",
