@@ -551,6 +551,9 @@ function Sites.advance(state, p, city, industry)
 			for id, kind in pairs(Sites.families) do
 				if kind == original.kind then
 					city.buildings[id] = nil
+					if city.machines then
+						city.machines[id] = nil
+					end
 					if city.projectProgress then
 						city.projectProgress["building:" .. id] = nil
 					end

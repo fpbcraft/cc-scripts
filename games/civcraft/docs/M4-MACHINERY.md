@@ -352,6 +352,18 @@ privacy, conservation, useful unpowered basics and the End bridge still apply.
 
 ## Shared material reservation backend
 
+### Intermediate machinery-configuration boundary
+
+The machinery-configuration slice persists a per-city recipe, priority and
+enabled choice for completed machine buildings. The Mixer starts with
+`no_recipe`; other machines use the accepted default catalog. These choices
+survive temporary site or operation pauses. `machineStatus` is derived and is
+discarded during migration. This slice does not resolve SU, consume fuel,
+activate operating effects, or change the existing reservation adapter's brass
+conversion. It does not add a second brass output path. The later integrated
+operation rules will connect selected recipes to the shared reservation plan;
+UI, AI-driven selection and default activation remain separate work.
+
 `resource_reservations.lua` operates on a copied post-extraction stock snapshot.
 `begin` creates an ephemeral session, `reserve` accepts authoritative operation
 input/output descriptors in ascending priority, city ID and building ID order,
