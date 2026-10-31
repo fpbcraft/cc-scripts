@@ -264,7 +264,11 @@ function H.ledger(ui, rect, player)
 				rows[#rows + 1] =
 					{ text = "CAP: " .. overflow .. " " .. kind:upper() .. " LOST/TURN" }
 			end
-			if kind ~= "horses" and kind ~= "saltpeter" then
+			if
+				kind ~= "horses"
+				and kind ~= "saltpeter"
+				and ((player.stockpile or {})[kind] or 0) < Stock.caps[kind]
+			then
 				rows[#rows + 1] = {
 					buttons = {
 						{

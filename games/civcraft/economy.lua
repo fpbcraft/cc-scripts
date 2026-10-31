@@ -144,9 +144,17 @@ function E.exchange(state, p, resource)
 	if not market or (p.gold or 0) < price then
 		return false, "Need a trading hall or friendly village, and " .. price .. " gold"
 	end
-	E.stocks(p)
-	p.gold = p.gold - price
-	p.stockpile[resource] = p.stockpile[resource] + 1
+	local stock, reason = Stock.migrate(p.stockpile or {})
+	if not stock then
+		return false, reason
+	end
+	local plan
+	plan, reason = Stock.planOutput(stock, resource, 1)
+	if not plan then
+		return false, "Material is at its stock cap"
+	end
+	local result = assert(Stock.applyInflow(stock, plan))
+	p.gold, p.stockpile = p.gold - price, result
 	return true, "Traded " .. price .. " gold for 1 " .. resource
 end
 return E

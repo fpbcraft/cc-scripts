@@ -161,4 +161,53 @@ function Stock.debit(stock, costs)
 	return result
 end
 
+-- Plan both outgoing reservations before checking either recipient's room.
+function Stock.trade(first, second, giveResource, giveAmount, askResource, askAmount)
+	for _, amount in ipairs({ giveAmount, askAmount }) do
+		local valid, reason = validateAmount(amount, "trade amount")
+		if not valid then
+			return nil, reason
+		end
+	end
+	if giveAmount == nil or askAmount == nil then
+		return nil, "missing trade amount"
+	end
+	local firstCosts, secondCosts = {}, {}
+	if giveAmount > 0 then
+		if Stock.caps[giveResource] == nil then
+			return nil, "unknown offered resource"
+		end
+		firstCosts[giveResource] = giveAmount
+	end
+	if askAmount > 0 then
+		if Stock.caps[askResource] == nil then
+			return nil, "unknown requested resource"
+		end
+		secondCosts[askResource] = askAmount
+	end
+	local a, why = Stock.debit(first, firstCosts)
+	if not a then
+		return nil, why
+	end
+	local b
+	b, why = Stock.debit(second, secondCosts)
+	if not b then
+		return nil, why
+	end
+	for _, transfer in ipairs({
+		{ stock = b, resource = giveResource, amount = giveAmount },
+		{ stock = a, resource = askResource, amount = askAmount },
+	}) do
+		if transfer.amount > 0 then
+			local plan
+			plan, why = Stock.planOutput(transfer.stock, transfer.resource, transfer.amount)
+			if not plan then
+				return nil, "Recipient stock cap would be exceeded"
+			end
+			transfer.stock[transfer.resource] = plan.before + plan.accepted
+		end
+	end
+	return { first = a, second = b }
+end
+
 return Stock
