@@ -413,7 +413,8 @@ function M.economy(p, state)
 		end
 	end
 	local owned = World.territory(state, Hex)
-	result.strategic = Economy.rates(p, state, owned)
+	local materials = Economy.plan(p, state, owned)
+	result.strategic, result.resourceOverflow = materials.rates, materials.overflow
 	return result
 end
 function M.canBuild(p, c, id, state)
@@ -935,10 +936,9 @@ function M.production(state, hex)
 		end
 		p.researchProgress = p.researchProgress or {}
 		Economy.stocks(p)
-		local rates = Economy.rates(p, state, owned)
-		for id, rate in pairs(rates) do
-			p.stockpile[id] = p.stockpile[id] + rate
-		end
+		local materials = Economy.plan(p, state, owned)
+		p.stockpile = materials.stock
+		p.resourceOverflow = materials.overflow
 		local totalScience, projectGold = 0, 0
 		for _, c in ipairs(state.cities) do
 			if c.owner == p.id then

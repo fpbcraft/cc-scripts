@@ -1,5 +1,5 @@
 --[[
-	Version 5 generation adds bounded seeded variety to viable start sites and seats.
+	Version 6 adds coal deposits without changing total resource density.
 	Saved geography never depends on renderer or simulation random state.
 ]]
 local Biomes = dofile("/games/civcraft/biomes.lua")
@@ -12,7 +12,7 @@ local START_SEARCH_RADIUS = 4
 local START_COMPONENT_MINIMUM = START_LAND_TARGET * 3
 local DIFFICULT_LAND_LIMIT = 0.45
 
-local WorldGen = { version = 5 }
+local WorldGen = { version = 6 }
 local function key(x, y)
 	return x .. ":" .. y
 end
@@ -603,6 +603,7 @@ local resources = {
 	{ "timber", 24 },
 	{ "stone", 20 },
 	{ "iron", 16 },
+	{ "coal", 16 },
 	{ "copper", 12 },
 	{ "zinc", 12 },
 	{ "redstone", 5 },

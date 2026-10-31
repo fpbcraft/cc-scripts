@@ -109,7 +109,7 @@ end
 
 -- Fixed regression for the former polar-corner starts on the expanded map.
 local opening = W.generate(12345, "standard", 4, "continents", { contentRules = "balance4" })
-assert(opening.generationVersion == 5)
+assert(opening.generationVersion == 6)
 local function openingTiles(world, start, radius)
 	local count, snow = 0, 0
 	local reached = { [W.key(start.x, start.y)] = true }

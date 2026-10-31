@@ -253,7 +253,7 @@ tech(
 tech("commerce", "Stock Logistics", 5, { "brassworking", "currency" }, "stock exchange")
 tech("education", "Ponder Research", 5, { "precision", "philosophy" }, "Ponder hall")
 tech("shipcannons", "Dispenser Batteries", 5, { "shipbuilding", "redstone" }, "dispenser barge")
-tech("steampower", "Steam Power", 6, { "precision", "heatedmixing" }, "steam plant")
+tech("steampower", "Steam Power", 6, { "precision", "heatedmixing" }, "coal deposits / steam plant")
 tech(
 	"railways",
 	"Railways",
@@ -691,6 +691,7 @@ building(
 )
 building("grandacademy", "End Archive", "enlightenment", 90, { science = 6 }, { "observatory" })
 C.resources = {
+	coal = { tech = "steampower" },
 	iron = { tech = "bronze" },
 	copper = { tech = "deepmining" },
 	zinc = { tech = "deepmining" },
@@ -700,7 +701,8 @@ C.resources = {
 	horses = {},
 	saltpeter = {},
 }
-C.resourceOrder = { "iron", "copper", "zinc", "redstone", "diamond", "brass" }
+C.resourceOrder =
+	{ "iron", "copper", "zinc", "redstone", "diamond", "brass", "horses", "saltpeter", "coal" }
 C.naturalWonders = {
 	lushcavern = {
 		name = "LUSH CAVERN",

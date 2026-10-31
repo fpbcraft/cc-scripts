@@ -5,6 +5,7 @@ local Landmarks = dofile("/games/civcraft/landmarks.lua")
 local Villages = dofile("/games/civcraft/villages.lua")
 local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
+local Stock = dofile("/games/civcraft/resource_stock.lua")
 local E = {}
 function E.effects(city, state, systems)
 	local result = { food = 0, industry = 0, science = 0, gold = 0 }
@@ -61,7 +62,9 @@ function E.stocks(p)
 		p.stockpile[id] = p.stockpile[id] or 0
 	end
 end
-function E.rates(p, state, owned)
+function E.plan(p, state, owned)
+	local initial = assert(Stock.migrate(p.stockpile or {}))
+	local stock, overflow = assert(Stock.copy(initial)), {}
 	local rates = {}
 	for id in pairs(Content.resources) do
 		rates[id] = 0
@@ -76,26 +79,35 @@ function E.rates(p, state, owned)
 			rates[id] = rates[id] + 1
 		end
 	end
-	local copper = (p.stockpile or {}).copper or 0
-	local zinc = (p.stockpile or {}).zinc or 0
-	copper = copper + rates.copper
-	zinc = zinc + rates.zinc
+	for _, id in ipairs(Stock.order) do
+		local inflow = assert(Stock.planInflow(stock, id, rates[id] or 0))
+		stock = assert(Stock.applyInflow(stock, inflow))
+		overflow[id] = inflow.overflow
+	end
+	-- Preserve the current mixer conversion after capped extraction. M4's generic
+	-- TODO: #163 replaces this adapter with the generic recipe reservation planner.
 	for _, city in ipairs(state.cities or {}) do
 		if
 			city.owner == p.id
 			and Sites.effectiveBuilding(state, city, "mixer")
 			and p.techs.brassworking
-			and copper > 0
-			and zinc > 0
+			and stock.copper > 0
+			and stock.zinc > 0
 		then
-			copper = copper - 1
-			zinc = zinc - 1
-			rates.copper = rates.copper - 1
-			rates.zinc = rates.zinc - 1
-			rates.brass = rates.brass + 2
+			local output = Stock.planOutput(stock, "brass", 2)
+			if output then
+				stock = assert(Stock.debit(stock, { copper = 1, zinc = 1 }))
+				stock = assert(Stock.applyInflow(stock, output))
+			end
 		end
 	end
-	return rates
+	for _, id in ipairs(Stock.order) do
+		rates[id] = stock[id] - initial[id]
+	end
+	return { stock = stock, rates = rates, overflow = overflow }
+end
+function E.rates(p, state, owned)
+	return E.plan(p, state, owned).rates
 end
 function E.exchange(state, p, resource)
 	if CouncilRules.embargoed(state, p.id) then

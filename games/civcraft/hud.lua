@@ -6,6 +6,7 @@ local Panels = dofile("/games/civcraft/panels.lua")
 local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local Contacts = dofile("/games/civcraft/contacts.lua")
 local FactionColors = dofile("/games/civcraft/faction_colors.lua")
+local Stock = dofile("/games/civcraft/resource_stock.lua")
 local H = {}
 local function compact(value)
 	value = math.floor(value or 0)
@@ -254,21 +255,30 @@ function H.ledger(ui, rect, player)
 				text = kind:upper()
 					.. " "
 					.. ((player.stockpile or {})[kind] or 0)
+					.. "/"
+					.. Stock.caps[kind]
 					.. (change ~= 0 and " (" .. rate(change) .. "/TURN)" or ""),
 			}
-			rows[#rows + 1] = {
-				buttons = {
-					{
-						label = "TRADE "
-							.. CouncilRules.exchangeCost(ui.state)
-							.. " GOLD FOR 1 "
-							.. kind:upper(),
-						run = function()
-							ui:command("exchange", { resource = kind })
-						end,
+			local overflow = (e.resourceOverflow or {})[kind] or 0
+			if overflow > 0 then
+				rows[#rows + 1] =
+					{ text = "CAP: " .. overflow .. " " .. kind:upper() .. " LOST/TURN" }
+			end
+			if kind ~= "horses" and kind ~= "saltpeter" then
+				rows[#rows + 1] = {
+					buttons = {
+						{
+							label = "TRADE "
+								.. CouncilRules.exchangeCost(ui.state)
+								.. " GOLD FOR 1 "
+								.. kind:upper(),
+							run = function()
+								ui:command("exchange", { resource = kind })
+							end,
+						},
 					},
-				},
-			}
+				}
+			end
 		end
 	end
 	rows[#rows + 1] = { text = "AGE: " .. Systems.ages[Systems.age(player)].name }
