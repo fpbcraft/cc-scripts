@@ -12,6 +12,7 @@ on:
       - 'tests/test_civcraft_m1.py'
       - 'tests/test_civcraft_m2.py'
       - 'tests/test_civcraft_m3.py'
+      - 'tests/test_civcraft_m4.py'
       - 'tests/test_civcraft_opening.py'
       - '.github/workflows/civcraft-lab.yml'
   workflow_dispatch:
@@ -36,6 +37,7 @@ jobs:
           tests/test_civcraft_m1.py
           tests/test_civcraft_m2.py
           tests/test_civcraft_m3.py
+          tests/test_civcraft_m4.py
           tests/test_civcraft_opening.py
           games/civcraft/research/lab/test_proposal_interface.py
           games/civcraft/research/lab/test_coordinated_siege_policy.py

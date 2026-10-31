@@ -6,6 +6,7 @@ local Villages = dofile("/games/civcraft/villages.lua")
 local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Stock = dofile("/games/civcraft/resource_stock.lua")
+local Reservations = dofile("/games/civcraft/resource_reservations.lua")
 local E = {}
 function E.effects(city, state, systems)
 	local result = { food = 0, industry = 0, science = 0, gold = 0 }
@@ -84,27 +85,31 @@ function E.plan(p, state, owned)
 		stock = assert(Stock.applyInflow(stock, inflow))
 		overflow[id] = inflow.overflow
 	end
-	-- Preserve the current mixer conversion after capped extraction. M4's generic
-	-- TODO: #163 replaces this adapter with the generic recipe reservation planner.
+	-- This adapter retains the pre-activation mixer choice. #103 supplies selected
+	-- operations and local SU/fuel gates through this same reservation engine.
+	local operations = {}
 	for _, city in ipairs(state.cities or {}) do
 		if
 			city.owner == p.id
 			and Sites.effectiveBuilding(state, city, "mixer")
 			and p.techs.brassworking
-			and stock.copper > 0
-			and stock.zinc > 0
 		then
-			local output = Stock.planOutput(stock, "brass", 2)
-			if output then
-				stock = assert(Stock.debit(stock, { copper = 1, zinc = 1 }))
-				stock = assert(Stock.applyInflow(stock, output))
-			end
+			operations[#operations + 1] = {
+				owner = p.id,
+				cityID = city.id,
+				buildingID = "mixer",
+				priority = 3,
+				inputs = { copper = 1, zinc = 1 },
+				outputs = { brass = 2 },
+			}
 		end
 	end
+	local reservations = assert(Reservations.plan(stock, p.id, operations))
+	stock = reservations.stock
 	for _, id in ipairs(Stock.order) do
 		rates[id] = stock[id] - initial[id]
 	end
-	return { stock = stock, rates = rates, overflow = overflow }
+	return { stock = stock, rates = rates, overflow = overflow, reservations = reservations }
 end
 function E.rates(p, state, owned)
 	return E.plan(p, state, owned).rates

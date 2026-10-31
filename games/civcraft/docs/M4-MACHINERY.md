@@ -349,3 +349,21 @@ placement detail. All M4 implementation tasks may proceed when their code
 dependencies are satisfied. Historical gameplay
 compatibility requirements are superseded by ADR-0039; migration validation,
 privacy, conservation, useful unpowered basics and the End bridge still apply.
+
+## Shared material reservation backend
+
+`resource_reservations.lua` operates on a copied post-extraction stock snapshot.
+`begin` creates an ephemeral session, `reserve` accepts authoritative operation
+input/output descriptors in ascending priority, city ID and building ID order,
+and `result` returns detached stocks, reservations and pause reasons. `plan`
+validates and sorts a batch through the same incremental engine. Descriptors are
+internal rule outputs, not client-defined recipes. Inputs come only from the
+snapshot; reserved outputs never replenish them. Complete output room is checked
+before any debit, and paused operations reserve nothing.
+
+The economy forecast and production share this backend. The pre-activation
+mixer adapter still supplies its existing brass conversion descriptor; #103
+replaces that adapter's selection/gating with persisted choices and local SU/fuel
+checks through the same session API. #104–#106 provide controls and combined
+activation/native delivery. This backend alone does not activate the complete
+M4 machinery rules, add recipes, serialize derived status, or resume balance work.

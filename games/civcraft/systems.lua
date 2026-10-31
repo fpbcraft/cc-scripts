@@ -415,6 +415,7 @@ function M.economy(p, state)
 	local owned = World.territory(state, Hex)
 	local materials = Economy.plan(p, state, owned)
 	result.strategic, result.resourceOverflow = materials.rates, materials.overflow
+	result.resourcePlan = materials.reservations
 	return result
 end
 function M.canBuild(p, c, id, state)
