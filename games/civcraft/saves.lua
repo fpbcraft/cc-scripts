@@ -15,23 +15,24 @@ local function read(p)
 	end
 	local h = fs.open(p, "r")
 	if not h then
-		return nil
+		return nil, "Cannot read campaign " .. p
 	end
 	local ok, raw = pcall(h.readAll)
 	h.close()
 	if not ok or not raw then
-		return nil
+		return nil, "Cannot read campaign " .. p
 	end
 	local success, value = pcall(textutils.unserialize, raw)
 	if success and type(value) == "table" then
 		return value
 	end
-	return nil
+	return nil, "Invalid campaign data in " .. p
 end
+S.readFile = read
 function S.load(slot)
-	local state = read(path(slot))
-	if state then
-		return state
+	local destination = path(slot)
+	if fs.exists(destination) then
+		return read(destination)
 	end
 	if tonumber(slot) == 1 and not fs.exists(migrationMarker) then
 		return read(S.root .. "/local-save.dat")
@@ -40,16 +41,19 @@ end
 function S.list()
 	local out = {}
 	for slot = 1, S.count do
-		local game = S.load(slot)
+		local game, reason = S.load(slot)
 		if game then
+			local world = type(game.world) == "table" and game.world or {}
 			out[slot] = {
 				occupied = true,
-				name = game.name or ("CAMPAIGN " .. slot),
-				seed = game.world and game.world.seed or 0,
-				size = game.world and game.world.size or "legacy",
-				round = game.round or 1,
-				phase = game.phase or "lobby",
+				name = type(game.name) == "string" and game.name or ("CAMPAIGN " .. slot),
+				seed = type(world.seed) == "number" and world.seed or 0,
+				size = type(world.size) == "string" and world.size or "unknown",
+				round = type(game.round) == "number" and game.round or 1,
+				phase = type(game.phase) == "string" and game.phase or "unknown",
 			}
+		elseif reason then
+			out[slot] = { occupied = true, name = "RESET REQUIRED", error = reason }
 		else
 			out[slot] = { occupied = false, name = "EMPTY SLOT " .. slot }
 		end

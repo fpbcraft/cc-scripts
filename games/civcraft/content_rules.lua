@@ -1,25 +1,19 @@
 -- One current V5 ruleset. Historical IDs are accepted only as migration inputs.
-local Rules = {
-	baseline = "baseline",
-	current = "p1",
-	redesign = "balance1",
-	development = "balance2",
-	landwork = "balance3",
-	opening = "balance4",
-	specialization = "balance5",
-	default = "balance5",
+local Rules = { current = "balance5", default = "balance5" }
+local savedIDs = {
+	baseline = true,
+	p1 = true,
+	balance1 = true,
+	balance2 = true,
+	balance3 = true,
+	balance4 = true,
+	balance5 = true,
 }
 function Rules.migrateId(id)
-	if id == nil or id == Rules.baseline or id == Rules.current or id == Rules.redesign
-		or id == Rules.development or id == Rules.landwork or id == Rules.opening
-		or id == Rules.specialization
-	then
-		return Rules.specialization
+	if id == nil or savedIDs[id] then
+		return Rules.current
 	end
-	return nil, "Unsupported content economy: " .. tostring(id)
-end
-function Rules.isP1()
-	return true
+	return nil, "Unsupported saved ruleset: " .. tostring(id)
 end
 function Rules.isRedesign()
 	return true
@@ -36,46 +30,34 @@ end
 function Rules.hasSpecialties()
 	return true
 end
-function Rules.available(record, context)
-	if record.tileDevelopment and not Rules.hasBuilders(context) then
-		return false
-	end
-	if record.retiredByBuilders and Rules.hasBuilders(context) then
-		return false
-	end
-	return not record.development or Rules.hasDevelopment(context)
+function Rules.available(record)
+	return not record.retiredByBuilders
 end
-function Rules.usesP1Economy(context)
+function Rules.usesP1Economy()
 	return true
 end
-function Rules.label(context)
+function Rules.label()
 	return "SPECIALIZATION V5"
 end
-function Rules.ability(record, context)
+function Rules.ability(record)
 	if record.healer then
 		return "Adjacent owned resting allies recover +10 HP; no self-support or stacking. Acting allies do not recover."
 	end
 	return record.ability
 end
 function Rules.validate(id)
-	local migrated, reason = Rules.migrateId(id)
-	assert(migrated, reason)
+	assert(id == Rules.current, "Only the current ruleset is supported")
 end
-function Rules.unitCost(id, record, player)
-	local base, step =
-		record.production or math.ceil((record.wood or 8) * 2.5), record.productionStep or 0
-	if Rules.usesP1Economy(player) then
-		if id == "scout" then
-			base = 15
-		end
-		if id == "warrior" then
-			base = 20
-		end
-		if id == "settler" then
-			base, step =
-				Rules.hasDevelopment(player) and 28 or 40, Rules.hasDevelopment(player) and 8 or 12
-		end
+function Rules.unitCost(id, record)
+	if id == "scout" then
+		return 15, 0
 	end
-	return base, step
+	if id == "warrior" then
+		return 20, 0
+	end
+	if id == "settler" then
+		return 28, 8
+	end
+	return record.production or math.ceil((record.wood or 8) * 2.5), record.productionStep or 0
 end
 return Rules

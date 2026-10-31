@@ -195,6 +195,7 @@ P.packages.civcraft = {
 		"game_view.lua",
 		"research_details.lua",
 		"campaign_rules.lua",
+		"campaign_migration.lua",
 		"diplomacy.lua",
 		"diplomatic_memory.lua",
 		"diplomatic_offers.lua",

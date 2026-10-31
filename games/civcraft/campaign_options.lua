@@ -1,6 +1,7 @@
 local Panels = dofile("/games/civcraft/panels.lua")
 local Rules = dofile("/games/civcraft/campaign_rules.lua")
 local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
+local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Options = {}
 local names = {
 	diplomatic = "DIPLOMATIC",

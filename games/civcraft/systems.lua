@@ -225,25 +225,30 @@ end
 function M.migrate(state)
 	assert(type(state) == "table", "Invalid campaign save; delete/reset this save to continue")
 	local currentRules, rulesReason = ContentRules.migrateId(state.contentRules)
-	assert(currentRules, rulesReason .. ". Delete/reset this save to continue.")
-	assert(type(state.players or {}) == "table", "Invalid players; delete/reset this save to continue")
-	assert(type(state.cities or {}) == "table", "Invalid cities; delete/reset this save to continue")
+	assert(currentRules, tostring(rulesReason) .. ". Delete/reset this save to continue.")
+	assert(
+		type(state.players or {}) == "table",
+		"Invalid players; delete/reset this save to continue"
+	)
+	assert(
+		type(state.cities or {}) == "table",
+		"Invalid cities; delete/reset this save to continue"
+	)
 	assert(type(state.units or {}) == "table", "Invalid units; delete/reset this save to continue")
 	for _, player in ipairs(state.players or {}) do
 		if player.stockpile ~= nil then
 			local valid, reason = ResourceStock.validate(player.stockpile)
-			assert(valid, reason .. ". Delete/reset this save to continue.")
+			assert(valid, tostring(reason) .. ". Delete/reset this save to continue.")
 		end
 	end
 	state.contentRules = currentRules
-	state.ruleset = state.ruleset or "legacy"
+	assert(
+		state.ruleset == nil or state.ruleset == "legacy" or state.ruleset == "create",
+		"Unsupported ruleset; delete/reset this save to continue"
+	)
+	state.ruleset = "create"
 	state.gameSpeed = state.gameSpeed or "standard"
-	state.roundLimit = state.roundLimit
-		or (
-			state.ruleset == "create"
-				and (ContentRules.isRedesign(state) and CampaignRules.rounds(state) or 180)
-			or 90
-		)
+	state.roundLimit = CampaignRules.rounds(state)
 	state.hostileMode = state.hostileMode or (state.ruleset == "create" and "standard" or "off")
 	if state.world then
 		state.world.landmarks = state.world.landmarks or {}
@@ -297,13 +302,9 @@ function M.migrate(state)
 		p.science = p.science or 0
 		p.gold = p.gold or 20
 		p.researchProgress = p.researchProgress or {}
-		if p.stockpile then
-			local migrated, reason = ResourceStock.migrate(p.stockpile)
-			assert(migrated, reason .. ". Delete/reset this save to continue.")
-			p.stockpile = migrated
-		else
-			Economy.stocks(p)
-		end
+		local migrated, reason = ResourceStock.migrate(p.stockpile or {})
+		assert(migrated, tostring(reason) .. ". Delete/reset this save to continue.")
+		p.stockpile = migrated
 	end
 	for _, c in ipairs(state.cities or {}) do
 		M.nameCity(state, c)
@@ -327,7 +328,7 @@ function M.migrate(state)
 	Queue.migrate(state)
 	Sites.validate(state)
 	state.version = 6
-	state.resourceSchema = state.resourceSchema or 1
+	state.resourceSchema = 1
 	return state
 end
 function M.canResearch(p, id)
