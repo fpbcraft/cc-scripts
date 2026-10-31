@@ -1,0 +1,277 @@
+{
+  "issue": 75,
+  "sourceRevision": "3dc01d7d3bb51b421b92123565efd571385cf40c",
+  "hardware": {
+    "model": "Mac15,7",
+    "chip": "Apple M3 Pro",
+    "memoryBytes": 38654705664
+  },
+  "runs": [
+    {
+      "command": "python3 tests/run_civcraft_native_opening_observation.py",
+      "profileDirectory": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-opening-observation-gk9d9gbi",
+      "result": "PASS",
+      "metadata": {
+        "sourceRevision": "3dc01d7d3bb51b421b92123565efd571385cf40c",
+        "runtime": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+        "canvasWidth": 102,
+        "elapsedMillis": 172,
+        "seed": 319497,
+        "kind": "campaign_metadata",
+        "wrapX": true,
+        "width": 32,
+        "stage": "lobby",
+        "backend": "text",
+        "lua": "Lua 5.2",
+        "canvasHeight": 57,
+        "mapSize": "compact",
+        "profile": "balance5",
+        "players": 2,
+        "height": 22
+      },
+      "milestones": [
+        {
+          "detail": 2,
+          "elapsedMillis": 780,
+          "name": "expansion",
+          "stage": "opening",
+          "round": 8,
+          "kind": "milestone"
+        },
+        {
+          "detail": "crafting",
+          "elapsedMillis": 803,
+          "name": "firstResearch",
+          "stage": "opening",
+          "round": 9,
+          "kind": "milestone"
+        },
+        {
+          "detail": "housing",
+          "elapsedMillis": 1124,
+          "name": "firstBuild",
+          "stage": "opening",
+          "round": 13,
+          "kind": "milestone"
+        },
+        {
+          "detail": "ponder",
+          "elapsedMillis": 2740,
+          "name": "civilianOutput",
+          "stage": "opening",
+          "round": 26,
+          "kind": "milestone"
+        }
+      ],
+      "viewportAndMenu": [
+        {
+          "panX": 296,
+          "millis": 8,
+          "elapsedMillis": 217,
+          "kind": "viewport_result",
+          "stage": "zoom",
+          "panY": 77.5,
+          "before": {
+            "since": 1793401422963,
+            "panX": 296,
+            "panY": 53.5
+          }
+        },
+        {
+          "elapsedMillis": 271,
+          "tile": 16,
+          "stage": "zoom-result",
+          "zoom": 16,
+          "kind": "zoom_result"
+        },
+        {
+          "round": 6,
+          "note": "Queued during round resolution; observed paused frame and Resume control",
+          "millis": 217,
+          "stage": "opening",
+          "elapsedMillis": 551,
+          "kind": "menu_after_load"
+        }
+      ],
+      "traceSpans": {
+        "gc": {
+          "count": 72,
+          "medianMillis": 2.0,
+          "maxMillis": 3
+        },
+        "draw": {
+          "count": 102,
+          "medianMillis": 4.5,
+          "maxMillis": 170
+        },
+        "ai": {
+          "count": 26,
+          "medianMillis": 43.0,
+          "maxMillis": 124
+        },
+        "save": {
+          "count": 45,
+          "medianMillis": 11,
+          "maxMillis": 17
+        },
+        "round": {
+          "count": 25,
+          "medianMillis": 70,
+          "maxMillis": 160
+        }
+      },
+      "frames": {
+        "count": 102,
+        "medianMillis": 4.0,
+        "maxMillis": 18
+      },
+      "commandCallbacks": {
+        "count": 50,
+        "medianMillis": 35.0,
+        "maxMillis": 163
+      },
+      "artifactSha256": {
+        "opening-observation.jsonl": "1c75155bdac5438444ebf39f1220024865cedac284043b1bed139d6987c97bed",
+        "games/civcraft/data/debug.log": "0bd2de307e6490ab670a184e5501e2b31d3e58cc9cbdd03746b8ea0eff179487"
+      }
+    },
+    {
+      "command": "python3 tests/run_civcraft_native_opening_observation.py --gui --craftos /tmp/civcraft-hardware-runner",
+      "profileDirectory": "/var/folders/jc/y2kx8rr53mn1tk5s2n8ybv140000gp/T/civcraft-opening-observation-cwbiankf",
+      "result": "PASS",
+      "metadata": {
+        "elapsedMillis": 646,
+        "profile": "balance5",
+        "backend": "graphics",
+        "mapSize": "compact",
+        "lua": "Lua 5.2",
+        "players": 2,
+        "canvasHeight": 76,
+        "seed": 319497,
+        "height": 22,
+        "wrapX": true,
+        "sourceRevision": "3dc01d7d3bb51b421b92123565efd571385cf40c",
+        "kind": "campaign_metadata",
+        "runtime": "ComputerCraft 1.112.0 (CraftOS-PC v2.8.3)",
+        "stage": "lobby",
+        "canvasWidth": 153,
+        "width": 32
+      },
+      "milestones": [
+        {
+          "elapsedMillis": 1570,
+          "kind": "milestone",
+          "round": 8,
+          "stage": "opening",
+          "detail": 2,
+          "name": "expansion"
+        },
+        {
+          "elapsedMillis": 1607,
+          "kind": "milestone",
+          "round": 9,
+          "stage": "opening",
+          "detail": "crafting",
+          "name": "firstResearch"
+        },
+        {
+          "elapsedMillis": 2084,
+          "kind": "milestone",
+          "round": 13,
+          "stage": "opening",
+          "detail": "housing",
+          "name": "firstBuild"
+        },
+        {
+          "elapsedMillis": 4109,
+          "kind": "milestone",
+          "round": 26,
+          "stage": "opening",
+          "detail": "ponder",
+          "name": "civilianOutput"
+        }
+      ],
+      "viewportAndMenu": [
+        {
+          "elapsedMillis": 726,
+          "kind": "viewport_result",
+          "panY": 67,
+          "before": {
+            "since": 1793401416220,
+            "panX": 278.5,
+            "panY": 44
+          },
+          "stage": "zoom",
+          "millis": 21,
+          "panX": 275.5
+        },
+        {
+          "zoom": 16,
+          "kind": "zoom_result",
+          "stage": "zoom-result",
+          "tile": 16,
+          "elapsedMillis": 789
+        },
+        {
+          "elapsedMillis": 1232,
+          "kind": "menu_after_load",
+          "round": 6,
+          "stage": "opening",
+          "millis": 332,
+          "note": "Queued during round resolution; observed paused frame and Resume control"
+        }
+      ],
+      "traceSpans": {
+        "gc": {
+          "count": 100,
+          "medianMillis": 2.0,
+          "maxMillis": 4
+        },
+        "draw": {
+          "count": 90,
+          "medianMillis": 16.5,
+          "maxMillis": 219
+        },
+        "ai": {
+          "count": 26,
+          "medianMillis": 45.0,
+          "maxMillis": 149
+        },
+        "save": {
+          "count": 45,
+          "medianMillis": 11,
+          "maxMillis": 17
+        },
+        "round": {
+          "count": 25,
+          "medianMillis": 95,
+          "maxMillis": 205
+        }
+      },
+      "frames": {
+        "count": 90,
+        "medianMillis": 8.0,
+        "maxMillis": 23
+      },
+      "commandCallbacks": {
+        "count": 50,
+        "medianMillis": 55.0,
+        "maxMillis": 208
+      },
+      "artifactSha256": {
+        "opening-observation.jsonl": "81bcc1f54e7a27c8b36a3777f4e87a218a2e9de6a54b0c696b9d35b3588c51a4",
+        "games/civcraft/data/debug.log.previous": "e62ff25e7bce624ba1aa2972c2e41644905e585e674cf4e18c088de241336671",
+        "games/civcraft/data/debug.log": "be58fdcd49a79467f022c84c82857e7311af090b2c0c20020be35c0405231ee8"
+      }
+    }
+  ],
+  "limitations": [
+    "Two fixed-scenario observations, not latency distributions or release budgets.",
+    "Round, AI, draw, save and GC spans are inclusive and overlapping; do not sum them.",
+    "Rules are represented by inclusive round spans, not isolated pure rules CPU time.",
+    "Menu key queued in first round resolution was observed and resumed at round 6; this measures recovery of queued input, not immediate input service during work.",
+    "UI command callback return does not always imply authoritative command acknowledgement.",
+    "No network traffic, physical Minecraft, monitor hardware or iPad measurements.",
+    "No balance experiments or scenario calibration."
+  ]
+}
