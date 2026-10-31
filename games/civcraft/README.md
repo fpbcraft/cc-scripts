@@ -5,9 +5,10 @@ player-chosen first-city placement, larger maps, city population/status banners
 and three geographic specialty site types. It includes Landwork V3's charge-based
 Builders, worked-tile fields/quarries/lumber camps, Settlement Capacity and population-consuming
 Settlers, alongside Conquest/End Expedition, a 250-round Standard deadline with
-Score fallback and territory-based recovery. Earlier campaign saves retain their
-rules. Existing saves keep their selected profile; new campaigns can still
-select earlier profiles from Campaign Options. See
+Score fallback and territory-based recovery. All campaigns use one current ruleset.
+Supported older saves migrate automatically; an unsupported or corrupt save reports
+its path and asks you to delete/reset it rather than silently replacing it. See
+[the save migration policy](docs/adr/0039-current-rules-and-save-migration.md) and
 [the opening and banner contract](docs/FOUNDERS-OPENING.md),
 [M2's implementation record](docs/M2-LAND-DEVELOPMENT.md) and
 [M1's campaign contract](docs/M1-CAMPAIGN-SCOPE.md). Later redesign systems
@@ -199,7 +200,7 @@ secret until closing; Recent Results shows public ballots and AI explanations.
 
 A strict majority elects leadership. Diplomatic victory additionally needs two
 thirds of all delegates, another civilization's support, Stock Logistics and a
-Council Hall. It is selectable in new campaigns; older saves retain their victory
+Council Hall. It is selectable in new campaigns; migrated saves use the current victory
 settings. Each member can propose one opening-round resolution. Temporary trade
 facilitation, embargo, peace and censure affect real market, commerce, combat and
 reputation rules. Conversation Requests can ask for a voting pledge; the ballot
@@ -247,7 +248,7 @@ Names appear above cities and in city navigation, and remain stable in saves.
 - **Production:** Choose **PROD**, then **UNITS** or **BUILDS**. City projects
   accumulate industry each full turn instead of consuming a resource wallet
   immediately. Changing projects preserves their individual progress.
-  Switching asks for confirmation. Locked projects are hidden; the adjacent book opens their Codex entry. Most projects take 2.5 times their former wood cost in industry. Scouts cost 5 industry; settlers start at 12 and rise by 5 for each settler your empire finishes training (12, 17, 22, 27, ...). The count persists after founding or losing a unit, and applies across all cities. Old saves estimate the initial count from surviving settlers and cities beyond the capital. Technologies and strategic stocks unlock specialized units.
+  Switching asks for confirmation. Locked projects are hidden; the adjacent book opens their Codex entry. Most projects take 2.5 times their former wood cost in industry. Scouts cost 15 industry; settlers start at 28 and rise by 8 for each settler your empire finishes training (28, 36, 44, 52, ...), before game-speed scaling. The count persists after founding or losing a unit, and applies across all cities. Old saves estimate the initial count from surviving settlers and cities beyond the capital. Technologies and strategic stocks unlock specialized units.
 - **Research:** The connected **TECH TREE** shows prerequisites, researched
   and available technologies, progress and expected turns. Select a technology
   and start research; science accumulates when a full round ends. Research costs
@@ -418,9 +419,19 @@ The economic system uses per-turn resource yields and does not require continuou
 
 ## Generated campaigns and discovery (v0.5)
 
+Save loading preserves recorded geography, campaign identity, valid stock (including
+historical amounts above a new cap), health and spent movement while migrating to
+current rules. Missing historical treasury becomes zero; new campaigns explicitly
+start with 20 gold. Obsolete AI planning memory is rebuilt. Unsupported active
+production queues, future schemas or malformed data require reset: the error names
+the exact slot or host save. The failed load leaves the original file and backup
+untouched. Use the title-screen slot deletion confirmation or delete only the named
+save file. Unknown user files are preserved. Historical descriptions below do not
+select or retain separate old rules engines.
+
 Each local game now has **three independent campaign slots**, selectable from the title screen. The selected slot shows its campaign name and current round; you can create a new game, continue, or delete a slot (with a second-tap confirmation). The original `/games/civcraft/data/local-save.dat` is still importable into an untouched first slot. Previous campaign files are preserved as backups during save replacement, and removing a migrated slot does not resurrect a deleted game.
 
-From the lobby, choose **MAP SIZE** and **REROLL SEED**. Specialization V5 uses Compact 32×22, Standard 56×36, Large 72×46, Huge 96×60 and Vast 120×76. Earlier profiles retain their setup sizes. The seed, generation version, dimensions, terrain and starting locations are serialized in each campaign. Identical setup and generation versions reproduce the same map; loading an older map preserves its recorded geography rather than regenerating it. See the [generation contract](WORLDGEN.md).
+From the lobby, choose **MAP SIZE** and **REROLL SEED**. Specialization V5 uses Compact 32×22, Standard 56×36, Large 72×46, Huge 96×60 and Vast 120×76. Older saved worlds retain their recorded dimensions; historical profile names no longer select different setup sizes. The seed, generation version, dimensions, terrain and starting locations are serialized in each campaign. Identical setup and generation versions reproduce the same map; loading an older map preserves its recorded geography rather than regenerating it. See the [generation contract](WORLDGEN.md).
 
 New campaigns default to a horizontal cylinder. In **CAMPAIGN OPTIONS**, choose
 **MAP WRAP** to connect the west and east edges or keep them bounded; the north
