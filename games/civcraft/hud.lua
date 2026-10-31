@@ -27,6 +27,10 @@ local function unlocked(player, kind)
 	return not technology or (player.techs or {})[technology] == true
 end
 function H.resources(ui, state, player)
+	if player.id == nil then
+		ui.economy = nil
+		return
+	end
 	local r = ui.r
 	local economy = Systems.economy(player, state)
 	ui.economy = economy
@@ -212,6 +216,10 @@ function H.contacts(ui, state, observer, left, right)
 end
 
 function H.ledger(ui, rect, player)
+	if player.id == nil then
+		ui.panel = "context"
+		return
+	end
 	local r = ui.r
 	local e = Systems.economy(player, ui.state)
 	r:fill(rect.x, rect.y, rect.w, rect.h, 1)
