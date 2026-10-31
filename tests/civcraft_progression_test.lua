@@ -97,8 +97,16 @@ local function simulate(firstID, secondID, expected)
 			break
 		end
 	end
+	-- The same preferred route can qualify both civilizations on one round.
+	local expectedReasons = {}
+	for _ in ipairs(state.winnerIDs or {}) do
+		expectedReasons[#expectedReasons + 1] = expected
+	end
 	assert(
-		state.phase == "over" and state.round < 180 and state.victoryReason == expected,
+		state.phase == "over"
+			and state.round < 180
+			and #expectedReasons > 0
+			and state.victoryReason == table.concat(expectedReasons, " / "),
 		"AI must reach " .. expected .. " before score deadline"
 	)
 	for _, p in ipairs(state.players) do

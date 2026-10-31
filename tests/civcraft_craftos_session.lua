@@ -13,6 +13,8 @@ local includeDevelopment = false
 local developmentProfile = "balance2"
 local includeDefaultSpecialization = false
 local defaultSpecializationVerified = false
+local includeSettlementSuggestions, settlementSuggestionsVerified = false, false
+local settlementAdviceRecord
 local fixtureSeed
 local includeConversation = false
 local includeContactHUD, contactBadgeStep, contactBadgeVerified = false, 0, false
@@ -28,6 +30,9 @@ local includeRoutes = false
 local routeRecord
 local routeResumed = false
 for _, argument in ipairs({ ... }) do
+	if argument == "--settlement-suggestions" then
+		includeSettlementSuggestions = true
+	end
 	if argument:match("^%-%-seed=") then
 		fixtureSeed = assert(tonumber(argument:sub(8)))
 	end
@@ -108,6 +113,8 @@ if touchMonitor then
 	assert(_G.periphemu.create("top", "monitor"), "Use a fresh profile for monitor testing")
 end
 local native = dofile
+local SettlementProbe = includeSettlementSuggestions
+	and native("/tests/support/civcraft_native_settlement_advice.lua")
 local stage = 0
 local settingsExpectedSpeed, settingsExpectedDisplay
 local responseSaved = false
@@ -288,7 +295,16 @@ dofile = function(path)
 	end
 	local construct = module.new
 	module.new = function(display, dispatch)
-		local view = construct(display, dispatch)
+		local advice = SettlementProbe and SettlementProbe.new()
+		local view = construct(display, function(action, params)
+			if advice then
+				advice:dispatch()
+			end
+			return dispatch(action, params)
+		end)
+		if advice then
+			advice:attach(view)
+		end
 		local pull = view.r.pullEvent
 		view.r.pullEvent = function(canvas)
 			local event = table.pack(pull(canvas))
@@ -316,7 +332,13 @@ dofile = function(path)
 		local routeStep, routeUnit, routeGoal = 0, nil, nil
 		local badgeStep, badgeUnit = 0, nil
 		view.draw = function(self, state, observer, options)
+			if advice then
+				advice:attach(self)
+			end
 			draw(self, state, observer, options)
+			if advice then
+				advice:observe(self, options)
+			end
 			renderer = self.r.mode
 			if queued then
 				return
@@ -436,6 +458,32 @@ dofile = function(path)
 			then
 				tap(self, "CLOSE")
 				return
+			end
+			if
+				advice
+				and not advice.verified
+				and stage == 2
+				and state.phase == "game"
+				and not options.handoff
+				and not options.paused
+			then
+				local handled = advice:drive(self, state, function(x, y)
+					queued = true
+					if touchMonitor then
+						os.queueEvent("monitor_touch", "top", x, y)
+					else
+						os.queueEvent("mouse_click", 1, x, y)
+						os.queueEvent("mouse_up", 1, x, y)
+					end
+					os.queueEvent("civcraft_test_input_complete")
+				end)
+				if advice.verified then
+					settlementSuggestionsVerified = true
+					settlementAdviceRecord = advice:evidence()
+				end
+				if handled then
+					return
+				end
 			end
 			if
 				state.phase == "game"
@@ -1195,6 +1243,16 @@ assert(
 	not includeUnitActions or unitActionsVerified,
 	"Requested normal-program unit-action input must run"
 )
+assert(
+	not includeSettlementSuggestions or settlementSuggestionsVerified,
+	"Requested normal-game settlement advice input did not complete"
+)
+if includeSettlementSuggestions and not includeHost then
+	assert(
+		settlementAdviceRecord and settlementAdviceRecord.handoffVerified,
+		"Native hotseat advice privacy must be exercised"
+	)
+end
 local output = assert(fs.open("/civcraft-native-session.txt", "w"))
 output.write(textutils.serialize({
 	host = _G._HOST,
@@ -1203,6 +1261,7 @@ output.write(textutils.serialize({
 	round = state.round,
 	contentRules = state.contentRules,
 	defaultSpecialization = defaultSpecializationVerified,
+	settlementSuggestions = settlementAdviceRecord or false,
 	roundLimit = state.roundLimit,
 	industrialEnabled = dofile("/games/civcraft/campaign_rules.lua").enabled(state, "industrial"),
 	diplomaticEnabled = dofile("/games/civcraft/campaign_rules.lua").enabled(state, "diplomatic"),

@@ -1,4 +1,5 @@
 local Sites = dofile("/games/civcraft/specialty_sites.lua")
+local Founding = dofile("/games/civcraft/founding.lua")
 -- Host-authoritative gameplay orders shared by humans, remote players and AI.
 -- Session orchestration (lobby, save, end turn) belongs to game.lua.
 local Combat = dofile("/games/civcraft/combat.lua")
@@ -515,28 +516,9 @@ local function apply(state, id, req, Systems)
 		if (u.movesLeft or (u.moved and 0 or Systems.units.settler.move)) <= 0 then
 			return false, "Settler needs movement remaining"
 		end
-		if c then
-			return false, "Tile has a city"
-		end
-		local claim = World.territoryCity(state, Hex, x, y)
-		if claim and claim.owner ~= id then
-			return false, "Cannot found in another civilization's territory"
-		end
-		if ((state.world or {}).landmarks or {})[x .. ":" .. y] then
-			return false, "Cannot settle on a landmark"
-		end
-		for _, camp in ipairs(state.spawners or {}) do
-			if not camp.cleared and camp.x == x and camp.y == y then
-				return false, "Clear the hostile camp first"
-			end
-		end
-		if terrain(x, y) == "water" or not Hex.passable(x, y, state, u, Systems) then
-			return false, "Unsettleable terrain"
-		end
-		for _, v in ipairs(state.cities) do
-			if Hex.distance(v.x, v.y, x, y, state) < 3 then
-				return false, "Cities need 3 hex spacing"
-			end
+		local legal, why = Founding.canFound(state, id, x, y, Systems, u)
+		if not legal then
+			return false, why
 		end
 		Stacks.unlink(state, u)
 		for i, v in ipairs(state.units) do

@@ -237,6 +237,8 @@ Physical Minecraft monitor/rednet validation remains open.
 
 ## M4 — Make machinery and materials operational choices
 
+Specification contract proposal: [M4.1 resources and local stress](M4-MACHINERY.md).
+
 Goal: industrial cities choose useful processing under local SU constraints.
 
 - [ ] Specify Minecraft strategic resources, generation, accumulation, caps and

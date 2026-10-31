@@ -231,6 +231,10 @@ function UI:advanceTurn()
 	return true
 end
 function UI:deselect()
+	self.settlementSuggestionCache = nil
+	self.settlementSuggestions = nil
+	self.settlementSuggestionDetail = nil
+	self.settlementSuggestionTargets = {}
 	self.placement = nil
 	self.cityStrikeSource = nil
 	self.source = nil
@@ -551,6 +555,10 @@ function UI:draw(state, playerID, opts)
 		self.historyPage, self.historyCursors, self.historyLoading = nil, {}, false
 		self.historyRequestID = (self.historyRequestID or 0) + 1
 		self.workCity = nil
+		self.settlementSuggestionCache = nil
+		self.settlementSuggestions = nil
+		self.settlementSuggestionDetail = nil
+		self.settlementSuggestionTargets = {}
 		self.worldReady = false
 		self.panX = 0
 		self.panY = 0
@@ -629,6 +637,10 @@ function UI:draw(state, playerID, opts)
 		or not state
 		or state.phase ~= "game"
 	then
+		self.settlementSuggestionCache = nil
+		self.settlementSuggestions = nil
+		self.settlementSuggestionDetail = nil
+		self.settlementSuggestionTargets = {}
 		self.placement = nil
 		self.reachable = {}
 		self.pendingMove = nil
@@ -1156,6 +1168,10 @@ function UI:draw(state, playerID, opts)
 	r:finish()
 end
 function UI:focus(kind, item)
+	self.settlementSuggestionCache = nil
+	self.settlementSuggestions = nil
+	self.settlementSuggestionDetail = nil
+	self.settlementSuggestionTargets = {}
 	self.lastUnitTap = nil
 	self.unitDetails = false
 	self.cityStrikeSource = nil
@@ -1708,6 +1724,21 @@ function UI:tap(x, y)
 		and not self.pendingMove
 		and not self.cityStrikeSource
 	then
+		for _, target in ipairs(self.settlementSuggestionTargets or {}) do
+			if
+				self.selected.kind == "unit"
+				and target.settlerID == self.selected.unitID
+				and rx >= target.x
+				and rx < target.x + target.w
+				and ry >= target.y
+				and ry < target.y + target.h
+			then
+				self.settlementSuggestionDetail = { x = target.site.x, y = target.site.y }
+				self.settlementSuggestionOffset = 0
+				self.panel = "settlementSuggestions"
+				return true
+			end
+		end
 		for _, badge in ipairs(self.unitBadgeTargets or {}) do
 			if
 				rx >= badge.x

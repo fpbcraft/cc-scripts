@@ -23,6 +23,7 @@ profile.add_argument(
 profile.add_argument("--landwork", action="store_true", help="Select Landwork V3 in the native lobby")
 profile.add_argument("--development", action="store_true", help="Select Development V2 in the native lobby")
 parser.add_argument("--seed", type=int, help="Use an explicit generated campaign seed for reproducible correctness checks")
+parser.add_argument("--settlement-suggestions", action="store_true", help="Exercise the opening Settler advisory list, explanations and map marker through native input")
 parser.add_argument("--host", action="store_true", help="Test a host/AI session instead of hotseat/AI")
 parser.add_argument("--contact-hud", action="store_true", help="Click the known-civilization HUD badge through native mouse events")
 parser.add_argument("--installed-ref", help="Download this published revision through the real GitHub installer before testing")
@@ -49,11 +50,16 @@ if args.specialization or args.default_specialization:
         repo / "tests/civcraft_craftos_specialization_session.lua",
         root / "tests/civcraft_craftos_specialization_session.lua",
     )
+if args.settlement_suggestions:
+    (root / "tests/support").mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(repo / "tests/support/civcraft_native_settlement_advice.lua", root / "tests/support/civcraft_native_settlement_advice.lua")
 flags = [
     "--settings", "--research", "--campaign", "--conversation", "--routes",
     "--history", "--council", "--map-tools", "--difficulty", "--civilization",
 ]
 flags += ["--host-ai"] if args.host else ["--ai", "--war"]
+if args.settlement_suggestions:
+    flags.append("--settlement-suggestions")
 if args.contact_hud:
     flags.append("--contact-hud")
 if args.specialization:

@@ -1,5 +1,5 @@
 --[[
-	Version 3 generation combines smooth climate with viable regional starts.
+	Version 5 generation adds bounded seeded variety to viable start sites and seats.
 	Saved geography never depends on renderer or simulation random state.
 ]]
 local Biomes = dofile("/games/civcraft/biomes.lua")
@@ -12,7 +12,7 @@ local START_SEARCH_RADIUS = 4
 local START_COMPONENT_MINIMUM = START_LAND_TARGET * 3
 local DIFFICULT_LAND_LIMIT = 0.45
 
-local WorldGen = { version = 4 }
+local WorldGen = { version = 5 }
 local function key(x, y)
 	return x .. ":" .. y
 end
@@ -229,6 +229,9 @@ local function openingScore(world, x, y)
 end
 
 local function starts(world, count, checkpoint)
+	-- Start-site choices and seat assignment use a private stream so changes to
+	-- terrain, resources, or other generation stages do not consume this entropy.
+	local rng = Random.new(world.seed, 73)
 	local width, height = world.width, world.height
 	local components = landComponents(world, checkpoint)
 	local minimumY = math.max(5, math.floor(height * 0.25))
@@ -258,6 +261,9 @@ local function starts(world, count, checkpoint)
 							component = component,
 							score = score + math.min(component.size, width * height * 0.3) * 0.25,
 						}
+						-- Keep the fertility score authoritative while letting the
+						-- seed break close calls by at most four score points.
+						candidate.pickScore = candidate.score + rng:next() * 4
 						fallbackCandidates[#fallbackCandidates + 1] = candidate
 						if component.size >= START_COMPONENT_MINIMUM then
 							candidates[#candidates + 1] = candidate
@@ -268,7 +274,7 @@ local function starts(world, count, checkpoint)
 		end
 	end
 	-- Prefer one substantial landmass that can fit every player at minimum
-	-- spacing; retain the exact fertility-ranked feasible set for placement.
+	-- spacing; the seeded ranking only perturbs close fertility scores.
 	local mainComponent, mainScore, mainSites
 	local sitesByComponent = {}
 	for rank, candidate in ipairs(candidates) do
@@ -283,52 +289,55 @@ local function starts(world, count, checkpoint)
 		sites[#sites + 1] = candidate
 	end
 	local feasibilityScanned = 0
-	for component, sites in pairs(sitesByComponent) do
-		local selected, score = {}, 0
-		for _ = 1, count do
-			local bestSite
-			for _, candidate in ipairs(sites) do
-				feasibilityScanned = feasibilityScanned + 1
-				if checkpoint and feasibilityScanned % 64 == 0 then
-					checkpoint()
-				end
-				local spaced = true
-				for _, prior in ipairs(selected) do
-					if Hex.distance(candidate.x, candidate.y, prior.x, prior.y, world) < 6 then
-						spaced = false
-						break
+	for _, component in ipairs(components) do
+		local sites = sitesByComponent[component]
+		if sites then
+			local selected, score = {}, 0
+			for _ = 1, count do
+				local bestSite
+				for _, candidate in ipairs(sites) do
+					feasibilityScanned = feasibilityScanned + 1
+					if checkpoint and feasibilityScanned % 64 == 0 then
+						checkpoint()
 					end
-				end
-				if
-					spaced
-					and (
-						not bestSite
-						or candidate.score > bestSite.score
-						or (
-							candidate.score == bestSite.score
-							and (
-								candidate.y < bestSite.y
-								or (candidate.y == bestSite.y and candidate.x < bestSite.x)
+					local spaced = true
+					for _, prior in ipairs(selected) do
+						if Hex.distance(candidate.x, candidate.y, prior.x, prior.y, world) < 6 then
+							spaced = false
+							break
+						end
+					end
+					if
+						spaced
+						and (
+							not bestSite
+							or candidate.pickScore > bestSite.pickScore
+							or (
+								candidate.pickScore == bestSite.pickScore
+								and (
+									candidate.y < bestSite.y
+									or (candidate.y == bestSite.y and candidate.x < bestSite.x)
+								)
 							)
 						)
-					)
-				then
-					bestSite = candidate
+					then
+						bestSite = candidate
+					end
+				end
+				if bestSite then
+					selected[#selected + 1] = bestSite
+					score = score + bestSite.score
 				end
 			end
-			if bestSite then
-				selected[#selected + 1] = bestSite
-				score = score + bestSite.score
-			end
-		end
-		if #selected >= count then
-			local merit = component.size + score / count
-			if
-				not mainScore
-				or merit > mainScore
-				or (merit == mainScore and component.id < mainComponent.id)
-			then
-				mainComponent, mainScore, mainSites = component, merit, selected
+			if #selected >= count then
+				local merit = component.size + score / count
+				if
+					not mainScore
+					or merit > mainScore
+					or (merit == mainScore and component.id < mainComponent.id)
+				then
+					mainComponent, mainScore, mainSites = component, merit, selected
+				end
 			end
 		end
 	end
@@ -338,23 +347,23 @@ local function starts(world, count, checkpoint)
 		-- If no existing mainland fits the whole roster, form a compact, shared
 		-- start region near the best nonpolar land. The radius-three patches
 		-- overlap, joining starts locally without filling ocean corridors elsewhere.
+		local topScore
+		for rank, candidate in ipairs(fallbackCandidates) do
+			if checkpoint and rank % 64 == 0 then
+				checkpoint()
+			end
+			topScore = math.max(topScore or candidate.score, candidate.score)
+		end
 		local anchor, anchorRank
 		for rank, candidate in ipairs(fallbackCandidates) do
 			if checkpoint and rank % 64 == 0 then
 				checkpoint()
 			end
-			if
-				not anchorRank
-				or candidate.score > anchorRank
-				or (
-					candidate.score == anchorRank
-					and (
-						candidate.y < anchor.y
-						or (candidate.y == anchor.y and candidate.x < anchor.x)
-					)
-				)
-			then
-				anchor, anchorRank = candidate, candidate.score
+			if candidate.score >= topScore - 4 then
+				local rankScore = rng:next()
+				if not anchorRank or rankScore > anchorRank then
+					anchor, anchorRank = candidate, rankScore
+				end
 			end
 		end
 		local baseX, baseY =
@@ -443,6 +452,8 @@ local function starts(world, count, checkpoint)
 		world.resources[key(adjacentX, best.y)] = "grain"
 		world.resources[key(ironX, best.y + 1)] = "iron"
 	end
+	-- Keep the validated site set intact while removing fertility-rank seat bias.
+	rng:shuffle(world.starts)
 end
 
 local function repairStart(world, start, rng, checkpoint)
