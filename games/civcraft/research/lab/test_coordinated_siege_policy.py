@@ -10,9 +10,18 @@ import military_competence_benchmark as military
 from runtime import Runtime, from_lua
 
 
+
+def found_capitals(runtime):
+    for player in runtime.state.players.values():
+        settler = next(u for u in runtime.state.units.values()
+                       if u.owner == player.id and u.kind == 'settler')
+        assert runtime.apply(player.id, {'action': 'found', 'unitID': settler.id,
+                                        'x': settler.x, 'y': settler.y})[0]
+    return runtime
+
 class SiegeCompositionTests(unittest.TestCase):
     def fixture(self):
-        runtime = Runtime(base_config(95117, 0, 'coordinated'))
+        runtime = found_capitals(Runtime(base_config(95117, 0, 'coordinated')))
         military._fixture_setup(runtime, 'siege_breach')
         runtime.call(runtime.lua.eval('''function(state)
             local p = state.players[1]
