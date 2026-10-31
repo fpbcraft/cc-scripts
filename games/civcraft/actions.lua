@@ -258,6 +258,7 @@ local function apply(state, id, req, Systems)
 		or req.action == "queueWork"
 		or req.action == "cancelWork"
 		or req.action == "resumeWork"
+		or req.action == "autoWork"
 	then
 		if not u or u.owner ~= id or u.kind ~= "builder" then
 			return false, "Select an owned Builder"
@@ -272,11 +273,47 @@ local function apply(state, id, req, Systems)
 		elseif req.action == "cancelWork" then
 			u.workQueue = nil
 			return true, "Builder work cancelled"
+		elseif req.action == "autoWork" then
+			if req.value == true or req.value == "resume" then
+				if not ContentRules.hasBuilders(state) then
+					return false, "Builder auto work is unavailable in this campaign"
+				end
+				if (u.charges or 0) <= 0 then
+					return false, "No Builder charges remain"
+				end
+				u.autoWork = true
+				u.autoWorkPaused = nil
+				if u.workQueue and u.workQueue.auto then
+					u.workQueue.paused = nil
+					WorkQueue.run(state, id, Systems, A.apply, u)
+				else
+					u.autoWorkScanStamp = nil
+					WorkQueue.planAuto(state, id, Systems, A.apply)
+				end
+				return true, u.autoWorkPaused and "Auto work paused" or "Auto work enabled"
+			end
+			if req.value == "pause" then
+				u.autoWork = true
+				u.autoWorkPaused = "Paused by player"
+				if u.workQueue and u.workQueue.auto then
+					u.workQueue = nil
+				end
+				return true, "Auto work paused"
+			end
+			u.autoWork = false
+			u.autoWorkPaused = nil
+			if u.workQueue and u.workQueue.auto then
+				u.workQueue = nil
+			end
+			return true, "Auto work stopped"
 		elseif req.action == "resumeWork" then
 			if not u.workQueue then
 				return false, "No saved Builder work"
 			end
 			u.workQueue.paused = nil
+			if u.workQueue.auto then
+				u.autoWorkPaused = nil
+			end
 			u.skippedTurn = nil
 			WorkQueue.run(state, id, Systems, A.apply, u)
 			return true, "Builder work resumed"
@@ -289,7 +326,8 @@ local function apply(state, id, req, Systems)
 			tonumber(req.tileX),
 			tonumber(req.tileY),
 			req.append == true,
-			Systems
+			Systems,
+			u.autoWorkPlanning == true
 		)
 		if ok then
 			WorkQueue.run(state, id, Systems, A.apply, u)
@@ -597,11 +635,19 @@ function A.apply(state, id, request, systems)
 	local ok, why, result = apply(state, id, request, systems)
 	if ok and unit and request.action == "queueMove" then
 		unit.workQueue = nil
+		unit.autoWork, unit.autoWorkPaused = false, nil
+	end
+	if ok and unit and request.action == "queueWork" and not unit.autoWorkPlanning then
+		unit.autoWork, unit.autoWorkPaused = false, nil
+		if unit.workQueue then
+			unit.workQueue.auto = false
+		end
 	end
 	if ok and unit and replacesRoute[request.action] and not unit.executingQueue then
 		Queue.cancel(state, unit)
 		if not unit.executingWork and request.action ~= "skipTurn" then
 			unit.workQueue = nil
+			unit.autoWork, unit.autoWorkPaused = false, nil
 			local partner = Stacks.partner(state, unit)
 			if partner then
 				partner.workQueue = nil

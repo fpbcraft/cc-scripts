@@ -30,12 +30,16 @@ local createdOne, createdTwo, setup = false, false, false
 local sentStep, reportedStep, endedRound = nil, nil, nil
 local lastProductionObservation
 local snapshotSerial, sentExpectation = 0, nil
+local sentStateSerial = {}
 local publicSiteExpectationSnapshot
 local foreignProjectExpectationSnapshot
 local publicVisionGranted = false
 local originalWarriorVision
 local unseenSiteChecked = false
 local foreignProjectID, foreignProjectProgress
+local autoBuilderID, autoBuilderX, autoBuilderY
+local autoBuilderVisibleKey
+local autoObserver, autoObserverX, autoObserverY
 local target, siteID, projectID, campaignID, restarted = nil, nil, nil, nil, false
 local raceFirst = reverse and 2 or 1
 local savedProgress
@@ -69,6 +73,13 @@ local function city(state, id)
 	for _, c in ipairs(state.cities or {}) do
 		if c.owner == id then
 			return c
+		end
+	end
+end
+local function unit(state, id)
+	for _, u in ipairs(state.units or {}) do
+		if u.id == id then
+			return u
 		end
 	end
 end
@@ -242,6 +253,29 @@ local function assertForeignProjectRedacted(state)
 		siteID = expected.siteID,
 	})
 end
+local function assertForeignBuilderRedacted(state)
+	local expected = controls.builderAutoPrivacyExpected
+	if
+		computer ~= 2
+		or not expected
+		or controls["builderAutoPrivacyObserved" .. expected.stage]
+		or snapshotSerial < (expected.minimumSerial or math.huge)
+		or state.campaignID ~= expected.campaignID
+	then
+		return
+	end
+	local observed = unit(state, expected.builderID)
+	if not observed or observed.owner ~= 1 then
+		return
+	end
+	assert(
+		observed.autoWork == nil and observed.autoWorkPaused == nil and observed.workQueue == nil,
+		"Rival unit snapshots must redact auto-work intent, pause reason and queued targets"
+	)
+	local kind = "builderAutoPrivacyObserved" .. expected.stage
+	controls[kind] = true
+	send(0, kind, { builderID = expected.builderID, stage = expected.stage })
+end
 env.rednet = {}
 for k, v in pairs(baseNet) do
 	env.rednet[k] = v
@@ -277,6 +311,14 @@ function env.rednet.receive(filter, timeout)
 	return sender, packet, received
 end
 function env.rednet.send(to, packet, outgoing)
+	if
+		computer == 0
+		and outgoing == protocol
+		and type(packet) == "table"
+		and packet.type == "state"
+	then
+		sentStateSerial[to] = packet.serial
+	end
 	if outgoing == protocol and type(packet) == "table" then
 		trace(
 			"PACKET to "
@@ -376,6 +418,17 @@ end
 local function step(to, token, action, values)
 	send(to, "step", { token = token, action = action, values = values })
 end
+local function expectBuilderPrivacy(stage)
+	send(2, "builderAutoPrivacyExpected", {
+		builderID = autoBuilderID,
+		campaignID = campaignID,
+		stage = stage,
+		minimumSerial = assert(
+			sentStateSerial[2],
+			"Privacy check requires an emitted rival snapshot"
+		),
+	})
+end
 local function stepDone(id, token, accepted)
 	local ack = controls[token]
 	local observed = controls["observed" .. id]
@@ -408,6 +461,7 @@ local function configureFixture()
 	local World = env.dofile("/games/civcraft/world.lua")
 	for _, p in ipairs(authoritative.players) do
 		p.techs.engineering, p.techs.writing, p.techs.currency = true, true, true
+		p.techs.agriculture, p.techs.mining, p.techs.crafting = true, true, true
 		p.gold = 500
 		local c = assert(city(authoritative, p.id))
 		c.population = 7
@@ -435,6 +489,117 @@ local function configureFixture()
 	World.reveal(authoritative, Hex, Systems)
 	target = legalTarget(authoritative, assert(city(authoritative, 1)), "works", nil, 2)
 	target.city = city(authoritative, 1).id
+	local builderCity = assert(city(authoritative, 1))
+	local observer = assert(player(authoritative, 2))
+	local Works = env.dofile("/games/civcraft/tile_improvements.lua")
+	local Stacks = env.dofile("/games/civcraft/unit_stacks.lua")
+	for _, candidate in ipairs(authoritative.units) do
+		if candidate.owner == 2 and not Stacks.isCivilian(candidate) then
+			autoObserver = candidate
+			break
+		end
+	end
+	assert(autoObserver, "Builder privacy fixture needs a peaceful observer unit")
+	autoObserverX, autoObserverY = autoObserver.x, autoObserver.y
+	local vision = (Systems.units[autoObserver.kind] or {}).vision or 2
+	local builderSpots = {}
+	for y = math.max(1, builderCity.y - 3), math.min(authoritative.world.height, builderCity.y + 3) do
+		for x = math.max(1, builderCity.x - 3), math.min(authoritative.world.width, builderCity.x + 3) do
+			local landOwner = World.territoryCity(authoritative, Hex, x, y)
+			if
+				(not landOwner or landOwner.id == builderCity.id)
+				and (x ~= target.x or y ~= target.y)
+				and not Stacks.at(authoritative.units, x, y)
+			then
+				for _, kind in ipairs(Works.order) do
+					if
+						Works.canPlace(authoritative, player(authoritative, 1), kind, x, y, Systems)
+					then
+						builderSpots[#builderSpots + 1] = {
+							position = { x = x, y = y },
+							worked = builderCity.worked
+								and builderCity.worked[World.key(x, y)] == true,
+						}
+						break
+					end
+				end
+			end
+		end
+	end
+	table.sort(builderSpots, function(a, b)
+		if a.worked ~= b.worked then
+			return a.worked
+		end
+		return Hex.distance(a.position.x, a.position.y, target.x, target.y, authoritative)
+			> Hex.distance(b.position.x, b.position.y, target.x, target.y, authoritative)
+	end)
+	local function observerPosition(spot)
+		for oy = math.max(1, spot.y - vision), math.min(authoritative.world.height, spot.y + vision) do
+			for ox = math.max(1, spot.x - vision), math.min(authoritative.world.width, spot.x + vision) do
+				local occupant = Stacks.at(authoritative.units, ox, oy)
+				local isCity = false
+				for _, cityRecord in ipairs(authoritative.cities) do
+					if cityRecord.x == ox and cityRecord.y == oy then
+						isCity = true
+						break
+					end
+				end
+				if
+					Hex.distance(spot.x, spot.y, ox, oy, authoritative) <= vision
+					and Hex.distance(target.x, target.y, ox, oy, authoritative) > vision
+					and (ox ~= spot.x or oy ~= spot.y)
+					and (ox ~= autoObserver.x or oy ~= autoObserver.y)
+					and (not occupant or occupant == autoObserver)
+					and not isCity
+					and Hex.terrain(ox, oy, authoritative) ~= "water"
+					and Hex.terrain(ox, oy, authoritative) ~= "mountain"
+				then
+					return { x = ox, y = oy }
+				end
+			end
+		end
+	end
+	local builderSpot, observerSpot
+	for _, candidate in ipairs(builderSpots) do
+		observerSpot = observerPosition(candidate.position)
+		if observerSpot then
+			builderSpot = candidate.position
+			break
+		end
+	end
+	assert(
+		builderSpot and observerSpot,
+		"Builder fixture needs a legal Builder tile and a safe observer location"
+	)
+	autoBuilderID = authoritative.nextId
+	authoritative.nextId = authoritative.nextId + 1
+	autoBuilderX, autoBuilderY = builderSpot.x, builderSpot.y
+	-- Fixture a charged Builder on legal owner land with no movement left so its
+	-- generated route stays saved while the clients inspect and stop it.
+	authoritative.units[#authoritative.units + 1] = {
+		id = autoBuilderID,
+		owner = 1,
+		kind = "builder",
+		x = autoBuilderX,
+		y = autoBuilderY,
+		charges = 3,
+		movesLeft = 0,
+		moved = true,
+		hp = 100,
+	}
+	autoObserver.x, autoObserver.y = observerSpot.x, observerSpot.y
+	World.reveal(authoritative, Hex, Systems)
+	autoBuilderVisibleKey = World.key(autoBuilderX, autoBuilderY)
+	assert(observer.visible[autoBuilderVisibleKey], "Observer unit must reveal the Builder tile")
+	assert(not observer.visible[World.key(target.x, target.y)], "Observer must preserve target fog")
+	local BuilderPlans = env.dofile("/games/civcraft/ai_builders.lua")
+	local initialPlan = BuilderPlans.order(
+		assert(World.forPlayer(authoritative, 1)),
+		player(authoritative, 1),
+		assert(unit(authoritative, autoBuilderID)),
+		Systems
+	)
+	assert(initialPlan, "Builder fixture needs a useful safe target in observed owned land")
 	campaignID = authoritative.campaignID
 end
 local function hostDraw(ui, state)
@@ -508,6 +673,102 @@ local function hostDraw(ui, state)
 			end
 		end
 	elseif phase == "fixture" then
+		step(1, "builderEnable", "autoWork", {
+			unitID = autoBuilderID,
+			x = autoBuilderX,
+			y = autoBuilderY,
+			value = true,
+		})
+		advancePhase("builderEnable")
+	elseif phase == "builderEnable" and stepDone(1, "builderEnable", true) then
+		local builder = assert(unit(authoritative, autoBuilderID))
+		assert(builder.autoWork and builder.workQueue and builder.workQueue.auto)
+		expectBuilderPrivacy("active")
+		step(2, "builderSpoof", "autoWork", {
+			unitID = autoBuilderID,
+			x = autoBuilderX,
+			y = autoBuilderY,
+			value = "pause",
+			playerID = 1,
+		})
+		advancePhase("builderSpoof")
+	elseif
+		phase == "builderSpoof"
+		and stepDone(2, "builderSpoof", false)
+		and controls.builderAutoPrivacyObservedactive
+	then
+		assert(
+			tostring(controls.builderSpoof.message):find("Select an owned Builder", 1, true),
+			"Spoofed playerID cannot authorize the other client's Builder order"
+		)
+		local builder = assert(unit(authoritative, autoBuilderID))
+		assert(builder.autoWork and builder.workQueue and builder.workQueue.auto)
+		step(1, "builderPause", "autoWork", {
+			unitID = autoBuilderID,
+			x = autoBuilderX,
+			y = autoBuilderY,
+			value = "pause",
+		})
+		advancePhase("builderPause")
+	elseif phase == "builderPause" and stepDone(1, "builderPause", true) then
+		local builder = assert(unit(authoritative, autoBuilderID))
+		assert(
+			builder.autoWork
+				and builder.autoWorkPaused == "Paused by player"
+				and not builder.workQueue
+		)
+		expectBuilderPrivacy("paused")
+		step(2, "builderSpoofPaused", "autoWork", {
+			unitID = autoBuilderID,
+			x = autoBuilderX,
+			y = autoBuilderY,
+			value = "stop",
+			playerID = 1,
+		})
+		advancePhase("builderSpoofPaused")
+	elseif
+		phase == "builderSpoofPaused"
+		and stepDone(2, "builderSpoofPaused", false)
+		and controls.builderAutoPrivacyObservedpaused
+	then
+		assert(
+			tostring(controls.builderSpoofPaused.message):find("Select an owned Builder", 1, true),
+			"Spoofed playerID cannot stop the other client's Builder order"
+		)
+		local builder = assert(unit(authoritative, autoBuilderID))
+		assert(
+			builder.autoWork
+				and builder.autoWorkPaused == "Paused by player"
+				and not builder.workQueue
+		)
+		step(1, "builderResume", "autoWork", {
+			unitID = autoBuilderID,
+			x = autoBuilderX,
+			y = autoBuilderY,
+			value = "resume",
+		})
+		advancePhase("builderResume")
+	elseif phase == "builderResume" and stepDone(1, "builderResume", true) then
+		local builder = assert(unit(authoritative, autoBuilderID))
+		assert(builder.autoWork and not builder.autoWorkPaused and builder.workQueue.auto)
+		step(1, "builderStop", "autoWork", {
+			unitID = autoBuilderID,
+			x = autoBuilderX,
+			y = autoBuilderY,
+			value = "stop",
+		})
+		advancePhase("builderStop")
+	elseif phase == "builderStop" and stepDone(1, "builderStop", true) then
+		local builder = assert(unit(authoritative, autoBuilderID))
+		assert(not builder.autoWork and not builder.autoWorkPaused and not builder.workQueue)
+		autoObserver.x, autoObserver.y = autoObserverX, autoObserverY
+		local Hex = env.dofile("/games/civcraft/hex.lua")
+		local World = env.dofile("/games/civcraft/world.lua")
+		World.reveal(authoritative, Hex, env.dofile("/games/civcraft/systems.lua"))
+		assert(
+			not player(authoritative, 2).visible[World.key(target.x, target.y)],
+			"Restoring the observer must preserve the later hidden-site scenario"
+		)
 		local request =
 			{ city = target.city, kind = "works", x = target.x, y = target.y, playerID = 1 }
 		step(raceFirst, "race" .. raceFirst, "placeSite", request)
@@ -779,6 +1040,31 @@ local function acceptedSnapshot(state, own, todo)
 			and retained.y == expected.project.y
 			and retained.progress == expected.project.progress
 	end
+	if todo.action == "autoWork" then
+		local builder = unit(state, request.unitID)
+		if not builder or builder.owner ~= computer then
+			return false
+		end
+		if request.value == true then
+			return builder.autoWork == true
+				and not builder.autoWorkPaused
+				and builder.workQueue
+				and builder.workQueue.auto == true
+		elseif request.value == "pause" then
+			return builder.autoWork == true
+				and builder.autoWorkPaused == "Paused by player"
+				and not builder.workQueue
+		elseif request.value == "resume" then
+			return builder.autoWork == true
+				and not builder.autoWorkPaused
+				and builder.workQueue
+				and builder.workQueue.auto == true
+		end
+		return request.value == "stop"
+			and not builder.autoWork
+			and not builder.autoWorkPaused
+			and not builder.workQueue
+	end
 	if own.id ~= request.city then
 		return false
 	end
@@ -815,6 +1101,7 @@ local function clientDraw(ui, state)
 	private(state)
 	assertPublicForeignSite(state)
 	assertForeignProjectRedacted(state)
+	assertForeignBuilderRedacted(state)
 	trace(
 		"view "
 			.. tostring(state.phase)
@@ -897,7 +1184,7 @@ local function clientDraw(ui, state)
 		if coherent then
 			if computer == 1 and results[todo.token].ok then
 				assert(own.focus)
-				if todo.action ~= "queue" then
+				if todo.action ~= "queue" and todo.action ~= "autoWork" then
 					assert(own.siteProjects[own.project.id])
 				end
 			end
@@ -987,6 +1274,9 @@ local ok, why = pcall(function()
 				elseif packet.kind == "foreignProjectExpected" then
 					foreignProjectExpectationSnapshot = snapshotSerial
 					send(0, "foreignProjectReady", { projectID = packet.projectID })
+				elseif packet.kind == "builderAutoPrivacyExpected" then
+					controls.builderAutoPrivacyExpected = packet
+					controls.builderAutoPrivacySnapshot = snapshotSerial
 				end
 				os.queueEvent("civcraft_state_changed")
 			end
@@ -1021,6 +1311,21 @@ file.write(textutils.serialize({
 	foreignPendingProjectID = foreignProjectID,
 	foreignPendingProjectProgress = foreignProjectProgress,
 	foreignPendingProjectRedacted = controls.foreignProjectObserved ~= nil,
+	builderAutoWorkAccepted = controls.builderStop ~= nil and controls.builderStop.ok,
+	builderAutoWorkSpoofRejected = controls.builderSpoof ~= nil
+		and not controls.builderSpoof.ok
+		and tostring(controls.builderSpoof.message):find("Select an owned Builder", 1, true)
+			~= nil,
+	builderAutoWorkPauseSpoofRejected = controls.builderSpoofPaused ~= nil
+		and not controls.builderSpoofPaused.ok
+		and tostring(controls.builderSpoofPaused.message):find(
+				"Select an owned Builder",
+				1,
+				true
+			)
+			~= nil,
+	builderAutoWorkRedacted = controls.builderAutoPrivacyObservedactive ~= nil
+		and controls.builderAutoPrivacyObservedpaused ~= nil,
 	unseenForeignSiteAbsent = unseenSiteChecked,
 	joins = joins,
 }))

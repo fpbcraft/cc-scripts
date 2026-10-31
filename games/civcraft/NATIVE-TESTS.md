@@ -437,3 +437,20 @@ hotseat runs also verify private advice is cleared at handoff. Display-setting
 changes rebuild the renderer, so the text observer reattaches to each new canvas.
 Exact scope and limits are retained in
 [`docs/validation/settlement-suggestions-validation.json`](docs/validation/settlement-suggestions-validation.json).
+
+## Saved Builder auto work
+
+Run `python3 tests/run_civcraft_native_builder_auto.py` for real Auto/Pause/Resume
+input, save/exit and a fresh-process restart that completes an improvement and
+consumes a charge. Add `--gui` for GUI rendering, `--gui --monitor` for emulated
+monitor-touch controls, or `--installed-ref <published-ref>` to install that
+revision first. A controlled generated V5 fixture supplies capitals, research,
+a charged Builder and an open owned tile; it does not seed completed work.
+The monitor scenario uses keyboard Q to open pause, so it does not prove a
+touch-only pause workflow.
+
+`python3 tests/run_civcraft_native_specialty_network.py` and `--reverse-race`
+also check owner Builder auto commands, spoofed-owner rejection, acknowledged
+snapshots and rival privacy before the existing specialty/restart/rejoin cases.
+Detailed revisions, outcomes and limits are in
+[builder-auto-validation.json](docs/validation/builder-auto-validation.json).

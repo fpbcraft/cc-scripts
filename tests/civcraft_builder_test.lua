@@ -141,11 +141,19 @@ state.cities = {}
 u.owner = 1
 u.charges = 2
 u.workQueue = { tasks = { { kind = "farm", x = 5, y = 4 } } }
+u.autoWork, u.autoWorkPaused = true, "Visible threat nearby"
 local attacker = { id = 8, owner = 0, kind = "warrior", x = 4, y = 4, movesLeft = 2 }
 state.units[#state.units + 1] = attacker
 W.reveal(state, H, S)
 assert(Combat.attack(state, attacker, { x = 5, y = 4 }, S))
-assert(u.owner == 0 and u.charges == 2 and not u.workQueue and u.movesLeft == 0)
+assert(
+	u.owner == 0
+		and u.charges == 2
+		and not u.workQueue
+		and not u.autoWork
+		and not u.autoWorkPaused
+		and u.movesLeft == 0
+)
 -- Fog memory stores observed improvements and does not leak unseen changes.
 state, p, u, c = fixture()
 assert(A.apply(state, 0, { action = "improve", unitID = 2, x = 5, y = 4, kind = "farm" }, S))
@@ -187,6 +195,79 @@ assert(
 		.. " moves="
 		.. u.movesLeft
 )
+-- Auto work is opt-in, saved as unit intent, and uses only generated queue provenance.
+state, p, u, c = fixture()
+local intentRequest = { action = "autoWork", unitID = u.id, x = u.x, y = u.y, value = true }
+u.owner = 1
+assert(not A.apply(state, 0, intentRequest, S) and not u.autoWork)
+u.owner = 0
+u.kind = "settler"
+assert(not A.apply(state, 0, intentRequest, S) and not u.autoWork)
+u.kind = "builder"
+u.charges = 0
+assert(not A.apply(state, 0, intentRequest, S) and not u.autoWork)
+u.charges = 3
+state.contentRules = "baseline"
+assert(not A.apply(state, 0, intentRequest, S) and not u.autoWork)
+state.contentRules = "balance3"
+u.moved, u.movesLeft = true, 0
+assert(A.apply(state, 0, { action = "autoWork", unitID = u.id, x = u.x, y = u.y, value = true }, S))
+assert(u.autoWork and u.workQueue and u.workQueue.auto, "Auto mode must create a tagged saved task")
+local plannedCharges = u.charges
+u.workQueue = nil
+Queue.planAuto(state, 0, S, A.apply)
+assert(
+	not u.workQueue and u.charges == plannedCharges and u.autoWorkScanStamp,
+	"Repeated pumps in one actor stamp must not rescan or spend another charge"
+)
+assert(
+	A.apply(state, 0, { action = "autoWork", unitID = u.id, x = u.x, y = u.y, value = "pause" }, S)
+)
+assert(u.autoWork and u.autoWorkPaused == "Paused by player" and not u.workQueue)
+assert(
+	A.apply(state, 0, { action = "autoWork", unitID = u.id, x = u.x, y = u.y, value = "stop" }, S)
+)
+assert(not u.autoWork and not u.autoWorkPaused)
+assert(Queue.submit(state, p, u, "farm", 5, 4, false, S))
+local manualQueue = u.workQueue
+u.autoWork = true
+assert(
+	A.apply(state, 0, { action = "autoWork", unitID = u.id, x = u.x, y = u.y, value = "stop" }, S)
+)
+assert(u.workQueue == manualQueue and not u.workQueue.auto, "Stop must preserve manual work")
+-- A hidden enemy cannot perturb auto planning or expose a pause reason.
+state, p, u, c = fixture()
+local Builders = dofile("/games/civcraft/ai_builders.lua")
+local knownView = W.forPlayer(state, 0)
+local knownOrder = Builders.order(knownView, knownView.players[1], knownView.units[1], S)
+state.units[#state.units + 1] = {
+	id = 11,
+	owner = 1,
+	kind = "warrior",
+	x = 12,
+	y = 10,
+	movesLeft = 2,
+}
+local hiddenView = W.forPlayer(state, 0)
+local hiddenOrder = Builders.order(hiddenView, hiddenView.players[1], hiddenView.units[1], S)
+assert(
+	knownOrder.kind == hiddenOrder.kind
+		and knownOrder.tileX == hiddenOrder.tileX
+		and knownOrder.tileY == hiddenOrder.tileY,
+	"Hidden enemies must not affect auto work planning"
+)
+-- Visible danger pauses an auto order without spending a charge.
+state, p, u, c = fixture()
+state.units[#state.units + 1] =
+	{ id = 12, owner = 1, kind = "warrior", x = 6, y = 4, movesLeft = 2 }
+W.reveal(state, H, S)
+assert(A.apply(state, 0, { action = "autoWork", unitID = u.id, x = u.x, y = u.y, value = true }, S))
+assert(u.autoWorkPaused == "Visible threat nearby" and u.charges == 3 and not u.workQueue)
+-- A last-charge auto job finishes without leaving a phantom unit.
+state, p, u, c = fixture()
+u.charges = 1
+assert(A.apply(state, 0, { action = "autoWork", unitID = u.id, x = u.x, y = u.y, value = true }, S))
+assert(not Stacks.byID(state, u.id) and u.charges == 0)
 -- A new civilian blocking a saved route pauses work without spending labor.
 state, p, u, c = fixture()
 assert(Queue.submit(state, p, u, "farm", 4, 5, false, S))
@@ -197,8 +278,18 @@ assert(u.workQueue.paused and u.charges == 3 and u.x == 5)
 state.units[#state.units] = nil
 u.movesLeft = 0
 u.moved = true
+u.autoWork = true
+assert(
+	not A.apply(
+			state,
+			0,
+			{ action = "queueMove", unitID = 2, sx = 5, sy = 4, x = 100, y = 100 },
+			S
+		) and u.autoWork,
+	"Rejected manual movement must leave auto intent unchanged"
+)
 assert(A.apply(state, 0, { action = "queueMove", unitID = 2, sx = 5, sy = 4, x = 4, y = 5 }, S))
-assert(not u.workQueue and u.moveQueue)
+assert(not u.workQueue and u.moveQueue and not u.autoWork)
 -- AI chooses legal tile development and recruits labor only when needed.
 local AI = dofile("/games/civcraft/ai.lua")
 local Production = dofile("/games/civcraft/ai_production.lua")
@@ -283,7 +374,18 @@ assert(
 	table.concat(texts, " "):find("WORK PREVIEW", 1, true)
 		and buttons["PLAN WHEAT FIELD"]
 		and buttons["WHEAT FIELD HERE"]
+		and buttons["AUTO WORK"]
 )
+u.autoWork, u.autoWorkPaused = true, "Paused by player"
+ui.state = W.forPlayer(state, 0)
+texts, buttons = {}, {}
+Inspector.draw(ui, ui.state, ui.state.players[1], { x = 1, y = 1, w = 240, h = 200 }, true)
+assert(
+	table.concat(texts, " "):find("Paused by player", 1, true)
+		and buttons["RESUME AUTO WORK"]
+		and buttons["STOP AUTO WORK"]
+)
+u.autoWork, u.autoWorkPaused = false, nil
 Panels.rows = originalRows
 assert(ui:confirmMove())
 assert(u.charges == 2 and state.world.improvements["5:4"].kind == "farm")
@@ -299,12 +401,18 @@ if fs and textutils then
 		version = 1,
 		tasks = { { kind = "quarry", x = 3, y = 4 } },
 		paused = "Work route blocked",
+		auto = true,
 	}
+	u.autoWork, u.autoWorkPaused, u.autoWorkScanStamp = true, "Work route blocked", "1:0"
 	assert(Saves.writeFile(Saves.path(1), state))
 	local restored = S.migrate(assert(Saves.load(1)))
 	assert(restored.contentRules == "balance3" and restored.units[1].charges == 2)
 	assert(
 		restored.units[1].workQueue.paused == "Work route blocked"
+			and restored.units[1].workQueue.auto
+			and restored.units[1].autoWork
+			and restored.units[1].autoWorkPaused == "Work route blocked"
+			and restored.units[1].autoWorkScanStamp == "1:0"
 			and restored.world.improvements["5:4"].damaged
 	)
 end

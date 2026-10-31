@@ -161,6 +161,7 @@ function Stacks.capture(state, settler, owner)
 	settler.skippedTurn, settler.zoneEnteredTurn, settler.waterMovementRound = nil, nil, nil
 	settler.aiSettlement, settler.aiRole, settler.aiRail = nil, nil, nil
 	settler.workQueue, settler.aiWork = nil, nil
+	settler.autoWork, settler.autoWorkPaused, settler.autoWorkScanStamp = false, nil, nil
 	settler.movementAllowanceRound, settler.turnMovementAllowance, settler.responseMovementRound =
 		nil, nil, nil
 	settler.actedThisRound = true

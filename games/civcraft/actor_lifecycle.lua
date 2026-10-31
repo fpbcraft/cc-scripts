@@ -54,6 +54,9 @@ function Actors.pump(state, callbacks)
 				end
 				-- Allowances already exist; queued orders can only spend those budgets.
 				QueuedRoutes.run(state, participant.id, Systems, Actions.apply)
+				if not participant.ai then
+					WorkQueue.planAuto(state, participant.id, Systems, Actions.apply)
+				end
 				WorkQueue.run(state, participant.id, Systems, Actions.apply)
 				if participant.ai then
 					if not participant.ready then

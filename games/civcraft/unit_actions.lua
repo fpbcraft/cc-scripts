@@ -50,6 +50,26 @@ local definitions = {
 		help = "Cancel this builder's queued work.",
 	},
 	["RESUME WORK"] = { icon = "right", short = "RESUME", help = "Resume the paused work queue." },
+	["AUTO WORK"] = {
+		icon = "bolt",
+		short = "AUTO",
+		help = "Choose useful legal improvements on your observed owned land.",
+	},
+	["PAUSE AUTO WORK"] = {
+		icon = "pause",
+		short = "PAUSE",
+		help = "Pause automatic Builder orders and cancel its current task.",
+	},
+	["RESUME AUTO WORK"] = {
+		icon = "right",
+		short = "RESUME",
+		help = "Resume automatic Builder orders using current observations.",
+	},
+	["STOP AUTO WORK"] = {
+		icon = "back",
+		short = "STOP",
+		help = "Stop automatic Builder orders and cancel its current task.",
+	},
 	["WORK MODE: APPEND"] = {
 		icon = "plus",
 		short = "APPEND",

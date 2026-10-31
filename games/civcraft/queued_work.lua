@@ -29,7 +29,7 @@ function Work.threat(view, owner, x, y, systems)
 	end
 	return false
 end
-function Work.submit(state, player, unit, kind, x, y, append, systems)
+function Work.submit(state, player, unit, kind, x, y, append, systems, auto)
 	local view = World.forPlayer(state, player.id)
 	local preview, reason = Works.preview(view, player, unit, kind, x, y, systems)
 	if not preview then
@@ -62,7 +62,7 @@ function Work.submit(state, player, unit, kind, x, y, append, systems)
 	end
 	tasks[#tasks + 1] = { kind = kind, x = x, y = y }
 	unit.moveQueue = nil
-	unit.workQueue = { version = 1, tasks = tasks }
+	unit.workQueue = { version = 1, tasks = tasks, auto = auto == true }
 	local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 	for _, member in ipairs({ unit, Stacks.partner(state, unit) }) do
 		member.standby, member.healing, member.skippedTurn = false, false, nil
@@ -74,7 +74,65 @@ function Work.pause(state, unit, reason)
 		return
 	end
 	unit.workQueue.paused = reason
+	if unit.workQueue.auto then
+		unit.autoWorkPaused = reason
+	end
 	Events.notice(state, "order", unit, "Builder paused: " .. reason, unit.owner)
+end
+function Work.planAuto(state, owner, systems, apply)
+	local Builders = dofile("/games/civcraft/ai_builders.lua")
+	local ids = {}
+	local stamp = Tasks.stamp(state, owner)
+	for _, unit in ipairs(state.units or {}) do
+		if
+			unit.owner == owner
+			and unit.kind == "builder"
+			and unit.autoWork
+			and not unit.autoWorkPaused
+			and not unit.workQueue
+			and unit.autoWorkScanStamp ~= stamp
+			and (unit.charges or 0) > 0
+		then
+			ids[#ids + 1] = unit.id
+		end
+	end
+	local Stacks = dofile("/games/civcraft/unit_stacks.lua")
+	for _, id in ipairs(ids) do
+		local unit = Stacks.byID(state, id)
+		if unit and unit.autoWork and not unit.autoWorkPaused and not unit.workQueue then
+			unit.autoWorkScanStamp = stamp
+			local view = World.forPlayer(state, owner)
+			local player
+			for _, candidate in ipairs(view.players or {}) do
+				if candidate.id == owner then
+					player = candidate
+					break
+				end
+			end
+			local request, reason
+			if player then
+				request, reason = Builders.order(view, player, unit, systems)
+			end
+			if request then
+				unit.autoWorkPlanning = true
+				local ran, ok = pcall(apply, state, owner, request, systems)
+				unit.autoWorkPlanning = nil
+				if not ran then
+					error(ok, 0)
+				end
+				if ok then
+					unit.autoWorkPaused = nil
+				else
+					unit.autoWorkPaused = "The selected improvement could not be queued"
+				end
+			elseif reason or Work.threat(view, owner, unit.x, unit.y, systems) then
+				unit.autoWorkPaused = reason or "Visible threat nearby"
+			else
+				unit.autoWorkPaused =
+					"No useful legal improvement is available on observed owned land"
+			end
+		end
+	end
 end
 function Work.run(state, owner, systems, apply, force)
 	if state.phase ~= "game" or not Scheduler.canAct(state, owner) then
@@ -188,6 +246,10 @@ function Work.run(state, owner, systems, apply, force)
 					table.remove(queue.tasks, 1)
 					if #queue.tasks == 0 or unit.charges == 0 then
 						unit.workQueue = nil
+						if unit.charges == 0 then
+							unit.autoWork = false
+							unit.autoWorkPaused = "No Builder charges remain"
+						end
 					end
 					break
 				end
