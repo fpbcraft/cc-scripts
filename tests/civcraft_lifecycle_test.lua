@@ -58,7 +58,7 @@ for _, count in ipairs({ 2, 3, 4 }) do
 		end
 		for _, u in ipairs(state.units) do
 			assert(
-				u.movesLeft == Systems.units[u.kind].move,
+				u.movesLeft == (u.villageGuard and 0 or Systems.units[u.kind].move),
 				"Round boundary restores a single allowance"
 			)
 		end

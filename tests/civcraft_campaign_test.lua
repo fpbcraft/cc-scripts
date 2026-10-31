@@ -202,6 +202,9 @@ end
 state, p, city, u = campaign()
 state.world.resources[W.key(city.x, city.y)] = "iron"
 S.production(state, H)
+assert(p.stockpile.iron == 0, "Iron requires Bronze")
+p.techs.bronze = true
+S.production(state, H)
 assert(p.stockpile.iron == 1, "Owned strategic deposits accrue stock")
 u.kind = "scout"
 u.movesLeft = 3

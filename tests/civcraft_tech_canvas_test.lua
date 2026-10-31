@@ -141,12 +141,13 @@ for _, mode in ipairs({ "text", "graphics" }) do
 		"Sidebar and connected graph remain visible together"
 	)
 	compact.selected = "writing"
+	redraw()
 	local found = false
 	for offset = 0, compact.pageMax do
 		compact.offset = offset
 		redraw()
 		for _, button in ipairs(buttons) do
-			if button.label == "CODEX LIBRARY" then
+			if button.label == "CODEX BOOKSHELF LIBRARY" then
 				button.fn()
 				assert(
 					picked == "buildings:library",

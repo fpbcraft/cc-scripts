@@ -113,7 +113,12 @@ for i = 2, 8 do
 end
 Strategy.signal(player, "resourceShock")
 Strategy.review(view, player, 13)
-assert(plan.primary == "industrial" and plan.revision == 2 and plan.revisionRound == 16)
+assert(
+	plan.primary ~= "industrial"
+		and plan.lastReviewRound == 16
+		and plan.reviewReason == "resourceShock",
+	"Reassessment must use a current goal"
+)
 
 local hiddenState = {
 	phase = "game",

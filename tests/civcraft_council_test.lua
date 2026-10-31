@@ -315,7 +315,7 @@ for _, project in ipairs(ranked) do
 		hall = project
 	end
 end
-assert(hall and hall.score > 0, "Diplomatic AI can prepare its victory building")
+assert(not hall, "A stale Diplomatic plan cannot revive the retired Hall")
 
 state = fixture()
 Memory.add(state, -1, 0, "lastingCooperation", 180, 0, 30, "Long-term cooperation")

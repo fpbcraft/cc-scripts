@@ -127,8 +127,12 @@ state = fixture()
 state.phase, state.round = "game", state.roundLimit
 state.victories = { conquest = false, expedition = false, score = false }
 Victory.check(state, false)
+local expected = {}
+for _ in ipairs(state.winnerIDs or {}) do
+	expected[#expected + 1] = "SCORE"
+end
 assert(
-	state.phase == "over" and state.victoryReason == "SCORE",
+	state.phase == "over" and #expected > 0 and state.victoryReason == table.concat(expected, " / "),
 	"Score always resolves the deadline"
 )
 local source = fixture()

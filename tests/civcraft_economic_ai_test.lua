@@ -153,6 +153,7 @@ assert(
 )
 assert(Systems.queue(player, city, "none", nil, state, Hex))
 city.buildings.library = nil
+player.gold = 100
 player.techs.writing = true
 assert(
 	AI.choose(state, player, city, Systems)

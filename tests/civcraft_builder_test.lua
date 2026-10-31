@@ -207,15 +207,18 @@ u.kind = "builder"
 u.charges = 0
 assert(not A.apply(state, 0, intentRequest, S) and not u.autoWork)
 u.charges = 3
-state.contentRules = "baseline"
-assert(
-	A.apply(state, 0, intentRequest, S) and u.autoWork,
-	"Old labels cannot disable current auto work"
-)
-assert(
-	A.apply(state, 0, { action = "autoWork", unitID = u.id, x = u.x, y = u.y, value = "stop" }, S)
-)
-state.contentRules = "balance3"
+do
+	local old, _, traveler = fixture()
+	old.contentRules = "baseline"
+	assert(A.apply(old, 0, {
+		action = "autoWork",
+		unitID = traveler.id,
+		x = traveler.x,
+		y = traveler.y,
+		value = true,
+	}, S) and traveler.autoWork)
+end
+state.contentRules = "balance5"
 u.moved, u.movesLeft = true, 0
 assert(A.apply(state, 0, { action = "autoWork", unitID = u.id, x = u.x, y = u.y, value = true }, S))
 assert(u.autoWork and u.workQueue and u.workQueue.auto, "Auto mode must create a tagged saved task")

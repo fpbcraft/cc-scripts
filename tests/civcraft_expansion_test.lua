@@ -224,6 +224,10 @@ for x = 2, 10 do
 	c.claimed[W.key(x, 4)] = true
 	state.world.rails[W.key(x, 4)] = true
 end
+for i, ownedCity in ipairs({ city, second, third }) do
+	ownedCity.sites = { freight = { id = 20 + i, kind = "freight", x = ownedCity.x - 1, y = 4 } }
+end
+state.nextSiteId = 24
 S.migrate(state)
 local net = R.network(state, p)
 assert(net[1].size == 3)
@@ -246,7 +250,7 @@ for round = 11, 20 do
 	state.round = round
 	Victory.check(state, true)
 end
-assert(state.phase == "over" and state.victoryReason == "INDUSTRIAL")
+assert(state.phase == "game" and p.industryTurns == 0, "Freight cannot revive Industrial victory")
 -- End, conquest, score, simultaneous victories and deadline compatibility.
 state, p, city = fixture()
 city.buildings.dragon = true
@@ -262,7 +266,7 @@ city.buildings.dragon = true
 Victory.check(state, true)
 assert(#state.winnerIDs == 2)
 state, p, city = fixture()
-state.round = 180
+state.round = state.roundLimit
 Victory.check(state, true)
 assert(state.phase == "over" and #state.winnerIDs == 2, "Equal development shares score victory")
 -- Mob camps respect the start buffer, spawn bounds, and replay guards.

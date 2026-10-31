@@ -238,15 +238,18 @@ for kind, stats in pairs(S.units) do
 				actedThisRound = true,
 			}
 			C.round(state, S)
-			assert(u.hp == 50, kind .. " heals an adjacent ally in any territory")
+			assert(u.hp == 40, kind .. " cannot heal an ally that acted")
 			assert(state.units[3].hp == 40, "Support never heals an enemy")
-			u.hp, u.actedThisRound = 98, true
+			u.hp, u.actedThisRound = 98, false
 			C.round(state, S)
 			assert(u.hp == 100, "Support healing is capped at full health")
-			u.hp, u.actedThisRound = 40, true
+			u.hp, u.actedThisRound = 40, false
 			state.units[2].x, state.units[2].y = 1, 1
 			C.round(state, S)
-			assert(u.hp == 40, "A distant healer supplies no healing")
+			assert(
+				u.hp == (position[1] == 3 and 60 or 50),
+				"A distant healer adds nothing to ordinary rest"
+			)
 		end
 	end
 end

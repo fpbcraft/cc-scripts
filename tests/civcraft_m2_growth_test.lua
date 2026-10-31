@@ -113,18 +113,20 @@ assert(
 )
 for _, version in ipairs({ "baseline", "p1", "balance1" }) do
 	state, p, c = fixture(version)
-	assert(not S.canBuild(p, c, "housing", state) and not S.canBuild(p, c, "well", state))
-	assert(S.growth(p, c, state).capacity == nil)
+	assert(S.canBuild(p, c, "housing", state) and S.canBuild(p, c, "well", state))
+	assert(S.growth(p, c, state).capacity == 4)
 	assert(S.queue(p, c, "unit", "settler", state, hex))
 	c.project.progress = 100
 	S.production(state, hex)
-	assert(c.population == 2 and #state.units == 1, "Old profiles retain population-free Settlers")
+	assert(
+		c.population == 1 and #state.units == 1 and p.settlersTrained == 1,
+		"Migrated settlers spend one citizen"
+	)
+	local housing = false
 	for _, entry in ipairs(E.entries("buildings", state)) do
-		assert(entry.id ~= "housing" and entry.id ~= "well")
+		housing = housing or entry.id == "housing"
 	end
-	for _, entry in ipairs(Details.unlocks(S, "crafting", p)) do
-		assert(entry.id ~= "housing")
-	end
+	assert(housing, "Current Housing help is available after migration")
 end
 state, p, c = fixture()
 local found = false

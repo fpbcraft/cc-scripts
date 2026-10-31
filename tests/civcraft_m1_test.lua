@@ -88,10 +88,11 @@ assert(lobby.roundLimit == 250)
 assert(R.configure(lobby, 0, { action = "gameSpeed", speed = "quick" }) and lobby.roundLimit == 167)
 assert(R.configure(lobby, 0, { action = "gameSpeed", speed = "epic" }) and lobby.roundLimit == 375)
 assert(
-	R.configure(lobby, 0, { action = "contentRules", version = "p1" }) and lobby.roundLimit == 270
+	not R.configure(lobby, 0, { action = "contentRules", version = "p1" })
+		and lobby.roundLimit == 375
 )
 assert(
-	R.configure(lobby, 0, { action = "contentRules", version = "balance1" })
+	not R.configure(lobby, 0, { action = "contentRules", version = "balance1" })
 		and lobby.roundLimit == 375
 )
 assert(
