@@ -7,8 +7,10 @@ local Panels = dofile("/games/civcraft/panels.lua")
 local ResearchDetails = dofile("/games/civcraft/research_details.lua")
 local Works = dofile("/games/civcraft/tile_improvements.lua")
 local Projects = dofile("/games/civcraft/civilian_projects.lua")
+local MachineHelp = dofile("/games/civcraft/machine_help.lua")
 local E = {}
 local mechanics = {
+	{ id = "machinery", name = "MACHINERY AND LOCAL SU", text = MachineHelp.overview },
 	{
 		id = "citybanners",
 		name = "CITY MAP BANNERS",
@@ -412,6 +414,9 @@ function E.describe(category, entry, player, state)
 			record.description or "",
 			"One of this building per city.",
 		}
+		for _, paragraph in ipairs(MachineHelp.building(entry.id)) do
+			lines[#lines + 1] = paragraph
+		end
 		if ContentRules.hasDevelopment(state or player) and (record.capacity or 0) > 0 then
 			lines[#lines + 1] = "Settlement Capacity +"
 				.. record.capacity
