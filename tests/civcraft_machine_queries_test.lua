@@ -96,6 +96,11 @@ assert(not Systems.machinePlan(state, 99))
 local preview = assert(Systems.previewMachine(state, 1, 1, "mixer", "industry"))
 assert(preview.stock.brass == 0 and preview.stock.copper == before.copper)
 assert(preview.effects[1].industry == plan.effects[1].industry + 2)
+assert(
+	Systems.yields(player, city, state, Hex, nil, true, preview).industry
+		== Systems.yields(player, city, state, Hex, nil, true, plan).industry + 2,
+	"Worked-tile yields must use the selected preview effects"
+)
 assert(city.machines.mixer.recipe == "brass", "Preview changed selected recipe")
 assert(not Systems.previewMachine(state, 1, 1, "mixer", "unknown"))
 assert(not Systems.previewMachine(state, 1, 2, "mixer", "industry"))
