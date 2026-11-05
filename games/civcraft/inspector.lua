@@ -153,48 +153,56 @@ function I.draw(ui, state, player, rect, modal)
 	elseif city and city.owner == ui.playerID then
 		local tabs = { "INFO", "JOBS", "TILES", "PROD", "MACH" }
 		local values = { "overview", "jobs", "tiles", "production", "machinery" }
-		local columns = w < 100 and 2 or 5
-		local width = math.floor((w - 4 - (columns - 1) * 2) / columns)
-		local tabButtons = {}
-		for i, label in ipairs(tabs) do
-			local mode = values[i]
-			local function choose()
-				ui.placement = nil
-				ui.cityPanel = mode
-				ui.inspectorOffset = 0
-				ui.cityStrikeSource = nil
-				ui.source = nil
-				ui.reachable = {}
-				ui.pendingMove = nil
-				ui.workCity = mode == "tiles" and { x = city.x, y = city.y } or nil
-				if mode == "tiles" and modal then
-					ui.panel = "context"
+		local function choose(mode)
+			ui.placement = nil
+			ui.cityPanel = mode
+			ui.inspectorOffset = 0
+			ui.cityStrikeSource = nil
+			ui.source = nil
+			ui.reachable = {}
+			ui.pendingMove = nil
+			ui.workCity = mode == "tiles" and { x = city.x, y = city.y } or nil
+			if mode == "tiles" and modal then
+				ui.panel = "context"
+			end
+		end
+		if h < 72 then
+			local selected = 1
+			for index, mode in ipairs(values) do
+				if mode == (ui.cityPanel or "overview") then
+					selected = index
+					break
 				end
 			end
-			if stacked and h < 64 then
-				tabButtons[#tabButtons + 1] = {
-					label = label,
-					run = choose,
-					style = {
-						selected = (ui.cityPanel or "overview") == mode,
-					},
-				}
-			else
+			local function stepTab(delta)
+				selected = ((selected - 1 + delta) % #values) + 1
+				choose(values[selected])
+			end
+			r:button(x + 2, controlsY, 14, 11, "<", function()
+				stepTab(-1)
+			end)
+			r:text(x + 20, controlsY + 3, tabs[selected], 8, 1, w - 40)
+			r:button(x + w - 16, controlsY, 14, 11, ">", function()
+				stepTab(1)
+			end)
+			bodyY = controlsY + 12
+		else
+			local columns = w < 100 and 2 or 5
+			local width = math.floor((w - 4 - (columns - 1) * 2) / columns)
+			for i, label in ipairs(tabs) do
+				local mode = values[i]
 				r:button(
 					x + 2 + ((i - 1) % columns) * (width + 2),
 					controlsY + math.floor((i - 1) / columns) * 12,
 					width,
 					11,
 					label,
-					choose,
+					function()
+						choose(mode)
+					end,
 					{ selected = (ui.cityPanel or "overview") == mode }
 				)
 			end
-		end
-		if #tabButtons > 0 then
-			rows[#rows + 1] = { buttons = tabButtons }
-			bodyY = controlsY
-		else
 			bodyY = controlsY + math.ceil(#tabs / columns) * 12
 		end
 		Combat.city(city)

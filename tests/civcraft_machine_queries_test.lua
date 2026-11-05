@@ -375,4 +375,100 @@ end
 for _, item in ipairs(spectatorRender.texts) do
 	assert(not item.value:find("PLANNED OPERATION", 1, true), "Spectator hides machinery forecast")
 end
+
+-- Reproduce the native text renderer's logical canvas for a 51x19 terminal.
+local Renderer = dofile("/games/civcraft/render.lua")
+local terminal = {
+	getSize = function()
+		return 51, 19
+	end,
+}
+local nativeUi = {
+	playerID = 1,
+	selected = { x = city.x, y = city.y, kind = "city" },
+	cityPanel = "machinery",
+	inspectorOffset = 0,
+	commands = {},
+}
+function nativeUi:command(action, params)
+	self.commands[#self.commands + 1] = { action = action, params = params }
+end
+local function drawNativeInspector()
+	nativeUi.r = Renderer.new(terminal, { forceText = true, layoutOnly = true })
+	Inspector.draw(nativeUi, state, player, { x = 3, y = 0, w = 96, h = 57 }, true)
+	for _, button in ipairs(nativeUi.r.buttons) do
+		assert(
+			button.x >= 3
+				and button.y >= 0
+				and button.x + button.w <= 99
+				and button.y + button.h <= 57,
+			"Native inspector button stays inside the clipped panel: " .. tostring(button.label)
+		)
+	end
+	return nativeUi.r
+end
+local function terminalClick(r, label)
+	local selected
+	for _, button in ipairs(r.buttons) do
+		if button.label == label then
+			selected = button
+			break
+		end
+	end
+	assert(selected, "Native terminal exposes " .. label)
+	local col = math.floor((selected.x + selected.w / 2) / 2) + 1
+	local row = math.floor((selected.y + selected.h / 2) / 3) + 1
+	assert(col <= r.cw and row <= r.ch, "Native control center maps to a terminal cell")
+	local x, y = r:touch(col, row)
+	assert(x and y and r:hit(x, y), "Transformed terminal click activates " .. label)
+end
+local r = drawNativeInspector()
+terminalClick(r, ">")
+assert(nativeUi.cityPanel == "overview", "Compact next-tab control changes city panel")
+r = drawNativeInspector()
+terminalClick(r, "<")
+assert(nativeUi.cityPanel == "machinery", "Compact previous-tab control returns to machinery")
+local nativePages = 0
+while nativePages < 50 do
+	r = drawNativeInspector()
+	local found = false
+	for _, button in ipairs(r.buttons) do
+		if button.label == "BRASS" then
+			found = true
+			break
+		end
+	end
+	if found then
+		break
+	end
+	terminalClick(r, "NEXT")
+	nativePages = nativePages + 1
+end
+assert(nativePages < 50, "Native 51x19 inspector reaches the Mixer recipe control")
+r = drawNativeInspector()
+terminalClick(r, "BRASS")
+assert(#nativeUi.commands == 0, "Native preview remains read-only")
+nativeUi.inspectorOffset = 0
+local nativeBefore = copy(state)
+r = drawNativeInspector()
+assert(equal(state, nativeBefore), "Native preview leaves full canonical state unchanged")
+local applyPages = 0
+while applyPages < 50 do
+	r = drawNativeInspector()
+	local found = false
+	for _, button in ipairs(r.buttons) do
+		if button.label == "APPLY" then
+			found = true
+			break
+		end
+	end
+	if found then
+		break
+	end
+	terminalClick(r, "NEXT")
+	applyPages = applyPages + 1
+end
+assert(applyPages < 50, "Native 51x19 inspector reaches the explicit recipe apply control")
+terminalClick(r, "APPLY")
+assert(nativeUi.commands[#nativeUi.commands].params.recipe == "brass")
 print("CIVCRAFT: machine forecasts, persistent controls, privacy and preview UI passed")
