@@ -2,6 +2,7 @@ local Sites = dofile("/games/civcraft/specialty_sites.lua")
 local Specialty = dofile("/games/civcraft/specialty_view.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Works = dofile("/games/civcraft/tile_improvements.lua")
+local MachineHelp = dofile("/games/civcraft/machine_help.lua")
 local Details = {}
 local purposes = {
 	agriculture = "Secure a food surplus so cities can grow and staff more worked tiles.",
@@ -146,6 +147,11 @@ function Details.paragraphs(systems, id, player)
 					.. "."
 			end
 			paragraphs[#paragraphs + 1] = record.name .. ": " .. benefit
+			if entry.category == "buildings" then
+				for _, paragraph in ipairs(MachineHelp.building(entry.id)) do
+					paragraphs[#paragraphs + 1] = record.name .. ": " .. paragraph
+				end
+			end
 		end
 	end
 	if Sites.enabled(player) and id == "astronomy" then
