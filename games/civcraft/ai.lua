@@ -19,6 +19,7 @@ local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local Difficulty = dofile("/games/civcraft/ai_difficulty.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Builders = dofile("/games/civcraft/ai_builders.lua")
+local Machinery = dofile("/games/civcraft/ai_machinery.lua")
 local A = {}
 
 local function attachAssignedEscort(state, player, unit, systems)
@@ -168,6 +169,27 @@ function A.materials(state, player, systems)
 			break
 		end
 	end
+end
+function A.machinery(state, player, systems)
+	local limit = 0
+	for _, city in ipairs(state.cities or {}) do
+		if city.owner == player.id and (city.buildings or {}).mixer == true then
+			limit = limit + 3
+		end
+	end
+	local acted = false
+	for _ = 1, limit do
+		local view = A.knowledge(state, player)
+		local request = Machinery.recommend(view, player, systems)
+		if type(request) ~= "table" or next(request) == nil then
+			break
+		end
+		if not Actions.apply(state, player.id, request, systems) then
+			break
+		end
+		acted = true
+	end
+	return acted
 end
 function A.choose(state, player, city, systems)
 	local view = A.knowledge(state, player)

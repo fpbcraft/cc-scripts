@@ -1,6 +1,7 @@
 -- Bounded owner-observation policy for persistent machinery choices.
 local M = {}
 local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
+local Stock = dofile("/games/civcraft/resource_stock.lua")
 
 local function copyChoice(choice)
 	return { recipe = choice.recipe, priority = choice.priority, enabled = choice.enabled }
@@ -78,6 +79,37 @@ local function projectedPlan(view, owner, city, patch, systems)
 	return forecast and forecast.plan
 end
 
+local function projectInputs(view, ownerID, inputs)
+	local projected = {}
+	for key, value in pairs(view) do
+		projected[key] = value
+	end
+	projected.players = {}
+	for index, player in ipairs(view.players or {}) do
+		if player.id == ownerID then
+			local clone = {}
+			for key, value in pairs(player) do
+				clone[key] = value
+			end
+			clone.stockpile = {}
+			for resource, amount in pairs(player.stockpile or {}) do
+				clone.stockpile[resource] = amount
+			end
+			for resource, amount in pairs(inputs) do
+				local newAmount = (clone.stockpile[resource] or 0) + amount
+				if newAmount > Stock.caps[resource] then
+					return nil
+				end
+				clone.stockpile[resource] = newAmount
+			end
+			projected.players[index] = clone
+		else
+			projected.players[index] = player
+		end
+	end
+	return projected
+end
+
 local function targetRecipe(view, player, city, forecast, systems)
 	local current = machine(forecast.plan, city.id, "mixer")
 	local brassNeed = hasBrassProject(view, player.id, systems)
@@ -148,6 +180,89 @@ local function targetRecipe(view, player, city, forecast, systems)
 		end
 	end
 	return "no_recipe"
+end
+
+-- Reports Mixer inputs only when a current brass project can use this enabled
+-- operation. `covered` also suppresses direct brass imports when the forecast
+-- can make the requested material or needs only its copper/zinc inputs.
+function M.brassInputTargets(view, player, systems)
+	if
+		type(view) ~= "table"
+		or type(systems) ~= "table"
+		or type(systems.machineForecast) ~= "function"
+		or type(systems.previewMachine) ~= "function"
+	then
+		return {}, false
+	end
+	local owner = ownPlayer(view, player)
+	if
+		not owner
+		or view.phase ~= "game"
+		or not Scheduler.canAct(view, owner.id)
+		or not (owner.techs or {}).brassworking
+		or ((owner.stockpile or {}).brass or 0) >= 2
+		or not hasBrassProject(view, owner.id, systems)
+	then
+		return {}, false
+	end
+	local forecast = systems.machineForecast(view, owner.id)
+	if not forecast or not forecast.plan then
+		return {}, false
+	end
+	if ((forecast.plan.stock or {}).brass or 0) >= 2 then
+		return {}, true
+	end
+	local cities, importableInputs = {}, nil
+	for _, city in ipairs(view.cities or {}) do
+		if city.owner == owner.id and (city.buildings or {}).mixer == true then
+			cities[#cities + 1] = city
+		end
+	end
+	table.sort(cities, function(a, b)
+		return a.id < b.id
+	end)
+	for _, city in ipairs(cities) do
+		local choice = (city.machines or {}).mixer
+		if choice and choice.enabled == true then
+			local preview = systems.previewMachine(view, owner.id, city.id, "mixer", "brass")
+			local record = preview and machine(preview, city.id, "mixer")
+			if
+				record
+				and record.active
+				and ((preview.stock or {}).brass or 0) > forecast.plan.stock.brass
+			then
+				return {}, true
+			end
+			if record and record.reason == "missing_input" and record.operation then
+				local available = forecast.plan.reservations.snapshot
+				local needed = {}
+				for resource, amount in pairs(record.operation.inputs or {}) do
+					local missing = math.max(0, amount - (available[resource] or 0))
+					if missing > 0 then
+						needed[resource] = missing
+					end
+				end
+				if next(needed) then
+					local projected = projectInputs(view, owner.id, needed)
+					local repaired = projected
+						and systems.previewMachine(projected, owner.id, city.id, "mixer", "brass")
+					local repairedRecord = repaired and machine(repaired, city.id, "mixer")
+					if
+						repairedRecord
+						and repairedRecord.active
+						and ((repaired.stock or {}).brass or 0) > forecast.plan.stock.brass
+					then
+						importableInputs = needed
+						break
+					end
+				end
+			end
+		end
+	end
+	if importableInputs then
+		return importableInputs, true
+	end
+	return {}, false
 end
 
 -- Returns at most one stable, legal persistent action. The caller applies it
