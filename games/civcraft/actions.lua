@@ -602,6 +602,7 @@ local function apply(state, id, req, Systems)
 			foodStore = 0,
 			jobs = { food = 1, wood = 1, science = 0 },
 			buildings = {},
+			machines = {},
 		})
 		local plot = World.key(x, y)
 		if state.world.improvements and state.world.improvements[plot] then
