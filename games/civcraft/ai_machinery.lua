@@ -64,10 +64,21 @@ local function hasBrassProject(view, owner, systems)
 	return false
 end
 
-local function hasIndustryDemand(city, player, systems)
+local function hasIndustryDemand(view, city, player, systems)
 	local project = city.project
 	if type(project) ~= "table" or type(project.kind) ~= "string" then
 		return false
+	end
+	if project.kind == "project" then
+		if
+			type(systems.canProject) ~= "function"
+			or type(systems.projectPreview) ~= "function"
+			or not systems.canProject(player, city, project.id)
+		then
+			return false
+		end
+		local preview = systems.projectPreview(player, city, project.id, view)
+		return preview and preview.active == true or false
 	end
 	local cost = systems.projectCost(project.kind, project.id, player, city)
 	return type(cost) == "number" and cost > (project.progress or 0)
@@ -147,7 +158,7 @@ local function targetRecipe(view, player, city, forecast, systems)
 			end
 		end
 	end
-	local industryNeed = hasIndustryDemand(city, player, systems)
+	local industryNeed = hasIndustryDemand(view, city, player, systems)
 	if industryNeed and current and current.active and current.choice.recipe == "industry" then
 		return "industry"
 	end

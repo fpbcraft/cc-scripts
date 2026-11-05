@@ -154,6 +154,64 @@ assert(request.action == "selectMachineRecipe" and request.recipe == "no_recipe"
 apply(industry, request)
 assertNoAdvice(industry, "An idle mixer must settle at no_recipe")
 
+-- Continuous civilian projects consume industry through their canonical divisor.
+-- Their progress field is not a finite completion cost.
+for _, id in ipairs({ "ponder", "trade", "tend" }) do
+	local buildings = {
+		waterwheel = true,
+		mixer = true,
+		market = true,
+		library = true,
+		farm = true,
+		housing = true,
+	}
+	local projectState = fixture({ kind = "project", id = id, progress = 100 }, buildings)
+	local projectPlayer, projectCity = projectState.players[1], projectState.cities[1]
+	if id == "ponder" then
+		projectPlayer.techs.agriculture = nil
+		projectPlayer.researchTarget = "agriculture"
+	end
+	local definition = Systems.projects[id]
+	projectCity.projectRemainders = { [id] = definition.divisor - 1 }
+	assert(Systems.canProject(projectPlayer, projectCity, id), id)
+	request = recommend(projectState)
+	assert(
+		request.action == "selectMachineRecipe" and request.recipe == "industry",
+		"A valid continuous project must keep Mixer industry useful: " .. id
+	)
+	apply(projectState, request)
+	local projectView = World.forPlayer(projectState, 1)
+	local plan = Systems.machineForecast(projectView, 1).plan
+	local industryYield = (plan.effects[projectCity.id] or {}).industry or 0
+	local conversion = Systems.projectPreview(projectPlayer, projectCity, id, projectView, {
+		industry = industryYield,
+	})
+	assert(conversion.active and conversion[definition.output] > 0)
+	assert(
+		conversion.remainder == (industryYield + definition.divisor - 1) % definition.divisor,
+		"The canonical conversion must preserve its fractional remainder"
+	)
+	assertNoAdvice(projectState, "Continuous project industry should converge: " .. id)
+
+	if id == "ponder" then
+		projectPlayer.researchTarget = nil
+	else
+		projectCity.project = nil
+	end
+	request = recommend(projectState)
+	assert(request.action == "selectMachineRecipe" and request.recipe == "no_recipe")
+	apply(projectState, request)
+	assertNoAdvice(
+		projectState,
+		"Inactive continuous projects must stop consuming industry: " .. id
+	)
+end
+
+local invalidProject = fixture({ kind = "project", id = "missing", progress = 0 })
+invalidProject.cities[1].machines.mixer.recipe = "industry"
+request = recommend(invalidProject)
+assert(request.action == "selectMachineRecipe" and request.recipe == "no_recipe")
+
 -- Missing inputs block brass selection until recovery; the helper never purchases inputs.
 local shortage = fixture(brassProject, nil, { copper = 1 })
 request = recommend(shortage)
