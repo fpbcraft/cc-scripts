@@ -787,7 +787,7 @@ function M.yields(p, c, state, hex, owned, readOnly, machinePlan)
 			M.ensureWorkers(state, c, tiles)
 			worked = c.worked
 		end
-		local center = M.centerYields(p, c, state)
+		local center = M.centerYields(p, c, state, machinePlan)
 		food, industry, science = center.food, center.industry, center.science
 		for _, tile in ipairs(tiles) do
 			if worked and worked[tile.key] then
