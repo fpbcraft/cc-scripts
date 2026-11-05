@@ -135,5 +135,57 @@ class MaterialReservationTests(unittest.TestCase):
             self.assertEqual(reference.state_hash(), accelerated.state_hash())
 
 
+    def prepare_powered_machine(self, runtime):
+        city = self.prepare_machine(runtime)
+        runtime.call(runtime.lua.eval("""function(state,cityID)
+            local systems=dofile('/games/civcraft/systems.lua')
+            for _, c in ipairs(state.cities) do if c.id==cityID then
+                c.buildings.waterwheel,c.buildings.press,c.buildings.steamplant=true,true,true
+            end end
+            state.players[1].stockpile.coal=1
+            state.players[1].stockpile.copper=1
+            state.players[1].stockpile.zinc=1
+            systems.migrate(state)
+        end"""), runtime.state, city)
+        self.assertTrue(runtime.apply(0, {'action': 'selectMachineRecipe', 'city': city,
+                                         'building': 'mixer', 'recipe': 'brass'})[0])
+        return city
+
+    def machine_forecast(self, runtime):
+        systems = runtime.lua.globals().dofile('/games/civcraft/systems.lua')
+        return from_lua(runtime.call(systems.machineForecast, runtime.state, 0))
+
+    def test_selected_machine_forecast_and_preview_preserve_complete_state(self):
+        runtime = fixture()
+        city = self.prepare_powered_machine(runtime)
+        systems = runtime.lua.globals().dofile('/games/civcraft/systems.lua')
+        before = runtime.state_hash()
+        forecast = self.machine_forecast(runtime)
+        raw_preview = runtime.call(systems.previewMachine, runtime.state, 0, city, 'mixer', 'industry')
+        preview = from_lua(raw_preview)
+        preview_economy = from_lua(runtime.call(systems.economy, runtime.state.players[1], runtime.state, raw_preview))
+        self.assertEqual(preview_economy['industry'], forecast['economy']['industry'] + 2)
+        self.assertEqual(runtime.state_hash(), before)
+        self.assertEqual(forecast['plan']['stock']['brass'], 2)
+        self.assertEqual(preview['stock']['copper'], 1)
+        self.assertEqual(preview['effects'][str(city)]['industry'], forecast['plan']['effects'][str(city)]['industry'] + 2)
+        runtime.state.players[2].stockpile.coal = 999
+        self.assertEqual(self.machine_forecast(runtime), forecast)
+
+    @unittest.skipUnless(importlib.util.find_spec('lupa.luajit21'), 'Optional LuaJIT extension absent')
+    def test_machine_effects_fuel_and_preview_match_jit_checkpoint(self):
+        reference, accelerated = fixture(), fixture('luajit21')
+        city = self.prepare_powered_machine(reference)
+        accelerated.restore(reference.canonical_state())
+        self.assertEqual(self.machine_forecast(reference), self.machine_forecast(accelerated))
+        previews = []
+        for runtime in (reference, accelerated):
+            systems = runtime.lua.globals().dofile('/games/civcraft/systems.lua')
+            before = runtime.state_hash()
+            previews.append(from_lua(runtime.call(systems.previewMachine, runtime.state, 0, city, 'mixer', 'industry')))
+            self.assertEqual(runtime.state_hash(), before)
+        self.assertEqual(previews[0], previews[1])
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -7,18 +7,27 @@ local CouncilRules = dofile("/games/civcraft/council_rules.lua")
 local ContentRules = dofile("/games/civcraft/content_rules.lua")
 local Stock = dofile("/games/civcraft/resource_stock.lua")
 local Reservations = dofile("/games/civcraft/resource_reservations.lua")
+local MachineChoices = dofile("/games/civcraft/machine_choices.lua")
+local MachineOperations = dofile("/games/civcraft/machine_operations.lua")
 local E = {}
-function E.effects(city, state, systems)
+function E.effects(city, state, systems, machinePlan)
 	local result = { food = 0, industry = 0, science = 0, gold = 0 }
 	for id, built in pairs(city.buildings or {}) do
 		if
 			built
 			and Sites.effectiveBuilding(state, city, id)
+			and (not machinePlan or not MachineChoices.machines[id])
 			and not (ContentRules.hasBuilders(state) and (id == "farm" or id == "mine"))
 		then
 			for k, v in pairs((Content.buildings[id] or {}).effects or {}) do
 				result[k] = (result[k] or 0) + v
 			end
+		end
+	end
+	if machinePlan then
+		assert(machinePlan.owner == city.owner, "Machine effects require the owned plan")
+		for field, value in pairs(MachineOperations.effects(machinePlan, city.id)) do
+			result[field] = result[field] + value
 		end
 	end
 	if state then
@@ -63,7 +72,7 @@ function E.stocks(p)
 		p.stockpile[id] = p.stockpile[id] or 0
 	end
 end
-function E.plan(p, state, owned)
+function E.extract(p, state, owned)
 	local initial = assert(Stock.migrate(p.stockpile or {}))
 	local stock, overflow = assert(Stock.copy(initial)), {}
 	local rates = {}
@@ -85,6 +94,15 @@ function E.plan(p, state, owned)
 		stock = assert(Stock.applyInflow(stock, inflow))
 		overflow[id] = inflow.overflow
 	end
+	for _, id in ipairs(Stock.order) do
+		rates[id] = stock[id] - initial[id]
+	end
+	return { before = initial, stock = stock, rates = rates, overflow = overflow }
+end
+function E.plan(p, state, owned)
+	local extraction = E.extract(p, state, owned)
+	local initial, stock, rates, overflow =
+		extraction.before, extraction.stock, extraction.rates, extraction.overflow
 	-- This adapter retains the pre-activation mixer choice. #103 supplies selected
 	-- operations and local SU/fuel gates through this same reservation engine.
 	local operations = {}

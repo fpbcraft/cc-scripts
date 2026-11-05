@@ -381,3 +381,31 @@ replaces that adapter's selection/gating with persisted choices and local SU/fue
 checks through the same session API. #104–#106 provide controls and combined
 activation/native delivery. This backend alone does not activate the complete
 M4 machinery rules, add recipes, serialize derived status, or resume balance work.
+
+### Phase A pure operations API
+
+`machine_operations.lua` exposes `plan(state, owner, postExtractionStock)` as a
+detached, owner-scoped forecast. It returns each owned machine's active state,
+effects and pause reason, per-city local capacity/use, final stock, and combined
+fuel/recipe reservations. It reads effective family status and research from
+the supplied state, ignores rival machine records, and does not create or repair
+persisted choices. Generator fuel is staged before machine work through the
+same reservation engine. Steam fuel is retained only when it enables an
+otherwise active local operation; otherwise coal is released and the forecast
+is recomputed.
+
+### Owner forecasts and recipe previews
+
+`Systems.machinePlan` builds the post-extraction operating plan for an actual
+player. `machineCapacity` returns an owned city's capacity and use;
+`previewMachine` applies a proposed recipe to detached choices before planning;
+`machineForecast` pairs the same plan with its economy forecast. Unknown actors
+and foreign city requests are rejected. These queries do not mutate choices,
+stock, events, or canonical state, and do not inspect rival private choices.
+
+Economy effects, center yields, city yields and treasury calculations accept an
+optional frozen operating plan. Passing the same plan preserves the operating
+result after stock debit, rather than recalculating affordability from remaining
+stock. The ordinary round loop still uses the pre-activation adapter. Default
+activation, operation-event delivery, player controls and AI selection remain
+in #104–#106; the query layer does not independently activate those rules.
