@@ -494,3 +494,22 @@ controls remain available on touch-only screens; the sidebar pages separately.
 Click the science value in the top resource strip, or the turn prompt when research is pending, to choose from available technologies. The quick picker shows saved progress, science cost, the current project, and estimated turns at the current science rate. Switching projects retains progress; **TECH TREE** still opens the complete technology graph.
 
 Visible formations have separate faction-colored map badges. Click a badge to select that exact unit, including a civilian sharing a military unit’s hex; click the city banner to inspect the city. Badges stay above city labels, and an armed move or attack continues to use the hex target. Remembered terrain does not retain unit badges.
+
+
+## Machinery forecasts
+
+Open an owned city and choose **MACH** to inspect planned local SU, materials,
+fuel and machine pause reasons. Select a recipe to preview it, then **APPLY** to
+save the choice. **P- / P+** change priority (1 runs first, 4 last), and
+**PAUSE / ENABLE** persists activation. Previewing or changing a setting spends
+no materials. These planned settings are not yet connected to round production;
+**INFO** continues to show current production until the M4 activation slice.
+The Codex and research details explain each machine and the unpowered basics.
+
+For development validation, `python3 tests/run_civcraft_native_machinery.py`
+exercises the compact native terminal with queued mouse input. Add `--gui` for
+the native graphics terminal, or `--gui --monitor` for emulated monitor touch.
+The controlled fixture prepares infrastructure/resources, verifies preview and
+persistent controls, rejects and retries one priority command, and reloads the
+save. This is UI/action/save evidence, not normal construction, multiplayer,
+physical Minecraft, balance, or round-loop activation evidence.
