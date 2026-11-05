@@ -162,6 +162,7 @@ P.packages.civcraft = {
 		"world_random.lua",
 		"worldgen.lua",
 		"ai.lua",
+		"ai_machinery.lua",
 		"ai_campaigns.lua",
 		"ai_tactics.lua",
 		"threats.lua",
