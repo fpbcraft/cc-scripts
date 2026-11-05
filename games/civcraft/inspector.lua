@@ -151,50 +151,58 @@ function I.draw(ui, state, player, rect, modal)
 		text("NO SELECTION", 7)
 		text("Click a hex to inspect it.")
 	elseif city and city.owner == ui.playerID then
-		local tabs = { "INFO", "JOBS", "TILES", "PROD" }
-		local values = { "overview", "jobs", "tiles", "production" }
-		local columns = w < 100 and 2 or 4
-		local width = math.floor((w - 4 - (columns - 1) * 2) / columns)
-		local tabButtons = {}
-		for i, label in ipairs(tabs) do
-			local mode = values[i]
-			local function choose()
-				ui.placement = nil
-				ui.cityPanel = mode
-				ui.inspectorOffset = 0
-				ui.cityStrikeSource = nil
-				ui.source = nil
-				ui.reachable = {}
-				ui.pendingMove = nil
-				ui.workCity = mode == "tiles" and { x = city.x, y = city.y } or nil
-				if mode == "tiles" and modal then
-					ui.panel = "context"
+		local tabs = { "INFO", "JOBS", "TILES", "PROD", "MACH" }
+		local values = { "overview", "jobs", "tiles", "production", "machinery" }
+		local function choose(mode)
+			ui.placement = nil
+			ui.cityPanel = mode
+			ui.inspectorOffset = 0
+			ui.cityStrikeSource = nil
+			ui.source = nil
+			ui.reachable = {}
+			ui.pendingMove = nil
+			ui.workCity = mode == "tiles" and { x = city.x, y = city.y } or nil
+			if mode == "tiles" and modal then
+				ui.panel = "context"
+			end
+		end
+		if h < 72 then
+			local selected = 1
+			for index, mode in ipairs(values) do
+				if mode == (ui.cityPanel or "overview") then
+					selected = index
+					break
 				end
 			end
-			if stacked and h < 64 then
-				tabButtons[#tabButtons + 1] = {
-					label = label,
-					run = choose,
-					style = {
-						selected = (ui.cityPanel or "overview") == mode,
-					},
-				}
-			else
+			local function stepTab(delta)
+				selected = ((selected - 1 + delta) % #values) + 1
+				choose(values[selected])
+			end
+			r:button(x + 2, controlsY, 14, 11, "<", function()
+				stepTab(-1)
+			end)
+			r:text(x + 20, controlsY + 3, tabs[selected], 8, 1, w - 40)
+			r:button(x + w - 16, controlsY, 14, 11, ">", function()
+				stepTab(1)
+			end)
+			bodyY = controlsY + 12
+		else
+			local columns = w < 100 and 2 or 5
+			local width = math.floor((w - 4 - (columns - 1) * 2) / columns)
+			for i, label in ipairs(tabs) do
+				local mode = values[i]
 				r:button(
 					x + 2 + ((i - 1) % columns) * (width + 2),
 					controlsY + math.floor((i - 1) / columns) * 12,
 					width,
 					11,
 					label,
-					choose,
+					function()
+						choose(mode)
+					end,
 					{ selected = (ui.cityPanel or "overview") == mode }
 				)
 			end
-		end
-		if #tabButtons > 0 then
-			rows[#rows + 1] = { buttons = tabButtons }
-			bodyY = controlsY
-		else
 			bodyY = controlsY + math.ceil(#tabs / columns) * 12
 		end
 		Combat.city(city)
@@ -254,6 +262,196 @@ function I.draw(ui, state, player, rect, modal)
 						},
 					},
 				}
+			end
+		elseif ui.cityPanel == "machinery" then
+			local plan, why = Systems.machinePlan(state, ui.playerID, city.id)
+			text("PLANNED OPERATION FORECAST", 8)
+			local capacity = plan and plan.capacity[city.id]
+			if not plan or not capacity then
+				text(why or "MACHINERY UNAVAILABLE", 31)
+			else
+				text(
+					"LOCAL SU "
+						.. capacity.used
+						.. "/"
+						.. capacity.capacity
+						.. " (BASE "
+						.. capacity.base
+						.. ")"
+				)
+				text("STOCK AFTER EXTRACTION / PLANNED USE", 7)
+				local stock = plan.reservations.snapshot
+				local used, produced = plan.reservations.inputs, plan.reservations.outputs
+				text(
+					"IRON "
+						.. (stock.iron or 0)
+						.. " COPPER "
+						.. (stock.copper or 0)
+						.. " ZINC "
+						.. (stock.zinc or 0)
+						.. " REDSTONE "
+						.. (stock.redstone or 0)
+				)
+				text(
+					"DIAMOND "
+						.. (stock.diamond or 0)
+						.. " BRASS "
+						.. (stock.brass or 0)
+						.. " HORSES "
+						.. (stock.horses or 0)
+						.. " SALTPETER "
+						.. (stock.saltpeter or 0)
+				)
+				text(
+					"COAL "
+						.. (stock.coal or 0)
+						.. " / PLAN -COAL "
+						.. (used.coal or 0)
+						.. " +BRASS "
+						.. (produced.brass or 0)
+				)
+				local preview = ui.machinePreview
+					and ui.machinePreview.cityID == city.id
+					and Systems.previewMachine(
+						state,
+						ui.playerID,
+						city.id,
+						ui.machinePreview.building,
+						ui.machinePreview.recipe
+					)
+				if preview then
+					text(
+						"PREVIEW "
+							.. ui.machinePreview.building:upper()
+							.. " -> "
+							.. ui.machinePreview.recipe:upper(),
+						18
+					)
+					local projected = preview.capacity[city.id]
+					text(
+						"PREVIEW SU "
+							.. projected.used
+							.. "/"
+							.. projected.capacity
+							.. " / OUTPUT BRASS "
+							.. (preview.stock.brass or 0)
+					)
+				end
+				for _, machine in ipairs(plan.machines) do
+					if machine.cityID == city.id then
+						local label = Systems.label("building", machine.buildingID)
+							.. " "
+							.. machine.choice.recipe:upper()
+							.. " P"
+							.. machine.choice.priority
+							.. (machine.choice.enabled and " ON" or " OFF")
+							.. (machine.active and " / ACTIVE" or " / PAUSED")
+						text(label .. " / SU " .. machine.impact, machine.active and 13 or 31)
+						if not machine.active then
+							local reasons = {
+								disabled = "Disabled by choice",
+								inactive_family = "Building is not active",
+								no_recipe = "Choose a recipe",
+								no_demand = "No powered machine demand",
+								missing_fuel = "Coal is unavailable",
+								missing_input = "Required material is unavailable",
+								output_cap = "Output stock is full",
+								no_capacity = "Insufficient local SU",
+							}
+							text("PAUSED: " .. (reasons[machine.reason] or "Cannot operate"), 31)
+						end
+						local id, recipe, priority, enabled =
+							machine.buildingID,
+							machine.choice.recipe,
+							machine.choice.priority,
+							machine.choice.enabled
+						local options = id == "mixer" and { "no_recipe", "brass", "industry" }
+							or { recipe }
+						for _, option in ipairs(options) do
+							local optionLabel = ({
+								no_recipe = "NO RECIPE",
+								brass = "BRASS",
+								industry = "INDUSTRY",
+							})[option] or option:upper()
+							rows[#rows + 1] = {
+								buttons = {
+									{
+										label = optionLabel,
+										run = function()
+											ui.machinePreview =
+												{ cityID = city.id, building = id, recipe = option }
+											ui.inspectorOffset = 0
+										end,
+										style = {
+											selected = ui.machinePreview
+													and ui.machinePreview.cityID == city.id
+													and ui.machinePreview.building == id
+													and ui.machinePreview.recipe == option
+												or option == recipe,
+										},
+									},
+								},
+							}
+						end
+						rows[#rows + 1] = {
+							buttons = {
+								{
+									label = "P-",
+									run = function()
+										ui:command("setMachinePriority", {
+											city = city.id,
+											building = id,
+											priority = math.max(1, priority - 1),
+										})
+									end,
+								},
+								{
+									label = "P+",
+									run = function()
+										ui:command("setMachinePriority", {
+											city = city.id,
+											building = id,
+											priority = math.min(4, priority + 1),
+										})
+									end,
+								},
+							},
+						}
+						rows[#rows + 1] = {
+							buttons = {
+								{
+									label = enabled and "PAUSE" or "ENABLE",
+									run = function()
+										ui:command("setMachineEnabled", {
+											city = city.id,
+											building = id,
+											enabled = not enabled,
+										})
+									end,
+								},
+							},
+						}
+						rows[#rows + 1] = {
+							buttons = {
+								{
+									label = "APPLY",
+									run = function()
+										local selected = ui.machinePreview
+												and ui.machinePreview.cityID == city.id
+												and ui.machinePreview.building == id
+												and ui.machinePreview.recipe
+											or recipe
+										ui:command(
+											"selectMachineRecipe",
+											{ city = city.id, building = id, recipe = selected }
+										)
+										ui.machinePreview = nil
+									end,
+								},
+							},
+						}
+					end
+				end
 			end
 		elseif ui.cityPanel == "jobs" then
 			text("POP " .. (city.population or 2) .. " / IDLE " .. Systems.idle(city), 7)
