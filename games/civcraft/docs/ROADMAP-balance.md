@@ -1,6 +1,6 @@
 # CivCraft balance implementation roadmap
 
-Date: 2026-10-31. Mode: implementation. Current position: **M3 mechanics and installed native default flow are complete; M4 materials backend #164–#168 is implemented in an unmerged PR stack, with final #168 CI pending; machinery choices are in #169.** M4 SU/fuel resolution (#170), UI (#104), AI (#105), and integrated activation/native delivery (#106) remain separate work. Balance calibration remains deferred. Physical Minecraft monitor/rednet validation remains open. This document plans the accepted [38 ADRs](adr/README.md); it
+Date: 2026-11-04. Mode: implementation. Current position: **M3 mechanics and installed native default flow are complete; M4 materials backend #164–#168 is integrated in main 8c841633, with standalone, native and CI evidence recorded in #102/#163; machinery choices are in #169.** M4 SU/fuel resolution (#170), UI (#104), AI (#105), and integrated activation/native delivery (#106) remain separate work. Balance calibration remains deferred. Physical Minecraft monitor/rednet validation remains open. This document plans the accepted [38 ADRs](adr/README.md); it
 does not mark the redesign implemented. All 16 follow-up answers were A.
 
 ## Product and delivery target

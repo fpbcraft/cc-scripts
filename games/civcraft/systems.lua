@@ -995,6 +995,7 @@ function M.production(state, hex)
 				if c.project and c.project.kind == "site" then
 					local complete, record = Sites.advance(state, p, c, yield.industry)
 					if complete then
+						MachineChoices.ensureCity(state, c)
 						Events.site(state, c, record)
 					end
 				end

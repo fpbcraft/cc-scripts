@@ -3,8 +3,8 @@ local Sites = dofile("/games/civcraft/specialty_sites.lua")
 local M = {
 	schema = 1,
 	machines = {
-		waterwheel = { priority = 0, recipe = "generator" },
-		windmill = { priority = 0, recipe = "generator" },
+		waterwheel = { priority = 4, recipe = "generator" },
+		windmill = { priority = 4, recipe = "generator" },
 		press = { priority = 1, recipe = "industry" },
 		crusher = { priority = 1, recipe = "industry" },
 		beltlogistics = { priority = 1, recipe = "industry" },
@@ -40,7 +40,7 @@ local function hasRetainedSite(city, id)
 end
 function M.create(city, building)
 	local spec = M.machines[building]
-	if not spec then
+	if not spec or (city.buildings or {})[building] ~= true then
 		return
 	end
 	city.machines = city.machines or {}
@@ -48,15 +48,29 @@ function M.create(city, building)
 		city.machines[building] = { recipe = spec.recipe, priority = spec.priority, enabled = true }
 	end
 end
+-- Called only at migration/construction boundaries, never by forecasts.
+function M.ensureCity(state, city)
+	for id, built in pairs(city.buildings or {}) do
+		if
+			built == true
+			and M.machines[id]
+			and (Sites.effectiveBuilding(state, city, id) or hasRetainedSite(city, id))
+		then
+			M.create(city, id)
+		end
+	end
+end
 function M.migrate(state)
 	assert(
 		state.machinerySchema == nil or state.machinerySchema == M.schema,
 		"Unsupported machinery schema"
 	)
-	local seen = {}
+	local seenRecords, seenMaps = {}, {}
 	for _, city in ipairs(state.cities or {}) do
 		assert(city.machines == nil or type(city.machines) == "table", "Invalid machine choices")
 		city.machines = city.machines or {}
+		assert(not seenMaps[city.machines], "Shared city machine choices")
+		seenMaps[city.machines] = true
 		city.machineStatus = nil
 		for id, record in pairs(city.machines) do
 			local spec = M.machines[id]
@@ -76,9 +90,9 @@ function M.migrate(state)
 				end
 			end
 			assert(ownerExists, "Machine choice has no valid city owner")
-			assert(not seen[tostring(city.id) .. ":" .. id], "Duplicate machine ownership")
-			seen[tostring(city.id) .. ":" .. id] = true
 			assert(type(record) == "table", "Invalid machine choice")
+			assert(not seenRecords[record], "Shared machine choice record")
+			seenRecords[record] = true
 			assert(
 				record.cityID == nil and record.owner == nil,
 				"Machine choice has foreign ownership"
@@ -87,7 +101,7 @@ function M.migrate(state)
 			assert(
 				type(record.priority) == "number"
 					and record.priority % 1 == 0
-					and record.priority >= 0
+					and record.priority >= 1
 					and record.priority <= 4,
 				"Invalid machine priority"
 			)
@@ -96,19 +110,22 @@ function M.migrate(state)
 				"Invalid machine enabled state"
 			)
 		end
-		for id in pairs(city.buildings or {}) do
-			if
-				M.machines[id]
-				and (Sites.effectiveBuilding(state, city, id) or hasRetainedSite(city, id))
-			then
-				M.create(city, id)
-			end
-		end
+		M.ensureCity(state, city)
 	end
 	state.machinerySchema = M.schema
 	return state
 end
 function M.apply(state, owner, request)
+	if type(request) ~= "table" then
+		return false, "Invalid machine order"
+	end
+	if
+		request.action ~= "selectMachineRecipe"
+		and request.action ~= "setMachinePriority"
+		and request.action ~= "setMachineEnabled"
+	then
+		return false, "Unknown machine action"
+	end
 	local city
 	for _, candidate in ipairs(state.cities or {}) do
 		if candidate.id == request.city then
@@ -152,7 +169,7 @@ function M.apply(state, owner, request)
 		if
 			type(request.priority) ~= "number"
 			or request.priority % 1 ~= 0
-			or request.priority < 0
+			or request.priority < 1
 			or request.priority > 4
 		then
 			return false, "Invalid machine priority"

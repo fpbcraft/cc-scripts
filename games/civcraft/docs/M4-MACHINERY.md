@@ -355,7 +355,9 @@ privacy, conservation, useful unpowered basics and the End bridge still apply.
 ### Intermediate machinery-configuration boundary
 
 The machinery-configuration slice persists a per-city recipe, priority and
-enabled choice for completed machine buildings. The Mixer starts with
+enabled choice for completed machine buildings. Priorities use positive integer
+tiers 1–4; generator defaults use tier 4 as bookkeeping because generation
+resolves before the operation queue. The Mixer starts with
 `no_recipe`; other machines use the accepted default catalog. These choices
 survive temporary site or operation pauses. `machineStatus` is derived and is
 discarded during migration. This slice does not resolve SU, consume fuel,
