@@ -136,4 +136,344 @@ assert(private.stock.brass == 2 and #private.machines == #plan.machines)
 for _, row in ipairs(private.machines) do
 	assert(row.cityID == 1)
 end
-print("CIVCRAFT: owner-only machine queries, previews, basic effects and frozen-plan yields passed")
+
+local Inspector = dofile("/games/civcraft/inspector.lua")
+local function renderer()
+	local r = { buttons = {}, texts = {} }
+	function r:fill() end
+	function r:outline() end
+	function r:text(_, _, value, _, _, width)
+		self.texts[#self.texts + 1] = { value = tostring(value), width = width }
+	end
+	function r:textWidth(value)
+		return #tostring(value or "") * 4
+	end
+	function r:button(x, y, w, h, label, run)
+		self.buttons[#self.buttons + 1] = { x = x, y = y, w = w, h = h, label = label, run = run }
+	end
+	return r
+end
+local cityUI = {
+	playerID = 1,
+	selected = { x = city.x, y = city.y, kind = "city" },
+	cityPanel = "machinery",
+	inspectorOffset = 0,
+	commands = {},
+}
+function cityUI:command(action, params)
+	self.commands[#self.commands + 1] = { action = action, params = params }
+end
+local function drawInspector(ui, width, height, observer)
+	ui.r = renderer()
+	Inspector.draw(ui, state, observer, { x = 0, y = 0, w = width, h = height }, false)
+	return ui.r
+end
+local function clickPaged(ui, width, height, label)
+	for _ = 1, 16 do
+		local r = drawInspector(ui, width, height, player)
+		for _, button in ipairs(r.buttons) do
+			if button.label == label then
+				assert(
+					button.w >= 10 and r:textWidth(label) <= button.w - 6,
+					"Compact control label is readable: " .. label
+				)
+				button.run()
+				return
+			end
+		end
+		local nextPage
+		for _, button in ipairs(r.buttons) do
+			if button.label == "NEXT" then
+				nextPage = button
+				break
+			end
+		end
+		assert(nextPage, "Paged control is reachable: " .. label)
+		nextPage.run()
+	end
+	error("Control not found: " .. label)
+end
+
+-- Reduce the owned test city to a single machine so each rendered control has
+-- one unambiguous owner-city action target.
+city.buildings = { mixer = true }
+city.machines = { mixer = { recipe = "brass", priority = 3, enabled = true } }
+local large = drawInspector(cityUI, 120, 300, player)
+local largeLabels = {}
+for _, button in ipairs(large.buttons) do
+	largeLabels[button.label] = true
+end
+for _, label in ipairs({ "MACH", "BRASS", "NO RECIPE", "INDUSTRY", "P-", "P+", "PAUSE", "APPLY" }) do
+	assert(largeLabels[label], "Large inspector renders " .. label)
+end
+assert(
+	table
+		.concat(
+			(function()
+				local lines = {}
+				for _, item in ipairs(large.texts) do
+					lines[#lines + 1] = item.value
+				end
+				return lines
+			end)(),
+			" "
+		)
+		:find("PAUSED: Insufficient local SU", 1, true),
+	"Pause reason is rendered in full"
+)
+for _, label in ipairs({ "NO RECIPE", "BRASS" }) do
+	clickPaged(cityUI, 60, 160, label)
+	assert(#cityUI.commands == 0, "Recipe preview control does not issue an action")
+end
+
+-- At compact width every option and action remains available on a page and
+-- each label fits its real button bounds.
+cityUI.inspectorOffset = 0
+local compactLabels = {}
+for _ = 1, 16 do
+	local r = drawInspector(cityUI, 60, 160, player)
+	for _, button in ipairs(r.buttons) do
+		if button.label then
+			compactLabels[button.label] = true
+		end
+	end
+	local nextPage
+	for _, button in ipairs(r.buttons) do
+		if button.label == "NEXT" then
+			nextPage = button
+			break
+		end
+	end
+	if not nextPage then
+		break
+	end
+	nextPage.run()
+end
+for _, label in ipairs({ "MACH", "BRASS", "NO RECIPE", "INDUSTRY", "P-", "P+", "PAUSE", "APPLY" }) do
+	assert(compactLabels[label], "Compact inspector exposes readable " .. label)
+end
+clickPaged(cityUI, 60, 160, "MACH")
+
+local function copy(value)
+	if type(value) ~= "table" then
+		return value
+	end
+	local result = {}
+	for key, item in pairs(value) do
+		result[key] = copy(item)
+	end
+	return result
+end
+local function equal(left, right)
+	if type(left) ~= type(right) then
+		return false
+	end
+	if type(left) ~= "table" then
+		return left == right
+	end
+	for key, value in pairs(left) do
+		if not equal(value, right[key]) then
+			return false
+		end
+	end
+	for key in pairs(right) do
+		if left[key] == nil then
+			return false
+		end
+	end
+	return true
+end
+
+cityUI.inspectorOffset = 0
+cityUI.machinePreview = nil
+local beforePreview = copy(state)
+clickPaged(cityUI, 60, 160, "INDUSTRY")
+assert(#cityUI.commands == 0, "Choosing a recipe previews without issuing an action")
+drawInspector(cityUI, 60, 160, player)
+assert(equal(state, beforePreview), "Rendered recipe preview leaves the complete state unchanged")
+assert(city.machines.mixer.recipe == "brass", "Preview leaves the persisted recipe unchanged")
+clickPaged(cityUI, 60, 160, "APPLY")
+local recipeCommand = cityUI.commands[#cityUI.commands]
+assert(recipeCommand.action == "selectMachineRecipe")
+assert(recipeCommand.params.city == city.id and recipeCommand.params.building == "mixer")
+assert(
+	recipeCommand.params.recipe == "industry",
+	"Apply sends only the explicitly previewed recipe"
+)
+local recipeFields = 0
+for _ in pairs(recipeCommand.params) do
+	recipeFields = recipeFields + 1
+end
+assert(recipeFields == 3, "Recipe action contains only stable identity and selected recipe")
+
+cityUI.inspectorOffset = 0
+clickPaged(cityUI, 60, 160, "P-")
+assert(cityUI.commands[#cityUI.commands].params.priority == 2)
+cityUI.inspectorOffset = 0
+clickPaged(cityUI, 60, 160, "P+")
+assert(cityUI.commands[#cityUI.commands].params.priority == 4)
+assert(
+	cityUI.selected.x == city.x and cityUI.selected.y == city.y,
+	"Rejected command retains city selection"
+)
+cityUI.inspectorOffset = 0
+clickPaged(cityUI, 60, 160, "P+")
+assert(
+	cityUI.commands[#cityUI.commands].params.priority == 4,
+	"Repeated control after rejection uses the unchanged authoritative priority"
+)
+assert(cityUI.selected.x == city.x and cityUI.selected.y == city.y)
+city.machines.mixer.priority = 2 -- Simulate an authoritative refreshed snapshot after rejection.
+cityUI.inspectorOffset = 0
+clickPaged(cityUI, 60, 160, "P+")
+assert(
+	cityUI.commands[#cityUI.commands].params.priority == 3,
+	"Priority control uses refreshed state"
+)
+clickPaged(cityUI, 60, 160, "PAUSE")
+assert(cityUI.commands[#cityUI.commands].params.enabled == false)
+assert(cityUI.selected.x == city.x and cityUI.selected.y == city.y)
+city.machines.mixer.enabled = false -- Re-render the authoritative disabled snapshot.
+cityUI.inspectorOffset = 0
+clickPaged(cityUI, 60, 160, "ENABLE")
+assert(cityUI.commands[#cityUI.commands].params.enabled == true)
+
+local rivalCity = state.cities[2]
+player.visible = player.visible or {}
+player.visible[rivalCity.x .. ":" .. rivalCity.y] = true
+assert(World.observedCity(state, player, rivalCity.x, rivalCity.y) == rivalCity)
+local rivalUi = {
+	playerID = 1,
+	selected = { x = rivalCity.x, y = rivalCity.y, kind = "city" },
+	cityPanel = "machinery",
+	inspectorOffset = 0,
+}
+local rivalRender = drawInspector(rivalUi, 120, 300, player)
+for _, button in ipairs(rivalRender.buttons) do
+	assert(
+		button.label ~= "MACH"
+			and button.label ~= "BRASS"
+			and button.label ~= "NO RECIPE"
+			and button.label ~= "INDUSTRY"
+			and button.label ~= "P-"
+			and button.label ~= "P+"
+			and button.label ~= "PAUSE"
+			and button.label ~= "ENABLE"
+			and button.label ~= "APPLY",
+		"Rival city hides machinery controls"
+	)
+end
+for _, item in ipairs(rivalRender.texts) do
+	assert(not item.value:find("PLANNED OPERATION", 1, true), "Rival city hides forecasts")
+end
+local spectatorUi = {
+	playerID = nil,
+	selected = { x = city.x, y = city.y, kind = "city" },
+	cityPanel = "machinery",
+	inspectorOffset = 0,
+}
+local spectator = { id = 0, visible = { [city.x .. ":" .. city.y] = true } }
+local spectatorRender = drawInspector(spectatorUi, 120, 300, spectator)
+for _, button in ipairs(spectatorRender.buttons) do
+	assert(button.label ~= "MACH" and button.label ~= "BRASS", "Spectator hides machinery controls")
+end
+for _, item in ipairs(spectatorRender.texts) do
+	assert(not item.value:find("PLANNED OPERATION", 1, true), "Spectator hides machinery forecast")
+end
+
+-- Reproduce the native text renderer's logical canvas for a 51x19 terminal.
+local Renderer = dofile("/games/civcraft/render.lua")
+local terminal = {
+	getSize = function()
+		return 51, 19
+	end,
+}
+local nativeUi = {
+	playerID = 1,
+	selected = { x = city.x, y = city.y, kind = "city" },
+	cityPanel = "machinery",
+	inspectorOffset = 0,
+	commands = {},
+}
+function nativeUi:command(action, params)
+	self.commands[#self.commands + 1] = { action = action, params = params }
+end
+local function drawNativeInspector()
+	nativeUi.r = Renderer.new(terminal, { forceText = true, layoutOnly = true })
+	Inspector.draw(nativeUi, state, player, { x = 3, y = 0, w = 96, h = 57 }, true)
+	for _, button in ipairs(nativeUi.r.buttons) do
+		assert(
+			button.x >= 3
+				and button.y >= 0
+				and button.x + button.w <= 99
+				and button.y + button.h <= 57,
+			"Native inspector button stays inside the clipped panel: " .. tostring(button.label)
+		)
+	end
+	return nativeUi.r
+end
+local function terminalClick(r, label)
+	local selected
+	for _, button in ipairs(r.buttons) do
+		if button.label == label then
+			selected = button
+			break
+		end
+	end
+	assert(selected, "Native terminal exposes " .. label)
+	local col = math.floor((selected.x + selected.w / 2) / 2) + 1
+	local row = math.floor((selected.y + selected.h / 2) / 3) + 1
+	assert(col <= r.cw and row <= r.ch, "Native control center maps to a terminal cell")
+	local x, y = r:touch(col, row)
+	assert(x and y and r:hit(x, y), "Transformed terminal click activates " .. label)
+end
+local r = drawNativeInspector()
+terminalClick(r, ">")
+assert(nativeUi.cityPanel == "overview", "Compact next-tab control changes city panel")
+r = drawNativeInspector()
+terminalClick(r, "<")
+assert(nativeUi.cityPanel == "machinery", "Compact previous-tab control returns to machinery")
+local nativePages = 0
+while nativePages < 50 do
+	r = drawNativeInspector()
+	local found = false
+	for _, button in ipairs(r.buttons) do
+		if button.label == "BRASS" then
+			found = true
+			break
+		end
+	end
+	if found then
+		break
+	end
+	terminalClick(r, "NEXT")
+	nativePages = nativePages + 1
+end
+assert(nativePages < 50, "Native 51x19 inspector reaches the Mixer recipe control")
+r = drawNativeInspector()
+terminalClick(r, "BRASS")
+assert(#nativeUi.commands == 0, "Native preview remains read-only")
+nativeUi.inspectorOffset = 0
+local nativeBefore = copy(state)
+r = drawNativeInspector()
+assert(equal(state, nativeBefore), "Native preview leaves full canonical state unchanged")
+local applyPages = 0
+while applyPages < 50 do
+	r = drawNativeInspector()
+	local found = false
+	for _, button in ipairs(r.buttons) do
+		if button.label == "APPLY" then
+			found = true
+			break
+		end
+	end
+	if found then
+		break
+	end
+	terminalClick(r, "NEXT")
+	applyPages = applyPages + 1
+end
+assert(applyPages < 50, "Native 51x19 inspector reaches the explicit recipe apply control")
+terminalClick(r, "APPLY")
+assert(nativeUi.commands[#nativeUi.commands].params.recipe == "brass")
+print("CIVCRAFT: machine forecasts, persistent controls, privacy and preview UI passed")
