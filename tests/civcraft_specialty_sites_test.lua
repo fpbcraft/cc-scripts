@@ -299,8 +299,8 @@ if fs and textutils then
 	end
 	assert(Saves.writeFile(Saves.path(2), earlier))
 	local earlierRestored = S.migrate(assert(Saves.load(2)))
-	assert(earlierRestored.contentRules == "balance4")
-	assert(not earlierRestored.specialtySchema and not Sites.enabled(earlierRestored))
+	assert(earlierRestored.contentRules == "balance5")
+	assert(earlierRestored.specialtySchema and Sites.enabled(earlierRestored))
 end
 print(
 	"PASS: rejection atomicity, all building roles, real production, fog bonuses, capture/invalidation, schema rejection, old profiles and native save/reload"

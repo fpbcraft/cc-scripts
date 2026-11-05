@@ -1,4 +1,5 @@
 local Sites = dofile("/games/civcraft/specialty_sites.lua")
+local MachineChoices = dofile("/games/civcraft/machine_choices.lua")
 local Founding = dofile("/games/civcraft/founding.lua")
 -- Host-authoritative gameplay orders shared by humans, remote players and AI.
 -- Session orchestration (lobby, save, end turn) belongs to game.lua.
@@ -170,6 +171,32 @@ local function apply(state, id, req, Systems)
 		local ok, why = Systems.exchange(state, p, req.resource)
 		if ok then
 			Events.notice(state, "order", nil, req.action, id)
+		end
+		return ok, why
+	end
+	if
+		req.action == "selectMachineRecipe"
+		or req.action == "setMachinePriority"
+		or req.action == "setMachineEnabled"
+	then
+		local ok, why = MachineChoices.apply(state, id, req)
+		if ok then
+			local city
+			local detail = req.building
+			for _, candidate in ipairs(state.cities or {}) do
+				if candidate.id == req.city then
+					city = candidate
+					break
+				end
+			end
+			if req.action == "selectMachineRecipe" then
+				detail = req.building .. " recipe: " .. req.recipe
+			elseif req.action == "setMachinePriority" then
+				detail = req.building .. " priority: " .. req.priority
+			else
+				detail = req.building .. (req.enabled and " enabled" or " disabled")
+			end
+			Events.notice(state, "order", city, detail, id)
 		end
 		return ok, why
 	end
@@ -575,6 +602,7 @@ local function apply(state, id, req, Systems)
 			foodStore = 0,
 			jobs = { food = 1, wood = 1, science = 0 },
 			buildings = {},
+			machines = {},
 		})
 		local plot = World.key(x, y)
 		if state.world.improvements and state.world.improvements[plot] then

@@ -1,4 +1,5 @@
 local Sites = dofile("/games/civcraft/specialty_sites.lua")
+local MachineChoices = dofile("/games/civcraft/machine_choices.lua")
 -- CIVCRAFT 4X data & deterministic mechanics, no dependencies on UI/peripherals.
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local Queue = dofile("/games/civcraft/queued_routes.lua")
@@ -327,6 +328,7 @@ function M.migrate(state)
 	Stacks.migrate(state)
 	Queue.migrate(state)
 	Sites.validate(state)
+	MachineChoices.migrate(state)
 	state.version = 6
 	state.resourceSchema = 1
 	return state
@@ -993,6 +995,7 @@ function M.production(state, hex)
 				if c.project and c.project.kind == "site" then
 					local complete, record = Sites.advance(state, p, c, yield.industry)
 					if complete then
+						MachineChoices.ensureCity(state, c)
 						Events.site(state, c, record)
 					end
 				end
@@ -1011,6 +1014,7 @@ function M.production(state, hex)
 								completed = Landmarks.complete(state, c, pr, M)
 							elseif pr.kind == "building" then
 								c.buildings[pr.id] = true
+								MachineChoices.create(c, pr.id)
 								Combat.city(c)
 								completed = true
 							else

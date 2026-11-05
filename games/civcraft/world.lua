@@ -712,6 +712,7 @@ function W.forPlayer(state, id, afterSeq)
 		contentRules = state.contentRules,
 		specialtySchema = state.specialtySchema,
 		resourceSchema = state.resourceSchema,
+		machinerySchema = state.machinerySchema,
 		victoryRulesVersion = state.victoryRulesVersion,
 		council = Council.public(state, id),
 		diplomacy = Diplomacy.public(state, id, Hex, Content.units),
