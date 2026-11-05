@@ -10,6 +10,8 @@ local Actions = dofile("/games/civcraft/actions.lua")
 local Migration = dofile("/games/civcraft/campaign_migration.lua")
 local MachineryAI = dofile("/games/civcraft/ai_machinery.lua")
 local StateWriter = dofile("/games/civcraft/state_writer.lua")
+local AI = dofile("/games/civcraft/ai.lua")
+local Materials = dofile("/games/civcraft/ai_materials.lua")
 
 local function fixture(project, buildings, stockpile)
 	local tiles = {}
@@ -35,7 +37,7 @@ local function fixture(project, buildings, stockpile)
 		x = 4,
 		y = 4,
 		population = 3,
-		buildings = buildings or { waterwheel = true, mixer = true },
+		buildings = buildings or { waterwheel = true, mixer = true, market = true },
 		sites = { works = { id = 1, kind = "works", x = 5, y = 4 } },
 		project = project,
 	}
@@ -84,6 +86,15 @@ end
 
 local function assertNoAdvice(state, message)
 	assert(next(recommend(state)) == nil, message)
+end
+
+local function hasRequest(requests, action, resource)
+	for _, request in ipairs(requests) do
+		if request.action == action and (resource == nil or request.resource == resource) then
+			return true
+		end
+	end
+	return false
 end
 
 local function saveAndReload(state)
@@ -142,6 +153,64 @@ request = recommend(industry)
 assert(request.action == "selectMachineRecipe" and request.recipe == "no_recipe")
 apply(industry, request)
 assertNoAdvice(industry, "An idle mixer must settle at no_recipe")
+
+-- Continuous civilian projects consume industry through their canonical divisor.
+-- Their progress field is not a finite completion cost.
+for _, id in ipairs({ "ponder", "trade", "tend" }) do
+	local buildings = {
+		waterwheel = true,
+		mixer = true,
+		market = true,
+		library = true,
+		farm = true,
+		housing = true,
+	}
+	local projectState = fixture({ kind = "project", id = id, progress = 100 }, buildings)
+	local projectPlayer, projectCity = projectState.players[1], projectState.cities[1]
+	if id == "ponder" then
+		projectPlayer.techs.agriculture = nil
+		projectPlayer.researchTarget = "agriculture"
+	end
+	local definition = Systems.projects[id]
+	projectCity.projectRemainders = { [id] = definition.divisor - 1 }
+	assert(Systems.canProject(projectPlayer, projectCity, id), id)
+	request = recommend(projectState)
+	assert(
+		request.action == "selectMachineRecipe" and request.recipe == "industry",
+		"A valid continuous project must keep Mixer industry useful: " .. id
+	)
+	apply(projectState, request)
+	local projectView = World.forPlayer(projectState, 1)
+	local plan = Systems.machineForecast(projectView, 1).plan
+	local industryYield = (plan.effects[projectCity.id] or {}).industry or 0
+	local conversion = Systems.projectPreview(projectPlayer, projectCity, id, projectView, {
+		industry = industryYield,
+	})
+	assert(conversion.active and conversion[definition.output] > 0)
+	assert(
+		conversion.remainder == (industryYield + definition.divisor - 1) % definition.divisor,
+		"The canonical conversion must preserve its fractional remainder"
+	)
+	assertNoAdvice(projectState, "Continuous project industry should converge: " .. id)
+
+	if id == "ponder" then
+		projectPlayer.researchTarget = nil
+	else
+		projectCity.project = nil
+	end
+	request = recommend(projectState)
+	assert(request.action == "selectMachineRecipe" and request.recipe == "no_recipe")
+	apply(projectState, request)
+	assertNoAdvice(
+		projectState,
+		"Inactive continuous projects must stop consuming industry: " .. id
+	)
+end
+
+local invalidProject = fixture({ kind = "project", id = "missing", progress = 0 })
+invalidProject.cities[1].machines.mixer.recipe = "industry"
+request = recommend(invalidProject)
+assert(request.action == "selectMachineRecipe" and request.recipe == "no_recipe")
 
 -- Missing inputs block brass selection until recovery; the helper never purchases inputs.
 local shortage = fixture(brassProject, nil, { copper = 1 })
@@ -230,4 +299,138 @@ private.cities[2].machines.mixer.recipe = "brass"
 private.cities[2].machines.mixer.priority = 1
 local after = recommend(private)
 assert(before.action == after.action and before.recipe == after.recipe)
+
+-- The AI entrypoint imports Mixer inputs only for a current, feasible brass use.
+local imports = fixture(nil, nil, {})
+local view = World.forPlayer(imports, 1)
+local requests, targets = Materials.orders(view, view.players[1], Systems)
+assert(not targets.copper and not targets.zinc and not hasRequest(requests, "exchange"))
+imports.cities[1].project = { kind = "unit", id = "brassengineer", progress = 0 }
+view = World.forPlayer(imports, 1)
+requests, targets = Materials.orders(view, view.players[1], Systems)
+assert(targets.copper == 1 and targets.zinc == 1 and targets.brass == nil)
+assert(hasRequest(requests, "exchange", "copper") and hasRequest(requests, "exchange", "zinc"))
+assert(not hasRequest(requests, "exchange", "brass"))
+AI.materials(imports, imports.players[1], Systems)
+assert(imports.players[1].stockpile.copper == 1 and imports.players[1].stockpile.zinc == 1)
+assert(imports.players[1].stockpile.brass == nil or imports.players[1].stockpile.brass == 0)
+view = World.forPlayer(imports, 1)
+requests, targets = Materials.orders(view, view.players[1], Systems)
+assert(not targets.copper and not targets.zinc and not targets.brass)
+assert(
+	not hasRequest(requests, "exchange"),
+	"Feasible Mixer output suppresses repeat input imports"
+)
+local importedAdvice = recommend(imports)
+assert(importedAdvice.action == "selectMachineRecipe" and importedAdvice.recipe == "brass")
+local importReplay = saveAndReload(imports)
+assert(AI.machinery(imports, imports.players[1], Systems))
+assert(AI.machinery(importReplay, importReplay.players[1], Systems))
+assert(imports.cities[1].machines.mixer.recipe == "brass")
+assert(importReplay.cities[1].machines.mixer.recipe == "brass")
+assert(not AI.machinery(imports, imports.players[1], Systems), "Machine decisions must converge")
+
+local privacy = fixture(brassProject, nil, {})
+view = World.forPlayer(privacy, 1)
+local privateRequests = Materials.orders(view, view.players[1], Systems)
+privacy.players[2].stockpile.copper = 0
+privacy.cities[2].machines.mixer.recipe = "brass"
+privacy.cities[2].machines.mixer.priority = 1
+view = World.forPlayer(privacy, 1)
+local publicRequests = Materials.orders(view, view.players[1], Systems)
+assert(#privateRequests == #publicRequests)
+for index, request in ipairs(privateRequests) do
+	assert(
+		request.action == publicRequests[index].action
+			and request.resource == publicRequests[index].resource,
+		"Rival private data must not change import orders"
+	)
+end
+
+local disabledInputs = fixture(brassProject, nil, {})
+disabledInputs.cities[1].machines.mixer.enabled = false
+view = World.forPlayer(disabledInputs, 1)
+requests, targets = Materials.orders(view, view.players[1], Systems)
+assert(not targets.copper and not targets.zinc)
+assert(
+	not hasRequest(requests, "exchange", "copper") and not hasRequest(requests, "exchange", "zinc")
+)
+assert(targets.brass == 2 and hasRequest(requests, "exchange", "brass"))
+
+local inactiveInputs = fixture(brassProject, { mixer = true, market = true }, {})
+inactiveInputs.cities[1].sites.works = nil
+view = World.forPlayer(inactiveInputs, 1)
+requests, targets = Materials.orders(view, view.players[1], Systems)
+assert(not targets.copper and not targets.zinc)
+assert(
+	not hasRequest(requests, "exchange", "copper") and not hasRequest(requests, "exchange", "zinc")
+)
+assert(hasRequest(requests, "exchange", "brass"), "Inactive works retains lawful direct import")
+
+local underpoweredInputs = fixture(brassProject, { mixer = true, market = true }, {})
+view = World.forPlayer(underpoweredInputs, 1)
+requests, targets = Materials.orders(view, view.players[1], Systems)
+assert(not targets.copper and not targets.zinc)
+assert(
+	not hasRequest(requests, "exchange", "copper") and not hasRequest(requests, "exchange", "zinc")
+)
+assert(hasRequest(requests, "exchange", "brass"), "Unavailable power retains lawful direct import")
+local unfueledInputs = fixture(brassProject, { mixer = true, steamplant = true, market = true }, {})
+view = World.forPlayer(unfueledInputs, 1)
+requests, targets = Materials.orders(view, view.players[1], Systems)
+assert(not targets.copper and not targets.zinc)
+assert(
+	not hasRequest(requests, "exchange", "copper") and not hasRequest(requests, "exchange", "zinc")
+)
+assert(hasRequest(requests, "exchange", "brass"), "Missing fuel retains lawful direct import")
+
+local cappedInputs = fixture(brassProject, nil, { copper = 0, zinc = 0, brass = 10 })
+view = World.forPlayer(cappedInputs, 1)
+requests, targets = Materials.orders(view, view.players[1], Systems)
+assert(not targets.copper and not targets.zinc)
+assert(
+	not hasRequest(requests, "exchange", "copper") and not hasRequest(requests, "exchange", "zinc")
+)
+
+-- The actual machinery entrypoint stops after a dispatcher rejection.
+local rejected = fixture(brassProject, nil, { copper = 1, zinc = 1 })
+local realApply, calls = Actions.apply, 0
+Actions.apply = function()
+	calls = calls + 1
+	return false, "injected rejection"
+end
+assert(not AI.machinery(rejected, rejected.players[1], Systems))
+Actions.apply = realApply
+assert(calls == 1 and rejected.cities[1].machines.mixer.recipe == "no_recipe")
+
+local gate = fixture(brassProject, nil, { copper = 1, zinc = 1 })
+gate.players[1].ready = true
+calls = 0
+Actions.apply = function()
+	calls = calls + 1
+	return false, "must not be called"
+end
+assert(not AI.machinery(gate, gate.players[1], Systems))
+Actions.apply = realApply
+assert(calls == 0, "The actual AI entrypoint must honor ordinary action gates")
+
+local staged = fixture(brassProject, { mixer = true, waterwheel = true }, { copper = 1, zinc = 1 })
+staged.cities[1].machines.mixer.enabled = false
+assert(AI.machinery(staged, staged.players[1], Systems))
+assert(
+	staged.cities[1].machines.mixer.enabled and staged.cities[1].machines.mixer.recipe == "brass",
+	"The dispatcher path must converge through enable and recipe actions"
+)
+local stagedPriority = fixture(brassProject, {
+	waterwheel = true,
+	press = true,
+	mixer = true,
+}, { copper = 1, zinc = 1 })
+assert(AI.machinery(stagedPriority, stagedPriority.players[1], Systems))
+assert(
+	stagedPriority.cities[1].machines.mixer.priority == 1
+		and stagedPriority.cities[1].machines.mixer.recipe == "brass",
+	"The dispatcher path must converge through priority and recipe actions"
+)
+assert(not AI.machinery(stagedPriority, stagedPriority.players[1], Systems))
 print("CIVCRAFT: bounded owner-only machinery AI recommendations and replay passed")

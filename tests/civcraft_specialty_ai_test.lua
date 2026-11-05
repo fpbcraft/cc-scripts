@@ -268,15 +268,15 @@ assert(Sites.advance(state, p, state.cities[1], 30))
 view, known = snapshot(state, p)
 orders, targets = Materials.orders(view, known, S)
 assert(
-	#orders == 2 and targets.copper == 1 and targets.zinc == 1,
-	"Effective mixer keeps normal material demand"
+	#orders == 0 and not targets.copper and not targets.zinc,
+	"An effective Mixer without a brass project creates no input demand"
 )
 state.contentRules = "balance4"
 view, known = snapshot(state, p)
 orders, targets = Materials.orders(view, known, S)
 assert(
-	#orders == 2 and targets.copper == 1 and targets.zinc == 1,
-	"Legacy mixer retains material demand"
+	#orders == 0 and not targets.copper and not targets.zinc,
+	"A legacy Mixer without a brass project creates no input demand"
 )
 -- Native save/load preserves deterministic ranked requests and retained progress.
 if fs and textutils then
