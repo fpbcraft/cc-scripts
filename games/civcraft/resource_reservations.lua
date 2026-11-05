@@ -118,6 +118,28 @@ function R.reserve(session, operation)
 	session.operations[#session.operations + 1] = op
 	return { active = op.active, reason = reason, resource = resource }
 end
+-- Record an operation rejected by a higher-level gate (such as local SU) in
+-- the same canonical reservation order without reserving any material.
+function R.skip(session, operation, reason)
+	local op, why = descriptor(session.owner, operation)
+	if not op then
+		return nil, why
+	end
+	if type(reason) ~= "string" or reason == "" then
+		return nil, "Invalid operation pause reason"
+	end
+	local identity = op.cityID .. ":" .. op.buildingID
+	if session.seen[identity] then
+		return nil, "Duplicate city/building operation"
+	end
+	if session.last and before(op, session.last) then
+		return nil, "Operations must be reserved in stable order"
+	end
+	op.active, op.reason = false, reason
+	session.seen[identity], session.last = true, op
+	session.operations[#session.operations + 1] = op
+	return { active = false, reason = reason }
+end
 function R.result(session)
 	local stock, operations = {}, {}
 	for _, id in ipairs(Stock.order) do
