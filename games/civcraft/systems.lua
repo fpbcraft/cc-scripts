@@ -1,5 +1,6 @@
 local Sites = dofile("/games/civcraft/specialty_sites.lua")
 local MachineChoices = dofile("/games/civcraft/machine_choices.lua")
+local MachineOperations = dofile("/games/civcraft/machine_operations.lua")
 -- CIVCRAFT 4X data & deterministic mechanics, no dependencies on UI/peripherals.
 local Stacks = dofile("/games/civcraft/unit_stacks.lua")
 local Queue = dofile("/games/civcraft/queued_routes.lua")
@@ -366,7 +367,7 @@ function M.coastal(state, c)
 	end
 	return false
 end
-function M.treasury(p, state, includeProjects)
+function M.treasury(p, state, includeProjects, machinePlan)
 	local income, upkeep = 0, 0
 	for _, other in ipairs(state.players or {}) do
 		if
@@ -379,17 +380,18 @@ function M.treasury(p, state, includeProjects)
 	end
 	for _, city in ipairs(state.cities or {}) do
 		if city.owner == p.id then
-			local effects = Economy.effects(city, state, M)
+			local effects = Economy.effects(city, state, M, machinePlan)
 			income = income + 2 + (city.population or 2) + effects.gold
 			-- Gold on worked coast/resource hexes enters the treasury once per turn.
-			income = income + M.yields(p, city, state, Hex, nil, true).gold
+			local yield = M.yields(p, city, state, Hex, nil, true, machinePlan)
+			income = income + yield.gold
 			if
 				includeProjects ~= false
 				and ContentRules.usesP1Economy(p)
 				and city.project
 				and city.project.kind == "project"
 			then
-				income = income + M.projectOutput(p, city, state).gold
+				income = income + M.projectOutput(p, city, state, yield).gold
 			end
 		end
 	end
@@ -400,25 +402,132 @@ function M.treasury(p, state, includeProjects)
 	end
 	return { income = income, upkeep = upkeep, net = income - upkeep }
 end
-function M.economy(p, state)
-	local result = M.treasury(p, state)
+function M.economy(p, state, machinePlan)
+	local result = M.treasury(p, state, nil, machinePlan)
 	result.food = 0
 	result.industry = 0
 	result.science = 0
 	result.strategic = { iron = 0, horses = 0, saltpeter = 0 }
 	for _, city in ipairs(state.cities or {}) do
 		if city.owner == p.id then
-			local y = M.yields(p, city, state, Hex)
+			local y = M.yields(p, city, state, Hex, nil, machinePlan ~= nil, machinePlan)
 			result.food = result.food + y.food - 2 * (city.population or 2)
 			result.industry = result.industry + y.industry
 			result.science = result.science + y.science
 		end
+	end
+	if machinePlan then
+		result.strategic, result.resourceOverflow =
+			machinePlan.rates, machinePlan.extraction.overflow
+		result.resourcePlan = machinePlan.reservations
+		return result
 	end
 	local owned = World.territory(state, Hex)
 	local materials = Economy.plan(p, state, owned)
 	result.strategic, result.resourceOverflow = materials.rates, materials.overflow
 	result.resourcePlan = materials.reservations
 	return result
+end
+local function machineOwner(state, player)
+	local id = type(player) == "table" and player.id or player
+	for _, candidate in ipairs(state.players or {}) do
+		if candidate.id == id then
+			return candidate
+		end
+	end
+end
+local function ownedMachineCity(state, owner, cityID)
+	for _, city in ipairs(state.cities or {}) do
+		if city.id == cityID and city.owner == owner then
+			return city
+		end
+	end
+end
+-- These selected-operation queries are pure; game-loop activation belongs to #106.
+function M.machinePlan(state, player, cityID)
+	local owner = machineOwner(state, player)
+	if not owner then
+		return nil, "Unknown machinery owner"
+	end
+	if cityID ~= nil and not ownedMachineCity(state, owner.id, cityID) then
+		return nil, "Select an owned city"
+	end
+	local extraction = Economy.extract(owner, state, World.territory(state, Hex))
+	local plan, why = MachineOperations.plan(state, owner.id, extraction.stock)
+	if not plan then
+		return nil, why
+	end
+	plan.extraction, plan.cityID = extraction, cityID
+	plan.rates = {}
+	for _, resource in ipairs(ResourceStock.order) do
+		plan.rates[resource] = plan.stock[resource] - extraction.before[resource]
+	end
+	return plan
+end
+function M.machineCapacity(state, player, cityID)
+	if cityID == nil then
+		return nil, "Select an owned city"
+	end
+	local plan, why = M.machinePlan(state, player, cityID)
+	if not plan then
+		return nil, why
+	end
+	return plan.capacity[cityID]
+end
+function M.previewMachine(state, player, cityID, building, recipe)
+	local owner = machineOwner(state, player)
+	if not owner then
+		return nil, "Unknown machinery owner"
+	end
+	if state.phase ~= "game" then
+		return nil, "Game not running"
+	end
+	-- Clone only the owner's choices; all other state is read-only query input.
+	local projected = {}
+	for key, value in pairs(state) do
+		projected[key] = value
+	end
+	projected.cities = {}
+	for index, city in ipairs(state.cities or {}) do
+		if city.owner == owner.id then
+			local cloned = {}
+			for key, value in pairs(city) do
+				cloned[key] = value
+			end
+			cloned.machines = {}
+			for id, choice in pairs(city.machines or {}) do
+				cloned.machines[id] = {}
+				for key, value in pairs(choice) do
+					cloned.machines[id][key] = value
+				end
+			end
+			projected.cities[index] = cloned
+		else
+			projected.cities[index] = city
+		end
+	end
+	local ok, why = MachineChoices.apply(
+		projected,
+		owner.id,
+		{ action = "selectMachineRecipe", city = cityID, building = building, recipe = recipe }
+	)
+	if not ok then
+		return nil, why
+	end
+	local plan
+	plan, why = M.machinePlan(projected, owner.id, cityID)
+	if not plan then
+		return nil, why
+	end
+	plan.preview = { city = cityID, building = building, recipe = recipe }
+	return plan
+end
+function M.machineForecast(state, player)
+	local plan, why = M.machinePlan(state, player)
+	if not plan then
+		return nil, why
+	end
+	return { plan = plan, economy = M.economy(machineOwner(state, player), state, plan) }
 end
 function M.canBuild(p, c, id, state)
 	if ContentRules.isRedesign(state or p) and id == "councilhall" then
@@ -628,8 +737,8 @@ function M.projectCost(kind, id, player, city)
 	end
 	return CampaignRules.cost(base, player)
 end
-function M.centerYields(p, c, state)
-	local e = Economy.effects(c, state, M)
+function M.centerYields(p, c, state, machinePlan)
+	local e = Economy.effects(c, state, M, machinePlan)
 	local civ = p.civ
 	local buildings = c.buildings or {}
 	local food, industry, science = 2 + e.food, 1 + e.industry, 1 + e.science
@@ -661,8 +770,8 @@ function M.centerYields(p, c, state)
 	end
 	return { food = food, industry = industry, science = science, gold = 0 }
 end
-function M.yields(p, c, state, hex, owned, readOnly)
-	local center = M.centerYields(p, c, state)
+function M.yields(p, c, state, hex, owned, readOnly, machinePlan)
+	local center = M.centerYields(p, c, state, machinePlan)
 	local jobs = c.jobs
 	local food = center.food - 1 + jobs.food * 2
 	local industry = center.industry + jobs.wood * 2

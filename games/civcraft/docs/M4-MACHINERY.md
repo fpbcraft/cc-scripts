@@ -392,4 +392,20 @@ the supplied state, ignores rival machine records, and does not create or repair
 persisted choices. Generator fuel is staged before machine work through the
 same reservation engine. Steam fuel is retained only when it enables an
 otherwise active local operation; otherwise coal is released and the forecast
-is recomputed. Phase A does not wire this API into economy or systems resolution.
+is recomputed.
+
+### Owner forecasts and recipe previews
+
+`Systems.machinePlan` builds the post-extraction operating plan for an actual
+player. `machineCapacity` returns an owned city's capacity and use;
+`previewMachine` applies a proposed recipe to detached choices before planning;
+`machineForecast` pairs the same plan with its economy forecast. Unknown actors
+and foreign city requests are rejected. These queries do not mutate choices,
+stock, events, or canonical state, and do not inspect rival private choices.
+
+Economy effects, center yields, city yields and treasury calculations accept an
+optional frozen operating plan. Passing the same plan preserves the operating
+result after stock debit, rather than recalculating affordability from remaining
+stock. The ordinary round loop still uses the pre-activation adapter. Default
+activation, operation-event delivery, player controls and AI selection remain
+in #104–#106; the query layer does not independently activate those rules.
