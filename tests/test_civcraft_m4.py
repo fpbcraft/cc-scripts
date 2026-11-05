@@ -72,5 +72,68 @@ class MaterialReservationTests(unittest.TestCase):
         self.assertEqual(self.forecast(runtime), self.forecast(restored))
 
 
+    def prepare_machine(self, runtime):
+        self.prepare(runtime)
+        return runtime.call(runtime.lua.eval("""function(state)
+            local systems=dofile('/games/civcraft/systems.lua')
+            local sites=dofile('/games/civcraft/specialty_sites.lua')
+            local actions=dofile('/games/civcraft/actions.lua')
+            local hex=dofile('/games/civcraft/hex.lua')
+            local world=dofile('/games/civcraft/world.lua')
+            local player=state.players[1]
+            for id in pairs(systems.techs) do player.techs[id]=true end
+            local city
+            for _, c in ipairs(state.cities) do if c.owner==0 then city=c end end
+            world.reveal(state,hex,systems)
+            for _, n in ipairs(hex.neighbours(city.x,city.y,state)) do
+                if sites.canPlace(state,player,city,'works',n.x,n.y) then
+                    assert(actions.apply(state,0,{action='placeSite',city=city.id,
+                        kind='works',x=n.x,y=n.y},systems))
+                    city.siteProjects[city.project.id].progress=100
+                    systems.production(state,hex)
+                    city.buildings.burner,city.buildings.mixer=true,true
+                    systems.migrate(state)
+                    return city.id
+                end
+            end
+            error('Expected legal Works fixture')
+        end"""), runtime.state)
+
+    def test_rejected_machine_orders_preserve_entire_state(self):
+        runtime = fixture()
+        city = self.prepare_machine(runtime)
+        for actor, fields in [(0, {'action': 'setMachinePriority', 'priority': 0}),
+                              (0, {'action': 'setMachinePriority', 'priority': 5}),
+                              (0, {'action': 'setMachinePriority', 'priority': 1.5}),
+                              (0, {'action': 'setMachineEnabled', 'enabled': 1}),
+                              (0, {'action': 'selectMachineRecipe', 'recipe': 'unknown'}),
+                              (1, {'action': 'setMachineEnabled', 'enabled': False})]:
+            before = runtime.state_hash()
+            self.assertFalse(runtime.apply(actor, {'city': city, 'building': 'mixer'} | fields)[0])
+            self.assertEqual(runtime.state_hash(), before)
+        runtime.state.players[1].techs.brassworking = None
+        before = runtime.state_hash()
+        self.assertFalse(runtime.apply(0, {'action': 'selectMachineRecipe', 'city': city,
+                                          'building': 'mixer', 'recipe': 'brass'})[0])
+        self.assertEqual(runtime.state_hash(), before)
+
+    @unittest.skipUnless(importlib.util.find_spec('lupa.luajit21'), 'Optional LuaJIT extension absent')
+    def test_machine_actions_and_checkpoint_replay_match_jit(self):
+        reference, accelerated = fixture(), fixture('luajit21')
+        city = self.prepare_machine(reference)
+        accelerated.restore(reference.canonical_state())
+        for fields in [{'action': 'selectMachineRecipe', 'recipe': 'brass'},
+                       {'action': 'setMachinePriority', 'priority': 2},
+                       {'action': 'setMachineEnabled', 'enabled': False},
+                       {'action': 'setMachineEnabled', 'enabled': True}]:
+            request = {'city': city, 'building': 'mixer'} | fields
+            self.assertTrue(reference.apply(0, request)[0])
+            self.assertTrue(accelerated.apply(0, request)[0])
+            self.assertEqual(reference.state_hash(), accelerated.state_hash())
+            self.assertEqual(reference.observe(0), accelerated.observe(0))
+            accelerated.restore(reference.canonical_state())
+            self.assertEqual(reference.state_hash(), accelerated.state_hash())
+
+
 if __name__ == '__main__':
     unittest.main()
