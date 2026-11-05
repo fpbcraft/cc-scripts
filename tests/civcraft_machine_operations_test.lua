@@ -4,9 +4,9 @@ dofile = function(path)
 end
 dofile("/games/civcraft/module_cache.lua").install(_ENV)
 local Operations = dofile("/games/civcraft/machine_operations.lua")
-local function machine(plan, id)
+local function machine(plan, id, cityID)
 	for _, item in ipairs(plan.machines) do
-		if item.buildingID == id then
+		if item.buildingID == id and (cityID == nil or item.cityID == cityID) then
 			return item
 		end
 	end
@@ -176,7 +176,7 @@ state.cities = {
 	higherFuelPriority,
 }
 local priorityFuel = assert(Operations.plan(state, 1, { coal = 1, copper = 1, zinc = 1 }))
-assert(machine(priorityFuel, "steamplant").active == false)
+assert(machine(priorityFuel, "steamplant", 1).active == false)
 local prioritySteam
 for _, item in ipairs(priorityFuel.machines) do
 	if item.cityID == 3 and item.buildingID == "steamplant" then
@@ -188,6 +188,37 @@ assert(
 	"Steam fuel must honor persisted priority before city ID"
 )
 
+higherFuelPriority.machines.steamplant.priority = 4
+local reallocated = assert(Operations.plan(state, 1, { coal = 1 }))
+local recoveredSteam
+for _, item in ipairs(reallocated.machines) do
+	if item.cityID == 3 and item.buildingID == "steamplant" then
+		recoveredSteam = item
+	end
+end
+assert(
+	recoveredSteam and recoveredSteam.active and recoveredSteam.reason == nil,
+	"Freed no-demand fuel must reach a previously unfunded city"
+)
+assert(reallocated.stock.coal == 0 and reallocated.capacity[3].used == 2)
+assert(Operations.effects(reallocated, 3).industry == 8, "Steam and Deep Mine contribute once")
+local beforeOrder = {}
+for _, item in ipairs(reallocated.machines) do
+	beforeOrder[#beforeOrder + 1] = item.cityID .. ":" .. item.buildingID
+end
+state.cities[1], state.cities[2] = state.cities[2], state.cities[1]
+local reordered = assert(Operations.plan(state, 1, { coal = 1 }))
+for i, item in ipairs(reordered.machines) do
+	assert(
+		beforeOrder[i] == item.cityID .. ":" .. item.buildingID,
+		"Forecast order must not depend on city array order"
+	)
+	assert(type(item.active) == "boolean" and type(item.effects) == "table")
+	if item.active then
+		assert(item.reason == nil)
+	end
+end
+assert(machine(shortage, "mixer").reason == "missing_fuel")
 disabled.machines.press.enabled = true
 disabled.machines.press.recipe = "bad"
 state.cities = { disabled }

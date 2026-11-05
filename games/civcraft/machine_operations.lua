@@ -87,7 +87,7 @@ local function fuelPlan(stock, owner, cities, candidates, steamPriorities)
 				cityID = city.id,
 				buildingID = "steamplant",
 				priority = steamPriorities[city.id],
-				inputs = { coal = 1 },
+				inputs = copy(Choices.machines.steamplant.fuel),
 				outputs = {},
 			}
 		end
@@ -111,6 +111,7 @@ function M.plan(state, owner, postExtractionStock)
 		return nil, why
 	end
 	local cities, operations, records = {}, {}, {}
+	local steamCapacity = Choices.machines.steamplant.capacity
 	for _, city in ipairs(state.cities or {}) do
 		if city.owner == ownerID then
 			cities[#cities + 1] = city
@@ -135,7 +136,14 @@ function M.plan(state, owner, postExtractionStock)
 					if type(choice) ~= "table" then
 						choice = { recipe = spec.recipe, priority = spec.priority, enabled = true }
 					end
-					local record = { cityID = city.id, buildingID = id, choice = copy(choice) }
+					local record = {
+						cityID = city.id,
+						buildingID = id,
+						choice = copy(choice),
+						active = false,
+						impact = spec.impact or 0,
+						effects = {},
+					}
 					records[#records + 1] = record
 					local reason = gate(state, city, player, id, choice)
 					if spec.generator then
@@ -161,6 +169,18 @@ function M.plan(state, owner, postExtractionStock)
 		return a.id < b.id
 	end)
 	table.sort(operations, byOperation)
+	table.sort(records, function(a, b)
+		local ag, bg =
+			Choices.machines[a.buildingID].generator == true,
+			Choices.machines[b.buildingID].generator == true
+		if ag ~= bg then
+			return ag
+		end
+		return byOperation(
+			{ priority = a.choice.priority, cityID = a.cityID, buildingID = a.buildingID },
+			{ priority = b.choice.priority, cityID = b.cityID, buildingID = b.buildingID }
+		)
+	end)
 	local baseCapacity, totalCapacity = {}, {}
 	for _, city in ipairs(cities) do
 		local capacity = 0
@@ -209,7 +229,7 @@ function M.plan(state, owner, postExtractionStock)
 		for _, op in ipairs(fuelForecast.operations) do
 			if op.active then
 				activeFuel[op.cityID] = true
-				totalCapacity[op.cityID] = baseCapacity[op.cityID] + 8
+				totalCapacity[op.cityID] = baseCapacity[op.cityID] + steamCapacity
 			end
 		end
 		local session = assert(Reservations.begin(fuelForecast.stock, ownerID))
@@ -221,10 +241,17 @@ function M.plan(state, owner, postExtractionStock)
 			local room = totalCapacity[op.cityID] - used[op.cityID]
 			local result
 			if op.impact > room then
-				local check = assert(Reservations.plan(fuelForecast.stock, ownerID, { op }))
-				result = assert(
-					Reservations.skip(session, op, check.operations[1].reason or "no_capacity")
-				)
+				local check = assert(Reservations.check(session, op))
+				local reason = check.reason or "no_capacity"
+				if
+					check.active
+					and steamPriorities[op.cityID]
+					and not activeFuel[op.cityID]
+					and op.impact <= room + steamCapacity
+				then
+					reason = "missing_fuel"
+				end
+				result = assert(Reservations.skip(session, op, reason))
 			else
 				result = assert(Reservations.reserve(session, op))
 				if result.active then
@@ -236,8 +263,12 @@ function M.plan(state, owner, postExtractionStock)
 		finalSession = Reservations.result(session)
 		local changed = false
 		for _, city in ipairs(cities) do
-			if candidates[city.id] and (active[city.id] or 0) <= baseCapacity[city.id] then
-				steamReasons[city.id] = activeFuel[city.id] and "no_demand" or "missing_fuel"
+			if
+				candidates[city.id]
+				and activeFuel[city.id]
+				and (active[city.id] or 0) <= baseCapacity[city.id]
+			then
+				steamReasons[city.id] = "no_demand"
 				candidates[city.id] = nil
 				changed = true
 			end
@@ -266,7 +297,11 @@ function M.plan(state, owner, postExtractionStock)
 		elseif record.buildingID == "steamplant" and not record.reason then
 			local active = activeFuel[record.cityID] == true and candidates[record.cityID] == true
 			record.active = active
-			record.reason = active and nil or steamReasons[record.cityID] or "missing_fuel"
+			if active then
+				record.reason = nil
+			else
+				record.reason = steamReasons[record.cityID] or "missing_fuel"
+			end
 			record.impact, record.effects =
 				0, active and copy((Content.buildings.steamplant or {}).effects) or {}
 			if not active then
@@ -279,7 +314,12 @@ function M.plan(state, owner, postExtractionStock)
 	end
 	local cityResults = {}
 	for _, city in ipairs(cities) do
-		cityResults[city.id] = { capacity = totalCapacity[city.id], used = 0 }
+		cityResults[city.id] = {
+			capacity = totalCapacity[city.id],
+			used = 0,
+			base = baseCapacity[city.id],
+			steamActive = activeFuel[city.id] == true,
+		}
 	end
 	for _, record in ipairs(records) do
 		if record.active and record.impact then
@@ -307,13 +347,30 @@ function M.plan(state, owner, postExtractionStock)
 		caps = copy(finalSession.caps),
 		operations = reservationOperations,
 	}
+	local effects = {}
+	for _, city in ipairs(cities) do
+		effects[city.id] = { food = 0, industry = 0, science = 0, gold = 0 }
+	end
+	for _, record in ipairs(records) do
+		if record.active then
+			for field in pairs(effects[record.cityID]) do
+				effects[record.cityID][field] = effects[record.cityID][field]
+					+ (record.effects[field] or 0)
+			end
+		end
+	end
 	return {
 		owner = ownerID,
 		stock = copy(finalSession.stock),
 		capacity = copy(cityResults),
+		effects = effects,
 		machines = copy(records),
 		reservations = materialReservations,
 	}
+end
+
+function M.effects(plan, cityID)
+	return copy((plan.effects or {})[cityID] or { food = 0, industry = 0, science = 0, gold = 0 })
 end
 
 return M

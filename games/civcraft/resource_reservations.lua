@@ -75,7 +75,7 @@ function R.begin(stock, owner)
 		seen = {},
 	}
 end
-function R.reserve(session, operation)
+local function orderedDescriptor(session, operation)
 	local op, why = descriptor(session.owner, operation)
 	if not op then
 		return nil, why
@@ -87,23 +87,35 @@ function R.reserve(session, operation)
 	if session.last and before(op, session.last) then
 		return nil, "Operations must be reserved in stable order"
 	end
-	local reason, resource
-	-- Check full output room before reserving any input. Outputs never replenish
-	-- available snapshot inputs, and a paused operation reserves nothing.
+	return op
+end
+local function pauseReason(session, op)
 	for _, id in ipairs(Stock.order) do
 		if (op.outputs[id] or 0) > session.room[id] then
-			reason, resource = "output_cap", id
-			break
+			return "output_cap", id
 		end
 	end
-	if not reason then
-		for _, id in ipairs(Stock.order) do
-			if (op.inputs[id] or 0) > session.available[id] then
-				reason, resource = "missing_input", id
-				break
-			end
+	for _, id in ipairs(Stock.order) do
+		if (op.inputs[id] or 0) > session.available[id] then
+			return "missing_input", id
 		end
 	end
+end
+-- Read feasibility against reservations already made, without changing the session.
+function R.check(session, operation)
+	local op, why = orderedDescriptor(session, operation)
+	if not op then
+		return nil, why
+	end
+	local reason, resource = pauseReason(session, op)
+	return { active = reason == nil, reason = reason, resource = resource }
+end
+function R.reserve(session, operation)
+	local op, why = orderedDescriptor(session, operation)
+	if not op then
+		return nil, why
+	end
+	local reason, resource = pauseReason(session, op)
 	op.active, op.reason, op.resource = reason == nil, reason, resource
 	if op.active then
 		for _, id in ipairs(Stock.order) do
@@ -114,29 +126,21 @@ function R.reserve(session, operation)
 			session.room[id] = session.room[id] - credit
 		end
 	end
-	session.seen[identity], session.last = true, op
+	session.seen[op.cityID .. ":" .. op.buildingID], session.last = true, op
 	session.operations[#session.operations + 1] = op
 	return { active = op.active, reason = reason, resource = resource }
 end
--- Record an operation rejected by a higher-level gate (such as local SU) in
--- the same canonical reservation order without reserving any material.
+-- Higher-level gates record a pause through the same canonical order.
 function R.skip(session, operation, reason)
-	local op, why = descriptor(session.owner, operation)
+	local op, why = orderedDescriptor(session, operation)
 	if not op then
 		return nil, why
 	end
 	if type(reason) ~= "string" or reason == "" then
 		return nil, "Invalid operation pause reason"
 	end
-	local identity = op.cityID .. ":" .. op.buildingID
-	if session.seen[identity] then
-		return nil, "Duplicate city/building operation"
-	end
-	if session.last and before(op, session.last) then
-		return nil, "Operations must be reserved in stable order"
-	end
 	op.active, op.reason = false, reason
-	session.seen[identity], session.last = true, op
+	session.seen[op.cityID .. ":" .. op.buildingID], session.last = true, op
 	session.operations[#session.operations + 1] = op
 	return { active = false, reason = reason }
 end
