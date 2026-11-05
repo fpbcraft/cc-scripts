@@ -82,6 +82,10 @@ local function apply(state, request)
 	assert(accepted, "Dispatcher rejected recommendation: " .. tostring(reason))
 end
 
+local function assertNoAdvice(state, message)
+	assert(next(recommend(state)) == nil, message)
+end
+
 local function saveAndReload(state)
 	local chunks = {}
 	StateWriter.write({
@@ -111,7 +115,7 @@ apply(state, request)
 apply(replay, request)
 assert(state.cities[1].machines.mixer.recipe == "brass")
 assert(replay.cities[1].machines.mixer.recipe == "brass")
-assert(#recommend(state) == 0, "An active brass plan must remain stable until resolution")
+assertNoAdvice(state, "An active brass plan must remain stable until resolution")
 state.cities[1].project = nil
 replay.cities[1].project = nil
 local nextRequest = recommend(state)
@@ -120,19 +124,24 @@ assert(nextRequest.action == replayRequest.action and nextRequest.recipe == repl
 apply(state, nextRequest)
 apply(replay, replayRequest)
 assert(state.cities[1].machines.mixer.recipe == replay.cities[1].machines.mixer.recipe)
-assert(#recommend(state) == 0, "Applied choices must settle without turn-by-turn churn")
+assertNoAdvice(state, "Applied choices must settle without turn-by-turn churn")
 
 -- A city with a non-brass project uses Mixer industry; an idle city leaves it off.
 local industry = fixture({ kind = "unit", id = "warrior", progress = 0 })
 request = recommend(industry)
 assert(request.action == "selectMachineRecipe" and request.recipe == "industry")
+local repeatedIndustry = recommend(industry)
+assert(
+	repeatedIndustry.action == request.action and repeatedIndustry.recipe == request.recipe,
+	"An unapplied industry recommendation must remain stable"
+)
 apply(industry, request)
-assert(#recommend(industry) == 0)
+assertNoAdvice(industry, "An active industry plan must remain selected while its project needs it")
 industry.cities[1].project = nil
 request = recommend(industry)
 assert(request.action == "selectMachineRecipe" and request.recipe == "no_recipe")
 apply(industry, request)
-assert(#recommend(industry) == 0)
+assertNoAdvice(industry, "An idle mixer must settle at no_recipe")
 
 -- Missing inputs block brass selection until recovery; the helper never purchases inputs.
 local shortage = fixture(brassProject, nil, { copper = 1 })
@@ -158,19 +167,28 @@ local disabled = fixture(brassProject, nil, { copper = 1, zinc = 1 })
 disabled.cities[1].machines.mixer.enabled = false
 request = recommend(disabled)
 assert(request.action == "setMachineEnabled" and request.enabled == true)
+local repeatedEnable = recommend(disabled)
+assert(repeatedEnable.action == request.action and repeatedEnable.enabled == request.enabled)
 apply(disabled, request)
 request = recommend(disabled)
 assert(request.action == "selectMachineRecipe" and request.recipe == "brass")
+local repeatedEnabledRecipe = recommend(disabled)
+assert(
+	repeatedEnabledRecipe.action == request.action
+		and repeatedEnabledRecipe.recipe == request.recipe
+)
+apply(disabled, request)
+assertNoAdvice(disabled, "An enabled brass operation must converge")
 local disabledIdle = fixture(nil, nil, { copper = 1, zinc = 1 })
 disabledIdle.cities[1].machines.mixer.enabled = false
-assert(#recommend(disabledIdle) == 0, "An idle disabled mixer stays off")
+assertNoAdvice(disabledIdle, "An idle disabled mixer stays off")
 
 -- Steam uses coal only for a runnable need; production recovers when fuel returns.
 local steam = fixture({ kind = "unit", id = "warrior", progress = 0 }, {
 	mixer = true,
 	steamplant = true,
 }, {})
-assert(#recommend(steam) == 0, "No-fuel operation must not trigger a recipe order")
+assertNoAdvice(steam, "No-fuel operation must not trigger a recipe order")
 steam.players[1].stockpile.coal = 1
 request = recommend(steam)
 assert(request.action == "selectMachineRecipe" and request.recipe == "industry")
@@ -183,9 +201,26 @@ local constrained = fixture(brassProject, {
 }, { copper = 1, zinc = 1 })
 request = recommend(constrained)
 assert(request.action == "setMachinePriority" and request.priority == 1)
+local repeatedPriority = recommend(constrained)
+assert(repeatedPriority.action == request.action and repeatedPriority.priority == request.priority)
 apply(constrained, request)
 request = recommend(constrained)
 assert(request.action == "selectMachineRecipe" and request.recipe == "brass")
+local repeatedPriorityRecipe = recommend(constrained)
+assert(
+	repeatedPriorityRecipe.action == request.action
+		and repeatedPriorityRecipe.recipe == request.recipe
+)
+apply(constrained, request)
+assertNoAdvice(constrained, "A prioritized brass operation must converge")
+
+-- Match the dispatcher gates so the policy does not suggest rejected game actions.
+local lobby = fixture(brassProject, nil, { copper = 1, zinc = 1 })
+lobby.phase = "lobby"
+assertNoAdvice(lobby, "Lobby observations do not permit machine orders")
+local endedTurn = fixture(brassProject, nil, { copper = 1, zinc = 1 })
+endedTurn.players[1].ready = true
+assertNoAdvice(endedTurn, "An ended-turn player cannot receive ordinary machine orders")
 
 -- Rival private stocks and settings cannot affect an owner's recommendation.
 local private = fixture(brassProject, nil, { copper = 1, zinc = 1 })

@@ -1,5 +1,6 @@
 -- Bounded owner-observation policy for persistent machinery choices.
 local M = {}
+local Scheduler = dofile("/games/civcraft/turn_scheduler.lua")
 
 local function copyChoice(choice)
 	return { recipe = choice.recipe, priority = choice.priority, enabled = choice.enabled }
@@ -114,7 +115,11 @@ local function targetRecipe(view, player, city, forecast, systems)
 			end
 		end
 	end
-	if hasIndustryDemand(city, player, systems) then
+	local industryNeed = hasIndustryDemand(city, player, systems)
+	if industryNeed and current and current.active and current.choice.recipe == "industry" then
+		return "industry"
+	end
+	if industryNeed then
 		local industryPlan =
 			projectedPlan(view, player.id, city, { recipe = "industry", enabled = true }, systems)
 		local record = industryPlan and machine(industryPlan, city.id, "mixer")
@@ -157,6 +162,9 @@ function M.recommend(view, player, systems)
 	end
 	local owner = ownPlayer(view, player)
 	if not owner then
+		return {}
+	end
+	if view.phase ~= "game" or not Scheduler.canAct(view, owner.id) then
 		return {}
 	end
 	local forecast = systems.machineForecast(view, owner.id)
