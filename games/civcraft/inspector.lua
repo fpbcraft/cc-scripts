@@ -257,8 +257,8 @@ function I.draw(ui, state, player, rect, modal)
 			end
 		elseif ui.cityPanel == "machinery" then
 			local plan, why = Systems.machinePlan(state, ui.playerID, city.id)
-			local capacity = Systems.machineCapacity(state, ui.playerID, city.id)
 			text("PLANNED OPERATION FORECAST", 8)
+			local capacity = plan and plan.capacity[city.id]
 			if not plan or not capacity then
 				text(why or "MACHINERY UNAVAILABLE", 31)
 			else
@@ -275,17 +275,29 @@ function I.draw(ui, state, player, rect, modal)
 				local stock = plan.reservations.snapshot
 				local used, produced = plan.reservations.inputs, plan.reservations.outputs
 				text(
-					"COAL "
-						.. (stock.coal or 0)
-						.. "  COPPER "
+					"IRON "
+						.. (stock.iron or 0)
+						.. " COPPER "
 						.. (stock.copper or 0)
-						.. "  ZINC "
+						.. " ZINC "
 						.. (stock.zinc or 0)
+						.. " REDSTONE "
+						.. (stock.redstone or 0)
 				)
 				text(
-					"BRASS "
+					"DIAMOND "
+						.. (stock.diamond or 0)
+						.. " BRASS "
 						.. (stock.brass or 0)
-						.. "  PLAN -COAL "
+						.. " HORSES "
+						.. (stock.horses or 0)
+						.. " SALTPETER "
+						.. (stock.saltpeter or 0)
+				)
+				text(
+					"COAL "
+						.. (stock.coal or 0)
+						.. " / PLAN -COAL "
 						.. (used.coal or 0)
 						.. " +BRASS "
 						.. (produced.brass or 0)
@@ -319,17 +331,27 @@ function I.draw(ui, state, player, rect, modal)
 				end
 				for _, machine in ipairs(plan.machines) do
 					if machine.cityID == city.id then
-						local label = machine.buildingID:upper()
+						local label = Systems.label("building", machine.buildingID)
 							.. " "
 							.. machine.choice.recipe:upper()
 							.. " P"
 							.. machine.choice.priority
 							.. (machine.choice.enabled and " ON" or " OFF")
-							.. (
-								machine.active and " ACTIVE"
-								or " PAUSED " .. (machine.reason or "unknown")
-							):upper()
+							.. (machine.active and " / ACTIVE" or " / PAUSED")
 						text(label .. " / SU " .. machine.impact, machine.active and 13 or 31)
+						if not machine.active then
+							local reasons = {
+								disabled = "Disabled by choice",
+								inactive_family = "Building is not active",
+								no_recipe = "Choose a recipe",
+								no_demand = "No powered machine demand",
+								missing_fuel = "Coal is unavailable",
+								missing_input = "Required material is unavailable",
+								output_cap = "Output stock is full",
+								no_capacity = "Insufficient local SU",
+							}
+							text("PAUSED: " .. (reasons[machine.reason] or "Cannot operate"), 31)
+						end
 						local id, recipe, priority, enabled =
 							machine.buildingID,
 							machine.choice.recipe,
@@ -337,71 +359,89 @@ function I.draw(ui, state, player, rect, modal)
 							machine.choice.enabled
 						local options = id == "mixer" and { "no_recipe", "brass", "industry" }
 							or { recipe }
-						local buttons = {}
 						for _, option in ipairs(options) do
-							buttons[#buttons + 1] = {
-								label = (option == recipe and "*" or "")
-									.. option:upper():sub(1, 9),
-								run = function()
-									ui.machinePreview =
-										{ cityID = city.id, building = id, recipe = option }
-									ui.inspectorOffset = 0
-								end,
-								style = { selected = option == recipe },
+							local optionLabel = ({
+								no_recipe = "NO RECIPE",
+								brass = "BRASS",
+								industry = "INDUSTRY",
+							})[option] or option:upper()
+							rows[#rows + 1] = {
+								buttons = {
+									{
+										label = optionLabel,
+										run = function()
+											ui.machinePreview =
+												{ cityID = city.id, building = id, recipe = option }
+											ui.inspectorOffset = 0
+										end,
+										style = {
+											selected = ui.machinePreview
+													and ui.machinePreview.cityID == city.id
+													and ui.machinePreview.building == id
+													and ui.machinePreview.recipe == option
+												or option == recipe,
+										},
+									},
+								},
 							}
 						end
-						buttons[#buttons + 1] = {
-							label = "P-",
-							run = function()
-								ui:command("setMachinePriority", {
-									city = city.id,
-									building = id,
-									priority = math.max(1, priority - 1),
-								})
-							end,
+						rows[#rows + 1] = {
+							buttons = {
+								{
+									label = "P-",
+									run = function()
+										ui:command("setMachinePriority", {
+											city = city.id,
+											building = id,
+											priority = math.max(1, priority - 1),
+										})
+									end,
+								},
+								{
+									label = "P+",
+									run = function()
+										ui:command("setMachinePriority", {
+											city = city.id,
+											building = id,
+											priority = math.min(4, priority + 1),
+										})
+									end,
+								},
+							},
 						}
-						buttons[#buttons + 1] = {
-							label = "P+",
-							run = function()
-								ui:command("setMachinePriority", {
-									city = city.id,
-									building = id,
-									priority = math.min(4, priority + 1),
-								})
-							end,
+						rows[#rows + 1] = {
+							buttons = {
+								{
+									label = enabled and "PAUSE" or "ENABLE",
+									run = function()
+										ui:command("setMachineEnabled", {
+											city = city.id,
+											building = id,
+											enabled = not enabled,
+										})
+									end,
+								},
+							},
 						}
-						buttons[#buttons + 1] = {
-							label = enabled and "PAUSE" or "ENABLE",
-							run = function()
-								ui:command(
-									"setMachineEnabled",
-									{ city = city.id, building = id, enabled = not enabled }
-								)
-							end,
+						rows[#rows + 1] = {
+							buttons = {
+								{
+									label = "APPLY",
+									run = function()
+										local selected = ui.machinePreview
+												and ui.machinePreview.cityID == city.id
+												and ui.machinePreview.building == id
+												and ui.machinePreview.recipe
+											or recipe
+										ui:command(
+											"selectMachineRecipe",
+											{ city = city.id, building = id, recipe = selected }
+										)
+										ui.machinePreview = nil
+									end,
+								},
+							},
 						}
-						buttons[#buttons + 1] = {
-							label = "PREVIEW",
-							run = function()
-								ui.machinePreview =
-									{ cityID = city.id, building = id, recipe = recipe }
-							end,
-						}
-						buttons[#buttons + 1] = {
-							label = "APPLY",
-							run = function()
-								local selected = ui.machinePreview
-										and ui.machinePreview.cityID == city.id
-										and ui.machinePreview.building == id
-										and ui.machinePreview.recipe
-									or recipe
-								ui:command(
-									"selectMachineRecipe",
-									{ city = city.id, building = id, recipe = selected }
-								)
-								ui.machinePreview = nil
-							end,
-						}
-						rows[#rows + 1] = { buttons = buttons }
 					end
 				end
 			end
